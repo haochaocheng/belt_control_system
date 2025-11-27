@@ -1,0 +1,55 @@
+belt_control_system/                  # 项目根目录
+├── build/                            # 构建输出目录（分平台存放）
+│   ├── windows_debug/                # Windows本地调试（MinGW）
+│   └── arm64_release/                # ARM64交叉编译（RK3588）
+├── cmake/                            # CMake配置（工具链、模块）
+│   ├── toolchain_aarch64.cmake       # ARM64交叉编译工具链
+│   └── QmlModule.cmake               # QML模块配置辅助（可选）
+├── src/                              # 源代码目录
+│   ├── main/                         # 程序入口（初始化QML引擎、注册C++类型）
+│   │   ├── main.cpp                  # 主函数（加载QML、注册硬件/控制类到QML）
+│   │   └── CMakeLists.txt            # 主模块构建配置
+│   ├── qml/                          # QML界面模块（所有UI相关文件）
+│   │   ├── main.qml                  # 主界面入口（根窗口）
+│   │   ├── pages/                    # 功能页面（如控制面板、参数设置、报警页）
+│   │   │   ├── ControlPanel.qml      # 核心控制面板（启动/停止、速度显示）
+│   │   │   ├── ParameterSettings.qml # 参数配置页面（波特率、阈值等）
+│   │   │   └── AlarmPage.qml         # 故障报警页面
+│   │   ├── components/               # 自定义QML组件（可复用控件）
+│   │   │   ├── SpeedGauge.qml        # 速度仪表盘（自定义圆形进度条）
+│   │   │   ├── StatusIndicator.qml   # 状态指示灯（红绿切换）
+│   │   │   └── MotorControlBtn.qml   # 电机控制按钮（带状态反馈）
+│   │   └── CMakeLists.txt            # QML模块构建配置（关联C++后端）
+│   ├── hardware/                     # 硬件交互层（与QML无关，纯C++）
+│   │   ├── hal/                      # 硬件抽象层接口
+│   │   │   ├── hardware_hal.h/cpp    # 抽象基类（定义接口：速度、温度、控制指令）
+│   │   │   └── CMakeLists.txt
+│   │   ├── simulated/                # Windows模拟实现
+│   │   │   ├── simulated_hal.h/cpp   # 生成模拟数据、打印调试信息
+│   │   │   └── CMakeLists.txt
+│   │   └── real/                     # RK3588真实实现
+│   │       ├── real_hal.h/cpp        # 操作串口、GPIO、CAN等硬件
+│   │       └── CMakeLists.txt
+│   ├── control/                      # 控制逻辑层（C++核心算法，供QML调用）
+│   │   ├── belt_controller.h/cpp     # 皮带控制类（速度调节、启停逻辑、故障检测）
+│   │   └── CMakeLists.txt            # 编译为库，供QML和main模块链接
+│   └── utils/                        # 工具类（C++通用功能）
+│       ├── logger.h/cpp              # 日志工具（输出到文件/控制台）
+│       ├── config_reader.h/cpp       # 配置文件解析（读取ini参数）
+│       └── CMakeLists.txt
+├── resources/                        # 资源文件（图片、配置模板、QML资源索引）
+│   ├── images/                       # 图片资源（图标、背景、按钮图片）
+│   │   ├── start_icon.png
+│   │   ├── alarm_red.svg
+│   │   └── background.jpg
+│   ├── config/                       # 配置文件模板
+│   │   └── system_config.ini         # 串口参数、采样频率、报警阈值等
+│   └── qml_resources.qrc             # QML资源索引（将images、config纳入QML资源系统）
+├── tests/                            # 单元测试（C++逻辑测试，QML测试可选）
+│   ├── test_controller.cpp           # 测试控制算法
+│   ├── test_hal.cpp                  # 测试硬件抽象层
+│   └── CMakeLists.txt                # 测试模块配置（依赖QT Test）
+├── Dockerfile                        # ARM64容器构建脚本
+├── .gitignore                        # 忽略build/、临时文件等
+├── README.md                         # 项目说明（编译、部署步骤）
+└── CMakeLists.txt                    # 根目录CMake配置（全局入口）

@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/BeltControlQml">
+        <file>../src/qml/main.qml</file>
+        <file>../src/qml/pages/ControlPanel.qml</file>
+        <file>../src/qml/pages/ParameterSettings.qml</file>
+        <file>../src/qml/pages/AlarmPage.qml</file>
+        <file>../src/qml/components/SpeedGauge.qml</file>
+        <file>../src/qml/components/StatusIndicator.qml</file>
+        <file>../src/qml/components/MotorControlBtn.qml</file>
+    </qresource>
+    <qresource prefix="/images">
+        <file>images/start_icon.png</file>
+    </qresource>
+    <qresource prefix="/config">
+        <file>config/system_config.ini</file>
+    </qresource>
+</RCC>

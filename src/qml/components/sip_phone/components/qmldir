@@ -1,0 +1,3 @@
+module BeltControlQml.sip_phone.components
+RisipButton 1.0 RisipButton.qml
+RisipLineEdit 1.0 RisipLineEdit.qml

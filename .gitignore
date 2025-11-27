@@ -1,0 +1,29 @@
+# Build directories
+build/
+.cmake/
+
+# Log files
+*.log
+belt_control_log.txt
+
+# Windows device files
+nul
+CON
+PRN
+AUX
+NUL
+
+# IDE files
+.vscode/
+.qtcreator/
+*.user
+*.autosave
+
+# Qt files
+*.qmlc
+*.jsc
+.qmake.stash
+
+# Backup files
+*.backup
+*~

@@ -1,0 +1,6 @@
+module VirtualKeyboard
+EnhancedVirtualKeyboard 1.0 EnhancedVirtualKeyboard.qml
+KeyboardModeSelector 1.0 KeyboardModeSelector.qml
+NumericKeyboard 1.0 NumericKeyboard.qml
+EnglishKeyboard 1.0 EnglishKeyboard.qml
+ChineseKeyboard 1.0 ChineseKeyboard.qml
