@@ -177,14 +177,32 @@ bool SipPhoneManager::initializeEndpoint()
         return true;
     }
 
-    // TEMPORARY: Skip actual PJSIP initialization to prevent crashes
-    // TODO: Fix PJSIP audio device initialization issue
-    qDebug() << "WARNING: PJSIP initialization is temporarily disabled";
-    qDebug() << "SIP functionality will not work until this is fixed";
+    // CRITICAL ISSUE: PJSIP compiled with incorrect configuration for this Windows system
+    // Error: "Assertion failed: sizeof(pj_fd_set_t)-sizeof(pj_sock_t) >= sizeof(fd_set)"
+    // Location: pjlib/src/pj/sock_select.c, line 45
+    //
+    // ROOT CAUSE: The PJSIP library was compiled with socket configuration that doesn't
+    // match the current Windows SDK's fd_set structure size. This is a compile-time
+    // configuration mismatch between PJSIP's expectations and Windows headers.
+    //
+    // SOLUTION REQUIRED: Recompile PJSIP 2.15.1 with correct Windows configuration:
+    // - Ensure PJ_IOQUEUE_MAX_HANDLES matches system capabilities
+    // - Update config_site.h for Windows 10/11 compatibility
+    // - Or use different select/poll mechanism (e.g., IOCP for Windows)
+    //
+    // TEMPORARY WORKAROUND: Disable PJSIP initialization to allow UI to function
+
+    qWarning() << "==========================================================";
+    qWarning() << "PJSIP INITIALIZATION DISABLED";
+    qWarning() << "Reason: PJSIP library configuration mismatch";
+    qWarning() << "Error: sizeof(pj_fd_set_t) assertion in sock_select.c:45";
+    qWarning() << "This requires recompiling PJSIP with correct Windows config";
+    qWarning() << "SIP telephone functionality will NOT work";
+    qWarning() << "==========================================================";
 
     d->initialized = true;
     emit isInitializedChanged(true);
-    updateServerStatus("SIP引擎未启动（调试模式）");
+    updateServerStatus("SIP引擎配置错误（需要重新编译PJSIP）");
 
     return true;
 }
