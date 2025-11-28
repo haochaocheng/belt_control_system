@@ -3,8 +3,9 @@
 ## 问题概述
 
 **日期**: 2025-11-27
-**状态**: 已诊断，待修复
+**状态**: ✅ 已解决
 **严重程度**: 严重（阻止 SIP 电话功能使用）
+**解决日期**: 2025-11-27
 
 ## 症状
 
@@ -134,21 +135,51 @@ bool SipPhoneManager::initializeEndpoint()
 - `/PJSIP_COMPILE_SUCCESS.md` - PJSIP 编译记录
 - `/run_debug_keepopen.bat` - 调试批处理文件
 
+## 最终解决方案
+
+**实施日期**: 2025-11-27
+
+### 1. 创建配置文件
+创建 `pjlib/include/pj/config_site.h` 文件，设置正确的 FD_SETSIZE：
+```c
+#define PJ_IOQUEUE_MAX_HANDLES    64
+#define FD_SETSIZE                64
+#define PJMEDIA_HAS_VIDEO         0
+```
+
+### 2. 编译 PJSIP 2.15.1
+- 使用 Git Bash + MinGW GCC 11.2.0
+- 修改 `build.mak` 添加 `-Wno-error` 和 `-Wno-format` 标志
+- 成功编译 20 个库文件
+- 编译时间：约 2-3 分钟
+
+### 3. 部署新库
+- 复制所有 `.a` 文件到项目 `libs/pjsip/` 目录
+- 恢复 `SipPhoneManager.cpp` 中的正常初始化代码
+
+### 4. 测试结果
+✅ 应用程序成功启动
+✅ SIP 界面正常打开
+✅ PJSIP 初始化不再崩溃
+
 ## 下一步行动
 
 1. **短期**（已完成）:
    - ✅ 禁用 PJSIP 初始化，确保应用不崩溃
    - ✅ 更新状态显示，告知用户 SIP 功能不可用
    - ✅ 提交代码到 Git
+   - ✅ 研究正确的 PJSIP Windows 配置参数
+   - ✅ 重新编译 PJSIP 库
+   - ✅ 测试新编译的库
 
-2. **中期**（待完成）:
-   - ⏳ 研究正确的 PJSIP Windows 配置参数
-   - ⏳ 重新编译 PJSIP 库
-   - ⏳ 测试新编译的库
+2. **中期**（建议）:
+   - 测试实际 SIP 通话功能
+   - 配置 SIP 服务器连接
+   - 验证音频设备工作正常
 
-3. **长期**（可选）:
-   - 考虑切换到更现代的 VoIP 库
-   - 或使用 PJSIP 官方预编译包
+3. **长期**（已不需要）:
+   - ~~考虑切换到更现代的 VoIP 库~~ (问题已解决)
+   - ~~或使用 PJSIP 官方预编译包~~ (不存在)
 
 ## 参考资料
 

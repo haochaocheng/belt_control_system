@@ -25,7 +25,6 @@
 #include "pjsipwrapper/pjsipendpoint.h"
 
 #include <QDebug>
-#include <pjsua-lib/pjsua.h>  // For pjsua_set_null_snd_dev()
 
 namespace risip {
 
@@ -202,65 +201,28 @@ int RisipEndpoint::start()
 //    m_endpointConfig.uaConfig.userAgent
 //    m_endpointConfig.uaConfig.maxCalls = 4;
 
-    // Configure media to completely disable audio device to avoid crashes
-    // This prevents PJSIP from trying to access real audio hardware
-    m_data->endpointConfig.medConfig.sndClockRate = 0;
-    m_data->endpointConfig.medConfig.channelCount = 1;
-    m_data->endpointConfig.medConfig.audioFramePtime = 20;
-    m_data->endpointConfig.medConfig.quality = 4;
-    m_data->endpointConfig.medConfig.ecTailLen = 0;  // Disable echo cancellation
-    m_data->endpointConfig.medConfig.sndAutoCloseTime = -1;  // Never auto-close
-    // Force no sound device initialization
-    m_data->endpointConfig.medConfig.noVad = true;  // Disable VAD
-
     try {
         m_data->pjsipEndpoint->libCreate();
-        qDebug() << "libCreate() completed successfully";
     } catch (Error &err) {
-        qCritical() << "libCreate() failed:" << QString::fromStdString(err.info());
         emit statusChanged(status());
         setError(err);
         return status();
-    } catch (...) {
-        qCritical() << "libCreate() failed with unknown exception";
-        return -1;
     }
 
     try {
         m_data->pjsipEndpoint->libInit(m_data->endpointConfig);
-        qDebug() << "libInit() completed successfully";
     } catch (Error &err) {
-        qCritical() << "libInit() failed:" << QString::fromStdString(err.info());
         emit statusChanged(status());
         setError(err);
         return status();
-    } catch (...) {
-        qCritical() << "libInit() failed with unknown exception";
-        return -1;
-    }
-
-    // Attempt to disable audio devices after libInit
-    // Note: pjsua_set_no_snd_dev() returns pjmedia_port*, not pj_status_t
-    // So we just call it without checking return value
-    try {
-        qDebug() << "Attempting to disable audio devices...";
-        pjsua_set_no_snd_dev();
-        qDebug() << "Audio devices disabled (pjsua_set_no_snd_dev called)";
-    } catch (...) {
-        qDebug() << "Exception when disabling audio devices (non-fatal)";
     }
 
     try {
         m_data->pjsipEndpoint->libStart();
-        qDebug() << "libStart() completed successfully";
     } catch (Error &err) {
-        qCritical() << "libStart() failed:" << QString::fromStdString(err.info());
         emit statusChanged(status());
         setError(err);
         return status();
-    } catch (...) {
-        qCritical() << "libStart() failed with unknown exception";
-        return -1;
     }
 
     //FIXME Codec priorities

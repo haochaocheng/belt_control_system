@@ -2,6 +2,8 @@ qt_add_qml_module(qml_module
     URI BeltControlQml
     VERSION 1.0
     STATIC
+    NO_PLUGIN
+    NO_GENERATE_QMLTYPES
     QML_FILES
         main.qml
         App.qml

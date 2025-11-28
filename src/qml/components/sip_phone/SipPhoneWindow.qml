@@ -2,6 +2,7 @@ import QtQuick 6.5
 import QtQuick.Controls 6.5
 import QtQuick.Layouts 6.5
 import QtQuick.Window 2.15
+import QtQuick.VirtualKeyboard 6.5
 
 // Independent SIP Phone Window
 Window {
@@ -127,6 +128,65 @@ Window {
             SipMainPage {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+            }
+        }
+    }
+
+    // Virtual Keyboard - 虚拟键盘会根据窗口大小自动缩放
+    Loader {
+        id: virtualKeyboardLoader
+        active: Qt.inputMethod.visible
+        anchors.fill: parent
+        z: 100000
+
+        sourceComponent: Item {
+            anchors.fill: parent
+
+            // 半透明背景遮罩（可选）
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+            }
+
+            InputPanel {
+                id: inputPanel
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+
+                // 确保键盘随窗口缩放
+                width: parent.width
+            }
+
+            // 关闭虚拟键盘按钮
+            Button {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: inputPanel.height - 10
+                anchors.rightMargin: 10
+                width: 50
+                height: 50
+                z: 1
+
+                background: Rectangle {
+                    color: parent.pressed ? "#c0392b" : "#e74c3c"
+                    radius: 25
+                    border.color: "#00d4ff"
+                    border.width: 2
+                }
+
+                contentItem: Text {
+                    text: "×"
+                    color: "white"
+                    font.pixelSize: 32
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                onClicked: {
+                    Qt.inputMethod.hide()
+                }
             }
         }
     }

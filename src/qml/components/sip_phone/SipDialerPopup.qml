@@ -10,7 +10,7 @@ Popup {
     height: 850
     modal: true
     focus: true
-    closePolicy: Popup.CloseOnEscape
+    closePolicy: Popup.NoAutoClose  // 防止点击外部或内部空白处关闭
     z: 2000
 
     // Center positioning

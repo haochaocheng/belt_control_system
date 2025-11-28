@@ -45,8 +45,8 @@ public:
         callTimer = new QTimer(parent);
         callTimer->setInterval(1000);
 
-        // Create Risip singleton instance
-        risipInstance = risip::Risip::instance();
+        // DON'T create Risip instance here - defer until initializeEndpoint() is called
+        // This prevents PJSIP initialization crash during app startup
     }
 
     ~Private()
@@ -177,32 +177,43 @@ bool SipPhoneManager::initializeEndpoint()
         return true;
     }
 
-    // CRITICAL ISSUE: PJSIP compiled with incorrect configuration for this Windows system
-    // Error: "Assertion failed: sizeof(pj_fd_set_t)-sizeof(pj_sock_t) >= sizeof(fd_set)"
-    // Location: pjlib/src/pj/sock_select.c, line 45
-    //
-    // ROOT CAUSE: The PJSIP library was compiled with socket configuration that doesn't
-    // match the current Windows SDK's fd_set structure size. This is a compile-time
-    // configuration mismatch between PJSIP's expectations and Windows headers.
-    //
-    // SOLUTION REQUIRED: Recompile PJSIP 2.15.1 with correct Windows configuration:
-    // - Ensure PJ_IOQUEUE_MAX_HANDLES matches system capabilities
-    // - Update config_site.h for Windows 10/11 compatibility
-    // - Or use different select/poll mechanism (e.g., IOCP for Windows)
-    //
-    // TEMPORARY WORKAROUND: Disable PJSIP initialization to allow UI to function
+    // Create Risip instance on first initialization (lazy initialization)
+    if (!d->risipInstance) {
+        qDebug() << "Creating Risip instance (this will initialize PJSIP)...";
+        d->risipInstance = risip::Risip::instance();
+        if (!d->risipInstance) {
+            qCritical() << "Failed to create Risip instance";
+            updateServerStatus("无法创建 SIP 引擎");
+            return false;
+        }
+    }
 
-    qWarning() << "==========================================================";
-    qWarning() << "PJSIP INITIALIZATION DISABLED";
-    qWarning() << "Reason: PJSIP library configuration mismatch";
-    qWarning() << "Error: sizeof(pj_fd_set_t) assertion in sock_select.c:45";
-    qWarning() << "This requires recompiling PJSIP with correct Windows config";
-    qWarning() << "SIP telephone functionality will NOT work";
-    qWarning() << "==========================================================";
+    // Get the SIP endpoint from Risip singleton
+    risip::RisipEndpoint *endpoint = d->risipInstance->sipEndpoint();
+    if (!endpoint) {
+        qCritical() << "Failed to get SIP endpoint from Risip instance";
+        updateServerStatus("无法获取 SIP 引擎");
+        return false;
+    }
 
+    // Initialize Risip endpoint (with recompiled PJSIP 2.15.1)
+    qDebug() << "Starting Risip endpoint with fixed PJSIP (FD_SETSIZE=64)...";
+    int status = endpoint->start();
+
+    if (status != 1) {  // 1 means Started
+        QString errorMsg = endpoint->errorMessage();
+        QString errorInfo = endpoint->errorInfo();
+        qCritical() << "SIP引擎启动失败:" << errorMsg;
+        qCritical() << "Error info:" << errorInfo;
+        qCritical() << "Endpoint status:" << status;
+        updateServerStatus("SIP引擎启动失败: " + errorMsg);
+        return false;
+    }
+
+    qDebug() << "SIP endpoint started successfully";
     d->initialized = true;
     emit isInitializedChanged(true);
-    updateServerStatus("SIP引擎配置错误（需要重新编译PJSIP）");
+    updateServerStatus("已初始化");
 
     return true;
 }
@@ -251,11 +262,14 @@ bool SipPhoneManager::registerAccount(const QString &sipServer,
         // Create account configuration
         risip::RisipAccountConfiguration *config = new risip::RisipAccountConfiguration(this);
 
-        // Build SIP URI: sip:username@server:port
-        QString sipUri = QString("sip:%1@%2:%3").arg(username, sipServer).arg(port);
+        // Build SIP URI: sip:username@server
+        QString sipUri = QString("sip:%1@%2").arg(username, sipServer);
         config->setUri(sipUri);
         config->setUserName(username);
         config->setPassword(password);
+
+        // Set registrar server address
+        config->setServerAddress(sipServer);
 
         // Create and register account
         d->currentAccount = d->risipInstance->createAccount(config);
@@ -270,15 +284,15 @@ bool SipPhoneManager::registerAccount(const QString &sipServer,
         // Connect account status signals
         connect(d->currentAccount, &risip::RisipAccount::statusChanged, this, [this]() {
             int status = d->currentAccount->status();
-            qDebug() << "Account status changed:" << status;
+            qDebug() << "Account status changed:" << status << "(" << d->currentAccount->statusText() << ")";
 
-            if (status == 200) { // SIP 200 OK = Registered
+            if (status == risip::RisipAccount::SignedIn) {
                 d->registered = true;
                 emit isRegisteredChanged(true);
                 emit registrationSuccess();
                 updateServerStatus(QString("已连接: %1").arg(d->currentAccount->configuration()->uri()));
                 qDebug() << "Account registered successfully";
-            } else if (status >= 400) { // Error status
+            } else if (status == risip::RisipAccount::SignedOut || status == risip::RisipAccount::AccountError) {
                 d->registered = false;
                 emit isRegisteredChanged(false);
                 QString reason = d->currentAccount->statusText();

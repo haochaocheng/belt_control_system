@@ -231,8 +231,8 @@ Page {
                         RisipLineEdit {
                             id: serverInput
                             Layout.fillWidth: true
-                            placeholderText: "例如: 192.168.1.100"
-                            text: "192.168.1.100"
+                            placeholderText: "例如: 192.168.10.243"
+                            text: "192.168.10.243"
                             inputMethodHints: Qt.ImhFormattedNumbersOnly  // Numbers and dots for IP
                         }
                     }
@@ -294,7 +294,7 @@ Page {
                             Layout.fillWidth: true
                             placeholderText: "SIP 密码"
                             echoMode: TextInput.Password
-                            text: "password"
+                            text: "1234"
                             inputMethodHints: Qt.ImhNoPredictiveText  // Password, no suggestions
                         }
                     }

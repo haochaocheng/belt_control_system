@@ -36,15 +36,28 @@ REM Setup MinGW environment
 set PATH=%QT_PATH%\bin;%QT_TOOLS_PATH%\mingw1120_64\bin;%PATH%
 
 REM Create build directory
-if not exist build mkdir build
+if not exist build (
+    echo Creating build directory...
+    mkdir build
+)
+
 cd build
 
-echo.
-echo Cleaning QML cache...
-if exist src\qml\qml_module_qmltyperegistrations.cpp del src\qml\qml_module_qmltyperegistrations.cpp
+REM Check if Makefile exists, if not, configure
+if not exist Makefile (
+    echo Configuring project...
+    "%CMAKE_EXE%" -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=%QT_PATH% -DCMAKE_MAKE_PROGRAM=%QT_TOOLS_PATH%\mingw1120_64\bin\mingw32-make.exe ..
+    if %ERRORLEVEL% NEQ 0 (
+        echo Configuration failed
+        cd ..
+        pause
+        exit /b 1
+    )
+)
 
+echo.
 echo Building...
-"%CMAKE_EXE%" --build . --config Release --clean-first
+"%CMAKE_EXE%" --build . --target belt_control_system -j4 -- VERBOSE=1
 if %ERRORLEVEL% NEQ 0 (
     echo Build failed
     cd ..

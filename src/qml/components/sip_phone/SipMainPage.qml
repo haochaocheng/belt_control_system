@@ -140,18 +140,39 @@ Rectangle {
                     }
                 }
 
-                // Server status indicator
+                // Registration status indicator with text
                 Rectangle {
-                    width: 20
-                    height: 20
-                    radius: 10
+                    Layout.preferredWidth: statusRow.implicitWidth + 20
+                    Layout.preferredHeight: 35
+                    radius: 17
                     color: SipPhoneManager.isRegistered ? "#27ae60" : "#e74c3c"
+                    opacity: 0.9
 
-                    SequentialAnimation on opacity {
-                        running: SipPhoneManager.isRegistered
-                        loops: Animation.Infinite
-                        NumberAnimation { from: 1.0; to: 0.3; duration: 800 }
-                        NumberAnimation { from: 0.3; to: 1.0; duration: 800 }
+                    RowLayout {
+                        id: statusRow
+                        anchors.centerIn: parent
+                        spacing: 8
+
+                        Rectangle {
+                            width: 12
+                            height: 12
+                            radius: 6
+                            color: "white"
+
+                            SequentialAnimation on opacity {
+                                running: SipPhoneManager.isRegistered
+                                loops: Animation.Infinite
+                                NumberAnimation { from: 1.0; to: 0.3; duration: 800 }
+                                NumberAnimation { from: 0.3; to: 1.0; duration: 800 }
+                            }
+                        }
+
+                        Text {
+                            text: SipPhoneManager.isRegistered ? "已注册" : "未注册"
+                            font.pixelSize: 12
+                            font.bold: true
+                            color: "white"
+                        }
                     }
                 }
             }
@@ -177,7 +198,7 @@ Rectangle {
                 source: "pages/SipContactsPage.qml"
                 onLoaded: {
                     item.callContact.connect(function(number) {
-                        SipPhoneManager.setCurrentNumber(number)
+                        SipPhoneManager.currentNumber = number
                         SipPhoneManager.makeCall(number)
                         tabBarRect.currentIndex = 1
                     })
@@ -194,7 +215,7 @@ Rectangle {
                 source: "pages/SipHistoryPage.qml"
                 onLoaded: {
                     item.callNumber.connect(function(number) {
-                        SipPhoneManager.setCurrentNumber(number)
+                        SipPhoneManager.currentNumber = number
                         SipPhoneManager.makeCall(number)
                         tabBarRect.currentIndex = 1
                     })

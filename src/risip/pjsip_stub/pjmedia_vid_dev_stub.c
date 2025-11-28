@@ -10,8 +10,12 @@
 #include <pj/types.h>
 #include <pj/errno.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Stub implementation for pjmedia_vid_dev_subsys_init */
-PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_init(void* pf)
+PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_init(void* pf)
 {
     /* No-op when video is disabled */
     PJ_UNUSED_ARG(pf);
@@ -19,8 +23,12 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_init(void* pf)
 }
 
 /* Stub implementation for pjmedia_vid_dev_subsys_shutdown */
-PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_shutdown(void)
+PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_shutdown(void)
 {
     /* No-op when video is disabled */
     return PJ_SUCCESS;
 }
+
+#ifdef __cplusplus
+}
+#endif

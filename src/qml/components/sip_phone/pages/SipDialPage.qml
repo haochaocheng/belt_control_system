@@ -111,7 +111,7 @@ Page {
                 onClicked: {
                     if (root.localNumber.length > 0) {
                         root.localNumber = root.localNumber.slice(0, -1)
-                        SipPhoneManager.setCurrentNumber(root.localNumber)
+                        SipPhoneManager.currentNumber = root.localNumber
                     }
                 }
             }
@@ -251,8 +251,8 @@ Page {
                             console.log("Dial pad button clicked:", modelData.num)
                             // Update local state immediately for responsive UI
                             root.localNumber = root.localNumber + modelData.num
-                            // Also update C++ backend
-                            SipPhoneManager.setCurrentNumber(root.localNumber)
+                            // Also update C++ backend using property assignment
+                            SipPhoneManager.currentNumber = root.localNumber
                             console.log("Number updated to:", root.localNumber)
                         }
                     }

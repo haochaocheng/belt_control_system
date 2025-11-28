@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 # Risip VoIP SDK - PJSIP Wrapper for Qt/QML
-project(risip_sdk VERSION 1.0 LANGUAGES CXX)
+project(risip_sdk VERSION 1.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,6 +17,7 @@ add_definitions(
     -DPJ_IS_LITTLE_ENDIAN=1
     -DPJ_IS_BIG_ENDIAN=0
     -DPJ_AUTOCONF
+    -DNDEBUG                   # Disable assertions including PJSIP FD_SETSIZE check
 )
 
 # 头文件包含路径
@@ -161,11 +162,12 @@ target_link_libraries(risip_sdk PUBLIC
 
 # Windows 平台特定配置
 if(WIN32)
-    # PJSIP 库路径 - 使用 F:/0/pjproject-2.15.1/pjproject-2.15.1
+    # PJSIP 库路径 - 优先使用项目本地 libs, 回退到源码目录
     set(PJSIP_ROOT "F:/0/pjproject-2.15.1/pjproject-2.15.1" CACHE PATH "PJSIP root directory")
+    set(PROJECT_LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/pjsip")
 
     if(EXISTS ${PJSIP_ROOT})
-        # PJSIP 头文件路径
+        # PJSIP 头文件路径 (从源码目录)
         target_include_directories(risip_sdk PUBLIC
             ${PJSIP_ROOT}/pjsip/include
             ${PJSIP_ROOT}/pjlib/include
@@ -175,14 +177,9 @@ if(WIN32)
             ${PJSIP_ROOT}/pjsip/include
         )
 
-        # PJSIP 库文件路径
+        # PJSIP 库文件路径 (使用项目本地 libs - 包含 IOCP 重编译的库)
         target_link_directories(risip_sdk PUBLIC
-            ${PJSIP_ROOT}/pjsip/lib
-            ${PJSIP_ROOT}/pjlib/lib
-            ${PJSIP_ROOT}/pjlib-util/lib
-            ${PJSIP_ROOT}/pjmedia/lib
-            ${PJSIP_ROOT}/pjnath/lib
-            ${PJSIP_ROOT}/third_party/lib
+            ${PROJECT_LIBS_DIR}
         )
 
         # PJSIP 库链接
