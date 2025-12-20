@@ -1,0 +1,134 @@
+# 在Docker容器内直接编译ARM64版本
+# 这个脚本完全在容器内编译，避免交叉编译问题
+
+FROM ubuntu:24.04
+
+# 设置环境变量
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+
+# 安装基础构建工具
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    pkg-config \
+    python3-pip \
+    python3-setuptools \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装Qt6和相关依赖
+RUN apt-get update && apt-get install -y \
+    qt6-base-dev \
+    qt6-declarative-dev \
+    qt6-multimedia-dev \
+    qt6-tools-dev \
+    qt6-tools-dev-tools \
+    qt6-l10n-tools \
+    qml6-module-qtquick \
+    qml6-module-qtquick-controls \
+    qml6-module-qtquick-layouts \
+    qml6-module-qtquick-window \
+    qml6-module-qtqml-workerscript \
+    qml6-module-qtmultimedia \
+    libqt6core6 \
+    libqt6gui6 \
+    libqt6widgets6 \
+    libqt6qml6 \
+    libqt6quick6 \
+    libqt6multimedia6 \
+    libqt6sql6 \
+    libqt6sql6-sqlite \
+    libqt6concurrent6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装多媒体和音频库
+RUN apt-get update && apt-get install -y \
+    libasound2-dev \
+    libpulse-dev \
+    libsdl2-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libswresample-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装系统库
+RUN apt-get update && apt-get install -y \
+    libssl-dev \
+    libsqlite3-dev \
+    libfreetype6-dev \
+    libfontconfig1-dev \
+    libexpat1-dev \
+    libicu-dev \
+    libglib2.0-dev \
+    libdbus-1-dev \
+    libegl1-mesa-dev \
+    libgles2-mesa-dev \
+    libx11-dev \
+    libxext-dev \
+    libxi-dev \
+    libxrandr-dev \
+    libxcursor-dev \
+    libxinerama-dev \
+    libxxf86vm-dev \
+    libwayland-dev \
+    libxcb-dri2-0-dev \
+    libbrotli-dev \
+    libbz2-dev \
+    liblz4-dev \
+    libzstd-dev \
+    libsystemd-dev \
+    libudev-dev \
+    libcap-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装OpenGL ES和EGL (Mali GPU)
+RUN apt-get update && apt-get install -y \
+    libmali-bifrost-g52-r25p0-gbm \
+    libmali-bifrost-g52-r25p0-wayland \
+    libmali-bifrost-g52-r25p0-x11 \
+    mali-g52-firmware \
+    && rm -rf /var/lib/apt/lists/* || true
+
+# 设置工作目录
+WORKDIR /workspace
+
+# 复制源代码（在构建时会挂载）
+# VOLUME ["/workspace/belt_control_system"]
+
+# 设置编译环境
+ENV CC=gcc
+ENV CXX=g++
+ENV CMAKE_PREFIX_PATH=/usr/lib/aarch64-linux-gnu/cmake
+
+# 编译脚本
+COPY <<EOF /build.sh
+#!/bin/bash
+set -e
+
+cd /workspace/belt_control_system
+
+# 创建构建目录
+mkdir -p build_native
+cd build_native
+
+# 配置CMake - 使用本地Qt6
+cmake .. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DENABLE_SHERPA_ONNX=ON \
+    -DQt6_DIR=/usr/lib/aarch64-linux-gnu/cmake/Qt6
+
+# 编译
+make -j\$(nproc)
+
+echo "编译完成！"
+echo "二进制文件位于: /workspace/belt_control_system/build_native/bin_arm64/"
+EOF
+
+RUN chmod +x /build.sh
+
+# 默认命令
+CMD ["/build.sh"]

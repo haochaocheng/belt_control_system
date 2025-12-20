@@ -65,6 +65,20 @@ docker/rk3588/device-build/
 docker/rk3588/docker-build/
 docker/*/device-build/
 docker/*/docker-build/
+docker_image_build/
+docker/*/docker_image_build/
+
+# Cross-compilation dependencies (too large for Git)
+docker/rk3588/qt-host/
+docker/rk3588/qt-raspi/
+docker/rk3588/sysroot/
+docker/rk3588/rk3588-libs/
+docker/rk3588/*.tar
+docker/rk3588/*.tar.xz
+docker/rk3588/_archive_old_versions/*.tar
+
+# Temp build directories
+docker/rk3588/temp_build/
 
 # Generated Qt files (large files)
 Pidai1/Generated/

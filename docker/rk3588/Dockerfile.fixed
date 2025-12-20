@@ -1,0 +1,91 @@
+# RK3588 Cross-Compilation Environment - Fixed GLIBC Compatibility
+# 使用Ubuntu 24.04但只安装编译必需的库
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+
+# 配置APT源 - Ubuntu 24.04使用新格式，需要删除旧格式避免重复
+RUN dpkg --add-architecture arm64 && \
+    # 删除新的sources文件避免重复
+    rm -f /etc/apt/sources.list.d/ubuntu.sources && \
+    # 创建新的源配置 - AMD64从官方源，ARM64从ports源
+    echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu noble main restricted universe multiverse" > /etc/apt/sources.list && \
+    echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu noble-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu noble-backports main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=amd64] http://security.ubuntu.com/ubuntu noble-security main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-security main restricted universe multiverse" >> /etc/apt/sources.list
+
+# 更新包列表
+RUN apt-get update
+
+# 安装交叉编译工具链和构建工具（AMD64）
+RUN apt-get install -y --no-install-recommends \
+    # 交叉编译工具链
+    crossbuild-essential-arm64 \
+    g++-aarch64-linux-gnu \
+    gcc-aarch64-linux-gnu \
+    # 构建工具
+    cmake \
+    ninja-build \
+    make \
+    git \
+    pkg-config \
+    file \
+    # Qt工具运行时依赖（AMD64） - 不需要指定:amd64
+    libpcre2-16-0 \
+    libicu74 \
+    libglib2.0-0 \
+    libdouble-conversion3 \
+    libzstd1
+
+# ARM64库实际上大部分不需要，因为我们使用sysroot中的库
+# 只安装真正必需的，其他的从qt-raspi和sysroot获取
+RUN apt-get install -y --no-install-recommends \
+    libc6:arm64 \
+    libstdc++6:arm64 \
+    libgcc-s1:arm64 || true
+
+# 清理缓存
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 安装curl或wget用于下载EGL头文件
+RUN apt-get update && apt-get install -y --no-install-recommends curl wget && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 复制EGL头文件安装脚本
+COPY install-egl-headers.sh /tmp/install-egl-headers.sh
+RUN chmod +x /tmp/install-egl-headers.sh
+
+# 执行脚本安装EGL/GLES头文件到sysroot（会在运行时使用挂载的sysroot）
+# 注意: 这里我们创建一个占位符，实际的sysroot会在运行时挂载
+RUN mkdir -p /opt/sysroot/pi-root/usr/include && \
+    echo "EGL headers will be installed when sysroot is mounted" > /opt/sysroot/pi-root/usr/include/README.txt
+
+# 创建ICU符号链接（Qt Host工具兼容性）
+RUN cd /usr/lib/x86_64-linux-gnu && \
+    ln -sf libicui18n.so.74 libicui18n.so.70 || true && \
+    ln -sf libicuuc.so.74 libicuuc.so.70 || true && \
+    ln -sf libicudata.so.74 libicudata.so.70 || true
+
+# 设置工作目录
+WORKDIR /workspace
+
+# 设置环境变量
+ENV PATH="/usr/aarch64-linux-gnu/bin:${PATH}"
+
+# 创建脚本来验证安装
+RUN echo '#!/bin/bash' > /check-libs.sh && \
+    echo 'echo "=== Build Environment Check ===" ' >> /check-libs.sh && \
+    echo 'echo -n "GCC cross-compiler: " && which aarch64-linux-gnu-gcc && aarch64-linux-gnu-gcc --version | head -n1' >> /check-libs.sh && \
+    echo 'echo -n "G++ cross-compiler: " && which aarch64-linux-gnu-g++ && aarch64-linux-gnu-g++ --version | head -n1' >> /check-libs.sh && \
+    echo 'echo -n "CMake: " && which cmake && cmake --version | head -n1' >> /check-libs.sh && \
+    echo 'echo "=== GLIBC version ===" ' >> /check-libs.sh && \
+    echo 'ldd --version | head -n1' >> /check-libs.sh && \
+    echo 'echo "=== Ready for cross-compilation ===" ' >> /check-libs.sh && \
+    chmod +x /check-libs.sh
+
+CMD ["/bin/bash"]

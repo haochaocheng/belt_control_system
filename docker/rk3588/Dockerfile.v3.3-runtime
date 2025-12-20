@@ -1,0 +1,45 @@
+# Belt Control System v3.3 Runtime Docker Image
+# Uses existing base image on device with v3.3 binary
+
+FROM belt-control-base:trixie-noglib-v3.0
+
+WORKDIR /app
+
+# Copy application binary
+COPY belt_control_system /app/
+
+# Copy Qt6 libraries and plugins
+COPY lib /app/lib
+COPY plugins /app/plugins
+COPY qml /app/qml
+
+# Copy AUDIO files
+COPY AUDIO /app/AUDIO
+
+# Set executable permissions
+RUN chmod +x /app/belt_control_system
+
+# Create data directories (before setting LD_PRELOAD)
+RUN mkdir -p /app/data /app/config
+
+# Create symlinks for GLib 2.80 libraries
+RUN cd /app/lib && \
+    if [ -f libglib-2.0.so.0.8000.0 ]; then ln -sf libglib-2.0.so.0.8000.0 libglib-2.0.so.0; fi && \
+    if [ -f libgobject-2.0.so.0.8000.0 ]; then ln -sf libgobject-2.0.so.0.8000.0 libgobject-2.0.so.0; fi && \
+    if [ -f libgio-2.0.so.0.8000.0 ]; then ln -sf libgio-2.0.so.0.8000.0 libgio-2.0.so.0; fi && \
+    if [ -f libgmodule-2.0.so.0.8000.0 ]; then ln -sf libgmodule-2.0.so.0.8000.0 libgmodule-2.0.so.0; fi
+
+# Set environment variables
+ENV LD_LIBRARY_PATH=/app/lib:$LD_LIBRARY_PATH
+ENV QT_PLUGIN_PATH=/app/plugins
+ENV QML2_IMPORT_PATH=/app/qml
+ENV QT_QPA_PLATFORM=eglfs
+ENV QT_QPA_EGLFS_INTEGRATION=eglfs_kms
+ENV QT_QPA_EGLFS_ALWAYS_SET_MODE=1
+
+# Force use our GLib 2.80 libraries (critical for g_sort_array symbol)
+ENV LD_PRELOAD=/app/lib/libglib-2.0.so.0:/app/lib/libgobject-2.0.so.0:/app/lib/libgio-2.0.so.0
+
+WORKDIR /app
+
+CMD ["/app/belt_control_system"]

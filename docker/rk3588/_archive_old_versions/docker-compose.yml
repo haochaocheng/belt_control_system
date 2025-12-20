@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  belt-control:
+    image: belt-control-rk3588:runtime
+    container_name: belt_control_system
+    restart: unless-stopped
+
+    # 特权模式 - 访问硬件设备
+    privileged: true
+
+    # 网络模式 - host 模式用于 SIP 通信
+    network_mode: host
+
+    # 设备访问
+    devices:
+      - /dev/dri:/dev/dri              # GPU 加速
+      - /dev/video0:/dev/video0        # 摄像头
+      - /dev/video1:/dev/video1        # 摄像头2（如果有）
+      - /dev/snd:/dev/snd              # 音频设备
+      - /dev/input:/dev/input          # 输入设备（触摸屏）
+      - /dev/fb0:/dev/fb0              # Framebuffer
+
+    # 环境变量
+    environment:
+      - DISPLAY=:0
+      - QT_QPA_PLATFORM=eglfs
+      - QT_QPA_EGLFS_INTEGRATION=eglfs_kms
+      - QT_QPA_EGLFS_KMS_CONFIG=/opt/app/config/kms.json
+      - QT_QPA_EGLFS_ALWAYS_SET_MODE=1
+      - QT_LOGGING_RULES=qt.qpa.*=true
+      - LD_LIBRARY_PATH=/opt/app/lib:/usr/local/lib
+
+    # 卷挂载
+    volumes:
+      # 配置文件（持久化）
+      - ./config:/opt/app/config
+      # 数据文件（持久化）
+      - ./data:/opt/app/data
+      # X11 socket（如果使用 X11）
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # PulseAudio socket（音频）
+      - /run/user/1000/pulse:/run/user/1000/pulse:ro
+      # DBus socket
+      - /var/run/dbus:/var/run/dbus:ro
+      # 时区
+      - /etc/localtime:/etc/localtime:ro
+
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "pidof", "belt_control_system"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# 可选：添加 Watchtower 自动更新容器
+  # watchtower:
+  #   image: containrrr/watchtower:arm64v8-latest
+  #   container_name: watchtower
+  #   restart: unless-stopped
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   environment:
+  #     - WATCHTOWER_CLEANUP=true
+  #     - WATCHTOWER_POLL_INTERVAL=3600

@@ -1,0 +1,55 @@
+# 皮带控制系统配置文件
+# 复制此文件到 build/bin_windows/config.ini 使用
+
+[System]
+# 皮带编号 (1-8)
+belt_number=1
+
+# 调试模式
+debug_mode=false
+
+[Network]
+# Modbus TCP 服务器配置
+modbus_server_ip=192.168.1.2
+modbus_gateway=192.168.1.1
+modbus_subnet_mask=255.255.255.0
+modbus_poll_interval=100
+server_port=502
+connection_timeout=5000
+
+[TTS]
+# =============================================================
+# Sherpa-ONNX TTS 模型配置
+# =============================================================
+
+# 模型选择（按音质排序）：
+# 1. vits-melo-tts-zh_en      - MeloTTS，音质最好 ⭐⭐⭐⭐⭐（推荐）
+# 2. vits-zh-hf-theresa       - 清晰女声 ⭐⭐⭐⭐
+# 3. vits-zh-hf-fanchen-wnj   - 柔和女声 ⭐⭐⭐⭐
+# 4. vits-zh-aishell3         - 标准女声 ⭐⭐⭐（默认）
+
+model=vits-zh-aishell3
+
+# 语速：0.5（很慢） - 2.0（很快）
+# 推荐值：
+#   0.7  - 重要通知（慢速清晰）
+#   0.9  - 一般报警（推荐）
+#   1.0  - 正常速度
+#   1.2  - 紧急报警（快速）
+
+rate=0.9
+
+# 音量：0.0（静音） - 1.0（最大）
+# 推荐值：1.0
+
+volume=1.0
+
+# 说话人ID（某些模型支持多个说话人，通常使用 0）
+speaker_id=0
+
+[Audio]
+# 音频文件播放音量
+media_volume=0.8
+
+# 音频文件路径
+audio_path=AUDIO

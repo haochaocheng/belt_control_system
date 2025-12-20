@@ -1,0 +1,101 @@
+# Ubuntu 24.04 ARM64运行环境
+# 用于在目标设备上运行应用
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+
+# 安装运行时依赖
+RUN apt-get update && apt-get install -y \
+    # Qt6运行时库
+    qt6-base-abi \
+    libqt6core6t64 \
+    libqt6gui6t64 \
+    libqt6widgets6t64 \
+    libqt6network6t64 \
+    libqt6qml6 \
+    libqt6quick6 \
+    libqt6quickcontrols2-6 \
+    libqt6multimedia6 \
+    libqt6quick3d6 \
+    qml6-module-qtquick \
+    qml6-module-qtquick-controls \
+    qml6-module-qtquick-layouts \
+    qml6-module-qtquick-window \
+    qml6-module-qtquick3d \
+    qml6-module-qtmultimedia \
+    # OpenGL支持
+    libgles2-mesa \
+    libegl1-mesa \
+    # 音频支持
+    libasound2 \
+    libpulse0 \
+    # 网络
+    libssl3t64 \
+    # 中文字体
+    fonts-noto-cjk \
+    # 调试工具（可选）
+    gdb \
+    strace \
+    && rm -rf /var/lib/apt/lists/*
+
+# 创建应用目录
+RUN mkdir -p /app/config /app/libs/tts_models /app/data
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制应用文件（构建时会覆盖）
+COPY belt_control_system /app/
+COPY config/ /app/config/
+COPY libs/tts_models/ /app/libs/tts_models/
+
+# 确保可执行权限
+RUN chmod +x /app/belt_control_system
+
+# 创建启动脚本
+RUN cat > /app/start.sh << 'EOF'
+#!/bin/bash
+echo "=========================================="
+echo "Belt Control System - Ubuntu 24.04 Docker"
+echo "=========================================="
+
+# 设置Qt环境变量
+export QT_QPA_PLATFORM=${QT_QPA_PLATFORM:-eglfs}
+export QT_QPA_EGLFS_PHYSICAL_WIDTH=${SCREEN_WIDTH:-1920}
+export QT_QPA_EGLFS_PHYSICAL_HEIGHT=${SCREEN_HEIGHT:-1080}
+export QT_QPA_EGLFS_INTEGRATION=${QT_QPA_EGLFS_INTEGRATION:-eglfs_kms}
+
+# 设置设备权限（如果需要）
+if [ -e /dev/dri ]; then
+    echo "检测到DRI设备，配置GPU访问..."
+    export QT_QPA_EGLFS_KMS_CONFIG=/app/eglfs_config.json
+fi
+
+# 启动应用
+echo "启动应用..."
+exec /app/belt_control_system "$@"
+EOF
+
+RUN chmod +x /app/start.sh
+
+# 默认的eglfs配置文件
+RUN cat > /app/eglfs_config.json << 'EOF'
+{
+  "device": "/dev/dri/card0",
+  "hwcursor": false,
+  "pbuffers": true,
+  "outputs": [
+    {
+      "name": "HDMI-A-1",
+      "mode": "1920x1080"
+    }
+  ]
+}
+EOF
+
+# 暴露端口（如果应用需要）
+EXPOSE 8080
+
+# 设置入口点
+ENTRYPOINT ["/app/start.sh"]
