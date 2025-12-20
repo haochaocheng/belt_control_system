@@ -1,0 +1,15 @@
+{
+  "device": "/dev/dri/card0",
+  "hwcursor": false,
+  "pbuffers": true,
+  "outputs": [
+    {
+      "name": "DP1",
+      "mode": "800x1280",
+      "physicalWidth": 155,
+      "physicalHeight": 97,
+      "rotation": 90,
+      "format": "argb8888"
+    }
+  ]
+}

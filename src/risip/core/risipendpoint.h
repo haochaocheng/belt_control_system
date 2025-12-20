@@ -62,6 +62,11 @@ public:
 
     static PjsipEndpoint *endpointInstance();
 
+    // ✅ Register callback to receive call state notifications for C API calls
+    // Callback signature: void callback(pjsua_call_id call_id, pjsip_inv_state state, const char* state_text)
+    typedef void (*CallStateNotificationCallback)(int call_id, pjsip_inv_state state, const char* state_text);
+    static void registerCallStateCallback(CallStateNotificationCallback callback);
+
 public Q_SLOTS:
     int start();
     int stop();

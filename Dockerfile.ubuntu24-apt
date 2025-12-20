@@ -1,0 +1,72 @@
+# ==============================================================================
+# Belt Control System - Ubuntu 24.04 Application Layer
+# Uses base image with pre-installed dependencies
+# This layer changes frequently (application updates)
+# ==============================================================================
+
+FROM belt-control-base:ubuntu24
+
+# Copy application files
+WORKDIR /app
+
+COPY belt_control_system /app/belt_control_system
+COPY sherpa_tts_service /app/sherpa_tts_service
+COPY lib /app/lib
+COPY plugins /app/plugins
+COPY qml /app/qml
+COPY tts_models /app/tts_models
+
+# Setup application
+RUN chmod +x /app/belt_control_system /app/sherpa_tts_service && \
+    \
+    # Create symlinks for application libraries (Qt6, FFmpeg, custom libs)
+    cd /app/lib && \
+    for lib in libavcodec libavformat libavutil libavdevice libavfilter libavresample libswresample libswscale \
+               libopus libmp3lame libogg libvorbis libvorbisenc libvorbisfile libtheora libspeex libvo-amrwbenc libyuv \
+               libsherpa-onnx-c-api libsherpa-onnx libonnxruntime libmali libicui18n libicuuc libpcre2-16 librknnrt libxcb-dri2 libx264; do \
+        if ls ${lib}.so.* 1> /dev/null 2>&1; then \
+            latest=$(ls -v ${lib}.so.* 2>/dev/null | tail -1); \
+            [ -z "$latest" ] && continue; \
+            basename_file=$(basename "$latest"); \
+            version=$(echo "$basename_file" | sed "s/${lib}.so.//"); \
+            major=$(echo "$version" | cut -d. -f1); \
+            [ -n "$major" ] && ln -sf "$basename_file" "${lib}.so.${major}" 2>/dev/null || true; \
+            ln -sf "$basename_file" "${lib}.so" 2>/dev/null || true; \
+        fi; \
+    done && \
+    \
+    # Configure fontconfig for emoji support
+    mkdir -p /etc/fonts/conf.d && \
+    echo '<?xml version="1.0"?>' > /etc/fonts/conf.d/01-emoji.conf && \
+    echo '<!DOCTYPE fontconfig SYSTEM "fonts.dtd">' >> /etc/fonts/conf.d/01-emoji.conf && \
+    echo '<fontconfig>' >> /etc/fonts/conf.d/01-emoji.conf && \
+    echo '  <!-- Prepend Noto Color Emoji for emoji characters -->' >> /etc/fonts/conf.d/01-emoji.conf && \
+    echo '  <match>' >> /etc/fonts/conf.d/01-emoji.conf && \
+    echo '    <test name="family"><string>sans-serif</string></test>' >> /etc/fonts/conf.d/01-emoji.conf && \
+    echo '    <edit name="family" mode="prepend" binding="strong">' >> /etc/fonts/conf.d/01-emoji.conf && \
+    echo '      <string>Noto Color Emoji</string>' >> /etc/fonts/conf.d/01-emoji.conf && \
+    echo '    </edit>' >> /etc/fonts/conf.d/01-emoji.conf && \
+    echo '  </match>' >> /etc/fonts/conf.d/01-emoji.conf && \
+    echo '</fontconfig>' >> /etc/fonts/conf.d/01-emoji.conf && \
+    \
+    # Rebuild font cache to ensure emoji fonts are properly registered
+    fc-cache -f -v
+
+# Environment variables
+# ✅ Note: QT_QPA_PLATFORM is NOT set in Dockerfile
+# It will be set by run script based on DISPLAY environment:
+# - If X11 available (ssh -X) → use xcb (windowed)
+# - If no X11 (direct run) → use eglfs (fullscreen)
+ENV LD_LIBRARY_PATH=/app/lib:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH \
+    QT_PLUGIN_PATH=/app/plugins \
+    QML2_IMPORT_PATH=/app/qml \
+    QT_QPA_EGLFS_INTEGRATION=eglfs_kms \
+    QT_QPA_EGLFS_ALWAYS_SET_MODE=1
+
+WORKDIR /app
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD test -f /app/belt_control_system || exit 1
+
+CMD ["/app/belt_control_system"]

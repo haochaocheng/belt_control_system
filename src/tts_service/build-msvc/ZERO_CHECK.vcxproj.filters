@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="E:\2025\3_gongkongji\belt_control_system\src\tts_service\build-msvc\CMakeFiles\b6ced930387756c29deb07ccb249008a\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{01DB50E8-EF28-3127-AA4D-714CB82270A6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

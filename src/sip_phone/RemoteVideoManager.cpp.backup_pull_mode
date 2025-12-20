@@ -1,0 +1,407 @@
+#include "RemoteVideoManager.h"
+#include <QDebug>
+#include <QImage>
+#include <QDateTime>
+#include <pjsua-lib/pjsua.h>
+#include <pjsua-lib/pjsua_internal.h>
+
+/**
+ * @brief 远端视频管理器实现 - 事件驱动的 Push 模式
+ *
+ * 不再使用定时器主动拉取帧,而是创建自定义 pjmedia_port
+ * 并连接到 video conference bridge,让 PJSIP 主动推送帧
+ */
+
+RemoteVideoManager::RemoteVideoManager(QObject *parent)
+    : QObject(parent)
+    , m_videoSink(new QVideoSink(this))
+    , m_hasRemoteVideo(false)
+    , m_currentCallId(PJSUA_INVALID_ID)
+    , m_checkTimer(new QTimer(this))
+    , m_customPort(nullptr)
+    , m_pool(nullptr)
+    , m_videoMediaIndex(0)
+{
+    qDebug() << "✅ RemoteVideoManager created (Event-driven Push mode)";
+
+    // 检查定时器 - 每500ms检查一次远端视频是否可用
+    // 一旦检测到视频流,就创建 custom port 并连接到 bridge
+    m_checkTimer->setInterval(500);
+    connect(m_checkTimer, &QTimer::timeout, this, &RemoteVideoManager::checkRemoteVideo);
+
+    // 连接信号 - 确保定时器在 Qt 主线程中启动/停止
+    connect(this, &RemoteVideoManager::requestStartCheck, this, &RemoteVideoManager::startCheckInMainThread, Qt::QueuedConnection);
+    connect(this, &RemoteVideoManager::requestStopCheck, this, &RemoteVideoManager::stopCheckInMainThread, Qt::QueuedConnection);
+
+    // 连接帧显示信号(从 PJSIP 线程到 Qt 主线程)
+    connect(this, &RemoteVideoManager::frameReadyForDisplay, this, &RemoteVideoManager::displayFrame, Qt::QueuedConnection);
+}
+
+RemoteVideoManager::~RemoteVideoManager()
+{
+    qDebug() << "RemoteVideoManager: Shutting down...";
+    disconnectFromVideoBridge();
+    destroyCustomPort();
+}
+
+QObject* RemoteVideoManager::videoSink() const
+{
+    return m_videoSink;
+}
+
+void RemoteVideoManager::onCallConnected(int callId)
+{
+    // qDebug() << "📹 RemoteVideoManager: Call connected, callId =" << callId;
+
+    m_currentCallId = callId;
+
+    // 发送信号，让 Qt 主线程启动定时器
+    emit requestStartTimers();
+
+    // 立即检查一次（在当前线程）
+    checkRemoteVideo();
+}
+
+void RemoteVideoManager::onCallDisconnected()
+{
+    // qDebug() << "📹 RemoteVideoManager: Call disconnected";
+
+    // 发送信号，让 Qt 主线程停止定时器
+    emit requestStopTimers();
+
+    // 分离视频端口
+    detachVideoPort();
+
+    m_currentCallId = PJSUA_INVALID_ID;
+
+    if (m_hasRemoteVideo) {
+        m_hasRemoteVideo = false;
+        emit hasRemoteVideoChanged();
+    }
+}
+
+void RemoteVideoManager::checkRemoteVideo()
+{
+    if (m_currentCallId == PJSUA_INVALID_ID) {
+        return;
+    }
+
+    // 尝试检测并附加视频端口
+    bool found = detectAndAttachVideoPort();
+
+    if (found != m_hasRemoteVideo) {
+        m_hasRemoteVideo = found;
+        emit hasRemoteVideoChanged();
+
+        if (found) {
+            // qDebug() << "✅ RemoteVideoManager: Remote video is now available";
+            // 帧捕获定时器已经在 startTimersInMainThread() 中启动了
+        } else {
+            // qDebug() << "⚠️ RemoteVideoManager: Remote video is no longer available";
+            // 不需要停止定时器，让它继续运行以便重新检测
+        }
+    }
+}
+
+bool RemoteVideoManager::detectAndAttachVideoPort()
+{
+    // 获取通话信息
+    pjsua_call_info ci;
+    pj_status_t status = pjsua_call_get_info(m_currentCallId, &ci);
+
+    if (status != PJ_SUCCESS) {
+        return false;
+    }
+
+    // 查找远端视频流
+    for (unsigned i = 0; i < ci.media_cnt; ++i) {
+        if (ci.media[i].type == PJMEDIA_TYPE_VIDEO &&
+            ci.media[i].status == PJSUA_CALL_MEDIA_ACTIVE &&
+            ci.media[i].dir & PJMEDIA_DIR_DECODING) {
+
+            // 获取视频流索引
+            int vid_idx = pjsua_call_get_vid_stream_idx(m_currentCallId);
+            if (vid_idx < 0) {
+                continue;
+            }
+
+            // 尝试获取 pjmedia_port
+            // 注意：这需要访问 PJSIP 内部 API
+            pjsua_call *call = &pjsua_var.calls[m_currentCallId];
+            if (call->med_cnt == 0 || vid_idx >= (int)call->med_cnt) {
+                continue;
+            }
+
+            pjsua_call_media *call_med = &call->media[vid_idx];
+            if (call_med->type != PJMEDIA_TYPE_VIDEO) {
+                continue;
+            }
+
+            // 获取视频流端口
+            if (call_med->strm.v.stream) {
+                pjmedia_vid_stream *vid_stream = call_med->strm.v.stream;
+
+                // 获取解码端口（接收端）
+                pjmedia_port *port = nullptr;
+                status = pjmedia_vid_stream_get_port(vid_stream, PJMEDIA_DIR_DECODING, &port);
+
+                if (status == PJ_SUCCESS && port) {
+                    // ✅ 优化：只有在端口改变时才重新附加和打印日志
+                    if (m_videoPort != port) {
+                        m_videoPort = port;
+                        // qDebug() << "📺 RemoteVideoManager: Attached to video port" << port;
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+void RemoteVideoManager::detachVideoPort()
+{
+    if (m_videoPort) {
+        // qDebug() << "🔌 RemoteVideoManager: Detaching video port";
+        m_videoPort = nullptr;
+    }
+}
+
+void RemoteVideoManager::captureVideoFrame()
+{
+    static int frameCount = 0;
+    static int errorCount = 0;
+    static qint64 lastLogTime = 0;
+    static qint64 lastFrameTime = 0;
+    static int framesInSecond = 0;
+    static qint64 totalFrameInterval = 0;
+    static int intervalSamples = 0;
+
+    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+
+    if (!m_videoPort) {
+        if (errorCount < 5) {
+            qDebug() << "⚠️ captureVideoFrame: No video port";
+            errorCount++;
+        }
+        return;
+    }
+
+    // 准备帧缓冲区
+    pjmedia_frame frame;
+    pj_bzero(&frame, sizeof(frame));
+
+    // 分配足够大的缓冲区 (假设最大 1920x1080 RGBA)
+    static unsigned char buffer[1920 * 1080 * 4];
+    frame.buf = buffer;
+    frame.size = sizeof(buffer);
+    frame.type = PJMEDIA_FRAME_TYPE_NONE;
+
+    // 从端口获取帧
+    pj_status_t status = pjmedia_port_get_frame(m_videoPort, &frame);
+
+    if (status != PJ_SUCCESS) {
+        if (errorCount < 5) {
+            qDebug() << "❌ pjmedia_port_get_frame failed, status:" << status;
+            errorCount++;
+        }
+        return;
+    }
+
+    if (frame.type != PJMEDIA_FRAME_TYPE_VIDEO) {
+        if (errorCount < 5) {
+            qDebug() << "⚠️ Frame type is not video, type:" << frame.type;
+            errorCount++;
+        }
+        return;
+    }
+
+    // 获取视频格式
+    const pjmedia_format *fmt = &m_videoPort->info.fmt;
+
+    // 转换为 QVideoFrame
+    QVideoFrame videoFrame = convertPjFrameToQt(&frame, fmt);
+
+    if (videoFrame.isValid()) {
+        // 📊 帧间隔统计
+        if (lastFrameTime > 0) {
+            qint64 interval = currentTime - lastFrameTime;
+            totalFrameInterval += interval;
+            intervalSamples++;
+        }
+        lastFrameTime = currentTime;
+
+        // 发送到 QVideoSink
+        m_videoSink->setVideoFrame(videoFrame);
+
+        frameCount++;
+        framesInSecond++;
+
+        // 📊 每秒统计一次性能
+        if (lastLogTime == 0) {
+            lastLogTime = currentTime;
+        } else if (currentTime - lastLogTime >= 1000) {
+            qint64 elapsedMs = currentTime - lastLogTime;
+            double actualFps = (framesInSecond * 1000.0) / elapsedMs;
+            double avgInterval = intervalSamples > 0 ? (double)totalFrameInterval / intervalSamples : 0;
+
+            qDebug() << "📊 [REMOTE VIDEO STATS]"
+                     << "Captured FPS:" << QString::number(actualFps, 'f', 1)
+                     << "| Avg interval:" << QString::number(avgInterval, 'f', 1) << "ms"
+                     << "| Total frames:" << frameCount
+                     << "| Size:" << videoFrame.size()
+                     << "| Format:" << videoFrame.pixelFormat();
+
+            // 重置计数器
+            lastLogTime = currentTime;
+            framesInSecond = 0;
+            totalFrameInterval = 0;
+            intervalSamples = 0;
+        }
+    } else {
+        if (errorCount < 5) {
+            qDebug() << "❌ convertPjFrameToQt returned invalid frame";
+            errorCount++;
+        }
+    }
+}
+
+QVideoFrame RemoteVideoManager::convertPjFrameToQt(pjmedia_frame *frame, const pjmedia_format *fmt)
+{
+    if (!frame || !fmt || frame->type != PJMEDIA_FRAME_TYPE_VIDEO) {
+        return QVideoFrame();
+    }
+
+    // 获取视频尺寸
+    pjmedia_video_format_detail *vfd = pjmedia_format_get_video_format_detail(fmt, PJ_TRUE);
+    if (!vfd) {
+        return QVideoFrame();
+    }
+
+    int width = vfd->size.w;
+    int height = vfd->size.h;
+
+    // 检查格式
+    pj_uint32_t pjfmt = fmt->id;
+
+    // Define J420 format ID (JPEG YUV420 with full range)
+    const pj_uint32_t PJMEDIA_FORMAT_J420 = 0x3032344a;
+
+    // ✅ 新方案：直接使用Qt的YUV格式支持，让Qt来处理颜色转换
+    // 不再手动转换YUV到RGB，而是创建YUV格式的QVideoFrame
+
+    if (pjfmt == PJMEDIA_FORMAT_I420 || pjfmt == PJMEDIA_FORMAT_IYUV || pjfmt == PJMEDIA_FORMAT_J420) {
+        // I420/IYUV/J420 -> 使用Qt的YUV420P格式
+        // Qt会自动处理颜色转换，无需手动计算
+
+        QVideoFrameFormat format(QSize(width, height), QVideoFrameFormat::Format_YUV420P);
+        QVideoFrame videoFrame(format);
+
+        if (!videoFrame.map(QVideoFrame::WriteOnly)) {
+            qWarning() << "❌ RemoteVideoManager: Failed to map YUV video frame";
+            return QVideoFrame();
+        }
+
+        // YUV420P内存布局：Y平面 + U平面 + V平面
+        const unsigned char *src_y = (const unsigned char *)frame->buf;
+        const unsigned char *src_u = src_y + width * height;
+        const unsigned char *src_v = src_u + (width * height / 4);
+
+        // 复制Y平面
+        unsigned char *dst_y = videoFrame.bits(0);
+        memcpy(dst_y, src_y, width * height);
+
+        // 复制U平面
+        unsigned char *dst_u = videoFrame.bits(1);
+        memcpy(dst_u, src_u, width * height / 4);
+
+        // 复制V平面
+        unsigned char *dst_v = videoFrame.bits(2);
+        memcpy(dst_v, src_v, width * height / 4);
+
+        videoFrame.unmap();
+
+        static int logCount = 0;
+        if (logCount == 0) {
+            qDebug() << "✅ Using Qt native YUV420P format for"
+                     << (pjfmt == PJMEDIA_FORMAT_J420 ? "J420" : "I420")
+                     << "video:" << width << "x" << height;
+            logCount++;
+        }
+
+        return videoFrame;
+    }
+    else if (pjfmt == PJMEDIA_FORMAT_RGB24) {
+        // RGB24 -> 直接使用QImage然后转换
+        QImage image((const uchar *)frame->buf, width, height, width * 3, QImage::Format_RGB888);
+
+        QVideoFrameFormat format(image.size(), QVideoFrameFormat::Format_ARGB8888);
+        QVideoFrame videoFrame(format);
+
+        if (!videoFrame.map(QVideoFrame::WriteOnly)) {
+            qWarning() << "❌ RemoteVideoManager: Failed to map video frame";
+            return QVideoFrame();
+        }
+
+        QImage rgbImage = image.convertToFormat(QImage::Format_ARGB32);
+        memcpy(videoFrame.bits(0), rgbImage.bits(), rgbImage.sizeInBytes());
+        videoFrame.unmap();
+
+        return videoFrame;
+    }
+    else if (pjfmt == PJMEDIA_FORMAT_RGBA) {
+        // RGBA -> 直接使用QImage然后转换
+        QImage image((const uchar *)frame->buf, width, height, width * 4, QImage::Format_RGBA8888);
+
+        QVideoFrameFormat format(image.size(), QVideoFrameFormat::Format_ARGB8888);
+        QVideoFrame videoFrame(format);
+
+        if (!videoFrame.map(QVideoFrame::WriteOnly)) {
+            qWarning() << "❌ RemoteVideoManager: Failed to map video frame";
+            return QVideoFrame();
+        }
+
+        QImage rgbImage = image.convertToFormat(QImage::Format_ARGB32);
+        memcpy(videoFrame.bits(0), rgbImage.bits(), rgbImage.sizeInBytes());
+        videoFrame.unmap();
+
+        return videoFrame;
+    }
+    else {
+        qWarning() << "❌ RemoteVideoManager: Unsupported format:" << Qt::hex << pjfmt;
+        return QVideoFrame();
+    }
+}
+
+void RemoteVideoManager::startTimersInMainThread()
+{
+    // qDebug() << "✅ RemoteVideoManager: Starting timers in Qt main thread";
+
+    // 在 Qt 主线程中启动定时器
+    if (!m_checkTimer->isActive()) {
+        m_checkTimer->start();
+        // qDebug() << "   ✅ Check timer started (500ms interval)";
+    }
+
+    if (!m_captureTimer->isActive()) {
+        m_captureTimer->start();
+        // qDebug() << "   ✅ Capture timer started (33ms interval, 30fps)";
+    }
+}
+
+void RemoteVideoManager::stopTimersInMainThread()
+{
+    // qDebug() << "✅ RemoteVideoManager: Stopping timers in Qt main thread";
+
+    // 在 Qt 主线程中停止定时器
+    if (m_checkTimer->isActive()) {
+        m_checkTimer->stop();
+        // qDebug() << "   ✅ Check timer stopped";
+    }
+
+    if (m_captureTimer->isActive()) {
+        m_captureTimer->stop();
+        // qDebug() << "   ✅ Capture timer stopped";
+    }
+}

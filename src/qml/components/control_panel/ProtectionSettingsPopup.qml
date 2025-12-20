@@ -30,15 +30,38 @@ Popup {
         root.opacity = 1.0
     }
 
-    // Click on empty area to show keyboard
+    // ✅ Click on empty area (outside input fields) to close keyboard
     MouseArea {
+        id: keyboardCloseArea
         anchors.fill: parent
-        z: -1
+        z: 10  // ✅ VERY HIGH Z - above Flickable (z: 0)
+        enabled: Qt.inputMethod.visible
         propagateComposedEvents: true
-        onClicked: function(mouse) {
-            // Show keyboard when clicking empty area
-            Qt.inputMethod.show()
-            mouse.accepted = false  // Allow event to propagate
+
+        onPressed: function(mouse) {
+            // Detect clicked element type
+            var clickedItem = scrollView.contentItem.childAt(
+                mouse.x - scrollView.x,
+                mouse.y - scrollView.y + scrollView.contentY
+            )
+
+            if (clickedItem) {
+                var itemType = clickedItem.toString()
+
+                // If clicked on input field, keep keyboard open and propagate event
+                if (itemType.indexOf("TextField") !== -1 ||
+                    itemType.indexOf("TextInput") !== -1 ||
+                    itemType.indexOf("SpinBox") !== -1 ||
+                    itemType.indexOf("ComboBox") !== -1) {
+                    mouse.accepted = false  // Let input field handle it
+                    return
+                }
+            }
+
+            // Clicked outside input field - close keyboard
+            Qt.inputMethod.commit()
+            Qt.inputMethod.hide()
+            mouse.accepted = true  // Don't propagate - we handled it
         }
     }
 
@@ -59,8 +82,10 @@ Popup {
     property real protectionDelay: 1.0
     property int playCount: 3
     property real playDuration: 5.0
-    property string moduleType: "输入模块"
-    property int channelNumber: 1
+    property string moduleType: "输入模块1"
+    property int registerAddress: 2
+    property int channelNumber: 0
+    property int relayAddress: 50
     property string audioFile: ""
     property bool useTextToSpeech: true
     property string ttsText: ""
@@ -352,10 +377,47 @@ Popup {
                         id: moduleTypeCombo
                         Layout.fillWidth: true
 
-                        model: ["输入模块", "输出模块", "主模块"]
+                        model: {
+                            if (typeCombo.currentIndex === 0) {
+                                // 模拟量
+                                return ["模拟量模块1", "模拟量模块2", "模拟量模块3", "模拟量模块4"]
+                            } else {
+                                // 开关量
+                                return ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
+                            }
+                        }
                         currentIndex: {
                             var idx = model.indexOf(root.moduleType)
                             return idx >= 0 ? idx : 0
+                        }
+
+                        onCurrentTextChanged: {
+                            // 根据模块类型自动设置寄存器地址
+                            if (typeCombo.currentIndex === 0) {
+                                // 模拟量模块
+                                if (currentText === "模拟量模块1") {
+                                    registerAddressSpin.value = 5
+                                } else if (currentText === "模拟量模块2") {
+                                    registerAddressSpin.value = 13
+                                } else if (currentText === "模拟量模块3") {
+                                    registerAddressSpin.value = 21
+                                } else if (currentText === "模拟量模块4") {
+                                    registerAddressSpin.value = 29
+                                }
+                            } else {
+                                // 开关量模块
+                                if (currentText === "输入模块1") {
+                                    registerAddressSpin.value = 2
+                                } else if (currentText === "输入模块2") {
+                                    registerAddressSpin.value = 3
+                                } else if (currentText === "输入模块3") {
+                                    registerAddressSpin.value = 4
+                                } else if (currentText === "输入模块4") {
+                                    registerAddressSpin.value = 5
+                                } else if (currentText === "输出模块") {
+                                    registerAddressSpin.value = 50
+                                }
+                            }
                         }
 
                         background: Rectangle {
@@ -375,10 +437,58 @@ Popup {
                     }
                 }
 
-                // Channel Number
+                // Register Address - 不显示主模块的寄存器地址
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
+                    visible: moduleTypeCombo.currentText !== "主模块"
+
+                    Text {
+                        text: "寄存器地址:"
+                        font.pixelSize: 14
+                        color: "#95a5a6"
+                        Layout.preferredWidth: 120
+                    }
+
+                    SpinBox {
+                        id: registerAddressSpin
+                        from: 0
+                        to: 255
+                        value: root.registerAddress
+                        editable: true
+                        Layout.fillWidth: true
+
+                        background: Rectangle {
+                            color: "#34495e"
+                            radius: 5
+                            border.color: registerAddressSpin.activeFocus ? "#3498db" : "#7f8c8d"
+                            border.width: 1
+                        }
+
+                        contentItem: TextInput {
+                            text: registerAddressSpin.textFromValue(registerAddressSpin.value, registerAddressSpin.locale)
+                            font.pixelSize: 13
+                            color: "#ecf0f1"
+                            horizontalAlignment: Qt.AlignHCenter
+                            verticalAlignment: Qt.AlignVCenter
+                            readOnly: !registerAddressSpin.editable
+                            validator: registerAddressSpin.validator
+                            inputMethodHints: Qt.ImhFormattedNumbersOnly
+
+                            onActiveFocusChanged: {
+                                if (activeFocus) {
+                                    scrollView.ensureVisible(registerAddressSpin)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Channel Number - 只对开关量显示
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    visible: typeCombo.currentIndex === 1  // 开关量
 
                     Text {
                         text: "通道编号:"
@@ -389,8 +499,8 @@ Popup {
 
                     SpinBox {
                         id: channelSpin
-                        from: 1
-                        to: 32
+                        from: 0
+                        to: 7
                         value: root.channelNumber
                         editable: true
                         Layout.fillWidth: true
@@ -1060,7 +1170,36 @@ Popup {
                 }
 
                 onClicked: {
-                    // Update values
+                    // 准备配置数据
+                    var configMap = {
+                        "name": nameField.text,
+                        "type": typeCombo.currentIndex === 0 ? "analog" : "digital",
+                        "moduleType": moduleTypeCombo.currentText,
+                        "registerAddress": registerAddressSpin.value,
+                        "channelNumber": channelSpin.value,
+                        "relayAddress": root.relayAddress,
+                        "upperLimit": upperLimitSpin.value,
+                        "lowerLimit": lowerLimitSpin.value,
+                        "range": rangeSpin.value,
+                        "ratedValue": ratedValueSpin.value,
+                        "unit": unitCombo.editable ? unitCombo.editText : unitCombo.displayText,
+                        "protectionDelay": delaySpin.realValue,
+                        "playCount": playCountSpin.value,
+                        "playDuration": durationSpin.realValue,
+                        "useTextToSpeech": ttsRadio.checked,
+                        "ttsText": ttsTextField.text,
+                        "audioFile": audioField.text,
+                        "enablePopupAnimation": animationCheckbox.checked
+                    }
+
+                    // 保存到数据库
+                    if (protectionConfigMgr.saveConfigFromMap(nameField.text, configMap)) {
+                        console.log("保护配置已保存:", nameField.text)
+                    } else {
+                        console.error("保存保护配置失败:", nameField.text)
+                    }
+
+                    // Update root values for backward compatibility
                     root.protectionName = nameField.text
                     root.protectionType = typeCombo.currentIndex === 0 ? "analog" : "digital"
                     root.upperLimit = upperLimitSpin.value
@@ -1071,6 +1210,7 @@ Popup {
                     root.playCount = playCountSpin.value
                     root.playDuration = durationSpin.realValue
                     root.moduleType = moduleTypeCombo.currentText
+                    root.registerAddress = registerAddressSpin.value
                     root.channelNumber = channelSpin.value
                     root.useTextToSpeech = ttsRadio.checked
                     root.ttsText = ttsTextField.text
@@ -1243,29 +1383,172 @@ Popup {
         root.protectionType = type
         root.sourceItem = srcItem
 
-        // Load existing values (in real app, these would come from backend)
-        root.upperLimit = 100
-        root.lowerLimit = 0
-        root.range = 100
-        root.ratedValue = 50
-        root.protectionDelay = 1.0
-        root.playCount = 3
-        root.playDuration = 5.0
-        root.moduleType = "输入模块"
-        root.channelNumber = 1
-        root.useTextToSpeech = true
-        root.ttsText = name + "保护报警"
-        root.audioFile = "alarm_high.wav"
+        // 从数据库加载配置
+        var configMap = protectionConfigMgr.loadConfigAsMap(name)
+        if (configMap && configMap.name) {
+            // 加载成功，使用数据库中的值
+            root.upperLimit = configMap.upperLimit
+            root.lowerLimit = configMap.lowerLimit
+            root.range = configMap.range
+            root.ratedValue = configMap.ratedValue
+            root.protectionDelay = configMap.protectionDelay
+            root.playCount = configMap.playCount
+            root.playDuration = configMap.playDuration
+            root.moduleType = configMap.moduleType
+            root.registerAddress = configMap.registerAddress
+            root.channelNumber = configMap.channelNumber
+            root.relayAddress = configMap.relayAddress
+            root.useTextToSpeech = configMap.useTextToSpeech
+            root.ttsText = configMap.ttsText
+            root.audioFile = configMap.audioFile
+            root.unit = configMap.unit
+            root.enablePopupAnimation = configMap.enablePopupAnimation
 
-        // Set appropriate unit based on protection name
-        if (name === "速度") {
-            root.unit = "m/s"
-        } else if (name === "张力") {
-            root.unit = "T"
-        } else if (name === "温度") {
-            root.unit = "℃"
+            // 延迟设置寄存器地址和通道，确保覆盖 onCurrentTextChanged 的自动设置
+            Qt.callLater(function() {
+                registerAddressSpin.value = configMap.registerAddress
+                channelSpin.value = configMap.channelNumber
+            })
         } else {
-            root.unit = "m/s"
+            // 数据库中没有此配置，使用默认值（兼容旧数据）
+            console.warn("配置不存在:", name, "使用默认值")
+            root.upperLimit = 100
+            root.lowerLimit = 0
+            root.range = 100
+            root.ratedValue = 50
+            root.protectionDelay = 1.0
+            root.playCount = 3
+            root.playDuration = 5.0
+
+            root.useTextToSpeech = true
+            root.ttsText = name + "保护报警"
+            root.audioFile = "alarm_high.wav"
+
+            // 根据保护类型和名称设置默认模块、寄存器和通道
+            var targetRegisterAddress = 2
+            var targetChannelNumber = 0
+            var targetModuleType = ""
+            var targetUnit = "m/s"
+
+            if (type === "analog") {
+                // 模拟量保护 - 根据名称设置寄存器地址
+                if (name === "速度") {
+                    targetModuleType = "模拟量模块1"
+                    targetRegisterAddress = 5
+                    targetUnit = "m/s"
+                } else if (name === "张力") {
+                    targetModuleType = "模拟量模块1"
+                    targetRegisterAddress = 6
+                    targetUnit = "T"
+                } else if (name === "红外温度一") {
+                    targetModuleType = "模拟量模块1"
+                    targetRegisterAddress = 7
+                    targetUnit = "℃"
+                } else if (name === "红外温度二") {
+                    targetModuleType = "模拟量模块1"
+                    targetRegisterAddress = 8
+                    targetUnit = "℃"
+                } else if (name === "电流一") {
+                    targetModuleType = "模拟量模块1"
+                    targetRegisterAddress = 9
+                    targetUnit = "A"
+                } else if (name === "电流二") {
+                    targetModuleType = "模拟量模块1"
+                    targetRegisterAddress = 10
+                    targetUnit = "A"
+                } else if (name === "电压") {
+                    targetModuleType = "模拟量模块1"
+                    targetRegisterAddress = 11
+                    targetUnit = "V"
+                } else if (name === "1号电机温度") {
+                    targetModuleType = "模拟量模块1"
+                    targetRegisterAddress = 12
+                    targetUnit = "℃"
+                } else if (name === "2号电机温度") {
+                    targetModuleType = "模拟量模块2"
+                    targetRegisterAddress = 13
+                    targetUnit = "℃"
+                } else if (name === "1号电机X振动") {
+                    targetModuleType = "模拟量模块2"
+                    targetRegisterAddress = 14
+                    targetUnit = "mm/s"
+                } else if (name === "1号电机Y振动") {
+                    targetModuleType = "模拟量模块2"
+                    targetRegisterAddress = 15
+                    targetUnit = "mm/s"
+                } else if (name === "2号电机X振动") {
+                    targetModuleType = "模拟量模块2"
+                    targetRegisterAddress = 16
+                    targetUnit = "mm/s"
+                } else if (name === "2号电机Y振动") {
+                    targetModuleType = "模拟量模块2"
+                    targetRegisterAddress = 17
+                    targetUnit = "mm/s"
+                } else if (name === "1号电机第一项绕组") {
+                    targetModuleType = "模拟量模块2"
+                    targetRegisterAddress = 18
+                    targetUnit = "℃"
+                } else if (name === "1号电机第二项绕组") {
+                    targetModuleType = "模拟量模块2"
+                    targetRegisterAddress = 19
+                    targetUnit = "℃"
+                } else if (name === "1号电机第三项绕组") {
+                    targetModuleType = "模拟量模块2"
+                    targetRegisterAddress = 20
+                    targetUnit = "℃"
+                } else if (name === "2号电机第一项绕组") {
+                    targetModuleType = "模拟量模块3"
+                    targetRegisterAddress = 21
+                    targetUnit = "℃"
+                } else if (name === "2号电机第二项绕组") {
+                    targetModuleType = "模拟量模块3"
+                    targetRegisterAddress = 22
+                    targetUnit = "℃"
+                } else if (name === "2号电机第三项绕组") {
+                    targetModuleType = "模拟量模块3"
+                    targetRegisterAddress = 23
+                    targetUnit = "℃"
+                } else {
+                    // 默认值
+                    targetModuleType = "模拟量模块1"
+                    targetRegisterAddress = 5
+                    targetUnit = "m/s"
+                }
+            } else {
+                // 开关量保护 - 根据名称设置通道号
+                targetModuleType = "输入模块1"
+                targetRegisterAddress = 2
+
+                if (name === "急停") {
+                    targetChannelNumber = 0
+                } else if (name === "跑偏") {
+                    targetChannelNumber = 1
+                } else if (name === "撕裂") {
+                    targetChannelNumber = 2
+                } else if (name === "烟雾") {
+                    targetChannelNumber = 3
+                } else if (name === "温度") {
+                    targetChannelNumber = 4
+                } else if (name === "护网") {
+                    targetChannelNumber = 5
+                } else if (name === "堆煤") {
+                    targetChannelNumber = 6
+                } else if (name === "主机急停") {
+                    targetChannelNumber = 7
+                } else {
+                    targetChannelNumber = 0
+                }
+            }
+
+            // 先设置模块类型（这会触发 onCurrentTextChanged）
+            root.moduleType = targetModuleType
+            root.unit = targetUnit
+
+            // 延迟设置寄存器地址，确保覆盖 onCurrentTextChanged 的自动设置
+            Qt.callLater(function() {
+                registerAddressSpin.value = targetRegisterAddress
+                channelSpin.value = targetChannelNumber
+            })
         }
 
         openWithAnimation()
@@ -1282,8 +1565,9 @@ Popup {
         root.protectionDelay = 1.0
         root.playCount = 3
         root.playDuration = 5.0
-        root.moduleType = "输入模块"
-        root.channelNumber = 1
+        root.moduleType = "模拟量模块1"
+        root.registerAddress = 5
+        root.channelNumber = 0
         root.useTextToSpeech = true
         root.ttsText = ""
         root.audioFile = ""

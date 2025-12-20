@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 查找QT依赖（必须包含Qml模块）
+# 核心组件（必须）
 find_package(Qt6 6.5 REQUIRED COMPONENTS
     Core
     Gui
@@ -15,8 +16,43 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
     VirtualKeyboard # Qt Virtual Keyboard for input
     SerialPort      # 硬件通信
     Network         # 网络（如需）
+    SerialBus       # Modbus TCP/RTU support
+)
+
+# 可选组件（某些ARM预编译Qt可能不包含）
+find_package(Qt6 6.5 QUIET COMPONENTS
+    Widgets         # Qt Widgets for video preview embedding
+    Multimedia      # Qt Multimedia for camera access
+    TextToSpeech    # Qt TextToSpeech for voice alerts
+    Sql             # Qt SQL for database support
     Test            # 单元测试（可选）
 )
+
+# 报告可选组件的可用性
+if(Qt6Widgets_FOUND)
+    message(STATUS "Qt6::Widgets available")
+else()
+    message(WARNING "Qt6::Widgets not found - video preview may be limited")
+endif()
+
+if(Qt6Multimedia_FOUND)
+    message(STATUS "Qt6::Multimedia available")
+else()
+    message(WARNING "Qt6::Multimedia not found - audio features may be limited")
+endif()
+
+if(Qt6TextToSpeech_FOUND)
+    message(STATUS "Qt6::TextToSpeech available")
+else()
+    message(WARNING "Qt6::TextToSpeech not found - TTS features may be limited")
+endif()
+
+if(Qt6Sql_FOUND)
+    message(STATUS "Qt6::Sql available")
+else()
+    message(WARNING "Qt6::Sql not found - database features may be limited")
+endif()
+
 qt_standard_project_setup(REQUIRES 6.5)
 
 # 配置输出目录
@@ -32,6 +68,7 @@ add_subdirectory(src/hardware/hal)
 add_subdirectory(src/hardware/simulated)
 add_subdirectory(src/hardware/real)
 add_subdirectory(src/control)
+add_subdirectory(src/network)  # Network module (Modbus TCP)
 add_subdirectory(src/risip)  # Risip VoIP SDK (PJSIP wrapper)
 add_subdirectory(src/sip_phone)  # SIP Phone module
 add_subdirectory(src/qml)  # QML模块需在控制模块之后（依赖C++逻辑）

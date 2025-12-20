@@ -1,6 +1,14 @@
 # Build directories
 build/
 .cmake/
+build_*/
+fresh-build/
+
+# Docker build contexts and caches
+docker_build_*/
+docker_deploy_*/
+docker_runtime_deploy/
+.docker_*.json
 
 # Log files
 *.log
@@ -27,3 +35,36 @@ NUL
 # Backup files
 *.backup
 *~
+
+# Database files (runtime data)
+*.db
+
+# Configuration files (runtime)
+config.ini
+appdata/
+
+# Audio recordings (runtime data)
+AUDIO/
+
+# Archive directories
+archive/
+
+# Temporary files
+temp_*.txt
+conversation_logs/
+
+# Large binary libraries
+libs/sherpa-onnx-*/
+libs/tts_models/
+libs/tts_models_download/
+libs/*.tar.bz2
+libs/*.zip
+
+# Device build directories (contains symlinks incompatible with Windows)
+docker/rk3588/device-build/
+docker/rk3588/docker-build/
+docker/*/device-build/
+docker/*/docker-build/
+
+# Generated Qt files (large files)
+Pidai1/Generated/

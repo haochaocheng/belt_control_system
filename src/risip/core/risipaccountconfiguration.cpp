@@ -336,6 +336,21 @@ AccountConfig RisipAccountConfiguration::pjsipAccountConfig()
 
 //    m_data->accountConfig.natConfig.iceEnabled = true;
 
+    // ✅ CRITICAL FIX: Set video device configuration BEFORE account creation
+    // This ensures PJSIP uses the correct device when creating video streams
+    // Device 0 = rk_hdmirx (HDMI input, not suitable for local video)
+    // Device 1 = USB Camera (correct device for video calls)
+    m_data->accountConfig.videoConfig.defaultCaptureDevice = 1;  // Use USB Camera (device 1)
+    m_data->accountConfig.videoConfig.defaultRenderDevice = PJMEDIA_VID_DEFAULT_RENDER_DEV;  // Auto-select renderer
+
+    // Video configuration for video calls
+    m_data->accountConfig.videoConfig.autoShowIncoming = false;  // Don't auto-show incoming video windows
+    m_data->accountConfig.videoConfig.autoTransmitOutgoing = true;  // ✅ Enable video transmission when video call is made
+
+    // ✅ 禁用所有 PJSIP 自动创建的独立视频窗口（使用 QML 界面显示）
+    m_data->accountConfig.videoConfig.windowFlags = PJMEDIA_VID_DEV_WND_BORDER | PJMEDIA_VID_DEV_WND_RESIZABLE;
+    // Note: autoShowIncoming=false 已经禁用了来电视频窗口的自动显示
+
     return m_data->accountConfig;
 }
 

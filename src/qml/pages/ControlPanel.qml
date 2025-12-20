@@ -13,6 +13,48 @@ Item {
     property bool motorRunning: false
     property real currentSpeed: 2.5
 
+    // Track device running states (deviceName -> isRunning)
+    property var deviceRunningStates: ({})
+
+    // 监听设备状态改变信号
+    Connections {
+        target: commonControl
+        function onDeviceStatusChanged(deviceName, isRunning) {
+            console.log("🔗 ControlPanel: 收到设备状态改变信号 -", deviceName, isRunning ? "运行" : "停止")
+            // Update device running state
+            var states = root.deviceRunningStates
+            states[deviceName] = isRunning
+            root.deviceRunningStates = states
+            // Force UI update
+            activeDevicesPanel.updateDeviceStates()
+        }
+    }
+
+    // 监听保护触发和恢复信号
+    Connections {
+        target: protectionMonitor
+
+        function onProtectionTriggered(protectionName, type, value) {
+            console.log("🚨 ControlPanel: 保护触发 -", protectionName, "类型:", type, "值:", value)
+
+            // 根据类型更新对应的保护显示
+            if (type === "digital") {
+                protectionPanel.setDigitalProtectionActive(protectionName, true)
+            } else if (type === "analog") {
+                protectionPanel.setAnalogProtectionActive(protectionName, true)
+            }
+        }
+
+        function onProtectionRestored(protectionName) {
+            console.log("✅ ControlPanel: 保护恢复 -", protectionName)
+
+            // 尝试恢复数字保护
+            protectionPanel.setDigitalProtectionActive(protectionName, false)
+            // 尝试恢复模拟量保护
+            protectionPanel.setAnalogProtectionActive(protectionName, false)
+        }
+    }
+
     // 3D Scene Background - Full screen
     BeltScene3D {
         anchors.fill: parent
@@ -37,11 +79,6 @@ Item {
         anchors.margins: 10
         width: 300
         height: 320
-
-        operationMode: "集控"
-        deviceName: "1号皮带"
-        deviceStatus: root.motorRunning ? "运行" : "停止"
-        mainStationConnected: true
     }
 
     // Left side - Protection Panel (below device status)
@@ -51,7 +88,7 @@ Item {
         anchors.top: deviceStatusPanel.bottom
         anchors.margins: 10
         width: 300
-        height: 350
+        height: 450  // 精确显示8个保护项
 
         onProtectionClicked: function(protectionName, sourceItem) {
             console.log("Protection clicked:", protectionName)
@@ -77,25 +114,127 @@ Item {
         }
     }
 
-    // Left side - Output Device Panel (below protection panel, extends to bottom)
-    OutputDevicePanel {
-        id: outputDevicePanel
+    // Left side - Active Devices Panel (shows devices in startup sequence)
+    Rectangle {
+        id: activeDevicesPanel
         anchors.left: parent.left
         anchors.top: protectionPanel.bottom
         anchors.bottom: parent.bottom
         anchors.margins: 10
         width: 300
+        // 增加高度以完整显示2行设备（每行3个）
+        height: Math.min(230, parent.height - protectionPanel.height - deviceStatusPanel.height - 40)
+        color: "#dd1a2332"
+        radius: 10
+        border.color: "#00d4ff"
+        border.width: 2
 
-        onDeviceClicked: function(deviceName, sourceItem) {
-            console.log("Device clicked:", deviceName)
-            operationLogPanel.addLog("打开设备设置: " + deviceName, "info")
-            deviceSettingsPopup.openForDevice(deviceName, sourceItem)
+        // Function to check if device is running
+        function isDeviceRunning(deviceName) {
+            return root.deviceRunningStates[deviceName] === true
         }
 
-        onAddDeviceClicked: function(sourceItem) {
-            console.log("Add device clicked")
-            operationLogPanel.addLog("打开新增设备对话框", "info")
-            deviceSettingsPopup.openForNew(sourceItem)
+        // Function to force update device states (called when deviceRunningStates changes)
+        function updateDeviceStates() {
+            // Trigger Repeater to refresh by updating the model reference
+            deviceRepeater.model = systemConfig ? systemConfig.startupSequence : []
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 15
+            spacing: 10
+
+            // Title
+            Text {
+                text: "启用设备"
+                font.pixelSize: 18
+                font.bold: true
+                color: "#00d4ff"
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 2
+                color: "#00d4ff"
+                opacity: 0.5
+            }
+
+            // Active devices grid - 使用 Grid 布局，每行3个
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                Grid {
+                    width: parent.width
+                    columns: 3  // 每行显示3个设备
+                    spacing: 10
+                    horizontalItemAlignment: Grid.AlignHCenter
+
+                    // 显示启动顺序中的设备
+                    Repeater {
+                        id: deviceRepeater
+                        model: systemConfig ? systemConfig.startupSequence : []
+
+                        Rectangle {
+                            id: deviceBox
+                            width: 75
+                            height: 50
+                            radius: 6
+                            // 判断是否为故障设备
+                            property bool isFaultDevice: runtimeTracker && runtimeTracker.faultDevices.indexOf(modelData) !== -1
+                            // 故障设备显示红色，运行设备显示绿色，停止设备显示灰色
+                            color: isFaultDevice ? "#ff4757" : (activeDevicesPanel.isDeviceRunning(modelData) ? "#00ff88" : "#2c3e50")
+                            border.color: isFaultDevice ? "#ff6677" : "#00d4ff"
+                            border.width: 1.5
+
+                            // Smooth color transition
+                            Behavior on color {
+                                ColorAnimation { duration: 300 }
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData
+                                font.pixelSize: 11
+                                font.bold: true
+                                // 故障设备白色文字，运行设备深色文字，停止设备青色文字
+                                color: parent.isFaultDevice ? "#ffffff" : (activeDevicesPanel.isDeviceRunning(modelData) ? "#003322" : "#00d4ff")
+                                wrapMode: Text.WordWrap
+                                horizontalAlignment: Text.AlignHCenter
+                                width: 68
+
+                                Behavior on color {
+                                    ColorAnimation { duration: 300 }
+                                }
+                            }
+                        }
+                    }
+
+                    // 洒水设备（始终显示，保持正常样式）
+                    Rectangle {
+                        width: 75
+                        height: 50
+                        radius: 6
+                        color: "#2c3e50"
+                        border.color: "#00d4ff"  // 正常边框颜色（不是绿色）
+                        border.width: 1.5
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "洒水"
+                            font.pixelSize: 11
+                            font.bold: true
+                            color: "#00d4ff"  // 正常文字颜色
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -113,14 +252,14 @@ Item {
         outputModuleConnected: true
     }
 
-    // Right side - Operation Log Panel
+    // Right side - Operation Log Panel (高度增加1/3: 280 * 1.33 ≈ 373)
     OperationLogPanel {
         id: operationLogPanel
         anchors.right: parent.right
         anchors.top: moduleConnectionPanel.bottom
         anchors.margins: 10
         width: 300
-        height: 280
+        height: 373
     }
 
     // Right side - Analog Chart (extends to bottom)
@@ -138,11 +277,11 @@ Item {
     }
 
     // Bottom center - Device Status Bar (32 devices)
-    // Positioned between OutputDevicePanel and AnalogChart
+    // Positioned between activeDevicesPanel and AnalogChart
     DeviceStatusBar {
         id: deviceStatusBar
         anchors.bottom: parent.bottom
-        anchors.left: outputDevicePanel.right
+        anchors.left: activeDevicesPanel.right
         anchors.right: analogChart.left
         anchors.margins: 10
     }
@@ -183,39 +322,8 @@ Item {
         }
     }
 
-    // Output Device Settings Popup
-    OutputDeviceSettingsPopup {
-        id: deviceSettingsPopup
-
-        onAccepted: {
-            if (deviceSettingsPopup.isNewDevice) {
-                outputDevicePanel.addDevice(deviceSettingsPopup.deviceName)
-                operationLogPanel.addLog(
-                    "新增设备: " + deviceSettingsPopup.deviceName +
-                    " [输出:" + deviceSettingsPopup.outputModule +
-                    " 通道:" + deviceSettingsPopup.channelNumber + "]",
-                    "info"
-                )
-            } else {
-                operationLogPanel.addLog(
-                    "修改设备参数: " + deviceSettingsPopup.deviceName +
-                    " [输出:" + deviceSettingsPopup.outputModule +
-                    " 通道:" + deviceSettingsPopup.channelNumber +
-                    " 继电器:" + deviceSettingsPopup.relayType + "]",
-                    "success"
-                )
-            }
-        }
-
-        onRejected: {
-            operationLogPanel.addLog("取消操作", "warning")
-        }
-
-        onDeleteRequested: {
-            outputDevicePanel.removeDevice(deviceSettingsPopup.deviceName)
-            operationLogPanel.addLog("删除设备: " + deviceSettingsPopup.deviceName, "error")
-        }
-    }
+    // Output Device Settings Popup has been moved to ParameterSettings page
+    // Device configuration is now handled there
 
     // Monitor speed changes
     onCurrentSpeedChanged: {

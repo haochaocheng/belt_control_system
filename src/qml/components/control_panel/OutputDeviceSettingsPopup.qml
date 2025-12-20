@@ -30,15 +30,39 @@ Popup {
         root.opacity = 1.0
     }
 
-    // Click on empty area to show keyboard
+    // ✅ Click on empty area (outside input fields) to close keyboard
     MouseArea {
         anchors.fill: parent
         z: -1
+        enabled: Qt.inputMethod.visible
         propagateComposedEvents: true
+
+        onPressed: function(mouse) {
+            mouse.accepted = false  // Let events propagate to input fields
+        }
+
         onClicked: function(mouse) {
-            // Show keyboard when clicking empty area
-            Qt.inputMethod.show()
-            mouse.accepted = false  // Allow event to propagate
+            // Detect clicked element type
+            var clickedItem = scrollView.contentItem.childAt(
+                mouse.x - scrollView.x,
+                mouse.y - scrollView.y + scrollView.contentY
+            )
+
+            if (clickedItem) {
+                var itemType = clickedItem.toString()
+                // If clicked on input field, keep keyboard open
+                if (itemType.indexOf("TextField") !== -1 ||
+                    itemType.indexOf("TextInput") !== -1 ||
+                    itemType.indexOf("SpinBox") !== -1 ||
+                    itemType.indexOf("ComboBox") !== -1) {
+                    return
+                }
+            }
+
+            // Clicked outside input field - close keyboard
+            root.forceActiveFocus()
+            Qt.inputMethod.hide()
+            mouse.accepted = true
         }
     }
 
@@ -49,11 +73,13 @@ Popup {
     // Properties
     property string deviceName: ""
     property string outputModule: "输出模块"
-    property int channelNumber: 1
+    property int channelNumber: 0  // 默认通道0 (0-15对应寄存器10的0-15位)
     property bool useWarningVoice: true
     property real startupDelay: 1.0
     property string feedbackModule: "输入模块"
-    property int feedbackChannel: 1
+    property int feedbackChannel: 0  // 默认反馈通道0 (0-15对应寄存器0的0-15位)
+    property bool useFeedback: true  // 是否使用反馈检测
+    property int feedbackDelay: 3  // 反馈延时（秒）
     property string relayType: "本机继电器"  // 本机继电器, 远程设备, 远程主机
     property bool isNewDevice: false
     property bool enablePopupAnimation: true  // 弹窗动画效果
@@ -328,7 +354,7 @@ Popup {
                     }
                 }
 
-                // Channel Number
+                // Channel Number (0-15 对应寄存器10的0-15位)
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
@@ -342,8 +368,8 @@ Popup {
 
                     SpinBox {
                         id: channelSpin
-                        from: 1
-                        to: 32
+                        from: 0
+                        to: 15
                         value: root.channelNumber
                         editable: true
                         Layout.fillWidth: true
@@ -365,6 +391,12 @@ Popup {
                             validator: channelSpin.validator
                             inputMethodHints: Qt.ImhFormattedNumbersOnly
                         }
+                    }
+
+                    Text {
+                        text: "(0-15)"
+                        font.pixelSize: 12
+                        color: "#7f8c8d"
                     }
                 }
 
@@ -540,10 +572,59 @@ Popup {
                     Layout.alignment: Qt.AlignLeft
                 }
 
+                // Use Feedback Checkbox
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Text {
+                        text: "使用反馈:"
+                        font.pixelSize: 14
+                        color: "#95a5a6"
+                        Layout.preferredWidth: 120
+                    }
+
+                    CheckBox {
+                        id: useFeedbackCheckbox
+                        checked: root.useFeedback
+                        text: useFeedbackCheckbox.checked ? "启用" : "禁用"
+                        font.pixelSize: 13
+
+                        indicator: Rectangle {
+                            implicitWidth: 24
+                            implicitHeight: 24
+                            x: useFeedbackCheckbox.leftPadding
+                            y: parent.height / 2 - height / 2
+                            radius: 4
+                            border.color: useFeedbackCheckbox.checked ? "#00d4ff" : "#7f8c8d"
+                            border.width: 2
+                            color: "transparent"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "✓"
+                                color: "#00d4ff"
+                                font.pixelSize: 16
+                                font.bold: true
+                                visible: useFeedbackCheckbox.checked
+                            }
+                        }
+
+                        contentItem: Text {
+                            text: useFeedbackCheckbox.text
+                            font: useFeedbackCheckbox.font
+                            color: "#ecf0f1"
+                            leftPadding: useFeedbackCheckbox.indicator.width + 8
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
+                }
+
                 // Feedback Module Type
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
+                    visible: useFeedbackCheckbox.checked
 
                     Text {
                         text: "反馈模块:"
@@ -579,10 +660,11 @@ Popup {
                     }
                 }
 
-                // Feedback Channel
+                // Feedback Channel (0-15 对应寄存器0的0-15位)
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
+                    visible: useFeedbackCheckbox.checked
 
                     Text {
                         text: "反馈通道:"
@@ -593,8 +675,8 @@ Popup {
 
                     SpinBox {
                         id: feedbackChannelSpin
-                        from: 1
-                        to: 32
+                        from: 0
+                        to: 15
                         value: root.feedbackChannel
                         editable: true
                         Layout.fillWidth: true
@@ -622,6 +704,65 @@ Popup {
                                 }
                             }
                         }
+                    }
+
+                    Text {
+                        text: "(0-15)"
+                        font.pixelSize: 12
+                        color: "#7f8c8d"
+                    }
+                }
+
+                // Feedback Delay (反馈延时)
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    visible: useFeedbackCheckbox.checked
+
+                    Text {
+                        text: "反馈延时(秒):"
+                        font.pixelSize: 14
+                        color: "#95a5a6"
+                        Layout.preferredWidth: 120
+                    }
+
+                    SpinBox {
+                        id: feedbackDelaySpin
+                        from: 1
+                        to: 30
+                        value: root.feedbackDelay
+                        editable: true
+                        Layout.fillWidth: true
+
+                        background: Rectangle {
+                            color: "#34495e"
+                            radius: 5
+                            border.color: feedbackDelaySpin.activeFocus ? "#3498db" : "#7f8c8d"
+                            border.width: 1
+                        }
+
+                        contentItem: TextInput {
+                            text: feedbackDelaySpin.textFromValue(feedbackDelaySpin.value, feedbackDelaySpin.locale)
+                            font.pixelSize: 13
+                            color: "#ecf0f1"
+                            horizontalAlignment: Qt.AlignHCenter
+                            verticalAlignment: Qt.AlignVCenter
+                            readOnly: !feedbackDelaySpin.editable
+                            validator: feedbackDelaySpin.validator
+                            inputMethodHints: Qt.ImhFormattedNumbersOnly
+
+                            onActiveFocusChanged: {
+                                if (activeFocus) {
+                                    scrollView.ensureVisible(feedbackDelaySpin)
+                                }
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: "(1-30秒)"
+                        font.pixelSize: 12
+                        color: "#7f8c8d"
                     }
                 }
 
@@ -706,6 +847,8 @@ Popup {
                     root.startupDelay = delaySpin.realValue
                     root.feedbackModule = feedbackModuleCombo.currentText
                     root.feedbackChannel = feedbackChannelSpin.value
+                    root.useFeedback = useFeedbackCheckbox.checked
+                    root.feedbackDelay = feedbackDelaySpin.value
                     root.relayType = relayTypeCombo.currentText
 
                     root.accepted()
@@ -767,18 +910,21 @@ Popup {
     }
 
     // Public functions
-    function openForDevice(name, srcItem) {
+    function openForDevice(name, srcItem, deviceChannel, deviceFeedbackChannel, deviceUseFeedback, deviceFeedbackDelay) {
         root.isNewDevice = false
         root.deviceName = name
         root.outputModule = "输出模块"
-        root.channelNumber = 1
+        root.channelNumber = deviceChannel !== undefined ? deviceChannel : 0
         root.useWarningVoice = true
         root.startupDelay = 1.0
         root.feedbackModule = "输入模块"
-        root.feedbackChannel = 1
+        root.feedbackChannel = deviceFeedbackChannel !== undefined ? deviceFeedbackChannel : 0
+        root.useFeedback = deviceUseFeedback !== undefined ? deviceUseFeedback : true
+        root.feedbackDelay = deviceFeedbackDelay !== undefined ? deviceFeedbackDelay : 3
         root.relayType = "本机继电器"
         root.sourceItem = srcItem || null
 
+        console.log("打开设备设置:", name, "通道:", root.channelNumber, "反馈通道:", root.feedbackChannel, "使用反馈:", root.useFeedback, "反馈延时:", root.feedbackDelay)
         openWithAnimation()
     }
 
@@ -786,11 +932,13 @@ Popup {
         root.isNewDevice = true
         root.deviceName = "新设备"
         root.outputModule = "输出模块"
-        root.channelNumber = 1
+        root.channelNumber = 0  // 新设备从通道0开始
         root.useWarningVoice = true
         root.startupDelay = 1.0
         root.feedbackModule = "输入模块"
-        root.feedbackChannel = 1
+        root.feedbackChannel = 0  // 新设备反馈通道也从0开始
+        root.useFeedback = true  // 默认使用反馈
+        root.feedbackDelay = 3   // 默认反馈延时3秒
         root.relayType = "本机继电器"
         root.sourceItem = srcItem || null
 

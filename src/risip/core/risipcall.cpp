@@ -45,6 +45,7 @@ public:
     PjsipCall *pjsipCall;
     Error error;
     int lastSipResponseCode;
+    bool enableVideo;  // ⭐ 添加视频标志
 };
 
 RisipCall::RisipCall(QObject *parent)
@@ -58,6 +59,7 @@ RisipCall::RisipCall(QObject *parent)
     m_data->callType = RisipCall::Sip;
     m_data->callDirection = Unknown;
     m_data->lastSipResponseCode = Risip::PJSIP_SC_OK;
+    m_data->enableVideo = false;  // ⭐ 初始化为 false
 }
 
 RisipCall::~RisipCall()
@@ -121,7 +123,7 @@ void RisipCall::setMedia(RisipMedia *med)
 int RisipCall::callId() const
 {
     if(m_data->pjsipCall)
-        m_data->pjsipCall->getId();
+        return m_data->pjsipCall->getId();  // CRITICAL FIX: Added missing return!
 
     return -1;
 }
@@ -243,13 +245,33 @@ void RisipCall::setCallDirection(int direction)
  * @return call duration in msec
  *
  * Retuns the duration of the call in milliseconds.
+ *
+ * ✅ FIXED: After call ends, PJSIP session is destroyed, so we can't call getInfo().
+ * Solution: Check for cached duration in Qt dynamic property first.
  */
 long RisipCall::callDuration() const
 {
-    if(!m_data->pjsipCall)
-        return 0.0;
+    // ✅ CRITICAL FIX: Check cached duration first (set when call ends)
+    // This prevents crash when accessing destroyed PJSIP session
+    QVariant cachedDuration = this->property("cachedDuration");
+    if (cachedDuration.isValid()) {
+        return cachedDuration.toLongLong();
+    }
 
-    return m_data->pjsipCall->getInfo().connectDuration.msec;
+    // If no cache, try to get real-time duration (only works during active call)
+    if(!m_data->pjsipCall)
+        return 0;
+
+    try {
+        // ✅ CRITICAL FIX: Return TOTAL milliseconds (sec * 1000 + msec)
+        // PJSIP connectDuration has two fields: sec and msec
+        CallInfo info = m_data->pjsipCall->getInfo();
+        return (long)(info.connectDuration.sec * 1000 + info.connectDuration.msec);
+    } catch (...) {
+        // ✅ Catch any exceptions if session is already destroyed
+        qWarning() << "Failed to get call duration (session may be destroyed)";
+        return 0;
+    }
 }
 
 int RisipCall::errorCode() const
@@ -363,6 +385,14 @@ void RisipCall::call()
     setPjsipCall(new PjsipCall(*m_data->account->pjsipAccount()));
     CallOpParam prm(true);
 
+    // ⭐ 新增：根据 enableVideo 标志设置视频参数
+    if (m_data->enableVideo) {
+        prm.opt.videoCount = 1;  // ✅ 启用 1 个视频流（PJSUA2 API）
+        prm.opt.audioCount = 1;  // 同时启用音频
+        prm.opt.flag |= PJSUA_CALL_INCLUDE_DISABLED_MEDIA;  // 在 SDP 中包含视频
+        qDebug() << "✅ RisipCall: Enabling video for outgoing call to" << QString::fromStdString(m_data->buddy->uri().toStdString());
+    }
+
     try {
         m_data->pjsipCall->makeCall(m_data->buddy->uri().toStdString(), prm);
     } catch (Error err) {
@@ -383,6 +413,14 @@ void RisipCall::invite(const QString &uri)
     createTimestamp();
     setPjsipCall(new PjsipCall(*m_data->account->pjsipAccount()));
     CallOpParam prm(true);
+
+    // ⭐ 新增：根据 enableVideo 标志设置视频参数
+    if (m_data->enableVideo) {
+        prm.opt.videoCount = 1;  // ✅ 启用 1 个视频流（PJSUA2 API）
+        prm.opt.audioCount = 1;  // 同时启用音频
+        prm.opt.flag |= PJSUA_CALL_INCLUDE_DISABLED_MEDIA;  // 在 SDP 中包含视频
+        qDebug() << "✅ RisipCall: Enabling video for SIP invite to" << uri;
+    }
 
     try {
         m_data->pjsipCall->makeCall(uri.toStdString(), prm);
@@ -474,6 +512,32 @@ void RisipCall::setError(const Error &error)
         emit errorCodeChanged(m_data->error.status);
         emit errorMessageChanged(QString::fromStdString(m_data->error.reason));
         emit errorInfoChanged(QString::fromStdString(m_data->error.info(true)));
+    }
+}
+
+/**
+ * @brief RisipCall::enableVideo
+ * @return true if video is enabled for this call
+ *
+ * ⭐ 新增：视频通话支持
+ */
+bool RisipCall::enableVideo() const
+{
+    return m_data->enableVideo;
+}
+
+/**
+ * @brief RisipCall::setEnableVideo
+ * @param enable - true to enable video for this call
+ *
+ * ⭐ 新增：设置是否启用视频
+ * 必须在 call() 或 invite() 之前调用才能生效
+ */
+void RisipCall::setEnableVideo(bool enable)
+{
+    if(m_data->enableVideo != enable) {
+        m_data->enableVideo = enable;
+        emit enableVideoChanged(m_data->enableVideo);
     }
 }
 

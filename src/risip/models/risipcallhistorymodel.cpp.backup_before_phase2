@@ -1,0 +1,153 @@
+/***********************************************************************************
+**    Copyright (C) 2016  Petref Saraci
+**    http://risip.io
+**
+**    This program is free software: you can redistribute it and/or modify
+**    it under the terms of the GNU General Public License as published by
+**    the Free Software Foundation, either version 3 of the License, or
+**    (at your option) any later version.
+**
+**    This program is distributed in the hope that it will be useful,
+**    but WITHOUT ANY WARRANTY; without even the implied warranty of
+**    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+**    GNU General Public License for more details.
+**
+**    You have received a copy of the GNU General Public License
+**    along with this program. See LICENSE.GPLv3
+**    A copy of the license can be found also here <http://www.gnu.org/licenses/>.
+**
+************************************************************************************/
+#include "risipcallhistorymodel.h"
+#include "risipaccount.h"
+#include "risipcall.h"
+#include "risipbuddy.h"
+#include "risip.h"
+
+#include <QDebug>
+
+namespace risip {
+
+RisipCallHistoryModel::RisipCallHistoryModel(QObject *parent)
+    : QAbstractListModel(parent)
+    ,m_account(Risip::instance()->defaultAccount())
+{
+}
+
+RisipCallHistoryModel::~RisipCallHistoryModel()
+{
+}
+
+RisipAccount *RisipCallHistoryModel::account()
+{
+    return m_account;
+}
+
+void RisipCallHistoryModel::setAccount(RisipAccount *account)
+{
+    if(m_account != account) {
+        m_account = account;
+        emit accountChanged(m_account);
+    }
+}
+
+QHash<int, QByteArray> RisipCallHistoryModel::roleNames() const
+{
+    QHash<int, QByteArray> roles;
+    roles[CallContactRole] = "callContact";
+    roles[CallDirectionRole] = "callDirection";
+    roles[CallDurationRole] = "callDuration";
+    roles[CallTimestampRole] = "callTimestamp";
+    return roles;
+}
+
+int RisipCallHistoryModel::rowCount(const QModelIndex &parent) const
+{
+    // For list models only the root node (an invalid parent) should return the list's size. For all
+    // other (valid) parents, rowCount() should return 0 so that it does not become a tree model.
+    if (parent.isValid())
+        return 0;
+
+    // ✅ FIX: Use snapshot count instead of call pointer count
+    // This ensures count is stable even after RisipCall objects are destroyed
+    return m_snapshots.count();
+}
+
+QVariant RisipCallHistoryModel::data(const QModelIndex &index, int role) const
+{
+    if (!index.isValid())
+        return QVariant();
+
+    // ✅ CRITICAL FIX: Read from snapshot instead of RisipCall pointer
+    // This prevents accessing destroyed objects and ensures data persistence
+    if (index.row() >= m_snapshots.count()) {
+        qWarning() << "Invalid index:" << index.row() << "count:" << m_snapshots.count();
+        return QVariant();
+    }
+
+    const CallRecordSnapshot &snapshot = m_snapshots.at(index.row());
+
+    switch (role) {
+    case CallDirectionRole:
+        return snapshot.direction;
+    case CallDurationRole:
+        return (qlonglong)snapshot.duration;
+    case CallTimestampRole:
+        return snapshot.timestamp;
+    case CallContactRole:
+        return snapshot.contact;
+    }
+
+    return QVariant();
+}
+
+void RisipCallHistoryModel::addCallRecord(RisipCall *call)
+{
+    if(!call) {
+        qWarning() << "addCallRecord called with null call";
+        return;
+    }
+
+    // ✅ CRITICAL FIX: Create snapshot of call data IMMEDIATELY
+    // This captures the current state before RisipCall object is destroyed
+    QString contact = call->buddy() ? call->buddy()->contact() : QString();
+    int direction = call->callDirection();
+    long duration = call->callDuration();  // Will use cached value if available
+    QDateTime timestamp = call->timestamp();
+
+    qDebug() << "📝 [HISTORY] Adding call record:";
+    qDebug() << "   Contact:" << contact;
+    qDebug() << "   Direction:" << direction << "(0=Outgoing, 1=Incoming, 2=Unknown)";
+    qDebug() << "   Duration:" << duration << "ms (" << (duration/1000) << "s)";
+    qDebug() << "   Timestamp:" << timestamp.toString("yyyy-MM-dd HH:mm:ss");
+
+    // Create and store snapshot
+    CallRecordSnapshot snapshot(contact, direction, duration, timestamp);
+
+    beginInsertRows(QModelIndex(), rowCount(), rowCount());
+    m_calls.append(call);  // Keep pointer for removeCallRecord() compatibility
+    m_snapshots.append(snapshot);  // ✅ Store permanent data
+    endInsertRows();
+
+    qDebug() << "✅ [HISTORY] Call record added, total count:" << m_snapshots.count();
+}
+
+void RisipCallHistoryModel::removeCallRecord(RisipCall *call)
+{
+    if(!call) {
+        qWarning() << "removeCallRecord called with null call";
+        return;
+    }
+
+    int index = m_calls.indexOf(call);
+    if (index >= 0 && index < m_snapshots.count()) {
+        beginRemoveRows(QModelIndex(), index, index);
+        m_calls.removeAt(index);
+        m_snapshots.removeAt(index);
+        endRemoveRows();
+        qDebug() << "Removed call record at index:" << index;
+    } else {
+        qWarning() << "Call not found in history, index:" << index;
+    }
+}
+
+} //end of risip namespace

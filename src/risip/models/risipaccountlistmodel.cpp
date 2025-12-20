@@ -86,6 +86,10 @@ QHash<int, QByteArray> RisipAccountListModel::roleNames() const
     roles[AccountURI] = "accountUri";
     roles[UserName] = "userName";
     roles[Password] = "password";
+    roles[Uri] = "uri";                    // Alias for accountUri
+    roles[Username] = "username";          // Alias for userName
+    roles[ServerAddress] = "serverAddress";
+    roles[IsDefault] = "isDefault";
     return roles;
 }
 
@@ -109,11 +113,17 @@ QVariant RisipAccountListModel::data(const QModelIndex &index, int role) const
 
     switch (role) {
     case AccountURI:
+    case Uri:  // Alias
         return account->configuration()->uri();
     case UserName:
+    case Username:  // Alias
         return account->configuration()->userName();
     case Password:
         return account->configuration()->password();
+    case ServerAddress:
+        return account->configuration()->serverAddress();
+    case IsDefault:
+        return account->configuration()->uri() == m_data->defaultAccountUri;
     default:
         return QVariant();
     }
@@ -151,14 +161,23 @@ bool RisipAccountListModel::clear()
 void RisipAccountListModel::addSipAccount(RisipAccount *account)
 {
     if(account) {
+        int oldCount = rowCount();
+        qDebug() << "[DEBUG] RisipAccountListModel::addSipAccount() - Before add, count:" << oldCount;
+        qDebug() << "[DEBUG]   Adding account URI:" << account->configuration()->uri();
+        qDebug() << "[DEBUG]   Server address:" << account->configuration()->serverAddress();
+
         beginInsertRows(QModelIndex(), rowCount(), rowCount());
         emit layoutAboutToBeChanged();
 
         m_data->accounts.insert(account->configuration()->uri(), account);
         account->setParent(this);
 
-        endInsertColumns();
+        endInsertRows();  // Fixed: was endInsertColumns()
         emit layoutChanged();
+
+        int newCount = rowCount();
+        qDebug() << "[DEBUG] RisipAccountListModel::addSipAccount() - After add, count:" << newCount;
+        qDebug() << "[DEBUG]   Total accounts in hash:" << m_data->accounts.count();
     }
 }
 

@@ -45,6 +45,14 @@ PjsipCall::~PjsipCall()
 void PjsipCall::onCallState(OnCallStateParam &prm)
 {
     Q_UNUSED(prm)
+
+    // NOTE: This callback is only triggered for calls created via PJSUA2 C++ API
+    // Calls made with pjsua_call_make_call() C API (as in SipPhoneManager::makeCall)
+    // do NOT trigger this callback because no PjsipCall C++ object is created
+
+    // Video encoder now starts automatically via vid_out_auto_transmit = PJ_TRUE config
+    // No manual intervention needed here
+
     if(m_risipCall != NULL)
         m_risipCall->statusChanged();
 }

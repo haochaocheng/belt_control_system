@@ -79,6 +79,7 @@ public:
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
     Q_PROPERTY(QString errorInfo READ errorInfo NOTIFY errorInfoChanged)
     Q_PROPERTY(int lastResponseCode READ lastResponseCode NOTIFY lastResponseCodeChanged)
+    Q_PROPERTY(bool enableVideo READ enableVideo WRITE setEnableVideo NOTIFY enableVideoChanged)
 
     RisipCall(QObject *parent = 0);
     ~RisipCall();
@@ -102,6 +103,8 @@ public:
     QString errorMessage();
     QString errorInfo() const;
     int lastResponseCode() const;
+    bool enableVideo() const;
+    void setEnableVideo(bool enable);
 
 public Q_SLOTS:
     void answer();
@@ -126,6 +129,7 @@ Q_SIGNALS:
     void errorMessageChanged(const QString &message);
     void errorInfoChanged(const QString &info);
     void lastResponseCodeChanged(int response);
+    void enableVideoChanged(bool enable);
 
 private:
     PjsipCall *pjsipCall() const;

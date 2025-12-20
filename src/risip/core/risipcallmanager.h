@@ -66,6 +66,10 @@ public:
     Q_INVOKABLE risip::RisipCall *callPhone(const QString &number);
     Q_INVOKABLE risip::RisipCall *callExternalSIP(const QString &uri);
 
+    // ⭐ 新增：视频通话 API (统一架构，支持视频+语音)
+    Q_INVOKABLE risip::RisipCall *callPhoneWithVideo(const QString &number, bool enableVideo = false);
+    Q_INVOKABLE risip::RisipCall *callBuddyWithVideo(RisipBuddy *buddy, bool enableVideo = false);
+
     void createModelsForAccount(RisipAccount *account);
     void removeModelsForAccount(const RisipAccount *account);
 

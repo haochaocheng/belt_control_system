@@ -132,62 +132,85 @@ Window {
         }
     }
 
-    // Virtual Keyboard - 虚拟键盘会根据窗口大小自动缩放
-    Loader {
-        id: virtualKeyboardLoader
-        active: Qt.inputMethod.visible
-        anchors.fill: parent
-        z: 100000
+    // ✅ CRITICAL: SipPhoneWindow 是独立 Window，必须有自己的 keyboardOverlay 和 InputPanel
+    MouseArea {
+        id: keyboardOverlay
+        parent: Overlay.overlay
+        anchors.left: parent ? parent.left : undefined
+        anchors.right: parent ? parent.right : undefined
+        anchors.top: parent ? parent.top : undefined
+        height: parent ? (parent.height - Qt.inputMethod.keyboardRectangle.height) : 0
+        z: 500000  // 高于 Dialog 但低于 InputPanel
+        visible: Qt.inputMethod.visible
+        enabled: true
+        propagateComposedEvents: true
 
-        sourceComponent: Item {
-            anchors.fill: parent
+        Component.onCompleted: {
+            console.log("=========================================")
+            console.log("🔥🔥🔥 SIP WINDOW OVERLAY VERSION: 2025-12-18-20:45 🔥🔥🔥")
+            console.log("🛡️ [SIP keyboardOverlay] Initialized")
+            console.log("   - z-index:", z)
+            console.log("   - enabled:", enabled)
+            console.log("   - propagateComposedEvents:", propagateComposedEvents)
+            console.log("=========================================")
+        }
 
-            // 半透明背景遮罩（可选）
-            Rectangle {
-                anchors.fill: parent
-                color: "transparent"
+        onVisibleChanged: {
+            if (visible) {
+                console.log("=====================================")
+                console.log("🛡️ [SIP keyboardOverlay] Visible TRUE")
+                console.log("   - Height:", height)
+                console.log("   - z:", z, "enabled:", enabled)
+                console.log("=====================================")
             }
+        }
 
-            InputPanel {
-                id: inputPanel
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
+        onPressed: function(mouse) {
+            console.log("=====================================")
+            console.log("🛡️🛡️🛡️ [SIP keyboardOverlay] 👇 PRESSED")
+            console.log("   - Position:", mouse.x, mouse.y)
+            console.log("   - mouse.accepted BEFORE:", mouse.accepted)
+            mouse.accepted = false
+            console.log("   - mouse.accepted AFTER:", mouse.accepted)
+            console.log("=====================================")
+        }
 
-                // 确保键盘随窗口缩放
-                width: parent.width
-            }
+        onClicked: function(mouse) {
+            console.log("=====================================")
+            console.log("🛡️🛡️🛡️ [SIP keyboardOverlay] 🖱️ CLICKED")
+            console.log("   - Position:", mouse.x, mouse.y)
+            console.log("   ✅ Closing keyboard now!")
 
-            // 关闭虚拟键盘按钮
-            Button {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: inputPanel.height - 10
-                anchors.rightMargin: 10
-                width: 50
-                height: 50
-                z: 1
+            Qt.inputMethod.commit()
+            Qt.inputMethod.hide()
 
-                background: Rectangle {
-                    color: parent.pressed ? "#c0392b" : "#e74c3c"
-                    radius: 25
-                    border.color: "#00d4ff"
-                    border.width: 2
-                }
+            mouse.accepted = true
+            console.log("   - Keyboard closed")
+            console.log("=====================================")
+        }
+    }
 
-                contentItem: Text {
-                    text: "×"
-                    color: "white"
-                    font.pixelSize: 32
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
+    // ✅ CRITICAL: 独立 Window 需要自己的 InputPanel
+    InputPanel {
+        id: inputPanel
+        parent: Overlay.overlay
+        width: sipWindow.width
+        x: 0
+        y: active ? sipWindow.height - height : sipWindow.height
+        z: 1000000  // 高于 keyboardOverlay
+        visible: active
 
-                onClicked: {
-                    Qt.inputMethod.hide()
-                }
-            }
+        Component.onCompleted: {
+            console.log("=========================================")
+            console.log("🔥🔥🔥 SIP InputPanel VERSION: 2025-12-18-20:45 🔥🔥🔥")
+            console.log("⌨️ [SIP InputPanel] Initialized")
+            console.log("   - z-index:", z)
+            console.log("   - width:", width)
+            console.log("=========================================")
+        }
+
+        onActiveChanged: {
+            console.log("⌨️ [SIP InputPanel] Active:", active, "z:", z)
         }
     }
 }

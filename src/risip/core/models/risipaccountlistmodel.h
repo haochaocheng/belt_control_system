@@ -35,7 +35,11 @@ public:
     enum RisipAccountListDataRole {
         AccountURI = Qt::UserRole + 1,
         UserName,
-        Password
+        Password,
+        Uri,              // Alias for AccountURI (for QML compatibility)
+        Username,         // Alias for UserName (for QML compatibility)
+        ServerAddress,    // Server address from configuration
+        IsDefault         // Whether this is the default account
     };
 
     Q_ENUM(RisipAccountListDataRole)

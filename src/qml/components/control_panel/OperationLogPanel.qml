@@ -2,7 +2,7 @@ import QtQuick 6.5
 import QtQuick.Controls 6.5
 import QtQuick.Layouts 6.5
 
-// Operation Log Panel - Shows system operation events
+// Operation Log Panel - Shows system operation events from database
 // Right side, above the chart
 Rectangle {
     id: root
@@ -12,6 +12,70 @@ Rectangle {
     radius: 10
     border.color: "#00d4ff"
     border.width: 2
+
+    // Monitor database log additions
+    Connections {
+        target: operationLogDB
+        function onLogAdded(timestamp, workMode, triggerType, operation, deviceName, detail) {
+            console.log("📥 OperationLogPanel: 收到新日志 -", timestamp, operation, deviceName)
+            refreshLogs()
+        }
+    }
+
+    // Load logs when component is ready
+    Component.onCompleted: {
+        refreshLogs()
+    }
+
+    // Refresh logs from database
+    function refreshLogs() {
+        if (operationLogDB) {
+            logModel.clear()
+            var logs = operationLogDB.getRecentLogs(50)  // Get 50 most recent logs
+            for (var i = 0; i < logs.length; i++) {
+                var log = logs[i]
+                // Format the event text from database fields
+                var eventText = formatEventText(log)
+                // Determine level based on operation type
+                var level = getLogLevel(log.operation)
+
+                logModel.append({
+                    timestamp: log.timestamp,
+                    event: eventText,
+                    level: level
+                })
+            }
+            console.log("✅ OperationLogPanel: 已加载", logs.length, "条日志记录")
+        }
+    }
+
+    // Format event text from database log entry
+    function formatEventText(log) {
+        var text = ""
+        if (log.deviceName) {
+            text = log.operation + ": " + log.deviceName
+        } else {
+            text = log.operation
+        }
+        if (log.detail) {
+            text += " (" + log.detail + ")"
+        }
+        return text
+    }
+
+    // Determine log level based on operation type
+    function getLogLevel(operation) {
+        if (operation.includes("启动") || operation.includes("开始")) {
+            return "success"
+        } else if (operation.includes("停止") || operation.includes("结束")) {
+            return "info"
+        } else if (operation.includes("预警") || operation.includes("警告")) {
+            return "warning"
+        } else if (operation.includes("错误") || operation.includes("失败")) {
+            return "error"
+        }
+        return "info"
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -44,35 +108,6 @@ Rectangle {
 
             model: ListModel {
                 id: logModel
-
-                Component.onCompleted: {
-                    // Sample data
-                    append({
-                        timestamp: "2025-11-21 14:32:15",
-                        event: "按键总起按下",
-                        level: "info"
-                    })
-                    append({
-                        timestamp: "2025-11-21 14:32:18",
-                        event: "电机1启动",
-                        level: "success"
-                    })
-                    append({
-                        timestamp: "2025-11-21 14:35:42",
-                        event: "速度参数修改: 2.5 → 3.0 m/s",
-                        level: "info"
-                    })
-                    append({
-                        timestamp: "2025-11-21 14:38:10",
-                        event: "保护投入: 速度保护",
-                        level: "info"
-                    })
-                    append({
-                        timestamp: "2025-11-21 14:40:22",
-                        event: "温度报警: 85°C",
-                        level: "warning"
-                    })
-                }
             }
 
             delegate: Rectangle {
@@ -150,21 +185,24 @@ Rectangle {
         }
     }
 
-    // Public function to add log entry
+    // Public function to add log entry (for UI operations)
+    // This will write to database, which will trigger onLogAdded and refresh the view
     function addLog(event, level) {
         level = level || "info"
-        var now = new Date()
-        var timestamp = Qt.formatDateTime(now, "yyyy-MM-dd hh:mm:ss")
 
-        logModel.insert(0, {
-            timestamp: timestamp,
-            event: event,
-            level: level
-        })
+        if (operationLogDB && systemConfig) {
+            // Get current work mode
+            var workModeName = "未知"
+            var workMode = systemConfig.workMode
+            switch (workMode) {
+                case 0: workModeName = "检修"; break
+                case 1: workModeName = "就地"; break
+                case 2: workModeName = "点动"; break
+                case 3: workModeName = "集控"; break
+            }
 
-        // Keep only last 100 entries
-        if (logModel.count > 100) {
-            logModel.remove(100, logModel.count - 100)
+            // Write to database (this will trigger refreshLogs via onLogAdded signal)
+            operationLogDB.logOperation(workModeName, "界面操作", event, "", "")
         }
     }
 }

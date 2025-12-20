@@ -1,4 +1,4 @@
-#include "control/belt_controller.h"
+#include "belt_controller.h"
 #include <QDebug>
 
 void BeltController::startMotor() {

@@ -7,118 +7,319 @@ import "components/sip_phone"
 ApplicationWindow {
     id: root
     visible: true
-    width: 1920
-    height: 1080
+    // Auto-detect screen resolution for proper fullscreen display
+    // Device 151 (EGLFS): 1920x1080
+    // Device 155 (X11): 1280x800
+    width: Screen.width > 0 ? Screen.width : 1920
+    height: Screen.height > 0 ? Screen.height : 1080
     title: "Belt Control System"
 
-    // Overlay to detect clicks outside keyboard - only above the keyboard area
-    MouseArea {
-        id: keyboardOverlay
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: parent.height - Qt.inputMethod.keyboardRectangle.height
-        z: 98
-        visible: inputPanel.active
-        propagateComposedEvents: true  // 允许事件传播到下层组件
+    // ✅ Windows platform: Prevent window from being maximized
+    minimumWidth: Qt.platform.os === "windows" ? 1920 : 0
+    minimumHeight: Qt.platform.os === "windows" ? 1080 : 0
+    maximumWidth: Qt.platform.os === "windows" ? 1920 : 65535
+    maximumHeight: Qt.platform.os === "windows" ? 1080 : 65535
 
-        onVisibleChanged: {
-            if (visible) {
-                console.log("KeyboardOverlay MouseArea:")
-                console.log("  Height:", height)
-                console.log("  Parent height:", parent.height)
-                console.log("  Keyboard height:", Qt.inputMethod.keyboardRectangle.height)
-            }
+    // For X11 mode (Device 155): Make fullscreen to hide window decorations and taskbar
+    // EGLFS mode (Device 151) naturally has no window decorations
+    // Windows platform: Use windowed mode (1920x1080) for development
+    // Use screen width to detect device: 1280=Device155(X11), 1920=Device151(EGLFS)
+    Component.onCompleted: {
+        console.log("[FULLSCREEN DEBUG] Screen size:", Screen.width, "x", Screen.height)
+        console.log("[FULLSCREEN DEBUG] Window size:", width, "x", height)
+        console.log("[FULLSCREEN DEBUG] Current visibility:", visibility)
+        console.log("[FULLSCREEN DEBUG] Platform:", Qt.platform.os)
+
+        // ✅ Windows platform: Always use windowed mode (1920x1080)
+        if (Qt.platform.os === "windows") {
+            visibility = Window.Windowed
+            // Center the window on screen
+            x = (Screen.width - width) / 2
+            y = (Screen.height - height) / 2
+            console.log("[FULLSCREEN DEBUG] Windows platform detected, using windowed mode 1920x1080")
+            console.log("[FULLSCREEN DEBUG] Window positioned at:", x, y)
+            return
         }
 
-        onClicked: function(mouse) {
-            // 检查是否点击在右上角的 VoIP 按钮区域 (假设按钮在右上角 100x100 区域)
-            var voipButtonArea = {
-                x: parent.width - 120,  // 右边距 20 + 按钮宽度 80 + 边距 20
-                y: 0,
-                width: 120,
-                height: 120
-            };
-
-            if (mouse.x >= voipButtonArea.x && mouse.x <= parent.width &&
-                mouse.y >= voipButtonArea.y && mouse.y <= voipButtonArea.height) {
-                console.log("Clicked on VoIP button area, propagating event")
-                mouse.accepted = false  // 不接受此事件，让它传播到下层
-                return
-            }
-
-            console.log("Clicked outside keyboard at y:", mouse.y)
-            // Click outside keyboard to close it
-            Qt.inputMethod.commit()
-            Qt.inputMethod.hide()
+        // Device 155 has screen width 1280 (rotated from 800x1280)
+        // Device 151 has screen width 1920
+        if (Screen.width === 1280 || Screen.height === 1280) {
+            visibility = Window.FullScreen
+            console.log("[FULLSCREEN DEBUG] Device 155 (1280x800) detected, set to fullscreen")
+        } else if (Screen.width === 1920 || Screen.height === 1920) {
+            console.log("[FULLSCREEN DEBUG] Device 151 (1920x1080) detected, EGLFS naturally fullscreen")
+        } else {
+            console.log("[FULLSCREEN DEBUG] Unknown screen size, trying fullscreen anyway")
+            visibility = Window.FullScreen
         }
     }
+
+    // ✅ MOVED keyboardOverlay to Overlay.overlay layer - see Loader below
+    // This ensures it's in the same hierarchy as InputPanel and won't block events
 
     App {
         id: mainApp
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.bottom: inputPanel.top
+        anchors.bottom: dummyInputPanel.top
         z: 1
     }
 
-    // Qt Official Virtual Keyboard - Must be on top of everything including Popups
-    // Using Overlay.overlay as parent to ensure keyboard is above all Popups
+    // ✅ Dummy InputPanel for layout calculations
+    Item {
+        id: dummyInputPanel
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: Qt.inputMethod.visible ? Qt.inputMethod.keyboardRectangle.height : 0
+    }
+
+    // ✅ CRITICAL: Both keyboardOverlay and InputPanel in Overlay.overlay
+    // This ensures they're in the same hierarchy and keyboardOverlay won't block InputPanel events
     Loader {
         id: keyboardLoader
-        active: Qt.inputMethod.visible
-        sourceComponent: Item {
-            parent: Overlay.overlay
-            anchors.fill: parent
-            z: 100000
+        active: true  // Always active to ensure initialization
+        asynchronous: false  // Synchronous loading to ensure immediate availability
 
-            InputPanel {
-                id: inputPanel
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
+        sourceComponent: Item {
+            id: keyboardContainerItem
+            // Wrapper Item containing both keyboard overlay and InputPanel
+            parent: Overlay.overlay
+            anchors.fill: parent ? parent : undefined
+            z: 1  // ✅ 默认 z 值，会动态调整
+
+            Component.onCompleted: {
+                console.log("========================================")
+                console.log("🔧 [Keyboard Container] Initialized in Overlay")
+                console.log("   - parent:", parent)
+                console.log("   - parent is Overlay:", parent === Overlay.overlay)
+                console.log("   - Initial z-index:", z, "⬅️ Will be dynamically adjusted")
+                console.log("========================================")
             }
 
-            // Close button for virtual keyboard
-            Button {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: inputPanel.height - 10
-                anchors.rightMargin: 10
-                width: 50
-                height: 50
-                visible: true
+            // ✅ 监听虚拟键盘显示/隐藏
+            Connections {
+                target: Qt.inputMethod
+                function onVisibleChanged() {
+                    if (Qt.inputMethod.visible) {
+                        console.log("⌨️ [Keyboard] Visible changed to TRUE")
+                        adjustKeyboardZIndex()
+                    } else {
+                        console.log("⌨️ [Keyboard] Visible changed to FALSE")
+                        // 键盘隐藏时恢复默认 z 值
+                        keyboardContainerItem.z = 1
+                        console.log("   - Reset z to:", keyboardContainerItem.z)
+                    }
+                }
+            }
 
-                background: Rectangle {
-                    color: parent.pressed ? "#c0392b" : "#e74c3c"
-                    radius: 25
-                    border.color: "#00d4ff"
-                    border.width: 2
+            // ✅ 动态调整键盘 z 值的函数
+            function adjustKeyboardZIndex() {
+                console.log("🔍 [Dynamic Z] Searching for active input...")
+
+                // ✅ 获取当前焦点元素 - 使用 Overlay.overlay 的方式
+                var focusItem = null
+
+                // 方法1: 通过 parent 找到 ApplicationWindow
+                var parentItem = keyboardContainerItem.parent
+                while (parentItem) {
+                    if (parentItem.activeFocusItem !== undefined) {
+                        focusItem = parentItem.activeFocusItem
+                        console.log("   ✅ Found activeFocusItem via parent chain")
+                        break
+                    }
+                    parentItem = parentItem.parent
                 }
 
-                contentItem: Text {
-                    text: "×"
-                    color: "white"
-                    font.pixelSize: 32
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
+                if (!focusItem) {
+                    console.log("   ⚠️ No active focus item found")
+                    keyboardContainerItem.z = 20000  // 默认高 z 值
+                    return
                 }
 
-                onClicked: {
+                console.log("   ✅ Found focus item:", focusItem)
+                console.log("      - Type:", focusItem.toString())
+
+                // 遍历父级链，找到最高的 z 值
+                var maxZ = 0
+                var item = focusItem
+                var level = 0
+
+                while (item && level < 50) {
+                    if (item.z !== undefined && item.z > maxZ) {
+                        maxZ = item.z
+                        console.log("      - Level", level, "z:", item.z, "=>", item.toString())
+                    }
+                    item = item.parent
+                    level++
+                }
+
+                // 设置键盘 z 为输入框层级 + 10000
+                var newZ = maxZ + 10000
+                console.log("   🎯 Max z found:", maxZ)
+                console.log("   ✅ Setting keyboard z to:", newZ, "(maxZ + 10000)")
+
+                keyboardContainerItem.z = newZ
+            }
+
+            // ✅ Keyboard Overlay - 覆盖键盘上方区域，点击即关闭键盘
+            // ⚠️ 但要避免拦截 Dialog 内的点击！
+            MouseArea {
+                id: keyboardOverlay
+                anchors.left: parent ? parent.left : undefined
+                anchors.right: parent ? parent.right : undefined
+                anchors.top: parent ? parent.top : undefined
+                height: parent ? (parent.height - Qt.inputMethod.keyboardRectangle.height) : 0
+                z: 3  // ✅ CRITICAL: 在容器内，高于 InputPanel wrapper (z:2)
+                visible: false  // ✅ CRITICAL: 禁用主界面的 keyboardOverlay，改用 Dialog 内的！
+                enabled: false  // ✅ CRITICAL: 完全禁用，避免拦截 Dialog 事件！
+                propagateComposedEvents: true  // ✅ CRITICAL: 允许事件穿透到下层元素（如 TextField）
+
+                Component.onCompleted: {
+                    console.log("=========================================")
+                    console.log("🔥🔥🔥 VERSION: 2025-12-19-07:00 DYNAMIC-Z 🔥🔥🔥")
+                    console.log("🛡️ [Main keyboardOverlay] DISABLED - using Dialog overlay instead")
+                    console.log("   - z-index:", z, "(parent container z:", parent.z, "- DYNAMIC)")
+                    console.log("   - visible:", visible, "(SHOULD be false)")
+                    console.log("   - enabled:", enabled, "(SHOULD be false)")
+                    console.log("=========================================")
+                }
+
+                onVisibleChanged: {
+                    if (visible) {
+                        console.log("🛡️ [keyboardOverlay] Visible changed to true")
+                        console.log("   - Height:", height)
+                        console.log("   - Keyboard height:", Qt.inputMethod.keyboardRectangle.height)
+                        console.log("   - z:", z, "enabled:", enabled)
+                    }
+                }
+
+                onPressed: function(mouse) {
+                    console.log("=====================================")
+                    console.log("🛡️🛡️🛡️ [Main keyboardOverlay] 👇 PRESSED")
+                    console.log("   - Position:", mouse.x, mouse.y)
+                    console.log("   - z-index:", z)
+                    console.log("   - enabled:", enabled)
+                    console.log("   - visible:", visible)
+                    console.log("   - mouse.accepted BEFORE:", mouse.accepted)
+                    // ✅ CRITICAL: 不要 accept，让事件继续传播到下层（TextField 等）
+                    mouse.accepted = false
+                    console.log("   - mouse.accepted AFTER:", mouse.accepted)
+                    console.log("   - Event should propagate to lower layers")
+                    console.log("=====================================")
+                }
+
+                onClicked: function(mouse) {
+                    console.log("=====================================")
+                    console.log("🛡️🛡️🛡️ [Main keyboardOverlay] 🖱️ CLICKED")
+                    console.log("   - Position:", mouse.x, mouse.y)
+                    console.log("   - Keyboard visible:", Qt.inputMethod.visible)
+                    console.log("   ✅ Closing keyboard from main keyboardOverlay")
+
+                    // 点击键盘上方任意位置，关闭键盘
+                    Qt.inputMethod.commit()
                     Qt.inputMethod.hide()
+
+                    // ✅ Accept 事件防止进一步传播
+                    mouse.accepted = true
+                    console.log("   - Keyboard should be closed now")
+                    console.log("=====================================")
+                }
+            }
+
+            // ✅ InputPanel - the actual virtual keyboard
+            Item {
+                anchors.left: parent ? parent.left : undefined
+                anchors.right: parent ? parent.right : undefined
+                anchors.bottom: parent ? parent.bottom : undefined
+                height: 600  // Fixed height for keyboard
+                z: 2  // Above keyboardOverlay (z:1)
+                visible: Qt.inputMethod.visible
+
+                Component.onCompleted: {
+                    console.log("========================================")
+                    console.log("🔧 [Keyboard Wrapper] Initialized")
+                    console.log("   - z-index:", z, "(above keyboardOverlay)")
+                    console.log("   - width:", width)
+                    console.log("   - height:", height)
+                    console.log("========================================")
+                }
+
+                // ✅ DEBUG: MouseArea to intercept all keyboard events and log them
+                MouseArea {
+                    id: keyboardDebugArea
+                    anchors.fill: parent
+                    z: -1  // Below InputPanel but captures events if InputPanel doesn't
+                    enabled: true
+                    propagateComposedEvents: true
+
+                    Component.onCompleted: {
+                        console.log("🖱️ [Keyboard Debug MouseArea] Initialized")
+                        console.log("   - Size:", width, "x", height)
+                        console.log("   - Z-index:", z)
+                        console.log("   - Enabled:", enabled)
+                    }
+
+                    onPressed: function(mouse) {
+                        console.log("🖱️🖱️🖱️ [Keyboard Debug] 👇👇👇 PRESSED at:", mouse.x, mouse.y)
+                        console.log("   - MouseArea size:", width, "x", height)
+                        console.log("   - MouseArea z:", z)
+                        console.log("   - MouseArea enabled:", enabled)
+                        console.log("   - mouse.accepted BEFORE:", mouse.accepted)
+                        mouse.accepted = false  // Let it propagate
+                    }
+
+                    onReleased: function(mouse) {
+                        console.log("🖱️🖱️🖱️ [Keyboard Debug] 👆👆👆 RELEASED at:", mouse.x, mouse.y)
+                        mouse.accepted = false
+                    }
+
+                    onClicked: function(mouse) {
+                        console.log("🖱️🖱️🖱️ [Keyboard Debug] 🖱️🖱️🖱️ CLICKED at:", mouse.x, mouse.y)
+                        console.log("   ❗❗❗ This means the click reached this MouseArea")
+                        console.log("   ❗❗❗ It should have been captured by InputPanel first!")
+                        mouse.accepted = false
+                    }
+
+                    onEnabledChanged: {
+                        console.log("🖱️ [Keyboard Debug MouseArea] Enabled changed:", enabled)
+                    }
+
+                    onVisibleChanged: {
+                        console.log("🖱️ [Keyboard Debug MouseArea] Visible changed:", visible)
+                    }
+                }
+
+                InputPanel {
+                    id: virtualKeyboard
+                    anchors.fill: parent
+                    z: 1  // Above the debug MouseArea
+                    visible: Qt.inputMethod.visible
+                    enabled: true
+
+                    Component.onCompleted: {
+                        console.log("========================================")
+                        console.log("⌨️ [InputPanel] Virtual keyboard initialized")
+                        console.log("   - parent:", parent)
+                        console.log("   - z-index:", z)
+                        console.log("   - width:", width)
+                        console.log("   - height:", height)
+                        console.log("   - enabled:", enabled)
+                        console.log("   - visible:", visible)
+                        console.log("========================================")
+                    }
+
+                    onVisibleChanged: {
+                        console.log("⌨️ [InputPanel] Visibility changed:", visible)
+                    }
+
+                    onEnabledChanged: {
+                        console.log("⌨️ [InputPanel] Enabled changed:", enabled)
+                    }
                 }
             }
         }
-    }
-
-    // Dummy InputPanel reference for anchors
-    Item {
-        id: inputPanel
-        anchors.bottom: parent.bottom
-        height: Qt.inputMethod.keyboardRectangle.height
-        width: parent.width
     }
 
     // VoIP Button - Must be at top level to avoid being blocked by keyboard overlay

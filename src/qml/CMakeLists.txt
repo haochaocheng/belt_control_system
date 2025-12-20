@@ -10,6 +10,7 @@ qt_add_qml_module(qml_module
         pages/ControlPanel.qml
         pages/ParameterSettings.qml
         pages/AlarmPage.qml
+        pages/DeviceOperationLog.qml
         components/SpeedGauge.qml
         components/StatusIndicator.qml
         components/MotorControlBtn.qml
@@ -33,8 +34,10 @@ qt_add_qml_module(qml_module
         components/control_panel/AnalogChart.qml
         components/parameter_settings/BasicParametersSection.qml
         components/parameter_settings/NetworkParametersSection.qml
+        components/parameter_settings/NetworkSettingsSection.qml
         components/parameter_settings/MasterControlSection.qml
         components/parameter_settings/DeviceSequenceSection.qml
+        components/parameter_settings/DeviceSelectionPopup.qml
         components/parameter_settings/VirtualKeyboardPopup.qml
         components/parameter_settings/DateTimePickerPopup.qml
         components/parameter_settings/NumericInputDialog.qml
@@ -54,6 +57,7 @@ qt_add_qml_module(qml_module
         components/sip_phone/pages/SipSettingsPage.qml
     RESOURCES
         images/header.png
+        sounds/ringtone.wav
     RESOURCE_PREFIX /qt/qml
     NO_PLUGIN_OPTIONAL
 )
@@ -65,6 +69,11 @@ target_link_libraries(qml_module PRIVATE
     control_module        # 控制逻辑模块（C++）
     utils_module          # 工具类模块
 )
+
+# 条件性链接可选Qt组件
+if(TARGET Qt6::Multimedia)
+    target_link_libraries(qml_module PRIVATE Qt6::Multimedia)  # 用于来电铃声播放
+endif()
 
 # 暴露头文件路径（供main模块调用）
 target_include_directories(qml_module PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

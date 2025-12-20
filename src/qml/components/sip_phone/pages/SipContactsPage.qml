@@ -1,12 +1,41 @@
 import QtQuick 6.5
 import QtQuick.Controls 6.5
 import QtQuick.Layouts 6.5
+import BeltControl.SipPhone 1.0
 
 // Contacts/Phonebook page
 Page {
     id: root
 
     signal callContact(string number)
+    signal callContactVideo(string number)  // 视频通话
+
+    // ✅ 加载联系人列表
+    Component.onCompleted: {
+        loadContacts()
+    }
+
+    // 从数据库加载联系人
+    function loadContacts() {
+        console.log("📇 Loading contacts from database...")
+
+        // 清空当前列表
+        contactsListModel.clear()
+
+        // 从数据库加载联系人
+        var contacts = SipPhoneManager.getAllContacts()
+        console.log("📇 Loaded", contacts.length, "contacts from database")
+
+        // 添加到列表模型
+        for (var i = 0; i < contacts.length; i++) {
+            contactsListModel.append({
+                id: contacts[i].id,
+                name: contacts[i].name,
+                number: contacts[i].number,
+                company: ""  // ContactDatabase 暂时不支持 company 字段
+            })
+        }
+    }
 
     // Inline RisipButton component
     component RisipButton: Button {
@@ -157,7 +186,7 @@ Page {
                     font.pixelSize: 14
                     font.bold: true
                     color: "#00d4ff"
-                    Layout.preferredWidth: 100
+                    Layout.preferredWidth: 140
                 }
             }
         }
@@ -172,27 +201,7 @@ Page {
 
             model: ListModel {
                 id: contactsListModel
-
-                ListElement {
-                    name: "张三"
-                    number: "1001"
-                    company: "技术部"
-                }
-                ListElement {
-                    name: "李四"
-                    number: "1002"
-                    company: "管理部"
-                }
-                ListElement {
-                    name: "王五"
-                    number: "1003"
-                    company: "运维部"
-                }
-                ListElement {
-                    name: "赵六"
-                    number: "1004"
-                    company: "安全部"
-                }
+                // ✅ 联系人数据从数据库动态加载，不再使用硬编码数据
             }
 
             delegate: Rectangle {
@@ -247,20 +256,21 @@ Page {
                     }
 
                     RowLayout {
-                        Layout.preferredWidth: 100
+                        Layout.preferredWidth: 140
                         spacing: 5
 
+                        // 语音通话按钮
                         RisipButton {
-                            Layout.preferredWidth: 45
-                            Layout.preferredHeight: 40
-                            buttonRadius: 20
+                            Layout.preferredWidth: 40
+                            Layout.preferredHeight: 36
+                            buttonRadius: 18
                             buttonColor: "#27ae60"
                             hoverColor: "#229954"
                             borderWidth: 1
 
                             contentItem: Text {
                                 text: "📞"
-                                font.pixelSize: 18
+                                font.pixelSize: 15
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                             }
@@ -270,23 +280,53 @@ Page {
                             }
                         }
 
+                        // 视频通话按钮
                         RisipButton {
-                            Layout.preferredWidth: 45
-                            Layout.preferredHeight: 40
-                            buttonRadius: 20
+                            Layout.preferredWidth: 40
+                            Layout.preferredHeight: 36
+                            buttonRadius: 18
+                            buttonColor: "#3498db"
+                            hoverColor: "#2980b9"
+                            borderWidth: 1
+
+                            contentItem: Text {
+                                text: "📹"
+                                font.pixelSize: 15
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            onClicked: {
+                                root.callContactVideo(model.number)
+                            }
+                        }
+
+                        // 删除按钮
+                        RisipButton {
+                            Layout.preferredWidth: 40
+                            Layout.preferredHeight: 36
+                            buttonRadius: 18
                             buttonColor: "#e74c3c"
                             hoverColor: "#cb4335"
                             borderWidth: 1
 
                             contentItem: Text {
                                 text: "🗑"
-                                font.pixelSize: 18
+                                font.pixelSize: 15
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                             }
 
                             onClicked: {
-                                contactsListModel.remove(index)
+                                // ✅ 从数据库删除联系人
+                                var success = SipPhoneManager.deleteContact(model.id)
+                                if (success) {
+                                    console.log("✅ 联系人删除成功:", model.name)
+                                    // 重新加载列表
+                                    loadContacts()
+                                } else {
+                                    console.log("❌ 联系人删除失败")
+                                }
                             }
                         }
                     }
@@ -326,75 +366,68 @@ Page {
         }
     }
 
-    // Add contact dialog - Popup with Flickable for scrolling
-    Popup {
+    // Add contact dialog - Dialog with Flickable for scrolling
+    Dialog {
         id: addContactDialog
-        modal: true
-        anchors.centerIn: parent
+        modal: false
+        closePolicy: Popup.NoAutoClose
+        x: (parent.width - width) / 2
+        y: 30
         width: Math.min(450, parent.width * 0.9)
-        height: Math.min(600, parent.height * 0.85)
-        padding: 0
+        height: Math.min(550, parent.height * 0.85)
 
         background: Rectangle {
             color: "#1a1a2e"
             radius: 15
             border.color: "#00d4ff"
-            border.width: 3
+            border.width: 2
         }
 
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 0
+        header: Rectangle {
+            height: 40
+            color: "#16213e"
+            radius: 15
 
-            // Header
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 60
-                color: "#0f3460"
-                radius: 15
-
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    height: parent.height / 2
-                    color: parent.color
-                }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "添加联系人"
-                    font.pixelSize: 20
-                    font.bold: true
-                    color: "#00d4ff"
-                }
+            Text {
+                anchors.centerIn: parent
+                text: "添加联系人"
+                font.pixelSize: 16
+                font.bold: true
+                color: "#00d4ff"
             }
 
-            // Content with Flickable for keyboard auto-scroll
-            Flickable {
-                id: dialogFlickable
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                contentWidth: width
-                // Add extra height when keyboard is visible to allow scrolling
-                contentHeight: {
-                    var baseHeight = dialogContent.implicitHeight + 40
-                    var keyboardHeight = Qt.inputMethod.keyboardRectangle.height
-                    if (keyboardHeight > 0) {
-                        // Add keyboard height plus margin to ensure scrollability
-                        return baseHeight + keyboardHeight + 100
-                    }
-                    return baseHeight
+            // MouseArea to close keyboard when clicking header
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    console.log("[Dialog Header] Clicked - closing keyboard")
+                    Qt.inputMethod.commit()
+                    Qt.inputMethod.hide()
                 }
+            }
+        }
 
-                interactive: true
-                flickableDirection: Flickable.VerticalFlick
+        contentItem: Flickable {
+            id: dialogFlickable
+            clip: true
+            // Add extra height when keyboard is visible to allow scrolling
+            contentHeight: {
+                var baseHeight = dialogContent.implicitHeight + 40
+                var keyboardHeight = Qt.inputMethod.keyboardRectangle.height
+                if (keyboardHeight > 0) {
+                    // Add keyboard height plus margin to ensure scrollability
+                    return baseHeight + keyboardHeight + 100
+                }
+                return baseHeight
+            }
 
-                property real scrollMarginVertical: 80
+            interactive: contentHeight > height
+            flickableDirection: Flickable.VerticalFlick
 
-                // Monitor keyboard visibility and adjust scroll
-                Connections {
+            property real scrollMarginVertical: 80
+
+            // Monitor keyboard visibility and adjust scroll
+            Connections {
                     target: Qt.inputMethod
                     function onVisibleChanged() {
                         console.log("Keyboard visibility changed:", Qt.inputMethod.visible)
@@ -487,11 +520,17 @@ Page {
 
                 // Click anywhere to dismiss keyboard
                 MouseArea {
-                    anchors.fill: parent
-                    z: -1
-                    onClicked: {
-                        addContactDialog.forceActiveFocus()
-                        Qt.inputMethod.hide()
+                    anchors.fill: dialogContent  // ✅ Fill ColumnLayout area
+                    z: -1  // ✅ Behind ColumnLayout content
+                    propagateComposedEvents: true
+
+                    onClicked: function(mouse) {
+                        console.log("[Dialog Content] MouseArea clicked, mouse.accepted:", mouse.accepted)
+                        if (!mouse.accepted) {
+                            console.log("[Dialog Content] Clicked blank space - closing keyboard")
+                            Qt.inputMethod.commit()
+                            Qt.inputMethod.hide()
+                        }
                     }
                 }
 
@@ -625,64 +664,74 @@ Page {
                 }
             }
 
-            // Bottom buttons
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 80
-                color: "#0f3460"
-                radius: 15
-
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    height: parent.height / 2
-                    color: parent.color
+        onAccepted: {
+            Qt.inputMethod.hide()
+            if (nameInput.text && numberInput.text) {
+                // ✅ 保存到数据库
+                var success = SipPhoneManager.addContact(nameInput.text, numberInput.text)
+                if (success) {
+                    console.log("✅ 联系人保存成功:", nameInput.text, numberInput.text)
+                    // ✅ 重新加载联系人列表以显示最新数据
+                    loadContacts()
+                } else {
+                    console.log("❌ 联系人保存失败")
                 }
 
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.margins: 15
-                    spacing: 15
+                nameInput.text = ""
+                numberInput.text = ""
+                companyInput.text = ""
+            }
+        }
 
-                    RisipButton {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 50
-                        text: "取消"
-                        buttonColor: "#7f8c8d"
-                        hoverColor: "#95a5a6"
+        onRejected: {
+            Qt.inputMethod.hide()
+            nameInput.text = ""
+            numberInput.text = ""
+            companyInput.text = ""
+        }
 
-                        onClicked: {
-                            Qt.inputMethod.hide()
-                            nameInput.text = ""
-                            numberInput.text = ""
-                            companyInput.text = ""
-                            addContactDialog.close()
-                        }
-                    }
+        footer: DialogButtonBox {
+            background: Rectangle {
+                color: "#16213e"
+            }
 
-                    RisipButton {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 50
-                        text: "保存"
-                        buttonColor: "#27ae60"
-                        hoverColor: "#229954"
+            Button {
+                text: "取消"
+                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+                implicitHeight: 45
 
-                        onClicked: {
-                            Qt.inputMethod.hide()
-                            if (nameInput.text && numberInput.text) {
-                                contactsListModel.append({
-                                    name: nameInput.text,
-                                    number: numberInput.text,
-                                    company: companyInput.text
-                                })
-                                nameInput.text = ""
-                                numberInput.text = ""
-                                companyInput.text = ""
-                                addContactDialog.close()
-                            }
-                        }
-                    }
+                background: Rectangle {
+                    color: parent.pressed ? "#95a5a6" : "#7f8c8d"
+                    radius: 8
+                }
+
+                contentItem: Text {
+                    text: parent.text
+                    color: "#ffffff"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 15
+                    font.bold: true
+                }
+            }
+
+            Button {
+                text: "保存"
+                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+                implicitHeight: 45
+
+                background: Rectangle {
+                    color: parent.pressed ? "#229954" : "#27ae60"
+                    radius: 8
+                }
+
+                contentItem: Text {
+                    text: parent.text
+                    color: "#ffffff"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 15
+                    font.bold: true
                 }
             }
         }

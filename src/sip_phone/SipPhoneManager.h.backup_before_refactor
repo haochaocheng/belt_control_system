@@ -1,0 +1,171 @@
+#ifndef SIPPHONEMANAGER_H
+#define SIPPHONEMANAGER_H
+
+#include <QObject>
+#include <QString>
+#include <QDateTime>
+#include <QWindow>
+
+/**
+ * @brief SIP Phone Manager - Main entry point for SIP functionality
+ *
+ * This class manages the SIP phone system including:
+ * - SIP endpoint initialization
+ * - Account registration
+ * - Call management
+ * - Audio/video handling
+ *
+ * Based on risip architecture wrapping PJSIP
+ */
+class SipPhoneManager : public QObject
+{
+    Q_OBJECT
+
+    // Properties exposed to QML
+    Q_PROPERTY(bool isInitialized READ isInitialized NOTIFY isInitializedChanged)
+    Q_PROPERTY(bool isRegistered READ isRegistered NOTIFY isRegisteredChanged)
+    Q_PROPERTY(bool isInCall READ isInCall NOTIFY isInCallChanged)
+    Q_PROPERTY(QString callStatus READ callStatus NOTIFY callStatusChanged)
+    Q_PROPERTY(QString currentNumber READ currentNumber WRITE setCurrentNumber NOTIFY currentNumberChanged)
+    Q_PROPERTY(bool isIncomingVideoCall READ isIncomingVideoCall NOTIFY isIncomingVideoCallChanged)
+    Q_PROPERTY(int callDuration READ callDuration NOTIFY callDurationChanged)
+    Q_PROPERTY(QString serverStatus READ serverStatus NOTIFY serverStatusChanged)
+    Q_PROPERTY(QObject* accountsModel READ accountsModel NOTIFY accountsModelChanged)
+    Q_PROPERTY(QObject* videoCallManager READ videoCallManager CONSTANT)
+    Q_PROPERTY(QObject* qtVideoPreview READ qtVideoPreview CONSTANT)
+    Q_PROPERTY(QObject* localVideoManager READ localVideoManager CONSTANT)
+    Q_PROPERTY(QObject* remoteVideoManager READ remoteVideoManager CONSTANT)
+
+public:
+    explicit SipPhoneManager(QObject *parent = nullptr);
+    ~SipPhoneManager();
+
+    // Static singleton instance
+    static SipPhoneManager* instance();
+    static void registerToQml();
+
+    // Property getters
+    bool isInitialized() const;
+    bool isRegistered() const;
+    bool isInCall() const;
+    QString callStatus() const;
+    QString currentNumber() const;
+    bool isIncomingVideoCall() const;
+    int callDuration() const;
+    QString serverStatus() const;
+    QObject* accountsModel() const;
+    QObject* videoCallManager() const;
+    QObject* qtVideoPreview() const;
+    QObject* localVideoManager() const;
+    QObject* remoteVideoManager() const;
+
+    // Property setters
+    void setCurrentNumber(const QString &number);
+
+public slots:
+    // SIP endpoint control
+    bool initializeEndpoint();
+    void shutdownEndpoint();
+
+    // Account management
+    bool registerAccount(const QString &sipServer,
+                        const QString &username,
+                        const QString &password,
+                        int port = 5060);
+    void unregisterAccount();
+
+    // Multi-account management (uses Risip's built-in account model)
+    QObject* getAllAccountsModel();  // Returns QAbstractItemModel* as QObject*
+    bool removeAccount(const QString &accountUri);
+    bool setAsDefaultAccount(const QString &accountUri);
+    bool loginExistingAccount(const QString &accountUri);  // Login to an existing saved account
+
+    // Create new account (like Risip.createAccount)
+    bool createAccount(const QString &username,
+                      const QString &password,
+                      const QString &serverAddress,
+                      const QString &proxyServer = QString(),
+                      int localPort = 5060,
+                      int networkProtocol = 0);  // 0=UDP, 1=TCP, 2=TLS
+
+    // Auto sign-in management
+    bool getAutoSignIn() const;
+    void setAutoSignInEnabled(bool enabled);
+
+    // Call history management (uses Risip's built-in call history model)
+    QObject* getCallHistoryModel();  // Returns current account's call history model
+
+    // Call control
+    void makeCall(const QString &number);          // Audio-only call
+    void makeVideoCall(const QString &number);     // Audio + Video call
+    void answerCall();                             // Answer incoming call (video if offered, audio otherwise)
+    void answerCallAsAudio();                      // Answer incoming call as audio-only (decline video)
+    void hangupCall();
+    void holdCall(bool hold);
+    void transferCall(const QString &targetNumber);
+
+    // Audio control
+    void setMicrophoneVolume(int volume);  // 0-100
+    void setSpeakerVolume(int volume);     // 0-100
+    void muteMicrophone(bool mute);
+
+    // DTMF (dial tone)
+    void sendDtmf(const QString &digits);
+
+    // Video preview control (本机视频预览)
+    void startVideoPreview();      // 开始本机视频预览
+    void stopVideoPreview();       // 停止本机视频预览
+    bool isVideoPreviewActive() const;  // 检查预览是否正在运行
+    Q_INVOKABLE QWidget* getVideoPreviewWidget();  // 获取视频预览Widget(用于嵌入Qt界面)
+
+    // ✅ Call timer control (must be slots for QMetaObject::invokeMethod to work from PJSIP thread)
+    void startCallTimer();   // Start call duration timer
+    void stopCallTimer();    // Stop call duration timer
+
+signals:
+    // Status signals
+    void isInitializedChanged(bool initialized);
+    void isRegisteredChanged(bool registered);
+    void isInCallChanged(bool inCall);
+    void callStatusChanged(const QString &status);
+    void currentNumberChanged(const QString &number);
+    void isIncomingVideoCallChanged(bool isVideoCall);
+    void callDurationChanged(int duration);
+    void serverStatusChanged(const QString &status);
+    void accountsModelChanged();
+
+    // Event signals
+    void incomingCall(const QString &callerNumber, const QString &callerName);
+    void callConnected();
+    void callDisconnected();
+    void registrationSuccess();
+    void registrationFailed(const QString &reason);
+    void callFailed(const QString &reason);
+
+    // Error signals
+    void errorOccurred(const QString &errorMessage);
+
+public:
+    // ✅ Public methods for call state callback to update UI
+    void setInCall(bool inCall);
+    void updateCallStatus(const QString &status);
+    void setIsIncomingVideoCall(bool isVideoCall);  // Update incoming video call flag
+    void notifyCallConnected(int callId);  // Notify video managers of call connected
+    void notifyCallDisconnected();         // Notify video managers of call disconnected
+
+private:
+    class Private;
+    Private *d;
+
+    static SipPhoneManager *m_instance;
+
+    // Helper methods
+    void updateServerStatus(const QString &status);
+    void configureAccountVideoDevice(const QString &accountUri);  // Configure video device for an account by URI
+    void handleCallStatusChange(bool isVideoCall);  // Handle call status changes for both audio and video calls
+
+    // Internal call method with video support
+    void makeCall(const QString &number, bool enableVideo);
+};
+
+#endif // SIPPHONEMANAGER_H

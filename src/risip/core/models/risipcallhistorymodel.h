@@ -23,11 +23,27 @@
 #include "risipsdkglobal.h"
 #include "risipmodels_qt6_compat.h"
 #include <QAbstractListModel>
+#include <QDateTime>
+#include <QHash>
 
 namespace risip {
 
 class RisipAccount;
 class RisipCall;
+
+// ✅ NEW: Snapshot structure to store call data permanently
+// This prevents data loss when RisipCall objects are destroyed
+struct CallRecordSnapshot {
+    QString contact;
+    int direction;
+    long duration;  // in milliseconds
+    QDateTime timestamp;
+
+    // ✅ Risip SDK enum: Incoming=1, Outgoing=2, Unknown=-1
+    CallRecordSnapshot() : direction(-1), duration(0) {}  // -1 = Unknown
+    CallRecordSnapshot(const QString &c, int dir, long dur, const QDateTime &ts)
+        : contact(c), direction(dir), duration(dur), timestamp(ts) {}
+};
 
 class RISIP_VOIPSDK_EXPORT RisipCallHistoryModel : public QAbstractListModel
 {
@@ -55,13 +71,19 @@ public:
 
     void addCallRecord(RisipCall *call);
     void removeCallRecord(RisipCall *call);
+    void removeRecordAtIndex(int index);  // ✅ Remove call record by index (for UI delete button)
 
 Q_SIGNALS:
     void accountChanged(RisipAccount *account);
 
+private Q_SLOTS:
+    void onCallStatusChanged();  // ✅ NEW: Monitor call status changes to update snapshot
+
 private:
     RisipAccount *m_account;
-    QList<RisipCall *> m_calls;
+    QList<RisipCall *> m_calls;  // Keep for removeCallRecord() compatibility
+    QList<CallRecordSnapshot> m_snapshots;  // ✅ NEW: Store permanent call data
+    QHash<RisipCall*, int> m_callIndexMap;  // ✅ NEW: Map call pointer to snapshot index
 };
 
 } //end of risip namespace

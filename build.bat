@@ -56,8 +56,8 @@ if not exist Makefile (
 )
 
 echo.
-echo Building...
-"%CMAKE_EXE%" --build . --target belt_control_system -j4 -- VERBOSE=1
+echo Building with 32 parallel jobs...
+"%CMAKE_EXE%" --build . --target belt_control_system -j32 -- VERBOSE=1
 if %ERRORLEVEL% NEQ 0 (
     echo Build failed
     cd ..

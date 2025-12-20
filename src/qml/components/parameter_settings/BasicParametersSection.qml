@@ -40,31 +40,84 @@ Rectangle {
             columnSpacing: 8
 
             ParameterRow {
+                label: "本机编号"
+                value: systemConfig ? systemConfig.machineNumber.toString() : "1"
+                unit: ""
+                keyboardMode: "numeric"
+                onFieldValueChanged: function(newValue) {
+                    if (systemConfig && newValue !== "") {
+                        var num = parseInt(newValue)
+                        if (num >= 1 && num <= 8) {
+                            systemConfig.machineNumber = num
+                        }
+                    }
+                }
+            }
+
+            ParameterRow {
+                label: "起车预警模式"
+                isComboBox: true
+                comboModel: ["按时间", "按次数"]
+                comboCurrentIndex: systemConfig ? systemConfig.warningMode : 0
+                onFieldComboChanged: function(newIndex) {
+                    if (systemConfig) {
+                        systemConfig.warningMode = newIndex
+                    }
+                }
+            }
+
+            ParameterRow {
                 label: "起车预警时间"
-                value: "30"
+                value: systemConfig ? systemConfig.warningTimeSeconds.toString() : "10"
                 unit: "秒"
                 keyboardMode: "numeric"
+                onFieldValueChanged: function(newValue) {
+                    if (systemConfig && newValue !== "") {
+                        var seconds = parseInt(newValue)
+                        if (seconds > 0) {
+                            systemConfig.warningTimeSeconds = seconds
+                        }
+                    }
+                }
+            }
+
+            ParameterRow {
+                label: "起车预警次数"
+                value: systemConfig ? systemConfig.warningPlayCount.toString() : "3"
+                unit: "次"
+                keyboardMode: "numeric"
+                onFieldValueChanged: function(newValue) {
+                    if (systemConfig && newValue !== "") {
+                        var count = parseInt(newValue)
+                        if (count > 0) {
+                            systemConfig.warningPlayCount = count
+                        }
+                    }
+                }
             }
 
             ParameterRow {
                 label: "工作模式"
                 isComboBox: true
-                comboModel: ["检修", "就地", "集控", "点动"]
-                comboCurrentIndex: 0
-            }
-
-            ParameterRow {
-                label: "本机编号"
-                value: "1"
-                unit: ""
-                keyboardMode: "numeric"
+                comboModel: ["检修", "就地", "点动", "集控"]
+                comboCurrentIndex: systemConfig ? systemConfig.workMode : 0
+                onFieldComboChanged: function(newIndex) {
+                    if (systemConfig) {
+                        systemConfig.workMode = newIndex
+                    }
+                }
             }
 
             ParameterRow {
                 label: "本机名称"
-                value: "1号皮带"
+                value: systemConfig ? systemConfig.localDeviceName : "1号皮带"
                 unit: ""
                 keyboardMode: "chinese"
+                onFieldValueChanged: function(newValue) {
+                    if (systemConfig) {
+                        systemConfig.localDeviceName = newValue
+                    }
+                }
             }
 
             ParameterRow {
@@ -124,6 +177,10 @@ Rectangle {
         property int comboCurrentIndex: 0
         property var dateTimePickerPopup: null
 
+        // Signals for value changes (renamed to avoid conflicts with built-in signals)
+        signal fieldValueChanged(string newValue)
+        signal fieldComboChanged(int newIndex)
+
         Layout.fillWidth: true
         spacing: 10
 
@@ -160,6 +217,13 @@ Rectangle {
                 radius: 5
             }
 
+            // Emit signal when text changes
+            onTextChanged: {
+                if (!isDateTime) {
+                    fieldValueChanged(text)
+                }
+            }
+
             // Only datetime fields need custom handling
             MouseArea {
                 anchors.fill: parent
@@ -179,6 +243,11 @@ Rectangle {
             currentIndex: comboCurrentIndex
             Layout.fillWidth: true
             Layout.preferredHeight: 36
+
+            // Emit signal when index changes
+            onCurrentIndexChanged: {
+                fieldComboChanged(currentIndex)
+            }
 
             background: Rectangle {
                 color: "#1a2332"

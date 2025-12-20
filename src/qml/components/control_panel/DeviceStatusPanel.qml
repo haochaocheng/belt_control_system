@@ -13,18 +13,37 @@ Rectangle {
     border.color: "#00d4ff"
     border.width: 2
 
-    // Public properties - driven by backend
-    property string operationMode: "集控"  // 就地/检修/集控/点动
-    property string deviceName: "1号皮带"  // Device name (configurable)
-    property string deviceStatus: "运行"   // 停止/运行/故障
-    property string dailyRuntime: "18:32:15"
-    property string weeklyRuntime: "125:45:30"
-    property string monthlyRuntime: "520:12:45"
-    property real dailyUptime: 85.5      // percentage
-    property real weeklyUptime: 82.3
-    property real monthlyUptime: 88.7
-    property real yearlyUptime: 86.2
+    // 从SystemConfig和RuntimeTracker获取数据
+    property string operationMode: getWorkModeName()
+    property string deviceName: systemConfig ? systemConfig.localDeviceName : "1号皮带"
+    property string deviceStatus: runtimeTracker ? runtimeTracker.currentStatus : "停止"
+    property string detailedStatus: runtimeTracker ? runtimeTracker.detailedStatus : "停车"
+    property bool isRunning: runtimeTracker ? runtimeTracker.isRunning : false
+    property bool isFault: runtimeTracker ? runtimeTracker.isFault : false
+
+    // 运行时间统计
+    property string dailyRuntime: runtimeTracker ? runtimeTracker.dailyRuntime : "00:00:00"
+    property string weeklyRuntime: runtimeTracker ? runtimeTracker.weeklyRuntime : "00:00:00"
+    property string monthlyRuntime: runtimeTracker ? runtimeTracker.monthlyRuntime : "00:00:00"
+
+    // 开机率统计
+    property real dailyUptime: runtimeTracker ? runtimeTracker.dailyUptime : 0.0
+    property real weeklyUptime: runtimeTracker ? runtimeTracker.weeklyUptime : 0.0
+    property real monthlyUptime: runtimeTracker ? runtimeTracker.monthlyUptime : 0.0
+
     property bool mainStationConnected: true
+
+    // 获取工作模式名称
+    function getWorkModeName() {
+        if (!systemConfig) return "集控"
+        switch (systemConfig.workMode) {
+            case 0: return "检修"
+            case 1: return "就地"
+            case 2: return "点动"
+            case 3: return "集控"
+            default: return "集控"
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -109,64 +128,39 @@ Rectangle {
             }
         }
 
-        // Status and Device Status - Side by side
+        // 状态显示（完整宽度，显示详细状态）
         RowLayout {
             Layout.fillWidth: true
-            spacing: 15
+            spacing: 10
 
-            // Left column - Status (original)
-            RowLayout {
-                spacing: 10
-
-                Text {
-                    text: "状态："
-                    font.pixelSize: 14
-                    color: "#95a5a6"
-                }
-
-                Rectangle {
-                    Layout.preferredWidth: 80
-                    Layout.preferredHeight: 28
-                    radius: 5
-                    color: getStatusColor(root.deviceStatus)
-                    border.color: "#00d4ff"
-                    border.width: 1
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: root.deviceStatus
-                        font.pixelSize: 14
-                        font.bold: true
-                        color: "white"
-                    }
-                }
+            Text {
+                text: "状态："
+                font.pixelSize: 14
+                color: "#95a5a6"
             }
 
-            // Right column - Device (same as deviceStatus)
-            RowLayout {
-                spacing: 10
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 40
+                radius: 5
+                color: getDetailedStatusColor()
+                border.color: "#00d4ff"
+                border.width: 2
 
-                Text {
-                    text: "设备："
-                    font.pixelSize: 14
-                    color: "#95a5a6"
+                // 根据状态添加动画效果
+                SequentialAnimation on opacity {
+                    running: root.isRunning && !root.isFault
+                    loops: Animation.Infinite
+                    NumberAnimation { to: 0.7; duration: 800 }
+                    NumberAnimation { to: 1.0; duration: 800 }
                 }
 
-                Rectangle {
-                    Layout.preferredWidth: 80
-                    Layout.preferredHeight: 28
-                    radius: 5
-                    color: getStatusColor(root.deviceStatus)
-                    border.color: "#00d4ff"
-                    border.width: 1
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: root.deviceStatus
-                        font.pixelSize: 14
-                        font.bold: true
-                        color: "white"
-                    }
+                Text {
+                    anchors.centerIn: parent
+                    text: root.detailedStatus
+                    font.pixelSize: 16
+                    font.bold: true
+                    color: "white"
                 }
             }
         }
@@ -304,6 +298,20 @@ Rectangle {
             case "停止": return "#95a5a6"
             case "故障": return "#ff4757"
             default: return "#95a5a6"
+        }
+    }
+
+    function getDetailedStatusColor() {
+        if (root.isFault) {
+            return "#ff4757"  // 红色 - 故障停止
+        } else if (root.isRunning) {
+            return "#00ff88"  // 绿色 - 运行
+        } else if (root.deviceStatus === "启动中") {
+            return "#ffa502"  // 橙色 - 启动中
+        } else if (root.deviceStatus === "停止中") {
+            return "#3498db"  // 蓝色 - 停止中
+        } else {
+            return "#95a5a6"  // 灰色 - 停止
         }
     }
 }

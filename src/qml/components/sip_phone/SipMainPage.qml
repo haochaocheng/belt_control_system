@@ -59,19 +59,33 @@ Rectangle {
     }
 
     // Initialize endpoint when first visible
+    // Use Timer with 0ms delay to defer initialization to next event loop
+    // This prevents crash from synchronous object deletion during signal handler
     onVisibleChanged: {
         if (visible && !SipPhoneManager.isInitialized) {
-            SipPhoneManager.initializeEndpoint()
+            initTimer.start()
+        }
+    }
+
+    Timer {
+        id: initTimer
+        interval: 0
+        running: false
+        repeat: false
+        onTriggered: {
+            if (root.visible && !SipPhoneManager.isInitialized) {
+                console.log("[DEBUG] Deferred initialization starting...")
+                SipPhoneManager.initializeEndpoint()
+            }
         }
     }
 
     // Signal handlers
     function handleIncomingCall(number, name) {
         console.log("Incoming call from:", number, name)
-        // Show incoming call dialog (like risip)
-        incomingCallDialog.callerNumber = number
-        incomingCallDialog.callerName = name
-        incomingCallDialog.open()
+        // ✅ DON'T show dialog - SipDialPage already shows incoming call UI with 3-button support
+        // Instead, just switch to Dial page to show the incoming call interface
+        tabBarRect.currentIndex = 1  // Switch to Dial page
     }
 
     function handleCallConnected() {
@@ -98,11 +112,11 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        // Top bar with title and status
+        // Status bar (simplified, no duplicate title - title is in Window)
         Rectangle {
             Layout.fillWidth: true
-            height: 60
-            color: "#0f3460"
+            height: 45
+            color: "#16213e"
             z: 10
 
             RowLayout {
@@ -111,10 +125,10 @@ Rectangle {
                 anchors.rightMargin: 20
                 spacing: 15
 
+                // Server status text
                 Text {
-                    text: "📞 SIP 电话"
-                    font.pixelSize: 24
-                    font.bold: true
+                    text: SipPhoneManager.serverStatus
+                    font.pixelSize: 13
                     color: "#00d4ff"
                     Layout.fillWidth: true
                 }
@@ -122,8 +136,8 @@ Rectangle {
                 // Call status indicator
                 Rectangle {
                     width: 120
-                    height: 35
-                    radius: 17
+                    height: 32
+                    radius: 16
                     visible: SipPhoneManager.isInCall
                     color: {
                         if (SipPhoneManager.callStatus === "通话中") return "#27ae60"
@@ -142,21 +156,21 @@ Rectangle {
 
                 // Registration status indicator with text
                 Rectangle {
-                    Layout.preferredWidth: statusRow.implicitWidth + 20
-                    Layout.preferredHeight: 35
-                    radius: 17
+                    Layout.preferredWidth: statusRow.implicitWidth + 16
+                    Layout.preferredHeight: 32
+                    radius: 16
                     color: SipPhoneManager.isRegistered ? "#27ae60" : "#e74c3c"
                     opacity: 0.9
 
                     RowLayout {
                         id: statusRow
                         anchors.centerIn: parent
-                        spacing: 8
+                        spacing: 6
 
                         Rectangle {
-                            width: 12
-                            height: 12
-                            radius: 6
+                            width: 10
+                            height: 10
+                            radius: 5
                             color: "white"
 
                             SequentialAnimation on opacity {
@@ -169,7 +183,7 @@ Rectangle {
 
                         Text {
                             text: SipPhoneManager.isRegistered ? "已注册" : "未注册"
-                            font.pixelSize: 12
+                            font.pixelSize: 11
                             font.bold: true
                             color: "white"
                         }
@@ -197,9 +211,16 @@ Rectangle {
             Loader {
                 source: "pages/SipContactsPage.qml"
                 onLoaded: {
+                    // 语音通话
                     item.callContact.connect(function(number) {
                         SipPhoneManager.currentNumber = number
-                        SipPhoneManager.makeCall(number)
+                        SipPhoneManager.makeCall(number, false)  // Audio only
+                        tabBarRect.currentIndex = 1
+                    })
+                    // 视频通话
+                    item.callContactVideo.connect(function(number) {
+                        SipPhoneManager.currentNumber = number
+                        SipPhoneManager.makeCall(number, true)  // Video call
                         tabBarRect.currentIndex = 1
                     })
                 }
@@ -208,16 +229,45 @@ Rectangle {
             // Dial page
             Loader {
                 source: "pages/SipDialPage.qml"
+                onLoaded: {
+                    console.log("✅ ✅ ✅ SipDialPage Loader: Successfully loaded!")
+                }
+                onStatusChanged: {
+                    if (status === Loader.Error) {
+                        console.log("❌ ❌ ❌ SipDialPage Loader: FAILED TO LOAD!")
+                        console.log("❌ Error details:", errorString())
+                    } else if (status === Loader.Loading) {
+                        console.log("⏳ SipDialPage Loader: Loading...")
+                    } else if (status === Loader.Ready) {
+                        console.log("✅ SipDialPage Loader: Ready (before onLoaded)")
+                    }
+                }
             }
 
             // History page
             Loader {
                 source: "pages/SipHistoryPage.qml"
                 onLoaded: {
+                    // 语音回拨
                     item.callNumber.connect(function(number) {
+                        console.log("📞 语音回拨:", number)
                         SipPhoneManager.currentNumber = number
-                        SipPhoneManager.makeCall(number)
-                        tabBarRect.currentIndex = 1
+                        SipPhoneManager.makeCall(number, false)  // false = 语音通话
+                        tabBarRect.currentIndex = 1  // 切换到拨号页
+                    })
+
+                    // 视频回拨
+                    item.callNumberVideo.connect(function(number) {
+                        console.log("📹 视频回拨:", number)
+                        SipPhoneManager.currentNumber = number
+                        SipPhoneManager.makeCall(number, true)   // true = 视频通话
+                        tabBarRect.currentIndex = 1  // 切换到拨号页
+                    })
+
+                    // 删除通话记录
+                    item.deleteCallRecord.connect(function(index) {
+                        console.log("🗑️ 删除通话记录 #" + index)
+                        SipPhoneManager.deleteCallHistoryRecord(index)
                     })
                 }
             }

@@ -1,0 +1,10 @@
+^E:\2025\3_GONGKONGJI\BELT_CONTROL_SYSTEM\SRC\TTS_SERVICE\BUILD-MSVC\CMAKEFILES\B6CED930387756C29DEB07CCB249008A\GENERATE.STAMP.RULE
+setlocal
+C:\Qt\Tools\CMake_64\bin\cmake.exe -SE:/2025/3_gongkongji/belt_control_system/src/tts_service -BE:/2025/3_gongkongji/belt_control_system/src/tts_service/build-msvc --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file E:/2025/3_gongkongji/belt_control_system/src/tts_service/build-msvc/sherpa_tts_service.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

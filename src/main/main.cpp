@@ -12,6 +12,19 @@
 #include "control/belt_controller.h"
 #include "utils/logger.h"
 #include "sip_phone/SipPhoneManager.h"
+#include "control/CommonControl.h"
+#include "control/SystemConfig.h"
+#include "control/DeviceRuntimeTracker.h"
+#include "control/OperationLogDatabase.h"
+#include "control/DeviceDatabase.h"
+#include "control/MaintenanceControl.h"
+#include "control/LocalControl.h"
+#include "control/ProtectionConfigManager.h"
+#include "control/ProtectionMonitorService.h"
+#include "control/AlarmPlaybackService.h"
+#include "control/AlarmHistoryDatabase.h"
+#include "control/DataPathConfig.h"
+#include "network/NetworkTask.h"
 
 // 全局日志文件
 std::ofstream g_logFile;
@@ -91,10 +104,59 @@ int main(int argc, char *argv[]) {
         BeltController controller(hal);
         logMessage("BeltController initialized");
 
+        // 初始化所有控制模块
+        logMessage("Creating control modules...");
+
+        // 输出所有数据文件路径
+        DataPathConfig::printAllPaths();
+
+        SystemConfig systemConfig;
+        DeviceDatabase deviceDatabase;
+        DeviceRuntimeTracker runtimeTracker(&deviceDatabase);
+
+        OperationLogDatabase operationLogDB;
+        operationLogDB.initialize();  // 使用统一数据路径
+
+        AlarmHistoryDatabase alarmHistoryDB;
+        alarmHistoryDB.initialize(DataPathConfig::getAlarmHistoryDbPath());
+
+        ProtectionConfigManager protectionConfigMgr;
+        protectionConfigMgr.initialize(DataPathConfig::getProtectionConfigDbPath());
+
+        NetworkTask networkTask;
+
+        CommonControl commonControl;
+        commonControl.setSystemConfig(&systemConfig);
+        commonControl.setNetworkTask(&networkTask);
+        commonControl.setOperationLogDB(&operationLogDB);
+        commonControl.setRuntimeTracker(&runtimeTracker);
+
+        MaintenanceControl maintenanceControl(hal);
+        LocalControl localControl(hal);
+
+        ProtectionMonitorService protectionMonitor;
+        protectionMonitor.setProtectionConfigManager(&protectionConfigMgr);
+        protectionMonitor.setNetworkTask(&networkTask);
+
+        AlarmPlaybackService alarmPlayback(&alarmHistoryDB);
+        logMessage("All control modules created");
+
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）
         logMessage("Setting context properties...");
         engine.rootContext()->setContextProperty("controller", &controller);
         engine.rootContext()->setContextProperty("logger", Logger::instance());
+        engine.rootContext()->setContextProperty("systemConfig", &systemConfig);
+        engine.rootContext()->setContextProperty("deviceDatabase", &deviceDatabase);
+        engine.rootContext()->setContextProperty("runtimeTracker", &runtimeTracker);
+        engine.rootContext()->setContextProperty("operationLogDB", &operationLogDB);
+        engine.rootContext()->setContextProperty("alarmHistoryDB", &alarmHistoryDB);
+        engine.rootContext()->setContextProperty("protectionConfigMgr", &protectionConfigMgr);
+        engine.rootContext()->setContextProperty("commonControl", &commonControl);
+        engine.rootContext()->setContextProperty("maintenanceControl", &maintenanceControl);
+        engine.rootContext()->setContextProperty("localControl", &localControl);
+        engine.rootContext()->setContextProperty("networkTask", &networkTask);
+        engine.rootContext()->setContextProperty("protectionMonitor", &protectionMonitor);
+        engine.rootContext()->setContextProperty("alarmPlayback", &alarmPlayback);
         logMessage("Context properties set");
 
         // 添加QML导入路径

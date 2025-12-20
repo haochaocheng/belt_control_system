@@ -230,6 +230,58 @@ RisipCall *RisipCallManager::callExternalSIP(const QString &uri)
 }
 
 /**
+ * @brief RisipCallManager::callPhoneWithVideo
+ * @param number - 电话号码
+ * @param enableVideo - true 启用视频，false 纯语音
+ * @return RisipCall 对象
+ *
+ * ⭐ 新增：统一的视频/语音通话 API
+ * 功能：支持视频或语音通话，自动添加历史记录，自动设置 callDirection
+ */
+RisipCall *RisipCallManager::callPhoneWithVideo(const QString &number, bool enableVideo)
+{
+    if(number.isNull())
+        return NULL;
+
+    RisipBuddy *buddy = new RisipBuddy(this);
+    buddy->setAccount(activeAccount());
+    buddy->setContact(number);
+    buddy->setType(RisipBuddy::Pstn);
+
+    return callBuddyWithVideo(buddy, enableVideo);
+}
+
+/**
+ * @brief RisipCallManager::callBuddyWithVideo
+ * @param buddy - 联系人对象
+ * @param enableVideo - true 启用视频，false 纯语音
+ * @return RisipCall 对象
+ *
+ * ⭐ 新增：统一的视频/语音通话 API（针对联系人）
+ * 功能：支持视频或语音通话，自动添加历史记录，自动设置 callDirection
+ */
+RisipCall *RisipCallManager::callBuddyWithVideo(RisipBuddy *buddy, bool enableVideo)
+{
+    if(!buddy || !m_data->m_activeAccount)
+        return new RisipCall(this);
+
+    RisipCall *call = new RisipCall(this);
+    call->setBuddy(buddy);
+    call->setAccount(m_data->m_activeAccount);
+    call->setEnableVideo(enableVideo);  // ⭐ 设置视频标志（必须在 call() 之前）
+    call->call();  // ⭐ 此时 call() 会根据 enableVideo 设置 CallOpParam
+    emit outgoingCall(call);
+
+    //adding call record for the active account.
+    qobject_cast<RisipCallHistoryModel *>(m_data->m_activeCallHistoryModel)->addCallRecord(call);
+    setActiveCall(call);
+
+    qDebug() << "✅ RisipCallManager: Call initiated via unified API, video =" << enableVideo;
+
+    return call;
+}
+
+/**
  * @brief RisipCallManager::createModelsForAccount
  * @param activeAccount
  *
