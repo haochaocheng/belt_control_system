@@ -61,7 +61,16 @@
       "Bash(\"e:/2025/3_gongkongji/New Folder/diagnostics-188.txt\")",
       "Bash(git ls-remote:*)",
       "Bash(git remote add:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(xargs:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git cat-file:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(git rm:*)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch:*)"
     ],
     "deny": [],
     "ask": []
