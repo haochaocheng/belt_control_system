@@ -542,8 +542,11 @@ sudo docker run \
     --name belt-control-app \
     --privileged \
     --ipc=host \
+    --net=host \
     $DISPLAY_ARG \
     -e QT_QPA_PLATFORM=$QT_PLATFORM \
+    -e QT_XCB_GL_INTEGRATION=xcb_egl \
+    -e LIBGL_ALWAYS_SOFTWARE=0 \
     -e XDG_RUNTIME_DIR=/tmp \
     $X11_VOLUME \
     -v /dev:/dev \
