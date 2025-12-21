@@ -523,16 +523,20 @@ mkdir -p /home/DEVICE_USER_PLACEHOLDER/belt-control-data/appdata
 mkdir -p /home/DEVICE_USER_PLACEHOLDER/belt-control-data/audio
 
 # Auto-detect Qt platform based on X11 availability
+export DISPLAY=:0
 if xhost +local:docker 2>/dev/null; then
-    echo "✅ X11 detected - using XCB platform (windowed mode)"
+    echo "✅ X11 detected - using XCB platform (CPU-optimized software rendering)"
     QT_PLATFORM=xcb
     DISPLAY_ARG="-e DISPLAY=:0"
     X11_VOLUME="-v /tmp/.X11-unix:/tmp/.X11-unix:rw"
+    # CPU optimization: Full software rendering stack (tested: 50% CPU vs 450% hardware attempt)
+    QT_RENDER_OPTS="-e QT_XCB_GL_INTEGRATION=none -e QSG_RENDER_LOOP=basic -e QSG_RHI_BACKEND=software -e QT_QUICK_BACKEND=software -e LIBGL_ALWAYS_SOFTWARE=1"
 else
     echo "✅ No X11 - using EGLFS platform (fullscreen mode)"
     QT_PLATFORM=eglfs
     DISPLAY_ARG=""
     X11_VOLUME=""
+    QT_RENDER_OPTS=""
 fi
 
 echo "Starting application with persistent data..."
@@ -545,8 +549,7 @@ sudo docker run \
     --net=host \
     $DISPLAY_ARG \
     -e QT_QPA_PLATFORM=$QT_PLATFORM \
-    -e QT_XCB_GL_INTEGRATION=xcb_egl \
-    -e LIBGL_ALWAYS_SOFTWARE=0 \
+    $QT_RENDER_OPTS \
     -e XDG_RUNTIME_DIR=/tmp \
     $X11_VOLUME \
     -v /dev:/dev \
