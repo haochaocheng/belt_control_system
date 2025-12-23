@@ -38,6 +38,7 @@ set(RISIP_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/core/apploader
     ${CMAKE_CURRENT_SOURCE_DIR}/core/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/pjsipwrapper
+    ${CMAKE_CURRENT_SOURCE_DIR}/../         # For "control/..." includes (DataPathConfig.h)
 )
 
 # 核心源文件

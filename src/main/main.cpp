@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
         protectionMonitor.setProtectionConfigManager(&protectionConfigMgr);
         protectionMonitor.setNetworkTask(&networkTask);
 
-        AlarmPlaybackService alarmPlayback(&alarmHistoryDB);
+        AlarmPlaybackService alarmPlayback;
         logMessage("All control modules created");
 
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）
