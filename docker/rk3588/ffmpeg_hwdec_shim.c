@@ -180,10 +180,10 @@ const AVCodec* avcodec_find_decoder_by_name(const char *name) {
 }
 
 /**
- * Intercepted avcodec_open2() - Log decoder initialization success/failure
+ * Intercepted avcodec_open2() - CRITICAL: Force hardware decoder override
  *
- * This is crucial to understand if the hardware decoder successfully initializes
- * or if it fails and causes PJSIP to fall back to software decoding.
+ * ULTIMATE FIX: Even if PJSIP cached the software decoder pointer,
+ * we intercept avcodec_open2() and forcibly redirect to hardware decoder.
  */
 int avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **options) {
     init_original_functions();
@@ -200,12 +200,36 @@ int avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **op
         }
     }
 
+    // 🚨 CRITICAL FIX: If trying to open software h264 decoder, forcibly redirect to hardware!
+    if (codec && codec_name && strcmp(codec_name, "h264") == 0 && hw_decoder_enabled) {
+        fprintf(stderr, "[FFmpeg HW Shim] 🚨🚨 CRITICAL INTERCEPT: Blocking software h264 decoder open!\n");
+        fprintf(stderr, "[FFmpeg HW Shim]    → Forcibly redirecting to hardware decoder...\n");
+
+        // Try to get hardware decoder
+        const AVCodec *hw_decoder = original_find_decoder_by_name("h264_rkmpp");
+        if (!hw_decoder) {
+            hw_decoder = original_find_decoder_by_name("h264_v4l2m2m");
+        }
+
+        if (hw_decoder) {
+            codec = hw_decoder;
+            // Update codec_name for logging
+            const char **hw_name_ptr = (const char **)hw_decoder;
+            if (hw_name_ptr && *hw_name_ptr) {
+                codec_name = *hw_name_ptr;
+            }
+            fprintf(stderr, "[FFmpeg HW Shim] ✅✅ Redirected to: %s\n", codec_name);
+        } else {
+            fprintf(stderr, "[FFmpeg HW Shim] ⚠️ WARNING: No hardware decoder found, proceeding with software\n");
+        }
+    }
+
     // Log ALL h264 decoder open attempts (before calling original function)
     if (strstr(codec_name, "h264")) {
         fprintf(stderr, "[FFmpeg HW Shim] 🔧 Attempting to open decoder: %s\n", codec_name);
     }
 
-    // Call original avcodec_open2
+    // Call original avcodec_open2 (with potentially substituted codec)
     int result = original_avcodec_open2(avctx, codec, options);
 
     // Log the result
