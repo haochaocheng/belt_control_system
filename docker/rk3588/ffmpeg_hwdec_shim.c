@@ -80,6 +80,14 @@ static void init_original_functions(void) {
             return;
         }
     }
+
+    if (!original_av_codec_iterate) {
+        original_av_codec_iterate = (av_codec_iterate_t)dlsym(RTLD_NEXT, "av_codec_iterate");
+        if (!original_av_codec_iterate) {
+            fprintf(stderr, "[FFmpeg HW Shim] ERROR: Failed to find av_codec_iterate: %s\n", dlerror());
+            return;
+        }
+    }
 }
 
 // Check if environment variable disables hardware decoder
@@ -229,6 +237,65 @@ int avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **op
     }
 
     return result;
+}
+
+/**
+ * Intercepted av_codec_iterate() - Skip software H.264 decoder during enumeration
+ *
+ * CRITICAL: PJSIP's FFmpeg plugin calls av_codec_iterate() during initialization
+ * to enumerate all codecs and cache them in a static array. During video calls,
+ * PJSIP directly uses the cached pointer (first h264 decoder = software "h264").
+ *
+ * Our previous interception of avcodec_find_decoder() is completely bypassed!
+ *
+ * Solution: Intercept av_codec_iterate() and skip the software h264 decoder
+ * so that PJSIP's cache will contain hardware decoders (h264_rkmpp/h264_v4l2m2m)
+ * instead of the software decoder.
+ */
+const AVCodec* av_codec_iterate(void **opaque) {
+    init_original_functions();
+    check_environment();
+
+    // Get next codec from FFmpeg
+    const AVCodec *codec = original_av_codec_iterate(opaque);
+
+    // If hardware decoding is disabled, return all codecs normally
+    if (!hw_decoder_enabled) {
+        return codec;
+    }
+
+    // Loop until we find a codec that's not the software h264 decoder
+    while (codec) {
+        // Try to get codec name (first field in AVCodec structure)
+        const char *codec_name = "unknown";
+        const char **name_ptr = (const char **)codec;
+        if (name_ptr && *name_ptr) {
+            codec_name = *name_ptr;
+        }
+
+        // Check if this is the software h264 decoder
+        if (strcmp(codec_name, "h264") == 0) {
+            // ✅ CRITICAL: Skip the software h264 decoder during enumeration!
+            // This prevents PJSIP from caching it
+            fprintf(stderr, "[FFmpeg HW Shim] 🚫 SKIPPING software h264 decoder during enumeration\n");
+            fprintf(stderr, "[FFmpeg HW Shim]    PJSIP will cache hardware decoders instead\n");
+
+            // Get next codec
+            codec = original_av_codec_iterate(opaque);
+            continue;  // Check next codec
+        }
+
+        // Log hardware h264 decoders we're allowing through
+        if (strstr(codec_name, "h264_rkmpp") || strstr(codec_name, "h264_v4l2m2m")) {
+            fprintf(stderr, "[FFmpeg HW Shim] ✅ Allowing hardware decoder: %s\n", codec_name);
+        }
+
+        // Return this codec (it's not the software h264 decoder)
+        return codec;
+    }
+
+    // No more codecs
+    return NULL;
 }
 
 // Constructor - runs when library is loaded
