@@ -103,6 +103,36 @@ public:
     }
 
     /**
+     * @brief 获取SIP账户配置文件完整路径
+     * @return sip_accounts.ini 的绝对路径
+     */
+    static QString getSipAccountsConfigPath()
+    {
+        return getDataDirectory() + "/sip_accounts.ini";
+    }
+
+    /**
+     * @brief 获取TTS缓存目录完整路径
+     * @return tts_cache 目录的绝对路径
+     */
+    static QString getTtsCacheDirectory()
+    {
+        QString cacheDir = getDataDirectory() + "/tts_cache";
+
+        // 确保TTS缓存目录存在
+        QDir dir;
+        if (!dir.exists(cacheDir)) {
+            if (dir.mkpath(cacheDir)) {
+                qDebug() << "✅ [DATA PATH] 创建TTS缓存目录:" << cacheDir;
+            } else {
+                qWarning() << "⚠️ [DATA PATH] 无法创建TTS缓存目录:" << cacheDir;
+            }
+        }
+
+        return cacheDir;
+    }
+
+    /**
      * @brief 输出所有数据文件路径信息（用于调试）
      */
     static void printAllPaths()
@@ -115,6 +145,8 @@ public:
         qDebug() << "操作日志数据库:" << getOperationLogDbPath();
         qDebug() << "联系人数据库:" << getContactsDbPath();
         qDebug() << "通话记录数据库:" << getCallHistoryDbPath();
+        qDebug() << "SIP账户配置:" << getSipAccountsConfigPath();
+        qDebug() << "TTS缓存目录:" << getTtsCacheDirectory();
         qDebug() << "=====================================";
     }
 };

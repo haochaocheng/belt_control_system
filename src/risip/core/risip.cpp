@@ -47,6 +47,9 @@
 #include <QQmlEngine>
 #include <QSettings>
 #include <QCoreApplication>
+
+// ✅ 引入统一数据路径配置（用于持久化SIP账户配置）
+#include "control/DataPathConfig.h"
 #include <QDebug>
 #include <QSortFilterProxyModel>
 
@@ -302,7 +305,10 @@ bool Risip::removeAccount(RisipAccountConfiguration *configuration)
 
 bool Risip::readSettings()
 {
-    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    // ✅ 使用统一数据路径配置（持久化到Docker卷）
+    QString configPath = DataPathConfig::getSipAccountsConfigPath();
+    qDebug() << "📖 [Risip] 从持久化位置读取SIP账户配置:" << configPath;
+    QSettings settings(configPath, QSettings::IniFormat);
     int totaltAccounts = settings.value(RisipSettingsParam::TotalAccounts).toInt();
 
     QString defaultAccountUri = settings.value(RisipSettingsParam::DefaultAccount).toString();
@@ -334,7 +340,10 @@ bool Risip::readSettings()
 
 bool Risip::saveSettings()
 {
-    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    // ✅ 使用统一数据路径配置（持久化到Docker卷）
+    QString configPath = DataPathConfig::getSipAccountsConfigPath();
+    qDebug() << "💾 [Risip] 保存SIP账户配置到持久化位置:" << configPath;
+    QSettings settings(configPath, QSettings::IniFormat);
     settings.setValue(RisipSettingsParam::TotalAccounts, m_data->accountsModel->rowCount());
     settings.setValue(RisipSettingsParam::FirstRun, true); //FIXME always to true for testing
 
@@ -368,7 +377,10 @@ bool Risip::saveSettings()
 bool Risip::resetSettings()
 {
     m_data->accountsModel->clear();
-    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    // ✅ 使用统一数据路径配置（持久化到Docker卷）
+    QString configPath = DataPathConfig::getSipAccountsConfigPath();
+    qDebug() << "🗑️  [Risip] 清除SIP账户配置:" << configPath;
+    QSettings settings(configPath, QSettings::IniFormat);
     settings.clear();
     settings.sync();
     return true;

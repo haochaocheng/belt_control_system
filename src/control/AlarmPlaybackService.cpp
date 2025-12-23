@@ -1,4 +1,5 @@
 #include "AlarmPlaybackService.h"
+#include "DataPathConfig.h"
 #include <QDebug>
 #include <QFile>
 #include <QDateTime>
@@ -450,13 +451,9 @@ void AlarmPlaybackService::initializeTtsCache()
 {
     qDebug() << "🗂️  AlarmPlaybackService: 初始化TTS缓存";
 
-    // 设置缓存目录
-    m_ttsCacheDir = QCoreApplication::applicationDirPath() + "/tts_cache";
-    QDir cacheDir(m_ttsCacheDir);
-    if (!cacheDir.exists()) {
-        cacheDir.mkpath(".");
-        qDebug() << "  创建TTS缓存目录:" << m_ttsCacheDir;
-    }
+    // ✅ 使用统一数据路径配置（持久化到Docker卷）
+    m_ttsCacheDir = DataPathConfig::getTtsCacheDirectory();
+    qDebug() << "  TTS缓存目录（持久化）:" << m_ttsCacheDir;
 
     // 预缓存常用报警文本
     QStringList commonTexts;
