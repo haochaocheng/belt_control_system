@@ -747,13 +747,12 @@ bool SipPhoneManager::initializeEndpoint()
         qDebug() << "Creating default account 2:" << account2_uri;
         // Note: Don't call registerAccount again, just add the account configuration
         risip::RisipAccountConfiguration cfg;
-        cfg.setAccountUri(account2_uri);
-        cfg.setUsername(account2_username);
+        cfg.setUri(account2_uri);
+        cfg.setUserName(account2_username);
         cfg.setPassword(account2_password);
-        cfg.setServerUri(QString("sip:%1").arg(account2_server));
-        cfg.setAutoSignIn(false); // Not auto-login for backup account
+        cfg.setServerAddress(account2_server);
 
-        risip::RisipAccount *account2 = d->risipInstance->addAccount(cfg);
+        risip::RisipAccount *account2 = d->risipInstance->createAccount(&cfg);
         if (account2) {
             qDebug() << "✅ Default account 2 created (backup, no auto-login):" << account2_uri;
         } else {
@@ -761,7 +760,7 @@ bool SipPhoneManager::initializeEndpoint()
         }
 
         // 保存配置
-        d->risipInstance->writeSettings();
+        d->risipInstance->saveSettings();
         qDebug() << "✅ Default accounts created and saved";
 
         emit accountsModelChanged();
