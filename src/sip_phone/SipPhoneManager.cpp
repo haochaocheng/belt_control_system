@@ -529,11 +529,11 @@ bool SipPhoneManager::initializeEndpoint()
                 if (status == PJ_SUCCESS) {
                     // Set video capture device to the REAL camera (not colorbar!)
                     acc_cfg.vid_cap_dev = realCaptureDevice;
-                    acc_cfg.vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;  // Auto-select renderer
+                    acc_cfg.vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;  // ✅ 必须保留渲染设备以接收远程视频
 
                     // ✅ CRITICAL FIX: Enable auto-transmit so video encoder starts automatically
-                    // ✅ Enable auto-show for remote video (let PJSIP show the SDL window automatically)
-                    acc_cfg.vid_in_auto_show = PJ_TRUE;  // Changed from PJ_FALSE - allow remote video to show
+                    // ✅ Disable auto-show (no SDL window), use Qt VideoSinkItem for remote video
+                    acc_cfg.vid_in_auto_show = PJ_FALSE;  // ✅ 禁用SDL窗口自动显示，但保留渲染器
                     acc_cfg.vid_out_auto_transmit = PJ_TRUE;  // ✅ Changed from PJ_FALSE - this was causing encoder to pause!
 
                     // Modify account with new video config
@@ -724,7 +724,47 @@ bool SipPhoneManager::initializeEndpoint()
         }
     } else {
         qDebug() << "Configs files cannot be found nor be read!!";
-        qDebug() << "User will need to configure account manually";
+        qDebug() << "Creating default SIP accounts...";
+
+        // 创建默认账户1: 1001@192.168.10.243 (主服务器)
+        QString account1_username = "1001";
+        QString account1_password = "1234";
+        QString account1_server = "192.168.10.243";
+        QString account1_uri = QString("sip:%1@%2").arg(account1_username, account1_server);
+
+        qDebug() << "Creating default account 1:" << account1_uri;
+        registerAccount(account1_username, account1_password, account1_server);
+
+        // 设置为默认账户并自动登录
+        setAsDefaultAccount(account1_uri);
+
+        // 创建默认账户2: 1001@192.168.1.9 (备用服务器)
+        QString account2_username = "1001";
+        QString account2_password = "1234";
+        QString account2_server = "192.168.1.9";
+        QString account2_uri = QString("sip:%1@%2").arg(account2_username, account2_server);
+
+        qDebug() << "Creating default account 2:" << account2_uri;
+        // Note: Don't call registerAccount again, just add the account configuration
+        risip::RisipAccountConfiguration cfg;
+        cfg.setAccountUri(account2_uri);
+        cfg.setUsername(account2_username);
+        cfg.setPassword(account2_password);
+        cfg.setServerUri(QString("sip:%1").arg(account2_server));
+        cfg.setAutoSignIn(false); // Not auto-login for backup account
+
+        risip::RisipAccount *account2 = d->risipInstance->addAccount(cfg);
+        if (account2) {
+            qDebug() << "✅ Default account 2 created (backup, no auto-login):" << account2_uri;
+        } else {
+            qWarning() << "Failed to create default account 2";
+        }
+
+        // 保存配置
+        d->risipInstance->writeSettings();
+        qDebug() << "✅ Default accounts created and saved";
+
+        emit accountsModelChanged();
     }
 
     return true;
@@ -789,7 +829,7 @@ bool SipPhoneManager::registerAccount(const QString &sipServer,
         try {
             AccountConfig pjsipAccCfg = config->pjsipAccountConfig();
             pjsipAccCfg.videoConfig.defaultCaptureDevice = 0;  // Device 0 = Integrated Webcam
-            pjsipAccCfg.videoConfig.defaultRenderDevice = PJMEDIA_VID_DEFAULT_RENDER_DEV;
+            pjsipAccCfg.videoConfig.defaultRenderDevice = PJMEDIA_VID_DEFAULT_RENDER_DEV;  // ✅ 必须保留渲染设备以接收远程视频
             config->setPjsipAccountConfig(pjsipAccCfg);
             qDebug() << "✅ Set video capture device to 0 in AccountConfig before account creation";
         } catch (const std::exception &ex) {
@@ -915,7 +955,7 @@ bool SipPhoneManager::createAccount(const QString &username,
         try {
             AccountConfig pjsipAccCfg = config->pjsipAccountConfig();
             pjsipAccCfg.videoConfig.defaultCaptureDevice = 0;  // Device 0 = Integrated Webcam
-            pjsipAccCfg.videoConfig.defaultRenderDevice = PJMEDIA_VID_DEFAULT_RENDER_DEV;
+            pjsipAccCfg.videoConfig.defaultRenderDevice = PJMEDIA_VID_DEFAULT_RENDER_DEV;  // ✅ 必须保留渲染设备以接收远程视频
             config->setPjsipAccountConfig(pjsipAccCfg);
             qDebug() << "✅ Set video capture device to 0 in AccountConfig before account creation";
         } catch (const std::exception &ex) {
@@ -2262,12 +2302,11 @@ void SipPhoneManager::configureAccountVideoDevice(const QString &accountUri)
 
             // Set video capture device to the REAL camera (not colorbar!)
             acc_cfg.vid_cap_dev = realCaptureDevice;
-            acc_cfg.vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;  // Auto-select renderer
+            acc_cfg.vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;  // ✅ 必须保留渲染设备以接收远程视频
 
-            // ✅ ATTEMPT 17: Enable vid_in_auto_show to allow PJSIP to accept incoming video
-            // Root cause: Even with vid_cnt=1, PJSIP doesn't create video RTP transport
-            // if vid_in_auto_show is disabled. This causes m=video 0 in 200 OK SDP.
-            acc_cfg.vid_in_auto_show = PJ_TRUE;  // ✅ Changed from PJ_FALSE - enable incoming video!
+            // ✅ Disable auto-show (no SDL window), use Qt VideoSinkItem for remote video
+            // Root cause: Setting vid_rend_dev to INVALID disables SDL renderer entirely
+            acc_cfg.vid_in_auto_show = PJ_FALSE;  // ✅ 禁用SDL窗口自动显示，但保留渲染器
             acc_cfg.vid_out_auto_transmit = PJ_TRUE;  // ✅ Enable outgoing video transmission
 
             // Modify account with new video config
@@ -2456,32 +2495,68 @@ void SipPhoneManager::startVideoPreview()
     qDebug() << "✅ Starting video preview...";
 
     try {
-        // ✅ CRITICAL: Get the REAL capture device ID from VideoCallManager
-        // We CANNOT hardcode device 0 because on this system:
-        //   Device 0 = colorbar (RENDER ONLY, Dir=2)
-        //   Device 1 = Integrated Webcam (CAPTURE, Dir=1)
-        pjmedia_vid_dev_index captureDevice = 0;
+        // ✅ CRITICAL FIX: Detect the REAL capture device dynamically
+        // We CANNOT hardcode device 0 because on RK3588:
+        //   Device 0 = rk_hdmirx (HDMI input, not a camera) - causes libv4l2 errors!
+        //   Device 1 = USB Camera (correct device)
+        //
+        // Solution: Replicate the device detection logic from VideoCallManager
+        pjmedia_vid_dev_index captureDevice = PJMEDIA_VID_INVALID_DEV;
+
+        // First try to get from VideoCallManager if available
         if (d->videoCallManager) {
             captureDevice = d->videoCallManager->getCaptureDeviceId();
-            qDebug() << "✅ Using capture device ID from VideoCallManager:" << captureDevice;
-        } else {
-            qWarning() << "⚠️ VideoCallManager not available, using device 0 (may be colorbar!)";
+            qDebug() << "📹 [PREVIEW] Device from VideoCallManager:" << captureDevice;
         }
 
-        // ✅ Configure video preview parameters (following PJSIP official example)
+        // Verify the device is valid and not a problematic device
+        // If invalid or device 0 (which might be rk_hdmirx), detect the correct device
+        if (captureDevice == PJMEDIA_VID_INVALID_DEV || captureDevice == 0) {
+            qDebug() << "📹 [PREVIEW] Detecting real capture device (skipping HDMI input)...";
+
+            unsigned count = pjsua_vid_dev_count();
+            pjmedia_vid_dev_index firstRealCamera = PJMEDIA_VID_INVALID_DEV;
+
+            for (unsigned i = 0; i < count; ++i) {
+                pjmedia_vid_dev_info info;
+                pj_status_t status = pjsua_vid_dev_get_info(i, &info);
+
+                if (status == PJ_SUCCESS && (info.dir & PJMEDIA_DIR_CAPTURE)) {
+                    QString deviceName = QString::fromUtf8(info.name);
+
+                    // Skip problematic devices (colorbar, null, HDMI input)
+                    if (!deviceName.contains("colorbar", Qt::CaseInsensitive) &&
+                        !deviceName.contains("null", Qt::CaseInsensitive) &&
+                        !deviceName.contains("hdmirx", Qt::CaseInsensitive) &&
+                        !deviceName.contains("rk_hdmirx", Qt::CaseInsensitive)) {
+                        firstRealCamera = i;
+                        qDebug() << "✅ [PREVIEW] Found real camera at device" << i << ":" << deviceName;
+                        break;  // Use the first real camera found
+                    } else {
+                        qDebug() << "⏭️ [PREVIEW] Skipping device" << i << ":" << deviceName;
+                    }
+                }
+            }
+
+            if (firstRealCamera != PJMEDIA_VID_INVALID_DEV) {
+                captureDevice = firstRealCamera;
+                qDebug() << "✅ [PREVIEW] Using detected device:" << captureDevice;
+            } else {
+                qWarning() << "❌ [PREVIEW] No real capture device found! Preview will likely fail.";
+                emit errorOccurred("未找到可用的摄像头设备");
+                return;
+            }
+        }
+
+        qDebug() << "✅ [PREVIEW] Final capture device selected:" << captureDevice;
+
+        // ✅ Start PJSIP local video preview with the correct device
         pjsua_vid_preview_param preview_param;
         pjsua_vid_preview_param_default(&preview_param);
-
-        // Use default render device (auto-select SDL2 or other available renderer)
-        preview_param.rend_id = PJMEDIA_VID_DEFAULT_RENDER_DEV;
-
-        // ✅ CRITICAL: Set show = PJ_FALSE (following official vidgui example)
-        // We will manually control window visibility via VideoPreviewWidget
+        preview_param.rend_id = PJMEDIA_VID_INVALID_DEV;
         preview_param.show = PJ_FALSE;
 
-        // ✅ Start video preview on the capture device
         pj_status_t status = pjsua_vid_preview_start(captureDevice, &preview_param);
-
         if (status != PJ_SUCCESS) {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(status, errmsg, sizeof(errmsg));
@@ -2490,11 +2565,9 @@ void SipPhoneManager::startVideoPreview()
             return;
         }
 
-        // ✅ Get the video preview window ID
         pjsua_vid_win_id wid = pjsua_vid_preview_get_win(captureDevice);
         if (wid == PJSUA_INVALID_ID) {
             qWarning() << "❌ Failed to get video preview window ID";
-            // Stop the preview we just started
             pjsua_vid_preview_stop(captureDevice);
             emit errorOccurred("无法获取视频预览窗口");
             return;
@@ -2504,7 +2577,6 @@ void SipPhoneManager::startVideoPreview()
         qDebug() << "   Capture device:" << captureDevice;
         qDebug() << "   Preview window ID:" << wid;
 
-        // ✅ Get the video window info to access native handle and embed it
         pjsua_vid_win_info wi;
         status = pjsua_vid_win_get_info(wid, &wi);
         if (status != PJ_SUCCESS) {

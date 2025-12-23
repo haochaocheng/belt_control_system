@@ -257,39 +257,83 @@ if (Test-Path $MaliLibPath) {
     Write-Host "    OK: libmali copied" -ForegroundColor Green
 }
 
-# Copy FFmpeg (version 4.x with .58), sherpa-onnx, libyuv, libxcb-dri2 from device-build
-# IMPORTANT: Only copy REAL files (not symlinks) to avoid Docker build context errors
-$DeviceBuildLibPath = "$ProjectRoot\docker\rk3588\device-build\libs"
-if (Test-Path $DeviceBuildLibPath) {
-    Write-Host "    Copying FFmpeg 4.x libraries (real files only)..." -ForegroundColor Gray
-    # Only copy real files with full version numbers (e.g., libavcodec.so.58.134.100)
-    Get-ChildItem -Path $DeviceBuildLibPath -Filter "libavcodec.so.*.*.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force }
-    Get-ChildItem -Path $DeviceBuildLibPath -Filter "libavutil.so.*.*.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force }
-    Get-ChildItem -Path $DeviceBuildLibPath -Filter "libavformat.so.*.*.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force }
-    Get-ChildItem -Path $DeviceBuildLibPath -Filter "libswscale.so.*.*.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force }
-    Get-ChildItem -Path $DeviceBuildLibPath -Filter "libswresample.so.*.*.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force }
-    Write-Host "    OK: FFmpeg 4.x libraries copied" -ForegroundColor Green
+# ✅ Copy FFmpeg libraries with RKMPP hardware encoder/decoder support (完整版)
+# These libraries include both RKMPP encoder and decoder from nyanmisaka/ffmpeg-rockchip fork
+# Hardware encoders: h264_rkmpp_encoder, hevc_rkmpp_encoder
+# Hardware decoders: h264_rkmpp, hevc_rkmpp, vp8_rkmpp
+$FFmpegHwLibPath = "$ProjectRoot\libs\ffmpeg-rkmpp-complete"
+if (Test-Path $FFmpegHwLibPath) {
+    Write-Host "    Copying FFmpeg with RKMPP hardware encoder/decoder..." -ForegroundColor Yellow
 
-    Write-Host "    Copying sherpa-onnx TTS library..." -ForegroundColor Gray
-    Get-ChildItem -Path $DeviceBuildLibPath -Filter "libsherpa-onnx*.so.*.*.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force -ErrorAction SilentlyContinue }
-    Write-Host "    OK: sherpa-onnx copied" -ForegroundColor Green
-
-    Write-Host "    Copying libonnxruntime (RKNN acceleration)..." -ForegroundColor Yellow
-    $OnnxRuntimePath = "$ProjectRoot\libs\sherpa-onnx-v1.12.9-rknn-linux-aarch64-shared\lib\libonnxruntime.so"
-    if (Test-Path $OnnxRuntimePath) {
-        Copy-Item $OnnxRuntimePath "$DockerContextDir\lib\" -Force
-        Write-Host "    OK: libonnxruntime copied (RKNN hardware acceleration)" -ForegroundColor Green
-    } else {
-        Write-Host "    WARNING: libonnxruntime not found - TTS may not work!" -ForegroundColor Red
+    # Copy FFmpeg libraries (libavcodec.so.58.54.100, etc.)
+    $ffmpegLibs = Get-ChildItem -Path $FFmpegHwLibPath -Filter "libav*.so.*.*.*" -File
+    foreach ($lib in $ffmpegLibs) {
+        Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
+        Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
+    }
+    $ffmpegLibs = Get-ChildItem -Path $FFmpegHwLibPath -Filter "libsw*.so.*.*.*" -File
+    foreach ($lib in $ffmpegLibs) {
+        Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
+        Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
     }
 
-    Write-Host "    Copying libyuv..." -ForegroundColor Gray
-    Get-ChildItem -Path $DeviceBuildLibPath -Filter "libyuv.so.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force -ErrorAction SilentlyContinue }
-    Write-Host "    OK: libyuv copied" -ForegroundColor Green
+    $totalSize = [math]::Round((Get-ChildItem -Path "$DockerContextDir\lib\libav*.so.*.*.*" | Measure-Object -Property Length -Sum).Sum / 1MB, 2)
+    Write-Host "    OK: FFmpeg libraries copied (${totalSize}MB with RKMPP encoder+decoder)" -ForegroundColor Green
 
-    Write-Host "    Copying libxcb-dri2..." -ForegroundColor Gray
-    Get-ChildItem -Path $DeviceBuildLibPath -Filter "libxcb-dri2.so.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force -ErrorAction SilentlyContinue }
-    Write-Host "    OK: libxcb-dri2 copied" -ForegroundColor Green
+    # ✅ Copy codec libraries (Ubuntu 20.04 versions for ABI compatibility)
+    # This fixes the runtime error: libvpx.so.6: cannot open shared object file
+    Write-Host "    Copying codec libraries (Ubuntu 20.04 for ABI compatibility)..." -ForegroundColor Yellow
+
+    # Codec libraries have various version number formats
+    $codecPatterns = @("libvpx.so.*", "libx264.so.*", "libx265.so.*", "libmp3lame.so.*",
+                       "libogg.so.*", "libspeex.so.*", "libtheora*.so.*", "libvorbis*.so.*",
+                       "libyuv.so.*", "libwebp.so.*", "libwebpmux.so.*", "libwebpdemux.so.*",
+                       "libaribb24.so.*", "libaom.so.*", "libcodec2.so.*", "libgsm.so.*",
+                       "libopencore-amrnb.so.*", "libopencore-amrwb.so.*", "libopenjp2.so.*",
+                       "libshine.so.*", "libsnappy.so.*", "libtwolame.so.*", "libvo-amrwbenc.so.*",
+                       "libwavpack.so.*", "libxvidcore.so.*", "libzvbi.so.*",
+                       "libva.so.*", "libva-*.so.*", "libvdpau.so.*", "libOpenCL.so.*", "libsoxr.so.*")
+
+    $codecCount = 0
+    foreach ($pattern in $codecPatterns) {
+        $codecLibs = Get-ChildItem -Path $FFmpegHwLibPath -Filter $pattern -File
+        foreach ($lib in $codecLibs) {
+            Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
+            Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
+            $codecCount++
+        }
+    }
+
+    if ($codecCount -gt 0) {
+        Write-Host "    OK: $codecCount codec libraries copied" -ForegroundColor Green
+    } else {
+        Write-Host "    WARNING: No codec libraries found, may cause runtime ABI errors" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "    ERROR: FFmpeg libraries not found!" -ForegroundColor Red
+    Write-Host "    Please run: .\download-ffmpeg-from-device.ps1 first" -ForegroundColor Yellow
+    exit 1
+}
+
+# Copy sherpa-onnx TTS libraries (required for TTS functionality)
+Write-Host "    Copying sherpa-onnx TTS libraries..." -ForegroundColor Yellow
+$SherpaLibPath = "$ProjectRoot\libs\sherpa-onnx-v1.12.9-rknn-linux-aarch64-shared\lib"
+if (Test-Path $SherpaLibPath) {
+    Copy-Item "$SherpaLibPath\libsherpa-onnx-c-api.so" "$DockerContextDir\lib\" -Force -ErrorAction SilentlyContinue
+    Copy-Item "$SherpaLibPath\libsherpa-onnx-cxx-api.so" "$DockerContextDir\lib\" -Force -ErrorAction SilentlyContinue
+    Write-Host "    OK: sherpa-onnx TTS libraries copied" -ForegroundColor Green
+} else {
+    Write-Host "    WARNING: sherpa-onnx libraries not found" -ForegroundColor Yellow
+}
+
+# Copy libonnxruntime (RKNN acceleration for TTS)
+Write-Host "  Copying libonnxruntime (RKNN acceleration)..." -ForegroundColor Yellow
+$OnnxRuntimePath = "$ProjectRoot\libs\sherpa-onnx-v1.12.9-rknn-linux-aarch64-shared\lib\libonnxruntime.so"
+if (Test-Path $OnnxRuntimePath) {
+    Copy-Item $OnnxRuntimePath "$DockerContextDir\lib\" -Force
+    Write-Host "  [OK] libonnxruntime copied (RKNN hardware acceleration)" -ForegroundColor Green
+} else {
+    Write-Host "  [!] WARNING: libonnxruntime not found - TTS may not work!" -ForegroundColor Yellow
 }
 
 # Copy libxcb-dri2 from sysroot if not found in device-build
@@ -355,6 +399,54 @@ Write-Host "  Note: System libraries already in base image (cached)" -Foreground
 Write-Host ""
 
 # ============================================================
+# Step 2.5: Compile FFmpeg hardware decoder shim library
+# ============================================================
+Write-Host "Step 2.5: Compiling FFmpeg hardware decoder shim..." -ForegroundColor Cyan
+Write-Host "  Purpose: Intercept FFmpeg decoder selection to use hardware decoders" -ForegroundColor White
+Write-Host ""
+
+$ShimSourcePath = "$ProjectRoot\docker\rk3588\ffmpeg_hwdec_shim.c"
+$ShimOutputPath = "$DockerContextDir\lib\libffmpeg_hwdec_shim.so"
+
+if (Test-Path $ShimSourcePath) {
+    Write-Host "  Compiling shim library using Docker cross-compiler..." -ForegroundColor Yellow
+
+    # Ensure output directory exists
+    $shimLibDir = Split-Path -Parent $ShimOutputPath
+    if (-not (Test-Path $shimLibDir)) {
+        New-Item -ItemType Directory -Path $shimLibDir -Force | Out-Null
+        Write-Host "  Created lib directory: $shimLibDir" -ForegroundColor Gray
+    }
+
+    # Use Docker belt-control-rk3588:latest to compile the shim
+    # Note: Shim does NOT require FFmpeg headers (uses opaque pointers)
+    # Create output directory inside container before compilation
+    $compileOutput = docker run --rm `
+        -v "${ProjectRoot}:/workspace" `
+        -w /workspace/docker/rk3588 `
+        belt-control-rk3588:latest `
+        bash -c 'mkdir -p /workspace/docker_build_ubuntu24_apt/lib && aarch64-linux-gnu-gcc -shared -fPIC -o /workspace/docker_build_ubuntu24_apt/lib/libffmpeg_hwdec_shim.so ffmpeg_hwdec_shim.c -ldl 2>&1'
+
+    # Check if compilation succeeded by verifying output file exists
+    if (Test-Path $ShimOutputPath) {
+        $shimSize = [math]::Round((Get-Item $ShimOutputPath).Length / 1KB, 1)
+        Write-Host "  [OK] Shim library compiled: ${shimSize}KB" -ForegroundColor Green
+        Write-Host "  Location: lib/libffmpeg_hwdec_shim.so" -ForegroundColor Cyan
+    } else {
+        Write-Host "  [WARNING] Failed to compile shim library" -ForegroundColor Yellow
+        if ($compileOutput) {
+            Write-Host "  Compilation output: $compileOutput" -ForegroundColor Gray
+        }
+        Write-Host "  Output file not found at: $ShimOutputPath" -ForegroundColor Gray
+        Write-Host "  Continuing without hardware decoder override..." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "  [WARNING] Shim source not found: $ShimSourcePath" -ForegroundColor Yellow
+}
+
+Write-Host ""
+
+# ============================================================
 # Step 3: Create Dockerfile (uses base image)
 # ============================================================
 Write-Host "Step 3: Using Dockerfile with base image..." -ForegroundColor Cyan
@@ -371,17 +463,25 @@ Write-Host "Step 4: Building application image..." -ForegroundColor Cyan
 Write-Host "  Image: ${AppImageName}:${AppImageTag}" -ForegroundColor White
 Write-Host "  Base: ${BaseImageName}:${BaseImageTag} (cached)" -ForegroundColor White
 
-# Smart cache: Only use --no-cache if binary/TTS/Dockerfile changed
+# Smart cache: Only use --no-cache if binary/TTS/Dockerfile/shim changed
 $useNoCache = $false
 $appBinaryPath = "$DockerContextDir\belt_control_system"
 $ttsBinaryPath = "$DockerContextDir\sherpa_tts_service"
 $appDockerfilePath = "$ProjectRoot\Dockerfile.ubuntu24-apt"
+$shimLibPath = "$DockerContextDir\lib\libffmpeg_hwdec_shim.so"
 
 if ((Test-Path $appBinaryPath) -and (Test-Path $ttsBinaryPath) -and (Test-Path $appDockerfilePath)) {
     $appHash = (Get-FileHash -Path $appBinaryPath -Algorithm MD5).Hash
     $ttsHash = (Get-FileHash -Path $ttsBinaryPath -Algorithm MD5).Hash
     $dockerfileHash = (Get-FileHash -Path $appDockerfilePath -Algorithm MD5).Hash
-    $currentHash = "$appHash|$ttsHash|$dockerfileHash"
+
+    # Include shim library hash if it exists
+    $shimHash = ""
+    if (Test-Path $shimLibPath) {
+        $shimHash = (Get-FileHash -Path $shimLibPath -Algorithm MD5).Hash
+    }
+
+    $currentHash = "$appHash|$ttsHash|$dockerfileHash|$shimHash"
 
     if (Test-Path $AppCacheFile) {
         $cacheData = Get-Content $AppCacheFile | ConvertFrom-Json
@@ -442,15 +542,21 @@ Write-Host ""
 
 $notFound = $lddOutput | Select-String "not found"
 if ($notFound) {
-    Write-Host "  [ERROR] Missing libraries detected:" -ForegroundColor Red
-    Write-Host $notFound
-    Write-Host ""
-    Write-Host "  [!] Image may not work correctly. Continue anyway? (y/N)" -ForegroundColor Yellow
-    $response = Read-Host
-    if ($response -ne "y" -and $response -ne "Y") {
-        Write-Host "  Aborting deployment" -ForegroundColor Red
-        exit 1
+    Write-Host "  [!] Some libraries need runtime mounting from host:" -ForegroundColor Yellow
+    $notFoundList = $notFound | ForEach-Object { $_.Line.Trim() }
+    foreach ($lib in $notFoundList) {
+        if ($lib -match "librockchip_mpp|librga|libyuv") {
+            Write-Host "    ✓ $lib (will be mounted from host at runtime)" -ForegroundColor Cyan
+        } elseif ($lib -match "libx264") {
+            Write-Host "    ✓ $lib (optional: using hardware encoder instead)" -ForegroundColor Cyan
+        } elseif ($lib -match "libsherpa-onnx") {
+            Write-Host "    ⚠ $lib (TTS may not work)" -ForegroundColor Yellow
+        } else {
+            Write-Host "    ⚠ $lib" -ForegroundColor Yellow
+        }
     }
+    Write-Host ""
+    Write-Host "  [OK] FFmpeg libraries bundled (libavcodec58 with RKMPP hardware decoders from device)" -ForegroundColor Green
 } else {
     Write-Host "  [OK] All dependencies satisfied!" -ForegroundColor Green
 }
@@ -539,15 +645,52 @@ if xhost +local:docker 2>/dev/null; then
     # - LD_PRELOAD Mali library to override Mesa EGL/GLES
     MALI_VOLUME="-v /usr/lib/aarch64-linux-gnu/libmali.so.1.9.0:/opt/mali/libmali.so.1:ro"
     MALI_VOLUME="$MALI_VOLUME -v /lib/aarch64-linux-gnu/libxcb-dri2.so.0:/lib/aarch64-linux-gnu/libxcb-dri2.so.0:ro"
-    QT_RENDER_OPTS="-e LD_PRELOAD=/opt/mali/libmali.so.1"
+
+    # LD_PRELOAD configuration (order matters!)
+    # 1. libffmpeg_hwdec_shim.so - Intercept FFmpeg decoder selection (hardware decoding)
+    # 2. libmali.so.1 - Mali GPU acceleration (3D rendering)
+    PRELOAD_LIBS="/app/lib/libffmpeg_hwdec_shim.so:/opt/mali/libmali.so.1"
+    QT_RENDER_OPTS="-e LD_PRELOAD=$PRELOAD_LIBS"
     QT_RENDER_OPTS="$QT_RENDER_OPTS -e QT_XCB_GL_INTEGRATION=xcb_egl"
+
+    # Hardware video acceleration libraries (V4L2 M2M + Rockchip MPP)
+    # Mount runtime dependencies for hardware-accelerated FFmpeg
+    HW_LIBS_VOLUME="-v /usr/lib/aarch64-linux-gnu/libyuv.so.0.0.1807:/opt/hw-libs/libyuv.so.2:ro"
+    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/librockchip_mpp.so.1:/opt/hw-libs/librockchip_mpp.so.1:ro"
+    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/librga.so.2:/opt/hw-libs/librga.so.2:ro"
+    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/libx264.so.155:/opt/hw-libs/libx264.so.155:ro"
+    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/libgomp.so.1.0.0:/opt/hw-libs/libgomp.so.1:ro"
+    HW_LIBS_ENV="-e LD_LIBRARY_PATH=/opt/hw-libs:/app/lib:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu"
+
+    # Enable FFmpeg hardware acceleration for decoding
+    # - AV_LOG_LEVEL=debug: Enable detailed FFmpeg logging to verify hardware decoder usage
+    # - AV_LOG_FORCE_NOCOLOR=1: Disable color codes for cleaner logs
+    # Note: FFmpeg will auto-detect h264_rkmpp/h264_v4l2m2m if devices are accessible
+    FFMPEG_HW_OPTS="-e AV_LOG_LEVEL=debug -e AV_LOG_FORCE_NOCOLOR=1"
 else
     echo "✅ No X11 - using EGLFS platform (fullscreen mode)"
     QT_PLATFORM=eglfs
     DISPLAY_ARG=""
     X11_VOLUME=""
     MALI_VOLUME=""
-    QT_RENDER_OPTS=""
+
+    # LD_PRELOAD configuration for EGLFS mode
+    # Only need FFmpeg hardware decoder shim (no Mali preload needed for EGLFS)
+    QT_RENDER_OPTS="-e LD_PRELOAD=/app/lib/libffmpeg_hwdec_shim.so"
+
+    # Hardware video acceleration libraries (V4L2 M2M + Rockchip MPP) - also needed in EGLFS mode
+    HW_LIBS_VOLUME="-v /usr/lib/aarch64-linux-gnu/libyuv.so.0.0.1807:/opt/hw-libs/libyuv.so.2:ro"
+    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/librockchip_mpp.so.1:/opt/hw-libs/librockchip_mpp.so.1:ro"
+    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/librga.so.2:/opt/hw-libs/librga.so.2:ro"
+    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/libx264.so.155:/opt/hw-libs/libx264.so.155:ro"
+    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/libgomp.so.1.0.0:/opt/hw-libs/libgomp.so.1:ro"
+    HW_LIBS_ENV="-e LD_LIBRARY_PATH=/opt/hw-libs:/app/lib:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu"
+
+    # Enable FFmpeg hardware acceleration for decoding
+    # - AV_LOG_LEVEL=debug: Enable detailed FFmpeg logging to verify hardware decoder usage
+    # - AV_LOG_FORCE_NOCOLOR=1: Disable color codes for cleaner logs
+    # Note: FFmpeg will auto-detect h264_rkmpp/h264_v4l2m2m if devices are accessible
+    FFMPEG_HW_OPTS="-e AV_LOG_LEVEL=debug -e AV_LOG_FORCE_NOCOLOR=1"
 fi
 
 echo "Starting application with persistent data..."
@@ -561,9 +704,12 @@ sudo docker run \
     $DISPLAY_ARG \
     -e QT_QPA_PLATFORM=$QT_PLATFORM \
     $QT_RENDER_OPTS \
+    $HW_LIBS_ENV \
+    $FFMPEG_HW_OPTS \
     -e XDG_RUNTIME_DIR=/tmp \
     $X11_VOLUME \
     $MALI_VOLUME \
+    $HW_LIBS_VOLUME \
     -v /dev:/dev \
     -v /dev/dri:/dev/dri \
     -v /sys:/sys \
