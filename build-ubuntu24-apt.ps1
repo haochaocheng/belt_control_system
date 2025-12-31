@@ -62,6 +62,806 @@ $AppImageTag = "v3.5-apt"
 $OutputTarFile = "$ProjectRoot\belt-control-ubuntu24-apt.tar"
 $BaseCacheFile = "$ProjectRoot\.docker_base_cache.json"
 $AppCacheFile = "$ProjectRoot\.docker_app_cache.json"
+$PJSIPLibsCacheFile = "$ProjectRoot\.pjsip_libs_cache.json"
+
+# ============================================================
+# Step -1: PJSIP 源码变化检测（自动重新编译）
+# ============================================================
+Write-Host "Step -1: Checking PJSIP source code..." -ForegroundColor Cyan
+
+$pjsipSourceDir = "$ProjectRoot\cross-compile\src\pjproject-2.16"
+$pjsipStaticLib = "$ProjectRoot\docker\rk3588\rk3588-libs\lib\libpjmedia-codec-aarch64-unknown-linux-gnu.a"
+
+if (-not (Test-Path $pjsipSourceDir)) {
+    Write-Host "  [!] PJSIP 源码目录不存在" -ForegroundColor Red
+    exit 1
+}
+
+if (-not (Test-Path $pjsipStaticLib)) {
+    Write-Host "  [!] PJSIP 静态库不存在 - 需要首次编译" -ForegroundColor Yellow
+    $needCompilePJSIP = $true
+} else {
+    # 扫描整个源码树，找到最新修改的文件
+    Write-Host "  扫描源码树..." -ForegroundColor Gray
+
+    $latestSourceFile = Get-ChildItem -Path $pjsipSourceDir -Recurse -File `
+        | Where-Object { $_.Extension -in @('.c', '.cpp', '.h', '.hpp') } `
+        | Sort-Object LastWriteTime -Descending `
+        | Select-Object -First 1
+
+    if (-not $latestSourceFile) {
+        Write-Host "  [!] 未找到任何源码文件" -ForegroundColor Red
+        exit 1
+    }
+
+    $sourceTime = $latestSourceFile.LastWriteTime
+    $libTime = (Get-Item $pjsipStaticLib).LastWriteTime
+
+    Write-Host "  最新源码文件: $($latestSourceFile.Name)" -ForegroundColor Cyan
+    Write-Host "  最新修改时间: $($sourceTime.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Cyan
+    Write-Host "  静态库时间: $($libTime.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Cyan
+
+    if ($sourceTime -gt $libTime) {
+        Write-Host ""
+        Write-Host "  [!] PJSIP 源码已更新 - 需要重新编译静态库" -ForegroundColor Yellow
+        Write-Host "  修改的文件: $($latestSourceFile.FullName.Replace($ProjectRoot, '.'))" -ForegroundColor Yellow
+        $timeDiff = $sourceTime - $libTime
+        Write-Host "  源码比静态库新 $($timeDiff.TotalMinutes.ToString('0.0')) 分钟" -ForegroundColor Yellow
+        $needCompilePJSIP = $true
+    } else {
+        Write-Host "  [OK] PJSIP 静态库是最新的" -ForegroundColor Green
+        $needCompilePJSIP = $false
+        $forceFullRebuild = $false
+    }
+}
+
+if ($needCompilePJSIP) {
+    Write-Host ""
+    Write-Host "========================================================" -ForegroundColor Yellow
+    Write-Host "  开始编译 PJSIP 静态库（混合优化方案）" -ForegroundColor Yellow
+    Write-Host "========================================================" -ForegroundColor Yellow
+    Write-Host ""
+
+    $pjsipOutputDir = "$ProjectRoot\docker\rk3588\pjsip-libs"
+    $pjsipConfigSite = "$ProjectRoot\docker\rk3588\pjsip_config_site.h"
+    $pjsipSysroot = "$ProjectRoot\docker\rk3588\sysroot\rk3588-root"
+    $pjsipContainerName = "pjsip-builder-persistent"
+    $pjsipImageName = "pjsip-builder-ubuntu20:latest"  # Ubuntu 20.04 + GCC 9
+
+    # 创建输出目录
+    if (-not (Test-Path $pjsipOutputDir)) {
+        New-Item -ItemType Directory -Path $pjsipOutputDir -Force | Out-Null
+    }
+
+    # 检查 Docker 镜像
+    Write-Host "  [1/6] 检查 PJSIP 编译镜像（Ubuntu 20.04）..." -ForegroundColor Green
+    $pjsipImageExists = docker images -q $pjsipImageName
+    if (-not $pjsipImageExists) {
+        Write-Host "  [!] PJSIP 编译镜像不存在，需要先构建" -ForegroundColor Red
+        Write-Host "  运行: docker build -f docker/rk3588/Dockerfile.pjsip-ubuntu20 -t pjsip-builder-ubuntu20:latest docker/rk3588/" -ForegroundColor Yellow
+        exit 1
+    }
+
+    # ⚠️ 检测配置文件是否修改（需要重新 configure）
+    Write-Host "  检查配置文件修改状态..." -ForegroundColor Gray
+    $configFiles = @(
+        "$ProjectRoot\docker\rk3588\pjsip_config_site.h",
+        "$ProjectRoot\docker\rk3588\Dockerfile.pjsip-ubuntu20"
+    )
+
+    $forceFullRebuild = $false
+    $containerExists = docker ps -a --filter "name=^${pjsipContainerName}$" --format "{{.Names}}"
+
+    if ($containerExists) {
+        # 容器存在时，比对配置文件和容器内记录的时间戳
+        $containerConfigTime = docker exec $pjsipContainerName cat /workspace/.config_timestamp 2>$null
+
+        foreach ($configFile in $configFiles) {
+            if (Test-Path $configFile) {
+                $configTime = (Get-Item $configFile).LastWriteTime.ToString("o")
+
+                # 如果容器没有记录，或者配置文件时间戳不同，需要重新 configure
+                if (-not $containerConfigTime -or $containerConfigTime -ne $configTime) {
+                    Write-Host "  [!] 配置文件已修改 - 强制完整重新编译" -ForegroundColor Red
+                    Write-Host "      配置: $(Split-Path $configFile -Leaf)" -ForegroundColor Gray
+                    Write-Host "      容器记录: $(if($containerConfigTime){$containerConfigTime}else{'无记录'})" -ForegroundColor Gray
+                    Write-Host "      当前时间: $configTime" -ForegroundColor Gray
+                    $forceFullRebuild = $true
+                    break
+                }
+            }
+        }
+
+        if (-not $forceFullRebuild) {
+            Write-Host "  ✓ 配置文件未修改 - 增量编译" -ForegroundColor Green
+        }
+    } else {
+        # 容器不存在，需要完整编译
+        Write-Host "  容器不存在 - 需要完整编译" -ForegroundColor Yellow
+        $forceFullRebuild = $true
+    }
+
+    # 检查或创建持久化容器
+    Write-Host "  [2/6] 检查持久化容器..." -ForegroundColor Green
+
+    # ⚠️ 配置文件修改时强制删除旧容器（重新 configure）
+    if ($containerExists -and $forceFullRebuild) {
+        Write-Host "    [!] 删除旧容器以重新 configure" -ForegroundColor Red
+        docker rm -f $pjsipContainerName | Out-Null
+        $containerExists = $null
+    }
+
+    if (-not $containerExists) {
+        Write-Host "    创建持久化容器: $pjsipContainerName" -ForegroundColor Yellow
+        docker create `
+            --name $pjsipContainerName `
+            -w /workspace `
+            -v "${pjsipOutputDir}:/output" `
+            $pjsipImageName `
+            tail -f /dev/null | Out-Null
+        Write-Host "    ✓ 容器已创建" -ForegroundColor Green
+        $isNewContainer = $true
+
+        # 启动容器（需要先启动才能复制文件）
+        docker start $pjsipContainerName | Out-Null
+
+        # ⚠️ 性能优化：只复制 FFmpeg + RKMPP 到容器（不复制整个 sysroot）
+        # 原因：PJSIP 只需要 FFmpeg/RKMPP，其他依赖（OpenSSL/ALSA）用 apt 安装
+        Write-Host "    复制 FFmpeg + RKMPP 到容器..." -ForegroundColor Yellow
+        Write-Host "    源: $pjsipSysroot" -ForegroundColor Gray
+
+        # 验证 sysroot 源目录存在
+        if (-not (Test-Path $pjsipSysroot)) {
+            Write-Host "    [错误] sysroot 源目录不存在: $pjsipSysroot" -ForegroundColor Red
+            exit 1
+        }
+
+        $sysrootCopyStart = Get-Date
+
+        # 创建目标目录
+        docker exec $pjsipContainerName mkdir -p /opt/rk3588-sysroot/usr/include | Out-Null
+        docker exec $pjsipContainerName mkdir -p /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig | Out-Null
+
+        # 只复制 FFmpeg 头文件（libav*）
+        Write-Host "    - 复制 FFmpeg 头文件..." -ForegroundColor Gray
+        $ffmpegIncludeDirs = @("libavcodec", "libavformat", "libavutil", "libavdevice", "libswscale", "libswresample", "libavfilter")
+        $copiedCount = 0
+        foreach ($dir in $ffmpegIncludeDirs) {
+            $srcPath = Join-Path $pjsipSysroot "usr\include\aarch64-linux-gnu\$dir"
+            if (Test-Path $srcPath) {
+                docker cp "$srcPath" "${pjsipContainerName}:/opt/rk3588-sysroot/usr/include/" 2>&1 | Out-Null
+                $copiedCount++
+            } else {
+                # 尝试另一个可能的路径
+                $srcPath = Join-Path $pjsipSysroot "usr\include\$dir"
+                if (Test-Path $srcPath) {
+                    docker cp "$srcPath" "${pjsipContainerName}:/opt/rk3588-sysroot/usr/include/" 2>&1 | Out-Null
+                    $copiedCount++
+                }
+            }
+        }
+        Write-Host "      复制了 $copiedCount 个 FFmpeg 头文件目录" -ForegroundColor Gray
+
+        # 复制 RKMPP 头文件
+        Write-Host "    - 复制 RKMPP 头文件..." -ForegroundColor Gray
+        $rkmppIncludePath = Join-Path $pjsipSysroot "usr\include\rockchip"
+        if (Test-Path $rkmppIncludePath) {
+            docker cp "$rkmppIncludePath" "${pjsipContainerName}:/opt/rk3588-sysroot/usr/include/" 2>&1 | Out-Null
+            Write-Host "      ✓ rockchip/" -ForegroundColor Gray
+        } else {
+            $rkmppIncludePath = Join-Path $pjsipSysroot "usr\include\aarch64-linux-gnu\rockchip"
+            if (Test-Path $rkmppIncludePath) {
+                docker cp "$rkmppIncludePath" "${pjsipContainerName}:/opt/rk3588-sysroot/usr/include/" 2>&1 | Out-Null
+                Write-Host "      ✓ rockchip/" -ForegroundColor Gray
+            } else {
+                Write-Host "      ⚠️ rockchip/ 未找到" -ForegroundColor Yellow
+            }
+        }
+
+        # ✅ 2025-12-30 11:10 优化：只复制 FFmpeg 及其实际依赖的库文件
+        #    之前复制所有 .so 文件（效率低、容器体积大）
+        #    现在只复制 FFmpeg 核心库 + 编解码器依赖库（从链接错误中提取）
+        Write-Host "    - 复制 FFmpeg + 编解码器依赖库..." -ForegroundColor Gray
+        $libPath = Join-Path $pjsipSysroot "usr\lib\aarch64-linux-gnu"
+        $libCount = 0
+
+        if (Test-Path $libPath) {
+            # FFmpeg 核心库
+            $ffmpegLibs = @("libav*.so*", "libsw*.so*")
+
+            # 编解码器依赖库（从链接错误中提取）
+            $codecLibs = @(
+                "librsvg-2.so*", "libcairo.so*", "libzvbi.so*", "libsnappy.so*",
+                "libaom.so*", "libcodec2.so*", "libgsm.so*", "libopenjp2.so*",
+                "libshine.so*", "libtheora*.so*", "libtwolame.so*", "libwavpack.so*",
+                "libx264.so*", "libx265.so*", "libxvidcore.so*",
+                "librga.so*", "libmpp.so*", "librockchip_mpp.so*",
+                "libva*.so*", "libvdpau.so*",
+                "libdav1d.so*", "libvpx.so*", "libwebp*.so*"
+            )
+
+            # 合并所有需要的库
+            $allLibs = $ffmpegLibs + $codecLibs
+
+            foreach ($libPattern in $allLibs) {
+                Get-ChildItem -Path $libPath -Filter $libPattern -ErrorAction SilentlyContinue | ForEach-Object {
+                    docker cp $_.FullName "${pjsipContainerName}:/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/" 2>&1 | Out-Null
+                    $libCount++
+                }
+            }
+        }
+        Write-Host "      复制了 $libCount 个库文件（FFmpeg + 编解码器依赖）" -ForegroundColor Gray
+
+        # 复制 pkg-config 文件
+        Write-Host "    - 复制 pkg-config 文件..." -ForegroundColor Gray
+        $pkgconfigPath = Join-Path $pjsipSysroot "usr\lib\aarch64-linux-gnu\pkgconfig"
+        $pcCount = 0
+        if (Test-Path $pkgconfigPath) {
+            Get-ChildItem -Path $pkgconfigPath -Filter "libav*.pc" -ErrorAction SilentlyContinue | ForEach-Object {
+                docker cp $_.FullName "${pjsipContainerName}:/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig/" 2>&1 | Out-Null
+                $pcCount++
+            }
+            Get-ChildItem -Path $pkgconfigPath -Filter "libsw*.pc" -ErrorAction SilentlyContinue | ForEach-Object {
+                docker cp $_.FullName "${pjsipContainerName}:/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig/" 2>&1 | Out-Null
+                $pcCount++
+            }
+        }
+        Write-Host "      复制了 $pcCount 个 .pc 文件" -ForegroundColor Gray
+
+        $sysrootCopyElapsed = (Get-Date) - $sysrootCopyStart
+        Write-Host "    ✓ FFmpeg + RKMPP 复制完成（耗时 $($sysrootCopyElapsed.TotalSeconds.ToString('F1'))s）" -ForegroundColor Green
+
+        # ✅ 验证 FFmpeg 头文件是否存在
+        Write-Host "    验证 FFmpeg 头文件..." -ForegroundColor Gray
+        $ffmpegHeaderCheck = docker exec $pjsipContainerName bash -c "find /opt/rk3588-sysroot/usr/include -name 'avutil.h' -path '*/libavutil/*' 2>/dev/null | head -1"
+        if (-not $ffmpegHeaderCheck -or $ffmpegHeaderCheck.Trim() -eq "") {
+            Write-Host "    [警告] FFmpeg 头文件未找到，列出 sysroot 内容以排查" -ForegroundColor Yellow
+            Write-Host "    include 目录内容:" -ForegroundColor Gray
+            docker exec $pjsipContainerName bash -c "ls -la /opt/rk3588-sysroot/usr/include/ 2>/dev/null | head -30"
+            Write-Host "    查找 libav* 目录:" -ForegroundColor Gray
+            docker exec $pjsipContainerName bash -c "find /opt/rk3588-sysroot/usr/include -type d -name 'libav*' 2>/dev/null"
+        } else {
+            Write-Host "    ✓ FFmpeg 头文件: $($ffmpegHeaderCheck.Trim())" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "    ✓ 容器已存在" -ForegroundColor Green
+        $isNewContainer = $false
+
+        # 启动容器
+        $containerRunning = docker ps --filter "name=^${pjsipContainerName}$" --format "{{.Names}}"
+        if (-not $containerRunning) {
+            Write-Host "    启动容器..." -ForegroundColor Yellow
+            docker start $pjsipContainerName | Out-Null
+        }
+    }
+
+    # 首次全量复制（如果是新容器）
+    if ($isNewContainer) {
+        Write-Host "  [3/6] 首次全量复制源码..." -ForegroundColor Green
+        $fullCopyStartTime = Get-Date
+
+        # 使用 tar 复制，排除编译产物
+        Write-Host "    创建源码 tar 包..." -ForegroundColor Gray
+
+        # ⚠️ 先清理源码目录中的旧 tar 文件，避免 tar 打包自己
+        Push-Location $pjsipSourceDir
+        Get-ChildItem -Filter "*.tar" | Remove-Item -Force -ErrorAction SilentlyContinue
+
+        # 使用简单文件名，在源码目录创建 tar
+        $tarFileName = "pjsip-source-full.tar"
+        tar -cf $tarFileName `
+            --exclude="*.o" `
+            --exclude="*.a" `
+            --exclude="*.so" `
+            --exclude="*.dll" `
+            --exclude="*.tar" `
+            --exclude=".*.depend" `
+            --exclude="build.mak" `
+            --exclude="output/*" `
+            --exclude=".git/*" `
+            .
+        $tarExitCode = $LASTEXITCODE
+
+        # 移动到 temp 目录
+        $tempTar = Join-Path $env:TEMP $tarFileName
+        if ($tarExitCode -eq 0) {
+            Move-Item $tarFileName $tempTar -Force
+        }
+        Pop-Location
+
+        if ($tarExitCode -ne 0) {
+            Write-Host "    [错误] tar 创建失败（退出码: $tarExitCode）" -ForegroundColor Red
+            exit 1
+        }
+
+        Write-Host "    复制 tar 到容器..." -ForegroundColor Gray
+        docker cp $tempTar "${pjsipContainerName}:/tmp/source.tar" | Out-Null
+
+        Write-Host "    解压源码..." -ForegroundColor Gray
+        docker exec $pjsipContainerName tar -xf /tmp/source.tar -C /workspace/ | Out-Null
+
+        # 恢复所有配置脚本的执行权限
+        Write-Host "    设置执行权限..." -ForegroundColor Gray
+        docker exec $pjsipContainerName bash -c "find /workspace -type f \( -name '*.sh' -o -name 'configure' -o -name 'aconfigure' \) -exec chmod +x {} \;" | Out-Null
+
+        Remove-Item $tempTar -Force
+
+        # 复制配置文件
+        Write-Host "    复制配置文件..." -ForegroundColor Gray
+        docker exec $pjsipContainerName mkdir -p /workspace/pjlib/include/pj | Out-Null
+        docker cp $pjsipConfigSite "${pjsipContainerName}:/workspace/pjlib/include/pj/config_site.h" | Out-Null
+
+        $fullCopyElapsed = (Get-Date) - $fullCopyStartTime
+        Write-Host "    ✓ 全量复制完成（耗时 $($fullCopyElapsed.TotalSeconds.ToString('F1'))s）" -ForegroundColor Green
+        Write-Host ""
+
+        # 首次编译（建立 .o 缓存）
+        Write-Host "  [4/6] 首次编译（建立增量缓存，约1-2分钟）..." -ForegroundColor Green
+        $firstBuildStartTime = Get-Date
+
+        # 获取配置文件时间戳
+        $configTimestamp = (Get-Item "$ProjectRoot\docker\rk3588\pjsip_config_site.h").LastWriteTime.ToString("o")
+
+        $firstBuildScript = @'
+#!/bin/bash
+# ⚠️ 不使用 set -e，手动检查每个命令的退出码（避免管道干扰）
+cd /workspace
+
+echo "================================================"
+echo "配置 PJSIP..."
+echo "================================================"
+export CC=aarch64-linux-gnu-gcc
+export CXX=aarch64-linux-gnu-g++
+export AR=aarch64-linux-gnu-ar
+export RANLIB=aarch64-linux-gnu-ranlib
+
+# ⚠️ 检测 FFmpeg 头文件实际路径
+FFMPEG_INCLUDE_DIR=$(find /opt/rk3588-sysroot/usr/include -name "libavutil" -type d 2>/dev/null | head -1 | xargs dirname)
+if [ -z "$FFMPEG_INCLUDE_DIR" ]; then
+    echo "✗ FFmpeg 头文件未找到！"
+    exit 1
+fi
+echo "检测到 FFmpeg 头文件: $FFMPEG_INCLUDE_DIR"
+
+# ⚠️ CFLAGS 必须包含 sysroot 头文件路径（FFmpeg、RKMPP）
+export CFLAGS="-fPIC -O2 -I/opt/rk3588-sysroot/usr/include -I/opt/rk3588-sysroot/usr/include/aarch64-linux-gnu -I$FFMPEG_INCLUDE_DIR"
+export CXXFLAGS="-fPIC -O2 -I/opt/rk3588-sysroot/usr/include -I/opt/rk3588-sysroot/usr/include/aarch64-linux-gnu -I$FFMPEG_INCLUDE_DIR"
+
+# ✅ 2025-12-30 19:00 关键修复：为 PJSIP 测试程序提供完整的 FFmpeg 编解码器依赖库
+# LDFLAGS：库搜索路径（-L）
+export LDFLAGS="-L/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu -L/opt/rk3588-sysroot/usr/lib -L/usr/lib/aarch64-linux-gnu"
+
+# LIBS：具体链接库（-l），包含所有 FFmpeg 编解码器依赖
+# 这些库用于 PJSIP 测试程序的链接，确保 FFmpeg 编解码器能正确初始化
+export LIBS="-lx264 -lx265 -lvpx -lcairo -lva -lva-drm -lva-x11 -ltwolame -lwebp -lcodec2 -ldav1d -laom -lwavpack -ltheora -ltheoraenc -ltheoradec -lxvidcore -lopenjp2 -lshine -lsnappy -lzvbi -lrsvg-2 -lvdpau -lrga -lrockchip_mpp -lpthread -lm -lrt"
+
+# ⚠️ PKG_CONFIG_SYSROOT_DIR 让 pkg-config 重定向 .pc 文件中的路径到 sysroot
+export PKG_CONFIG_SYSROOT_DIR=/opt/rk3588-sysroot
+
+# ⚠️ PKG_CONFIG_PATH 必须包含 sysroot 的 pkgconfig 目录
+export PKG_CONFIG_PATH=/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/opt/rk3588-sysroot/usr/lib/pkgconfig
+
+echo "环境变量："
+echo "  CC=$CC"
+echo "  CFLAGS=$CFLAGS"
+echo "  CPPFLAGS=$CPPFLAGS"
+echo "  LDFLAGS=$LDFLAGS"
+echo "  PKG_CONFIG_SYSROOT_DIR=$PKG_CONFIG_SYSROOT_DIR"
+echo "  PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+echo ""
+
+# ⚠️ 为 FFmpeg 创建符号链接，让 --with-ffmpeg 能找到 .pc 文件
+echo "创建 FFmpeg pkg-config 符号链接..."
+mkdir -p /opt/rk3588-sysroot/usr/lib/pkgconfig
+ln -sf /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig/libavcodec.pc /opt/rk3588-sysroot/usr/lib/pkgconfig/ 2>/dev/null || true
+ln -sf /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig/libavformat.pc /opt/rk3588-sysroot/usr/lib/pkgconfig/ 2>/dev/null || true
+ln -sf /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig/libavutil.pc /opt/rk3588-sysroot/usr/lib/pkgconfig/ 2>/dev/null || true
+ln -sf /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig/libavdevice.pc /opt/rk3588-sysroot/usr/lib/pkgconfig/ 2>/dev/null || true
+ln -sf /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig/libswscale.pc /opt/rk3588-sysroot/usr/lib/pkgconfig/ 2>/dev/null || true
+ln -sf /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig/libswresample.pc /opt/rk3588-sysroot/usr/lib/pkgconfig/ 2>/dev/null || true
+ln -sf /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig/libavfilter.pc /opt/rk3588-sysroot/usr/lib/pkgconfig/ 2>/dev/null || true
+
+# ✅ 2025-12-30 10:45 关键修复：创建标准布局符号链接，让 PJSIP configure 能找到 FFmpeg
+#    PJSIP --with-ffmpeg=/path 会查找 /path/lib/ 和 /path/include/
+#    我们的文件在 /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/
+echo "创建 sysroot 标准布局符号链接（让 PJSIP configure 检测到 FFmpeg）..."
+ln -sfn /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu /opt/rk3588-sysroot/lib 2>/dev/null || true
+ln -sfn /opt/rk3588-sysroot/usr/include /opt/rk3588-sysroot/include 2>/dev/null || true
+echo ""
+
+# ⚠️ 设置 PKG_CONFIG_SYSROOT_DIR 让 pkg-config 正确处理 sysroot 路径
+export PKG_CONFIG_SYSROOT_DIR=/opt/rk3588-sysroot
+
+./configure \
+    --host=aarch64-linux-gnu \
+    --prefix=/opt/pjsip \
+    --disable-shared \
+    --enable-static \
+    --with-ssl=/usr \
+    --with-sdl=/usr \
+    --with-ffmpeg=/opt/rk3588-sysroot 2>&1 | tee /tmp/configure.log
+    # ❌ 2025-12-30 之前：--disable-ffmpeg
+    #    原因：为避免 OpenSSL 1.1/3.x 版本不兼容时的 FFmpeg 链接错误
+    # ✅ 2025-12-30 10:30 恢复：--with-ffmpeg=/opt/rk3588-sysroot
+    #    原因：升级到 Ubuntu 24.04 + OpenSSL 3.x 后，重新启用视频编解码
+
+# ⚠️ 说明（2025-12-30 更新）：
+# - 启用 FFmpeg：用于 H.264/H.265 视频编解码（从设备 188 sysroot 复制）
+# - RKMPP 硬件编解码器：通过 PJSIP 的自定义编解码器接口注册
+# - 保留 SDL：用于视频设备支持
+# - 保留 OpenSSL：用于 TLS/SRTP 加密
+
+# ⚠️ 检查 configure 是否成功
+if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    echo "✗ configure 失败"
+    exit 1
+fi
+
+echo ""
+echo "生成依赖文件（make dep）..."
+echo "（这个过程需要扫描所有头文件，约需 1-3 分钟，请耐心等待）"
+
+# 显示进度的 make dep
+make dep 2>&1 | while IFS= read -r line; do
+    # 只显示正在处理的文件（减少输出）
+    if echo "$line" | grep -q "^make\["; then
+        echo "$line"
+    fi
+done > /tmp/make_dep.log
+
+# ⚠️ 检查 make dep 是否成功
+DEP_EXIT=${PIPESTATUS[0]}
+if [ $DEP_EXIT -ne 0 ]; then
+    echo "⚠️ make dep 失败，尝试继续编译（某些模块的 dep 可能失败但不影响编译）"
+    tail -20 /tmp/make_dep.log
+else
+    echo "✓ make dep 完成"
+fi
+
+echo ""
+echo "编译 PJSIP（使用 $(nproc) 线程）..."
+# ✅ 2025-12-30 19:00 关键修复：不再允许测试程序编译失败
+#    必须让所有测试程序编译成功，才能保证 FFmpeg 编解码器依赖库正确链接
+#    已在 LIBS 环境变量中添加所有 FFmpeg 编解码器依赖库
+make -j$(nproc) 2>&1 | tee /tmp/make.log
+
+# ⚠️ make 必须成功，否则说明链接库配置有问题
+if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    echo "✗ make 编译失败"
+    echo ""
+    echo "=== 最后 100 行编译日志 ==="
+    tail -100 /tmp/make.log
+    exit 1
+fi
+
+echo ""
+echo "复制静态库到输出目录..."
+mkdir -p /output/lib
+find . -name "*.a" -type f -exec cp {} /output/lib/ \;
+
+FINAL_COUNT=$(ls /output/lib/*.a 2>/dev/null | wc -l)
+echo ""
+if [ $FINAL_COUNT -lt 20 ]; then
+    echo "✗ 静态库数量不足：${FINAL_COUNT} 个（预期 >=20）"
+    exit 1
+else
+    echo "✓ 静态库生成成功：${FINAL_COUNT} 个"
+    echo "✓ PJSIP 编译完成（包括所有测试程序）"
+    # 记录配置文件时间戳（用于检测配置是否修改）
+    echo "$CONFIG_TIMESTAMP" > /workspace/.config_timestamp
+fi
+'@
+
+        $firstBuildScript = $firstBuildScript -replace "`r`n", "`n"
+        $firstBuildScript = $firstBuildScript -replace "`r", "`n"
+
+        $tempScript = Join-Path $env:TEMP "pjsip-first-build.sh"
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($tempScript, $firstBuildScript, $utf8NoBom)
+
+        docker cp $tempScript "${pjsipContainerName}:/tmp/first-build.sh" | Out-Null
+        docker exec -e CONFIG_TIMESTAMP="$configTimestamp" $pjsipContainerName bash /tmp/first-build.sh
+
+        # ⚠️ 检查编译是否成功
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "    [错误] PJSIP 编译失败（退出码: $LASTEXITCODE）" -ForegroundColor Red
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            exit 1
+        }
+
+        $firstBuildElapsed = (Get-Date) - $firstBuildStartTime
+        Write-Host "    ✓ 首次编译完成（耗时 $($firstBuildElapsed.TotalSeconds.ToString('F1'))s）" -ForegroundColor Green
+        Write-Host ""
+
+        Remove-Item $tempScript -Force
+    } else {
+        Write-Host "  [3-4/6] 跳过初始化（容器已有源码）" -ForegroundColor Green
+        Write-Host ""
+
+        # 使用 Git 检测修改的文件
+        Write-Host "  [5/6] 检测修改的文件（使用 Git）..." -ForegroundColor Green
+        $detectStartTime = Get-Date
+
+        $isGitRepo = Test-Path "$pjsipSourceDir\.git"
+
+        if ($isGitRepo) {
+            $modifiedFilesRaw = git -C $pjsipSourceDir diff --name-only HEAD 2>$null
+            $modifiedFiles = $modifiedFilesRaw | Where-Object { $_ -match '\.(c|cpp|h|hpp)$' }
+
+            if (-not $modifiedFiles) {
+                Write-Host "    ✓ 无修改文件（跳过同步）" -ForegroundColor Green
+                $needSync = $false
+            } else {
+                Write-Host "    检测到 $($modifiedFiles.Count) 个修改的文件" -ForegroundColor Yellow
+                $modifiedFiles | Select-Object -First 3 | ForEach-Object {
+                    Write-Host "      - $_" -ForegroundColor Gray
+                }
+                if ($modifiedFiles.Count -gt 3) {
+                    Write-Host "      ... 还有 $($modifiedFiles.Count - 3) 个文件" -ForegroundColor Gray
+                }
+                $needSync = $true
+            }
+        } else {
+            Write-Host "    使用时间戳检测" -ForegroundColor Yellow
+            $needSync = $true
+            # 简化：直接认为需要同步
+        }
+
+        $detectElapsed = (Get-Date) - $detectStartTime
+        Write-Host "    检测耗时: $($detectElapsed.TotalSeconds.ToString('F1'))s" -ForegroundColor Gray
+        Write-Host ""
+
+        # 批量同步修改的文件
+        if ($needSync) {
+            Write-Host "  [6/6] 批量同步修改的文件..." -ForegroundColor Green
+            $syncStartTime = Get-Date
+
+            $tempTar = Join-Path $env:TEMP "pjsip-modified-$(Get-Date -Format 'HHmmss').tar"
+
+            Write-Host "    创建 tar 包..." -ForegroundColor Gray
+            if ($modifiedFiles) {
+                # 创建 Unix 格式的文件列表（LF 换行符）
+                $fileListPath = Join-Path $env:TEMP "modified-files.txt"
+                $fileListContent = ($modifiedFiles -join "`n") + "`n"
+                $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+                [System.IO.File]::WriteAllText($fileListPath, $fileListContent, $utf8NoBom)
+
+                # ⚠️ 先清理源码目录中的旧 tar 文件
+                Push-Location $pjsipSourceDir
+                Get-ChildItem -Filter "*.tar" | Remove-Item -Force -ErrorAction SilentlyContinue
+
+                # 使用简单文件名，在当前目录创建 tar
+                $tarFileName = "pjsip-modified-$(Get-Date -Format 'HHmmss').tar"
+                tar -cf $tarFileName -T $fileListPath
+                $tarExitCode = $LASTEXITCODE
+
+                # 移动到 temp 目录
+                $tempTar = Join-Path $env:TEMP $tarFileName
+                if ($tarExitCode -eq 0) {
+                    Move-Item $tarFileName $tempTar -Force
+                }
+                Pop-Location
+
+                Remove-Item $fileListPath -Force
+
+                if ($tarExitCode -ne 0) {
+                    Write-Host "    [错误] tar 创建失败（退出码: $tarExitCode）" -ForegroundColor Red
+                    exit 1
+                }
+            } else {
+                # 回退：同步配置文件
+                Push-Location $pjsipSourceDir
+                Get-ChildItem -Filter "*.tar" | Remove-Item -Force -ErrorAction SilentlyContinue
+
+                $tarFileName = "pjsip-modified-$(Get-Date -Format 'HHmmss').tar"
+                tar -cf $tarFileName "pjlib/include/pj/config_site.h"
+                $tarExitCode = $LASTEXITCODE
+
+                # 移动到 temp 目录
+                $tempTar = Join-Path $env:TEMP $tarFileName
+                if ($tarExitCode -eq 0) {
+                    Move-Item $tarFileName $tempTar -Force
+                }
+                Pop-Location
+
+                if ($tarExitCode -ne 0) {
+                    Write-Host "    [错误] tar 创建失败（退出码: $tarExitCode）" -ForegroundColor Red
+                    exit 1
+                }
+            }
+
+            Write-Host "    复制 tar 到容器..." -ForegroundColor Gray
+            docker cp $tempTar "${pjsipContainerName}:/tmp/modified.tar" | Out-Null
+
+            Write-Host "    解压到容器..." -ForegroundColor Gray
+            docker exec $pjsipContainerName tar -xf /tmp/modified.tar -C /workspace/ | Out-Null
+
+            Remove-Item $tempTar -Force
+
+            $syncElapsed = (Get-Date) - $syncStartTime
+            Write-Host "    ✓ 同步完成（耗时 $($syncElapsed.TotalSeconds.ToString('F1'))s）" -ForegroundColor Green
+            Write-Host ""
+        } else {
+            Write-Host "  [6/6] 跳过文件同步（无修改）" -ForegroundColor Green
+            Write-Host ""
+        }
+
+        # 容器内增量编译
+        Write-Host "  [增量编译] 容器内增量编译..." -ForegroundColor Green
+        $incrementalBuildStartTime = Get-Date
+
+        $incrementalBuildScript = @'
+#!/bin/bash
+set -e
+cd /workspace
+
+echo "增量编译（Make 自动检测依赖）..."
+make -j$(nproc) >/dev/null 2>&1
+
+# 更新静态库到输出目录
+mkdir -p /output/lib
+find . -name "*.a" -type f -exec cp {} /output/lib/ \;
+
+FINAL_COUNT=$(ls /output/lib/*.a 2>/dev/null | wc -l)
+echo "✓ 增量编译完成！已更新 ${FINAL_COUNT} 个静态库"
+'@
+
+        $incrementalBuildScript = $incrementalBuildScript -replace "`r`n", "`n"
+        $incrementalBuildScript = $incrementalBuildScript -replace "`r", "`n"
+
+        $tempScript = Join-Path $env:TEMP "pjsip-incremental-build.sh"
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($tempScript, $incrementalBuildScript, $utf8NoBom)
+
+        docker cp $tempScript "${pjsipContainerName}:/tmp/incremental-build.sh" | Out-Null
+        docker exec $pjsipContainerName bash /tmp/incremental-build.sh
+
+        $incrementalBuildElapsed = (Get-Date) - $incrementalBuildStartTime
+        Write-Host "    ✓ 增量编译完成（耗时 $($incrementalBuildElapsed.TotalSeconds.ToString('F1'))s）" -ForegroundColor Green
+        Write-Host ""
+
+        Remove-Item $tempScript -Force
+    }
+
+    # 复制到 rk3588-libs 目录
+    Write-Host "  [最终步骤] 复制编译结果到 rk3588-libs..." -ForegroundColor Green
+    $targetLibDir = "$ProjectRoot\docker\rk3588\rk3588-libs\lib"
+    if (-not (Test-Path $targetLibDir)) {
+        New-Item -ItemType Directory -Path $targetLibDir -Force | Out-Null
+    }
+
+    Copy-Item "$pjsipOutputDir\lib\*.a" $targetLibDir -Force
+
+    $libCount = (Get-ChildItem -Path $targetLibDir -Filter "*.a").Count
+    Write-Host ""
+    Write-Host "  ✓ PJSIP 编译完成，生成 $libCount 个静态库" -ForegroundColor Green
+
+    # 清除应用缓存（因为 PJSIP 库已更新）
+    Write-Host "  清除应用缓存（PJSIP 库已更新）..." -ForegroundColor Yellow
+    $appImageExists = docker images -q "${AppImageName}:${AppImageTag}" 2>$null
+    if ($appImageExists) {
+        docker rmi "${AppImageName}:${AppImageTag}" 2>&1 | Out-Null
+    }
+    if (Test-Path $AppCacheFile) {
+        Remove-Item $AppCacheFile -Force
+    }
+    $binaryPath = "$ProjectRoot\build_rk3588\bin_arm64\belt_control_system"
+    if (Test-Path $binaryPath) {
+        Remove-Item $binaryPath -Force
+    }
+}
+Write-Host ""
+
+# ============================================================
+# Step -0.5: PJSIP 静态库变化检测（自动清除应用缓存）
+# ============================================================
+Write-Host "Step -0.5: Checking PJSIP static libraries..." -ForegroundColor Cyan
+
+# 🔍 监控 PJSIP 静态库文件哈希，确保库更新后应用重新链接
+$pjsipLibDir = "$ProjectRoot\docker\rk3588\rk3588-libs\lib"
+
+if (-not (Test-Path $pjsipLibDir)) {
+    Write-Host "  [!] PJSIP 库目录不存在 - 请先编译 PJSIP" -ForegroundColor Red
+    exit 1
+}
+
+# 获取所有 PJSIP 静态库文件
+$pjsipLibFiles = Get-ChildItem -Path $pjsipLibDir -Filter "*.a" -File | Sort-Object Name
+
+if ($pjsipLibFiles.Count -eq 0) {
+    Write-Host "  [!] PJSIP 库不存在 - 请先编译 PJSIP" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "  找到 $($pjsipLibFiles.Count) 个 PJSIP 静态库" -ForegroundColor Gray
+
+# 计算所有静态库的综合哈希
+$combinedHash = ""
+$recentlyModified = @()
+
+foreach ($file in $pjsipLibFiles) {
+    $fileHash = (Get-FileHash -Path $file.FullName -Algorithm MD5).Hash
+    $combinedHash += $fileHash
+
+    # 记录最近修改的库（1小时内）
+    $timeDiff = (Get-Date) - $file.LastWriteTime
+    if ($timeDiff.TotalHours -lt 1) {
+        $recentlyModified += @{
+            Name = $file.Name
+            Time = $file.LastWriteTime.ToString("MM-dd HH:mm:ss")
+            Size = [math]::Round($file.Length / 1MB, 2)
+        }
+    }
+}
+
+$currentLibsHash = (Get-FileHash -Algorithm MD5 -InputStream ([System.IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($combinedHash)))).Hash
+Write-Host "  当前库哈希: $currentLibsHash" -ForegroundColor Cyan
+
+# 检查静态库是否变化
+$libsChanged = $false
+if (Test-Path $PJSIPLibsCacheFile) {
+    $libsCache = Get-Content $PJSIPLibsCacheFile | ConvertFrom-Json
+    $previousLibsHash = $libsCache.libsHash
+
+    Write-Host "  缓存库哈希: $previousLibsHash" -ForegroundColor Cyan
+
+    if ($previousLibsHash -ne $currentLibsHash) {
+        $libsChanged = $true
+        Write-Host ""
+        Write-Host "  [!] PJSIP 静态库已变化 - 需要重新链接应用" -ForegroundColor Yellow
+
+        if ($recentlyModified.Count -gt 0) {
+            Write-Host "  最近修改的库（1小时内）：" -ForegroundColor Yellow
+            foreach ($modFile in $recentlyModified) {
+                Write-Host "    - $($modFile.Name) ($($modFile.Size)MB, $($modFile.Time))" -ForegroundColor Yellow
+            }
+        }
+    } else {
+        Write-Host "  [OK] PJSIP 静态库未变化" -ForegroundColor Green
+    }
+} else {
+    Write-Host "  [INFO] 首次检测 - 创建缓存" -ForegroundColor Gray
+    $libsChanged = $true  # 首次检测，标记为已变化以创建缓存
+}
+
+# 如果静态库变化，清除应用缓存和二进制文件
+if ($libsChanged) {
+    Write-Host ""
+    Write-Host "  🔧 清除应用缓存（强制重新链接新库）..." -ForegroundColor Yellow
+
+    # 1. 删除 Docker 应用镜像
+    $appImageExists = docker images -q "${AppImageName}:${AppImageTag}" 2>$null
+    if ($appImageExists) {
+        Write-Host "    删除旧应用镜像..." -ForegroundColor Gray
+        docker rmi "${AppImageName}:${AppImageTag}" 2>&1 | Out-Null
+    }
+
+    # 2. 清除 Docker 构建缓存
+    Write-Host "    清除 Docker 构建缓存..." -ForegroundColor Gray
+    docker builder prune -af 2>&1 | Out-Null
+
+    # 3. 删除应用缓存文件
+    if (Test-Path $AppCacheFile) {
+        Remove-Item $AppCacheFile -Force
+    }
+
+    # 4. 删除交叉编译的二进制文件（强制重新链接）
+    $binaryPath = "$ProjectRoot\build_rk3588\bin_arm64\belt_control_system"
+    if (Test-Path $binaryPath) {
+        Write-Host "    删除旧二进制文件..." -ForegroundColor Gray
+        Remove-Item $binaryPath -Force
+    }
+
+    Write-Host "  ✓ 缓存已清除，应用将重新编译并链接新库" -ForegroundColor Green
+
+    # 更新静态库缓存
+    @{
+        libsHash = $currentLibsHash
+        timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+        libCount = $pjsipLibFiles.Count
+    } | ConvertTo-Json | Set-Content $PJSIPLibsCacheFile -Encoding UTF8
+}
+Write-Host ""
 
 # ============================================================
 # Step 0: Check and build base image if needed
@@ -354,25 +1154,30 @@ if (Test-Path $RknnLibPath) {
     Write-Host "    WARNING: librknnrt not found - RKNN acceleration will NOT work!" -ForegroundColor Red
 }
 
-# Copy ICU and PCRE2 from RK3588 libs directory (not qt-raspi!)
-# IMPORTANT: Only copy REAL files (not symlinks) to avoid Docker build context errors
-$RK3588LibPath = "$ProjectRoot\docker\rk3588\rk3588-libs\lib"
-if (Test-Path $RK3588LibPath) {
-    Write-Host "    Copying ICU libraries (Qt6 dependencies, real files only)..." -ForegroundColor Gray
-    Get-ChildItem -Path $RK3588LibPath -Filter "libicui18n.so.*.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force -ErrorAction SilentlyContinue }
-    Get-ChildItem -Path $RK3588LibPath -Filter "libicuuc.so.*.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force -ErrorAction SilentlyContinue }
-    Get-ChildItem -Path $RK3588LibPath -Filter "libicudata.so.*.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force -ErrorAction SilentlyContinue }
-    Write-Host "    OK: ICU libraries copied" -ForegroundColor Green
+# ✅ Copy Qt6 dependencies and OpenSSL from sysroot
+$SysrootLibPath = "$ProjectRoot\docker\rk3588\sysroot\rk3588-root\lib\aarch64-linux-gnu"
+if (Test-Path $SysrootLibPath) {
+    # Copy ICU libraries (Qt6 dependencies)
+    # Copy actual files (.so.67.1), not symlinks (.so.67)
+    Write-Host "    Copying ICU libraries (Qt6 dependencies from sysroot)..." -ForegroundColor Gray
+    Copy-Item "$SysrootLibPath\libicui18n.so.67.1" "$DockerContextDir\lib\libicui18n.so.67" -Force -ErrorAction Stop
+    Copy-Item "$SysrootLibPath\libicuuc.so.67.1" "$DockerContextDir\lib\libicuuc.so.67" -Force -ErrorAction Stop
+    Copy-Item "$SysrootLibPath\libicudata.so.67.1" "$DockerContextDir\lib\libicudata.so.67" -Force -ErrorAction Stop
+    Write-Host "    OK: ICU libraries copied (i18n, uc, data)" -ForegroundColor Green
 
-    Write-Host "    Copying PCRE2-16 (Qt6 dependency, real files only)..." -ForegroundColor Gray
-    Get-ChildItem -Path $RK3588LibPath -Filter "libpcre2-16.so.*.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force -ErrorAction SilentlyContinue }
+    # Copy PCRE2-16 (Qt6 dependency)
+    Write-Host "    Copying PCRE2-16 (Qt6 dependency from sysroot)..." -ForegroundColor Gray
+    Copy-Item "$SysrootLibPath\libpcre2-16.so.0.10.1" "$DockerContextDir\lib\libpcre2-16.so.0" -Force -ErrorAction Stop
     Write-Host "    OK: PCRE2-16 copied" -ForegroundColor Green
 
-    Write-Host "    Copying libx264 (H.264 encoder, REQUIRED)..." -ForegroundColor Yellow
-    Get-ChildItem -Path $RK3588LibPath -Filter "libx264.so.*" -File | Where-Object { $_.Length -gt 0 } | ForEach-Object { Copy-Item $_.FullName "$DockerContextDir\lib\" -Force }
-    Write-Host "    OK: libx264 copied" -ForegroundColor Green
+    # Copy OpenSSL 1.1 (PJSIP runtime dependency)
+    Write-Host "    Copying OpenSSL 1.1 (PJSIP runtime dependency)..." -ForegroundColor Yellow
+    Copy-Item "$SysrootLibPath\libssl.so.1.1" "$DockerContextDir\lib\" -Force -ErrorAction Stop
+    Copy-Item "$SysrootLibPath\libcrypto.so.1.1" "$DockerContextDir\lib\" -Force -ErrorAction Stop
+    Write-Host "    OK: OpenSSL 1.1 copied (libssl.so.1.1 + libcrypto.so.1.1)" -ForegroundColor Green
 } else {
-    Write-Host "    WARNING: RK3588 libs not found" -ForegroundColor Red
+    Write-Host "    ERROR: Sysroot not found at: $SysrootLibPath" -ForegroundColor Red
+    exit 1
 }
 
 # Copy TTS models (vits-zh-aishell3)
@@ -399,51 +1204,10 @@ Write-Host "  Note: System libraries already in base image (cached)" -Foreground
 Write-Host ""
 
 # ============================================================
-# Step 2.5: Compile FFmpeg hardware decoder shim library
+# Step 2.5: Compile FFmpeg hardware decoder shim library (DISABLED)
 # ============================================================
-Write-Host "Step 2.5: Compiling FFmpeg hardware decoder shim..." -ForegroundColor Cyan
-Write-Host "  Purpose: Intercept FFmpeg decoder selection to use hardware decoders" -ForegroundColor White
-Write-Host ""
-
-$ShimSourcePath = "$ProjectRoot\docker\rk3588\ffmpeg_hwdec_shim.c"
-$ShimOutputPath = "$DockerContextDir\lib\libffmpeg_hwdec_shim.so"
-
-if (Test-Path $ShimSourcePath) {
-    Write-Host "  Compiling shim library using Docker cross-compiler..." -ForegroundColor Yellow
-
-    # Ensure output directory exists
-    $shimLibDir = Split-Path -Parent $ShimOutputPath
-    if (-not (Test-Path $shimLibDir)) {
-        New-Item -ItemType Directory -Path $shimLibDir -Force | Out-Null
-        Write-Host "  Created lib directory: $shimLibDir" -ForegroundColor Gray
-    }
-
-    # Use Docker belt-control-rk3588:latest to compile the shim
-    # Note: Shim does NOT require FFmpeg headers (uses opaque pointers)
-    # Create output directory inside container before compilation
-    $compileOutput = docker run --rm `
-        -v "${ProjectRoot}:/workspace" `
-        -w /workspace/docker/rk3588 `
-        belt-control-rk3588:latest `
-        bash -c 'mkdir -p /workspace/docker_build_ubuntu24_apt/lib && aarch64-linux-gnu-gcc -shared -fPIC -o /workspace/docker_build_ubuntu24_apt/lib/libffmpeg_hwdec_shim.so ffmpeg_hwdec_shim.c -ldl 2>&1'
-
-    # Check if compilation succeeded by verifying output file exists
-    if (Test-Path $ShimOutputPath) {
-        $shimSize = [math]::Round((Get-Item $ShimOutputPath).Length / 1KB, 1)
-        Write-Host "  [OK] Shim library compiled: ${shimSize}KB" -ForegroundColor Green
-        Write-Host "  Location: lib/libffmpeg_hwdec_shim.so" -ForegroundColor Cyan
-    } else {
-        Write-Host "  [WARNING] Failed to compile shim library" -ForegroundColor Yellow
-        if ($compileOutput) {
-            Write-Host "  Compilation output: $compileOutput" -ForegroundColor Gray
-        }
-        Write-Host "  Output file not found at: $ShimOutputPath" -ForegroundColor Gray
-        Write-Host "  Continuing without hardware decoder override..." -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "  [WARNING] Shim source not found: $ShimSourcePath" -ForegroundColor Yellow
-}
-
+# Note: Shim library compilation disabled -镜像已删除
+Write-Host "Step 2.5: Skipping FFmpeg shim compilation (disabled)..." -ForegroundColor Gray
 Write-Host ""
 
 # ============================================================
@@ -463,25 +1227,18 @@ Write-Host "Step 4: Building application image..." -ForegroundColor Cyan
 Write-Host "  Image: ${AppImageName}:${AppImageTag}" -ForegroundColor White
 Write-Host "  Base: ${BaseImageName}:${BaseImageTag} (cached)" -ForegroundColor White
 
-# Smart cache: Only use --no-cache if binary/TTS/Dockerfile/shim changed
+# Smart cache: Only use --no-cache if binary/TTS/Dockerfile changed
 $useNoCache = $false
 $appBinaryPath = "$DockerContextDir\belt_control_system"
 $ttsBinaryPath = "$DockerContextDir\sherpa_tts_service"
 $appDockerfilePath = "$ProjectRoot\Dockerfile.ubuntu24-apt"
-$shimLibPath = "$DockerContextDir\lib\libffmpeg_hwdec_shim.so"
 
 if ((Test-Path $appBinaryPath) -and (Test-Path $ttsBinaryPath) -and (Test-Path $appDockerfilePath)) {
     $appHash = (Get-FileHash -Path $appBinaryPath -Algorithm MD5).Hash
     $ttsHash = (Get-FileHash -Path $ttsBinaryPath -Algorithm MD5).Hash
     $dockerfileHash = (Get-FileHash -Path $appDockerfilePath -Algorithm MD5).Hash
 
-    # Include shim library hash if it exists
-    $shimHash = ""
-    if (Test-Path $shimLibPath) {
-        $shimHash = (Get-FileHash -Path $shimLibPath -Algorithm MD5).Hash
-    }
-
-    $currentHash = "$appHash|$ttsHash|$dockerfileHash|$shimHash"
+    $currentHash = "$appHash|$ttsHash|$dockerfileHash"
 
     if (Test-Path $AppCacheFile) {
         $cacheData = Get-Content $AppCacheFile | ConvertFrom-Json
@@ -646,11 +1403,9 @@ if xhost +local:docker 2>/dev/null; then
     MALI_VOLUME="-v /usr/lib/aarch64-linux-gnu/libmali.so.1.9.0:/opt/mali/libmali.so.1:ro"
     MALI_VOLUME="$MALI_VOLUME -v /lib/aarch64-linux-gnu/libxcb-dri2.so.0:/lib/aarch64-linux-gnu/libxcb-dri2.so.0:ro"
 
-    # LD_PRELOAD configuration (order matters!)
-    # 1. libffmpeg_hwdec_shim.so - Intercept FFmpeg decoder selection (hardware decoding)
-    # 2. libmali.so.1 - Mali GPU acceleration (3D rendering)
-    PRELOAD_LIBS="/app/lib/libffmpeg_hwdec_shim.so:/opt/mali/libmali.so.1"
-    QT_RENDER_OPTS="-e LD_PRELOAD=$PRELOAD_LIBS"
+    # LD_PRELOAD configuration
+    # Mali GPU acceleration via direct library preload (3D rendering)
+    QT_RENDER_OPTS="-e LD_PRELOAD=/opt/mali/libmali.so.1"
     QT_RENDER_OPTS="$QT_RENDER_OPTS -e QT_XCB_GL_INTEGRATION=xcb_egl"
 
     # Hardware video acceleration libraries (V4L2 M2M + Rockchip MPP)
@@ -673,10 +1428,7 @@ else
     DISPLAY_ARG=""
     X11_VOLUME=""
     MALI_VOLUME=""
-
-    # LD_PRELOAD configuration for EGLFS mode
-    # Only need FFmpeg hardware decoder shim (no Mali preload needed for EGLFS)
-    QT_RENDER_OPTS="-e LD_PRELOAD=/app/lib/libffmpeg_hwdec_shim.so"
+    # No LD_PRELOAD needed for EGLFS mode
 
     # Hardware video acceleration libraries (V4L2 M2M + Rockchip MPP) - also needed in EGLFS mode
     HW_LIBS_VOLUME="-v /usr/lib/aarch64-linux-gnu/libyuv.so.0.0.1807:/opt/hw-libs/libyuv.so.2:ro"
