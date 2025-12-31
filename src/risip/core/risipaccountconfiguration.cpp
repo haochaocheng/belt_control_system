@@ -296,11 +296,27 @@ void RisipAccountConfiguration::setTransportId(int transId)
  * Basically the RisipAccountConfiguration class has an internal AccountConfig object that populates it with the
  * respective account settings.
  */
-AccountConfig RisipAccountConfiguration::pjsipAccountConfig()
+AccountConfig& RisipAccountConfiguration::pjsipAccountConfig()
 {
+    qDebug() << "[CONFIG] 🔹 pjsipAccountConfig() called";
+
+    // ✅ 关键修复：清空 authCreds，避免重复累积
+    qDebug() << "[CONFIG] 🔸 Clearing authCreds...";
+    m_data->accountConfig.sipConfig.authCreds.clear();
+    qDebug() << "[CONFIG] ✅ authCreds cleared";
+
     //setting the final sip account URI in a proper SIP format
+    qDebug() << "[CONFIG] 🔸 Setting URI...";
     if(uri().isEmpty())
         setUri(QString("sip:") + userName() + QString("@") + serverAddress());
+
+    // 设置 URI 字段
+    qDebug() << "[CONFIG] 🔸 Setting idUri and registrarUri...";
+    qDebug() << "[CONFIG]    URI:" << uri();
+    qDebug() << "[CONFIG]    Server:" << serverAddress();
+    m_data->accountConfig.idUri = uri().toStdString();
+    m_data->accountConfig.regConfig.registrarUri = "sip:" + serverAddress().toStdString();
+    qDebug() << "[CONFIG] ✅ URI fields set";
 
     //add the proxy and relevant network type
     if(!m_data->proxyAddress.isEmpty() || !m_data->proxyAddress.isNull()) {
@@ -315,12 +331,6 @@ AccountConfig RisipAccountConfiguration::pjsipAccountConfig()
         case TLS:
             proxyUri = proxyUri + QString("tls");
             break;
-//        case UDP6:
-//            proxyUri = proxyUri + QString("udp6");
-//            break;
-//        case TCP6:
-//            proxyUri = proxyUri + QString("tcp6");
-//            break;
         default:
             break;
         }
@@ -334,22 +344,110 @@ AccountConfig RisipAccountConfiguration::pjsipAccountConfig()
     m_data->accountConfig.callConfig.timerMinSESec = 1200;
     m_data->accountConfig.callConfig.timerSessExpiresSec = 22000;
 
+    // ✅ CRITICAL FIX: Disable account-level Keep-alive timer to prevent PJSIP race condition bug
+    // Official PJSIP Bug: Ticket #2079 - Race condition in keep_alive_timer_cb()
+    // Root cause: Timer callback accesses freed timer or NULL ka_transport after registration
+    // Solution: Set udpKaIntervalSec to 0 (official PJSIP method to disable keep-alive)
+    // Reference: https://www.pjsip.org/pjsip/docs/html/structpj_1_1AccountNatConfig.html
+    qDebug() << "[CONFIG] 🔸 Disabling account Keep-alive timer (PJSIP bug #2079 workaround)...";
+    qDebug() << "[CONFIG]    Bug: Race condition in keep_alive_timer_cb() causes crash after 200 OK";
+    qDebug() << "[CONFIG]    Fix: udpKaIntervalSec = 0 (prevents timer from starting)";
+
+    m_data->accountConfig.natConfig.udpKaIntervalSec = 0;          // ⭐ 禁用账户级 Keep-alive（防止race condition崩溃）
+    m_data->accountConfig.natConfig.iceEnabled = false;            // 禁用 ICE
+    m_data->accountConfig.natConfig.turnEnabled = false;           // 禁用 TURN
+    m_data->accountConfig.natConfig.sipStunUse = PJSUA_STUN_USE_DISABLED;    // 禁用 STUN for SIP
+    m_data->accountConfig.natConfig.mediaStunUse = PJSUA_STUN_USE_DISABLED;  // 禁用 STUN for media
+
+    qDebug() << "[CONFIG] ✅ Account Keep-alive disabled (udpKaIntervalSec=0, ICE=false, TURN=false, STUN=disabled)";
+    qDebug() << "[CONFIG]    Expected: NO 'Keep-alive timer started' message after registration";
+
+
 //    m_data->accountConfig.natConfig.iceEnabled = true;
 
-    // ✅ CRITICAL FIX: Set video device configuration BEFORE account creation
-    // This ensures PJSIP uses the correct device when creating video streams
-    // Device 0 = rk_hdmirx (HDMI input, not suitable for local video)
-    // Device 1 = USB Camera (correct device for video calls)
-    m_data->accountConfig.videoConfig.defaultCaptureDevice = 1;  // Use USB Camera (device 1)
-    m_data->accountConfig.videoConfig.defaultRenderDevice = PJMEDIA_VID_DEFAULT_RENDER_DEV;  // Auto-select renderer
+    // ✅ 视频配置：使用默认设备，避免指定不存在的设备导致崩溃
+    m_data->accountConfig.videoConfig.defaultCaptureDevice = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;  // 使用 PJSIP 自动选择的默认摄像头
+    m_data->accountConfig.videoConfig.defaultRenderDevice = PJMEDIA_VID_DEFAULT_RENDER_DEV;    // 使用默认渲染设备
 
-    // Video configuration for video calls
-    m_data->accountConfig.videoConfig.autoShowIncoming = false;  // Don't auto-show incoming video windows
-    m_data->accountConfig.videoConfig.autoTransmitOutgoing = true;  // ✅ Enable video transmission when video call is made
+    // 视频窗口配置：禁用 PJSIP 自动弹出的视频窗口，我们使用 QML 界面
+    m_data->accountConfig.videoConfig.autoShowIncoming = false;       // 不自动显示来电视频窗口
+    m_data->accountConfig.videoConfig.autoTransmitOutgoing = false;   // ✅ 关键修复：账户创建时不自动传输视频，避免设备初始化问题
 
-    // ✅ 禁用所有 PJSIP 自动创建的独立视频窗口（使用 QML 界面显示）
+    // 视频窗口标志（虽然我们不使用 PJSIP 的窗口，但仍需设置）
     m_data->accountConfig.videoConfig.windowFlags = PJMEDIA_VID_DEV_WND_BORDER | PJMEDIA_VID_DEV_WND_RESIZABLE;
-    // Note: autoShowIncoming=false 已经禁用了来电视频窗口的自动显示
+
+    // ✅ 2025-12-31 关键修复：添加 PortSIP 需要的额外 RTCP-FB 参数
+    // 原因：PortSIP UC Client 要求完整的 RTCP-FB 参数，否则返回 a=inactive 拒绝视频流
+    // Wireshark 抓包对比：
+    //   成功 (1005→1006): rtcp-fb:125 goog-remb, transport-cc, ccm fir, nack, nack pli
+    //   失败 (1002→1006): rtcp-fb:* nack pli (只有这一个)
+    // 注意：PJSIP 已默认添加 nack pli（因为 PJMEDIA_STREAM_ENABLE_RTCP_FB=1）
+    //       我们只需要添加 PJSIP 默认没有的 4 个参数
+    qDebug() << "[CONFIG] 🔸 Configuring additional RTCP-FB capabilities for PortSIP compatibility...";
+
+    // 启用 RTCP-FB（使用 RTP/AVP 而不是 RTP/AVPF 以兼容旧设备）
+    m_data->accountConfig.mediaConfig.rtcpFbConfig.dontUseAvpf = PJ_TRUE;
+
+    // 配置额外的 RTCP-FB 能力（PJSIP 默认没有的）
+    pj::RtcpFbCap cap;
+
+    // 注意：删除了 "nack pli"，因为 PJSIP 已经自动添加（避免重复）
+    // 2025-12-31 16:00: 发现 SDP 中 nack pli 重复，导致 PortSIP 拒绝
+
+    // 1. NACK - Generic NACK（通用否定应答）
+    cap.codecId = "*";
+    cap.type = PJMEDIA_RTCP_FB_NACK;
+    cap.param = "";
+    m_data->accountConfig.mediaConfig.rtcpFbConfig.caps.push_back(cap);
+
+    // 2. CCM FIR - Codec Control Message, Full Intra Request（完整内帧请求）
+    cap.codecId = "*";
+    cap.type = PJMEDIA_RTCP_FB_OTHER;
+    cap.typeName = "ccm";
+    cap.param = "fir";
+    m_data->accountConfig.mediaConfig.rtcpFbConfig.caps.push_back(cap);
+
+    // ❌ 2025-12-31 删除：GOOG-REMB 和 TRANSPORT-CC（为了减小 SDP 大小到 MTU 1500 以下）
+    // 原因：INVITE 消息大小 1566 字节超过 MTU 1500，导致 IP 分片，miniSIP 服务器无法处理
+    // 删除这两个非必需的 Google 扩展参数可减少约 110 字节，使 INVITE < 1500 字节
+    // goog-remb: Google 带宽估计扩展（非 RFC 标准，可选）
+    // transport-cc: 传输层拥塞控制扩展（非 RFC 标准，可选）
+    // 保留：nack, ccm fir（RFC 标准，必需）
+    /*
+    // 3. GOOG-REMB - Google Receiver Estimated Maximum Bitrate（带宽估计）
+    cap.codecId = "*";
+    cap.type = PJMEDIA_RTCP_FB_OTHER;
+    cap.typeName = "goog-remb";
+    cap.param = "";
+    m_data->accountConfig.mediaConfig.rtcpFbConfig.caps.push_back(cap);
+
+    // 4. TRANSPORT-CC - Transport-wide Congestion Control（传输层拥塞控制）
+    cap.codecId = "*";
+    cap.type = PJMEDIA_RTCP_FB_OTHER;
+    cap.typeName = "transport-cc";
+    cap.param = "";
+    m_data->accountConfig.mediaConfig.rtcpFbConfig.caps.push_back(cap);
+    */
+
+    qDebug() << "[CONFIG] ✅ RTCP-FB configured with" << m_data->accountConfig.mediaConfig.rtcpFbConfig.caps.size() << "essential capabilities (optimized for MTU):";
+    qDebug() << "[CONFIG]    (nack pli - already added by PJSIP)";
+    qDebug() << "[CONFIG]    1. nack (Generic NACK) - RFC standard";
+    qDebug() << "[CONFIG]    2. ccm fir (Full Intra Request) - RFC standard";
+    qDebug() << "[CONFIG]    ❌ Removed: goog-remb (Google extension, ~55 bytes saved)";
+    qDebug() << "[CONFIG]    ❌ Removed: transport-cc (Google extension, ~55 bytes saved)";
+    qDebug() << "[CONFIG]    Expected INVITE size reduction: ~110 bytes (1566 → ~1456 < MTU 1500)";
+
+    // ✅ 2025-12-31 关键修复：禁用 Lock Codec（避免通话后自动 re-INVITE）
+    // 问题：PJSIP 在通话建立后会自动发送 re-INVITE/UPDATE 锁定单一编解码器
+    // 原因：对方响应多个编解码器时，PJSIP 会尝试优化到单一编解码器
+    // 结果：miniSIP/PortSIP 收到 re-INVITE 后误判，将视频设为 a=inactive
+    // 解决：禁用 Lock Codec 功能，保持初始协商的多编解码器状态
+    // 参考：pjsip/include/pjsua2/account.hpp:1098 (lockCodecEnabled in AccountMediaConfig)
+    qDebug() << "[CONFIG] 🔸 Disabling Lock Codec to prevent post-call re-INVITE...";
+    m_data->accountConfig.mediaConfig.lockCodecEnabled = false;
+    qDebug() << "[CONFIG] ✅ Lock Codec disabled (lockCodecEnabled=false)";
+    qDebug() << "[CONFIG]    Expected: NO automatic re-INVITE after call setup";
+    qDebug() << "[CONFIG]    Expected: Video remains a=sendrecv (not a=inactive)";
 
     return m_data->accountConfig;
 }
@@ -359,7 +457,7 @@ void RisipAccountConfiguration::setPjsipAccountConfig(AccountConfig pjsipConfig)
     m_data->accountConfig = pjsipConfig;
 }
 
-TransportConfig RisipAccountConfiguration::pjsipTransportConfig()
+TransportConfig& RisipAccountConfiguration::pjsipTransportConfig()
 {
     if(!m_data->randomLocalPort && localPort() != 0)
         m_data->transportConfiguration.port = localPort();

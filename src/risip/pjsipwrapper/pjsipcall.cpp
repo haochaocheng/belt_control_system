@@ -45,6 +45,7 @@ PjsipCall::~PjsipCall()
 void PjsipCall::onCallState(OnCallStateParam &prm)
 {
     Q_UNUSED(prm)
+    qDebug() << "🔔 [PJSIP CALLBACK] onCallState() triggered";
 
     // NOTE: This callback is only triggered for calls created via PJSUA2 C++ API
     // Calls made with pjsua_call_make_call() C API (as in SipPhoneManager::makeCall)
@@ -53,8 +54,13 @@ void PjsipCall::onCallState(OnCallStateParam &prm)
     // Video encoder now starts automatically via vid_out_auto_transmit = PJ_TRUE config
     // No manual intervention needed here
 
-    if(m_risipCall != NULL)
+    if(m_risipCall != NULL) {
+        qDebug() << "🔔 [PJSIP CALLBACK] Emitting statusChanged signal...";
         m_risipCall->statusChanged();
+        qDebug() << "🔔 [PJSIP CALLBACK] statusChanged signal emitted";
+    } else {
+        qWarning() << "❌ [PJSIP CALLBACK] m_risipCall is NULL!";
+    }
 }
 
 void PjsipCall::onCallTsxState(OnCallTsxStateParam &prm)
@@ -75,8 +81,23 @@ void PjsipCall::onCallTsxState(OnCallTsxStateParam &prm)
 void PjsipCall::onCallMediaState(OnCallMediaStateParam &prm)
 {
     Q_UNUSED(prm)
-    if(m_risipCall)
-        m_risipCall->initializeMediaHandler();
+    qDebug() << "✅ [PJSIP CALLBACK] onCallMediaState() callback triggered";
+
+    try {
+        if(m_risipCall) {
+            qDebug() << "✅ [PJSIP CALLBACK] m_risipCall is valid, calling initializeMediaHandler()...";
+            m_risipCall->initializeMediaHandler();
+            qDebug() << "✅ [PJSIP CALLBACK] initializeMediaHandler() returned successfully";
+        } else {
+            qWarning() << "❌ [PJSIP CALLBACK] ERROR: m_risipCall is NULL!";
+        }
+    } catch (const std::exception &e) {
+        qCritical() << "❌ [PJSIP CALLBACK] Exception in onCallMediaState:" << e.what();
+    } catch (...) {
+        qCritical() << "❌ [PJSIP CALLBACK] Unknown exception in onCallMediaState!";
+    }
+
+    qDebug() << "✅ [PJSIP CALLBACK] onCallMediaState() returning...";
 }
 
 //logging purpose
@@ -88,7 +109,11 @@ void PjsipCall::onCallSdpCreated(OnCallSdpCreatedParam &prm)
 //logging purpose
 void PjsipCall::onStreamCreated(OnStreamCreatedParam &prm)
 {
+    qDebug() << "🔔 [PJSIP CALLBACK] onStreamCreated() triggered";
+    qDebug() << "🔔 [PJSIP CALLBACK] Stream index:" << prm.streamIdx;
+    qDebug() << "🔔 [PJSIP CALLBACK] Stream pointer:" << prm.stream;
     Q_UNUSED(prm)
+    qDebug() << "🔔 [PJSIP CALLBACK] onStreamCreated() returning...";
 }
 
 //logging purpose

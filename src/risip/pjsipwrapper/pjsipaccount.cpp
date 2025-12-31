@@ -26,6 +26,8 @@
 #include "pjsipcall.h"
 
 #include <QDebug>
+#include <QMetaObject>
+#include <QPointer>
 
 namespace risip {
 
@@ -50,35 +52,109 @@ PjsipAccount::~PjsipAccount()
 
 void PjsipAccount::onRegState(OnRegStateParam &prm)
 {
+    qDebug() << "[PJSIP] 🔹 onRegState() called (thread-safe version v4 - compile-time Keep-alive disable)";
+    qDebug() << "[PJSIP]    Response code:" << prm.code;
+    qDebug() << "[PJSIP]    m_risipAccount pointer:" << (void*)m_risipAccount;
+
+    // ⚠️ NOTE: Keep-alive disabling attempted via compile-time config (pjsip_config_site.h)
+    // However, this project uses precompiled PJSIP libraries, so the fix may not work.
+    // See docs/2025-12-25/Keep-alive崩溃深度分析与修复.md for details.
+    //
+    // Runtime config modification was attempted but:
+    // 1. getInfo() in callbacks causes crashes (Bug #2117)
+    // 2. setConfig() may not work with precompiled libraries
+    // 3. Keep-alive timer starts before we can disable it at runtime
+    //
+    // If crashes persist, the only solution is to recompile PJSIP from source with
+    // PJSUA_UDP_KA_INTERVAL=0 in pjsip_config_site.h
+
     if(m_risipAccount != NULL) {
-        m_risipAccount->setLastResponseCode(prm.code);
-        AccountInfo accountInfo = getInfo();
-        switch (accountInfo.regStatus) {
+        // ✅ FIX: Use prm.code directly instead of getInfo() to avoid AccountInfo destructor issues
+        qDebug() << "[PJSIP] 🔸 Determining status from response code (no AccountInfo)...";
+
+        // ✅ THREAD SAFETY: Determine new status first
+        RisipAccount::Status newStatus;
+        switch (prm.code) {
         case PJSIP_SC_OK:
-            if(accountInfo.regIsActive)
-                m_risipAccount->setStatus(RisipAccount::SignedIn);
-            else
-                m_risipAccount->setStatus(RisipAccount::SignedOut);
+            qDebug() << "[PJSIP] ✅ Registration successful (200 OK)";
+            newStatus = RisipAccount::SignedIn;  // 200 OK means signed in
             break;
         case PJSIP_SC_TRYING:
-            if(accountInfo.regIsActive)
-                m_risipAccount->setStatus(RisipAccount::UnRegistering);
-            else
-                m_risipAccount->setStatus(RisipAccount::Registering);
+            qDebug() << "[PJSIP] ⏳ Registration trying (100)";
+            newStatus = RisipAccount::Registering;  // 100 Trying means registering
             break;
         default:
-            m_risipAccount->setStatus(RisipAccount::AccountError);
+            qDebug() << "[PJSIP] ❌ Registration failed, code:" << prm.code;
+            newStatus = RisipAccount::AccountError;
             break;
         }
+
+        // ✅ CRITICAL FIX: Queue ALL Qt object modifications to main thread
+        // Including setLastResponseCode() which was previously called directly
+        qDebug() << "[PJSIP] 🔸 Queuing ALL updates to main thread (including response code)...";
+
+        // ✅ SAFETY FIX: Use QPointer to prevent dangling pointer access
+        // If RisipAccount is deleted before lambda executes, QPointer becomes null
+        QPointer<RisipAccount> account = m_risipAccount;
+        RisipAccount::Status statusToSet = newStatus;
+        int responseCode = prm.code;
+
+        QMetaObject::invokeMethod(account.data(), [account, statusToSet, responseCode]() {
+            // ✅ Check if object still exists before accessing
+            if (!account) {
+                qDebug() << "[PJSIP-MainThread] ⚠️ RisipAccount was deleted, skipping update";
+                return;
+            }
+            qDebug() << "[PJSIP-MainThread] 🔸 Setting last response code:" << responseCode;
+            account->setLastResponseCode(responseCode);
+            qDebug() << "[PJSIP-MainThread] 🔸 Setting status to" << statusToSet;
+            account->setStatus(statusToSet);
+            qDebug() << "[PJSIP-MainThread] ✅ All updates completed";
+        }, Qt::QueuedConnection);
+
+        qDebug() << "[PJSIP] ✅ onRegState() completed (all updates queued)";
+    } else {
+        qDebug() << "[PJSIP] ⚠️ m_risipAccount is NULL, skipping status update";
     }
+
+    // ✅ FIX: Return immediately to allow Qt event loop to process queued updates
+    qDebug() << "[PJSIP] 🔚 onRegState() returning immediately (no blocking, no AccountInfo)...";
+    qDebug() << "[PJSIP] 🔚 About to return from onRegState()...";
+    // PJSIP 可能在此函数返回后继续执行其他操作（包括启动 Keep-alive 定时器）
 }
 
 void PjsipAccount::onRegStarted(OnRegStartedParam &prm)
 {
-    if(prm.renew)
-        m_risipAccount->setStatus(RisipAccount::Registering);
-    else
-        m_risipAccount->setStatus(RisipAccount::UnRegistering);
+    qDebug() << "[PJSIP] 🔹 onRegStarted() called (thread-safe version)";
+    qDebug() << "[PJSIP]    renew:" << prm.renew;
+
+    if(!m_risipAccount) {
+        qDebug() << "[PJSIP] ⚠️ m_risipAccount is NULL in onRegStarted";
+        return;
+    }
+
+    // ✅ THREAD SAFETY: Determine status first
+    RisipAccount::Status newStatus = prm.renew ?
+        RisipAccount::Registering : RisipAccount::UnRegistering;
+
+    // ✅ CRITICAL: Queue status change to main thread
+    qDebug() << "[PJSIP] 🔸 Queuing status change to" << newStatus << "for main thread...";
+
+    // ✅ SAFETY FIX: Use QPointer to prevent dangling pointer access
+    QPointer<RisipAccount> account = m_risipAccount;
+    RisipAccount::Status statusToSet = newStatus;
+
+    QMetaObject::invokeMethod(account.data(), [account, statusToSet]() {
+        if (!account) {
+            qDebug() << "[PJSIP-MainThread] ⚠️ RisipAccount was deleted, skipping status update";
+            return;
+        }
+        qDebug() << "[PJSIP-MainThread] 🔸 onRegStarted: Setting status to" << statusToSet;
+        account->setStatus(statusToSet);
+        qDebug() << "[PJSIP-MainThread] ✅ onRegStarted: Status set successfully";
+    }, Qt::QueuedConnection);
+
+    qDebug() << "[PJSIP] ✅ onRegStarted() completed (status change queued)";
 }
 
 /**
@@ -89,10 +165,33 @@ void PjsipAccount::onRegStarted(OnRegStartedParam &prm)
  */
 void PjsipAccount::onIncomingCall(OnIncomingCallParam &prm)
 {
-    if(!m_risipAccount)
-        return;
+    qDebug() << "[PJSIP] 🔹 onIncomingCall() called (thread-safe version)";
+    qDebug() << "[PJSIP]    callId:" << prm.callId;
 
-    m_risipAccount->setIncomingPjsipCall(new PjsipCall(*m_risipAccount->pjsipAccount(), prm.callId));
+    if(!m_risipAccount) {
+        qDebug() << "[PJSIP] ⚠️ m_risipAccount is NULL in onIncomingCall";
+        return;
+    }
+
+    // ✅ THREAD SAFETY: Create call in main thread
+    qDebug() << "[PJSIP] 🔸 Queuing incoming call creation to main thread...";
+
+    // ✅ SAFETY FIX: Use QPointer to prevent dangling pointer access
+    QPointer<RisipAccount> account = m_risipAccount;
+    int callId = prm.callId;
+
+    QMetaObject::invokeMethod(account.data(), [account, callId]() {
+        if (!account) {
+            qDebug() << "[PJSIP-MainThread] ⚠️ RisipAccount was deleted, skipping incoming call";
+            return;
+        }
+        qDebug() << "[PJSIP-MainThread] 🔸 Creating incoming call, callId:" << callId;
+        PjsipCall* call = new PjsipCall(*account->pjsipAccount(), callId);
+        account->setIncomingPjsipCall(call);
+        qDebug() << "[PJSIP-MainThread] ✅ Incoming call created successfully";
+    }, Qt::QueuedConnection);
+
+    qDebug() << "[PJSIP] ✅ onIncomingCall() completed (call creation queued)";
 }
 
 void PjsipAccount::onIncomingSubscribe(OnIncomingSubscribeParam &prm)
@@ -102,25 +201,55 @@ void PjsipAccount::onIncomingSubscribe(OnIncomingSubscribeParam &prm)
 
 void PjsipAccount::onInstantMessage(OnInstantMessageParam &prm)
 {
-    qDebug()<< "Incoming IM : " << QString::fromStdString(prm.fromUri) << QString::fromStdString(prm.msgBody);
+    qDebug() << "[PJSIP] 🔹 onInstantMessage() called (thread-safe version)";
+    qDebug() << "[PJSIP]    from:" << QString::fromStdString(prm.fromUri);
 
-    //creating the account if needed or simply reuse it
-    RisipBuddy *buddy = m_risipAccount->findBuddy(QString::fromStdString(prm.fromUri));
-    if(!buddy) {
-        buddy = new RisipBuddy;
-        buddy->setAccount(m_risipAccount);
-        buddy->setUri(QString::fromStdString(prm.fromUri));
+    if(!m_risipAccount) {
+        qDebug() << "[PJSIP] ⚠️ m_risipAccount is NULL in onInstantMessage";
+        return;
     }
 
-    //constructing a risip message to be passed around
-    RisipMessage *message = new RisipMessage;
-    message->setBuddy(buddy);
-    message->setDirection(RisipMessage::Incoming);
-    QString msgBody = QString::fromStdString(prm.msgBody);
-    QString contenttype = QString::fromStdString(prm.contentType);
-    message->setMessageBody(msgBody);
-    message->setContentType(contenttype);
-    m_risipAccount->incomingMessage(message);
+    // ✅ THREAD SAFETY: Process message in main thread
+    qDebug() << "[PJSIP] 🔸 Queuing instant message processing to main thread...";
+
+    // ✅ SAFETY FIX: Use QPointer to prevent dangling pointer access
+    QPointer<RisipAccount> account = m_risipAccount;
+    std::string fromUri = prm.fromUri;
+    std::string msgBody = prm.msgBody;
+    std::string contentType = prm.contentType;
+
+    QMetaObject::invokeMethod(account.data(), [account, fromUri, msgBody, contentType]() {
+        if (!account) {
+            qDebug() << "[PJSIP-MainThread] ⚠️ RisipAccount was deleted, skipping message";
+            return;
+        }
+        qDebug() << "[PJSIP-MainThread] 🔸 Processing instant message from:" << QString::fromStdString(fromUri);
+
+        // Creating the buddy if needed or simply reuse it
+        RisipBuddy *buddy = account->findBuddy(QString::fromStdString(fromUri));
+        if(!buddy) {
+            buddy = new RisipBuddy;
+            buddy->setAccount(account);
+            buddy->setUri(QString::fromStdString(fromUri));
+        }
+
+        // Constructing a risip message to be passed around
+        RisipMessage *message = new RisipMessage;
+        message->setBuddy(buddy);
+        message->setDirection(RisipMessage::Incoming);
+
+        // Create QString variables (not temporaries) for setMessageBody/setContentType
+        QString messageBody = QString::fromStdString(msgBody);
+        QString messageContentType = QString::fromStdString(contentType);
+        message->setMessageBody(messageBody);
+        message->setContentType(messageContentType);
+
+        account->incomingMessage(message);
+
+        qDebug() << "[PJSIP-MainThread] ✅ Instant message processed successfully";
+    }, Qt::QueuedConnection);
+
+    qDebug() << "[PJSIP] ✅ onInstantMessage() completed (message processing queued)";
 }
 
 void PjsipAccount::onInstantMessageStatus(OnInstantMessageStatusParam &prm)

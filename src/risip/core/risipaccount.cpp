@@ -95,17 +95,41 @@ RisipAccountConfiguration *RisipAccount::configuration() const
 void RisipAccount::setConfiguration(RisipAccountConfiguration *config)
 {
     if(m_data->configuration != config) {
+        qDebug() << "[DEBUG] 🔹 setConfiguration() - 开始设置配置";
+        qDebug() << "[DEBUG]    旧配置指针:" << (void*)m_data->configuration;
+        qDebug() << "[DEBUG]    新配置指针:" << (void*)config;
 
-        delete m_data->configuration;
-        m_data->configuration = NULL;
-        m_data->configuration = config;
+        // ✅ CRITICAL FIX: 复制配置内容而不是替换对象
+        // 这样避免Qt父子对象管理的问题
+        //  注意：我们不删除传入的config对象，让调用者管理它的生命周期
+        if(m_data->configuration && config) {
+            qDebug() << "[DEBUG] 🔸 复制新配置内容到现有配置对象...";
+            // 复制所有配置属性
+            m_data->configuration->setUri(config->uri());
+            m_data->configuration->setUserName(config->userName());
+            m_data->configuration->setPassword(config->password());
+            m_data->configuration->setServerAddress(config->serverAddress());
+            m_data->configuration->setScheme(config->scheme());
+            m_data->configuration->setProxyServer(config->proxyServer());
+            m_data->configuration->setProxyPort(config->proxyPort());
+            m_data->configuration->setTransportId(config->transportId());
+            m_data->configuration->setNetworkProtocol(config->networkProtocol());
+            m_data->configuration->setLocalPort(config->localPort());
+            m_data->configuration->setRandomLocalPort(config->randomLocalPort());
+            m_data->configuration->setEncryptCalls(config->encryptCalls());
 
-        if(m_data->configuration != NULL) {
-            m_data->configuration->setParent(this);
-            setStatus(NotCreated);
+            qDebug() << "[DEBUG] ✅ 配置内容已复制（原config对象由调用者管理）";
         }
 
+        qDebug() << "[DEBUG] 🔸 设置账户状态为NotCreated...";
+        setStatus(NotCreated);
+        qDebug() << "[DEBUG] ✅ 状态已设置";
+
+        qDebug() << "[DEBUG] 🔸 发出configurationChanged信号...";
         emit configurationChanged(m_data->configuration);
+        qDebug() << "[DEBUG] ✅ setConfiguration() 完成";
+    } else {
+        qDebug() << "[DEBUG] ⚠️ setConfiguration() - 配置相同，跳过";
     }
 }
 
@@ -411,8 +435,15 @@ void RisipAccount::setAutoSignIn(bool signin)
  */
 void RisipAccount::login()
 {
-    if(!m_data->sipEndpoint)
+    qDebug() << "[LOGIN] 🔹 login() called";
+
+    if(!m_data->sipEndpoint) {
+        qDebug() << "[LOGIN] ❌ sipEndpoint is NULL, returning";
         return;
+    }
+
+    qDebug() << "[LOGIN] ✅ sipEndpoint valid";
+    qDebug() << "[LOGIN] Current status:" << m_data->status;
 
     /** if account is not created then initialize it for the first time with
     * username , password and registration.
@@ -422,29 +453,72 @@ void RisipAccount::login()
             || m_data->status == AccountError
             || m_data->status == NotConfigured) {
 
+        qDebug() << "[LOGIN] 🔸 Account needs to be created/reconfigured";
+
         //create transport if none exists and return if not success
         if(m_data->sipEndpoint->activeTransportId() == -1) {
+            qDebug() << "[LOGIN] 🔸 Creating transport network...";
             if(!m_data->sipEndpoint->createTransportNetwork(m_data->configuration)) {
+                qDebug() << "[LOGIN] ❌ Failed to create transport network";
                 setStatus(NotConfigured);
                 return;
             }
+            qDebug() << "[LOGIN] ✅ Transport network created";
+        } else {
+            qDebug() << "[LOGIN] ✅ Transport already exists, ID:" << m_data->sipEndpoint->activeTransportId();
         }
 
         m_data->configuration->setTransportId(m_data->sipEndpoint->activeTransportId());
+        qDebug() << "[LOGIN] ✅ Transport ID set in configuration";
 
         // Create the account
+        qDebug() << "[LOGIN] 🔸 Creating PjsipAccount object...";
         m_data->pjsipAccount = new PjsipAccount;
+        qDebug() << "[LOGIN] ✅ PjsipAccount object created";
+
+        qDebug() << "[LOGIN] 🔸 Setting Risip interface...";
         m_data->pjsipAccount->setRisipInterface(this);
+        qDebug() << "[LOGIN] ✅ Risip interface set";
+
         try {
-            m_data->pjsipAccount->create(m_data->configuration->pjsipAccountConfig());
+            qDebug() << "[LOGIN] 🔸 Preparing AccountConfig...";
+            qDebug() << "[LOGIN]    configuration pointer:" << (void*)m_data->configuration;
+
+            // ✅ 关键修复：返回引用，避免复制构造函数
+            qDebug() << "[LOGIN] 🔸 Getting AccountConfig reference...";
+            AccountConfig& config = m_data->configuration->pjsipAccountConfig();
+            qDebug() << "[LOGIN] ✅ Got AccountConfig reference (no copy)";
+
+            qDebug() << "[LOGIN] 🔸 Calling pjsipAccount->create() with reference...";
+            m_data->pjsipAccount->create(config);
+            qDebug() << "[LOGIN] ✅ pjsipAccount->create() completed successfully";
         } catch (Error& err) {
+            qDebug() << "[LOGIN] ❌ pjsipAccount->create() threw PJSIP Error:";
+            qDebug() << "[LOGIN]    Error:" << QString::fromStdString(err.info());
             setStatus(AccountError);
             setError(err);
             return;
+        } catch (std::exception& e) {
+            qDebug() << "[LOGIN] ❌ pjsipAccount->create() threw std::exception:";
+            qDebug() << "[LOGIN]    what():" << e.what();
+            setStatus(AccountError);
+            return;
+        } catch (...) {
+            qDebug() << "[LOGIN] ❌ pjsipAccount->create() threw unknown exception!";
+            setStatus(AccountError);
+            return;
         }
         //updating status
+        qDebug() << "[LOGIN] 🔸 Setting status to Registering...";
         setStatus(Registering);
-        setPresence(RisipBuddy::Online);
+
+        // ✅ CRITICAL FIX: 不要在注册期间设置 presence！
+        // setStatus(SignedIn) 会自动调用 setPresence(Online)
+        // 过早调用 setPresence() 会导致 PJSIP 内部状态冲突，可能是真正的崩溃原因
+        qDebug() << "[LOGIN] ⏭️  Skipping setPresence() - will be called automatically on SignedIn";
+        qDebug() << "[LOGIN] ✅ login() completed successfully";
+    } else {
+        qDebug() << "[LOGIN] ℹ️ Account already created, status:" << m_data->status;
     }
 }
 

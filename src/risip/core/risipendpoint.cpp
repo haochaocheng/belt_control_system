@@ -161,16 +161,21 @@ static void audio_routing_callback_wrapper(pjsua_call_id call_id)
 // We notify the UI and delegate to PJSUA2's original callback
 static void call_state_callback_wrapper(pjsua_call_id call_id, pjsip_event *e)
 {
+    qDebug() << "🔔 [PJSIP C CALLBACK] call_state_callback_wrapper() called, call_id:" << call_id;
+
     static bool in_state_callback = false;
 
     // Prevent recursive invocation
     if (in_state_callback) {
+        qDebug() << "⚠️ [PJSIP C CALLBACK] Recursive invocation detected, returning";
         return;
     }
     in_state_callback = true;
 
+    qDebug() << "🔔 [PJSIP C CALLBACK] Getting call info...";
     pjsua_call_info ci;
     pj_status_t status = pjsua_call_get_info(call_id, &ci);
+    qDebug() << "🔔 [PJSIP C CALLBACK] pjsua_call_get_info() status:" << status;
 
     if (status == PJ_SUCCESS) {
         // Notify UI about call state change
@@ -243,10 +248,15 @@ static void call_state_callback_wrapper(pjsua_call_id call_id, pjsip_event *e)
     }
 
     // Call original PJSUA2 callback
+    qDebug() << "🔔 [PJSIP C CALLBACK] Calling original PJSUA2 on_call_state callback...";
     if (original_pjsua2_callback && original_pjsua2_callback->on_call_state) {
         original_pjsua2_callback->on_call_state(call_id, e);
+        qDebug() << "🔔 [PJSIP C CALLBACK] Original callback returned";
+    } else {
+        qDebug() << "⚠️ [PJSIP C CALLBACK] No original callback registered";
     }
 
+    qDebug() << "🔔 [PJSIP C CALLBACK] call_state_callback_wrapper() completed";
     in_state_callback = false;
 }
 
@@ -588,28 +598,72 @@ int RisipEndpoint::start()
     // The cap_id=-1 bug is fixed at PJSIP source level (pjsua_vid.c:1224)
     // PJSIP now uses call_med->strm.v.cap_dev (account-level config) instead of hardcoded -1
 
+    // ✅ 2025-12-31 关键修复：减少音频编解码器以避免 IP 分片
+    // 原因：INVITE 消息 1682 字节 > MTU 1500 字节，导致 IP 分片，PortSIP 无响应
+    // 解决：保留常用的 PCMA/PCMU/Opus，禁用其他编解码器
+    // 注意：用户要求保留 Opus，后续会使用 Opus 编码
+    // 参考：docs/2025-12-29/IP分片问题排查与修复.md
+    qDebug() << "🎵 [CODEC] Configuring audio codecs (reduced set to avoid IP fragmentation)...";
+
     //FIXME Codec priorities
     //TODO Codecs settings page
     // Wrap codec priority settings in try-catch to handle missing codecs gracefully
     try {
         Endpoint::instance().codecSetPriority("PCMA/8000", 215);
+        qDebug() << "  ✅ PCMA/8000 enabled (priority: 215)";
     } catch (Error &err) {
         qDebug() << "Warning: Could not set PCMA codec priority:" << QString::fromStdString(err.reason);
     }
 
     try {
         Endpoint::instance().codecSetPriority("PCMU/8000", 214);
+        qDebug() << "  ✅ PCMU/8000 enabled (priority: 214)";
     } catch (Error &err) {
         qDebug() << "Warning: Could not set PCMU codec priority:" << QString::fromStdString(err.reason);
     }
 
     try {
+        Endpoint::instance().codecSetPriority("opus/48000/2", 213);
+        qDebug() << "  ✅ opus/48000/2 enabled (priority: 213) - 用户要求保留，后续使用";
+    } catch (Error &err) {
+        qDebug() << "Warning: Could not set Opus codec priority:" << QString::fromStdString(err.reason);
+    }
+
+    // 2025-12-31: 禁用以下编解码器以减小 SDP 大小（避免 IP 分片）
+    try {
+        Endpoint::instance().codecSetPriority("GSM/8000", 0);
+        qDebug() << "  ⛔ GSM/8000 disabled (to reduce SDP size)";
+    } catch (Error &err) {
+        qDebug() << "Warning: Could not disable GSM codec:" << QString::fromStdString(err.reason);
+    }
+
+    try {
+        Endpoint::instance().codecSetPriority("iLBC/8000", 0);
+        qDebug() << "  ⛔ iLBC/8000 disabled (to reduce SDP size)";
+    } catch (Error &err) {
+        qDebug() << "Warning: Could not disable iLBC codec:" << QString::fromStdString(err.reason);
+    }
+
+    try {
+        Endpoint::instance().codecSetPriority("telephone-event/8000", 0);
+        qDebug() << "  ⛔ telephone-event/8000 disabled (to reduce SDP size)";
+    } catch (Error &err) {
+        qDebug() << "Warning: Could not disable telephone-event 8kHz:" << QString::fromStdString(err.reason);
+    }
+
+    try {
+        Endpoint::instance().codecSetPriority("telephone-event/48000", 0);
+        qDebug() << "  ⛔ telephone-event/48000 disabled (to reduce SDP size)";
+    } catch (Error &err) {
+        qDebug() << "Warning: Could not disable telephone-event 48kHz:" << QString::fromStdString(err.reason);
+    }
+
+    try {
         Endpoint::instance().codecSetPriority("g722/16000", 0);
+        qDebug() << "  ⛔ g722/16000 disabled";
     } catch (Error &err) {
         qDebug() << "Warning: Could not set G.722 codec priority:" << QString::fromStdString(err.reason);
     }
-
-//    Endpoint::instance().codecSetPriority("iLBC/8000", 0);
 
     try {
         Endpoint::instance().codecSetPriority("speex/16000", 0);
@@ -629,6 +683,13 @@ int RisipEndpoint::start()
         qDebug() << "Warning: Could not set Speex 32kHz codec priority:" << QString::fromStdString(err.reason);
     }
 
+    qDebug() << "✅ [CODEC] Audio codec configuration complete";
+    qDebug() << "  Enabled: PCMA, PCMU, Opus (3 codecs - 用户要求保留 Opus)";
+    qDebug() << "  Disabled: GSM, iLBC, telephone-event, g722, speex";
+    qDebug() << "  Expected SDP reduction: ~200 bytes (from 1682 → ~1480 bytes)";
+    qDebug() << "  Target: < MTU 1500 bytes to avoid IP fragmentation";
+
+
     // ✅ CRITICAL FIX: Configure H264 encoder for 25fps to fix choppy outgoing video
     // This must be done after libStart() when video subsystem is initialized
     qDebug() << "========================================";
@@ -640,6 +701,28 @@ int RisipEndpoint::start()
     pj_status_t vid_status = pjsua_vid_codec_get_param(&h264_codec_id, &h264_param);
 
     if (vid_status == PJ_SUCCESS) {
+        // ✅ CRITICAL: Check if format structure is initialized before accessing det.vid
+        // If detail_type is not PJMEDIA_FORMAT_DETAIL_VIDEO, calling det.vid will crash
+        // This happens when default_attr() hasn't been called yet (e.g. manual codec registration)
+        if (h264_param.enc_fmt.detail_type != PJMEDIA_FORMAT_DETAIL_VIDEO) {
+            qDebug() << "⚠️ H264 format not initialized (detail_type=" << h264_param.enc_fmt.detail_type
+                     << "), initializing manually...";
+
+            // Initialize format structures properly
+            pjmedia_format_init_video(&h264_param.enc_fmt,
+                                     PJMEDIA_FORMAT_H264,  // H.264 format ID
+                                     1280, 720,            // 720P resolution
+                                     25, 1);               // 25 fps
+
+            pjmedia_format_init_video(&h264_param.dec_fmt,
+                                     PJMEDIA_FORMAT_I420,  // Raw YUV420 for decoder
+                                     1280, 720,            // 720P resolution
+                                     30, 1);               // Support up to 30fps
+
+            qDebug() << "✅ Format initialized: enc_fmt.detail_type=" << h264_param.enc_fmt.detail_type
+                     << ", dec_fmt.detail_type=" << h264_param.dec_fmt.detail_type;
+        }
+
         qDebug() << "  Current H264 encoder settings:";
         qDebug() << "    TX size:" << h264_param.enc_fmt.det.vid.size.w << "x" << h264_param.enc_fmt.det.vid.size.h;
         qDebug() << "    TX fps:" << h264_param.enc_fmt.det.vid.fps.num << "/" << h264_param.enc_fmt.det.vid.fps.denum;
@@ -675,11 +758,31 @@ int RisipEndpoint::start()
     // PJSIP 2.15.1: codecEnum2() returns vector<CodecInfo> (values) not pointers
     CodecInfoVector2 codecs = Endpoint::instance().codecEnum2();
 
+    qDebug() << "📹 Enumerating AUDIO codecs:";
     for(int i=0; i<codecs.size(); ++i) {
         const CodecInfo &codecInfo = codecs.at(i);
-        qDebug()<<"CODEC INFO: " << QString::fromStdString(codecInfo.codecId)
+        qDebug()<<"  AUDIO CODEC: " << QString::fromStdString(codecInfo.codecId)
                 << QString::fromStdString(codecInfo.desc)
                 << codecInfo.priority;
+    }
+
+    // Enumerate VIDEO codecs using PJSUA C API
+    qDebug() << "📹 Enumerating VIDEO codecs using pjsua_vid_enum_codecs:";
+    pjsua_codec_info vid_codecs[32];
+    unsigned vid_codec_count = PJ_ARRAY_SIZE(vid_codecs);
+    pj_status_t vid_enum_status = pjsua_vid_enum_codecs(vid_codecs, &vid_codec_count);
+
+    if (vid_enum_status == PJ_SUCCESS) {
+        qDebug() << "  ✅ Found" << vid_codec_count << "video codecs:";
+        for (unsigned i = 0; i < vid_codec_count; ++i) {
+            QString codecId = QString::fromLocal8Bit(vid_codecs[i].codec_id.ptr, vid_codecs[i].codec_id.slen);
+            qDebug() << "    [" << i << "]" << codecId
+                     << "priority:" << vid_codecs[i].priority;
+        }
+    } else {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(vid_enum_status, errmsg, sizeof(errmsg));
+        qWarning() << "  ❌ Failed to enumerate video codecs:" << errmsg;
     }
 
     emit statusChanged(status());

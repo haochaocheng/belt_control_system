@@ -177,30 +177,46 @@ void RisipCall::setCallType(int type)
 
 int RisipCall::status() const
 {
-    if(m_data->pjsipCall == NULL)
+    qDebug() << "🔍 [RisipCall::status] Called";
+
+    if(m_data->pjsipCall == NULL) {
+        qDebug() << "🔍 [RisipCall::status] pjsipCall is NULL, returning Null";
         return Null;
+    }
 
     if(m_data->pjsipCall->isActive()) {
+        qDebug() << "🔍 [RisipCall::status] Call is active, getting info...";
         CallInfo callInfo = m_data->pjsipCall->getInfo();
+        qDebug() << "🔍 [RisipCall::status] PJSIP state:" << callInfo.state;
+
         switch (callInfo.state) {
         case PJSIP_INV_STATE_CALLING:
+            qDebug() << "🔍 [RisipCall::status] Returning OutgoingCallStarted";
             return RisipCall::OutgoingCallStarted;
         case PJSIP_INV_STATE_CONNECTING:
+            qDebug() << "🔍 [RisipCall::status] Returning ConnectingToCall";
             return RisipCall::ConnectingToCall;
         case PJSIP_INV_STATE_CONFIRMED:
+            qDebug() << "🔍 [RisipCall::status] Returning CallConfirmed";
             return RisipCall::CallConfirmed;
         case PJSIP_INV_STATE_DISCONNECTED:
+            qDebug() << "🔍 [RisipCall::status] Returning CallDisconnected";
             return RisipCall::CallDisconnected;
         case PJSIP_INV_STATE_EARLY:
+            qDebug() << "🔍 [RisipCall::status] Returning CallEarly";
             return RisipCall::CallEarly;
         case PJSIP_INV_STATE_INCOMING:
+            qDebug() << "🔍 [RisipCall::status] Returning IncomingCallStarted";
             return RisipCall::IncomingCallStarted;
         case PJSIP_INV_STATE_NULL:
+            qDebug() << "🔍 [RisipCall::status] Returning Null (PJSIP_INV_STATE_NULL)";
             return RisipCall::Null;
         default:
+            qDebug() << "🔍 [RisipCall::status] Unknown state, returning Null";
             return RisipCall::Null;
         }
     } else {
+        qDebug() << "🔍 [RisipCall::status] Call not active, returning Null";
         return RisipCall::Null;
     }
 }
@@ -311,10 +327,19 @@ void RisipCall::setLastResponseCode(int response)
  */
 void RisipCall::initializeMediaHandler()
 {
-    if(!m_data->risipMedia)
-        setMedia(new RisipMedia);
+    qDebug() << "✅ [RisipCall] initializeMediaHandler() called";
 
+    if(!m_data->risipMedia) {
+        qDebug() << "✅ [RisipCall] Creating new RisipMedia...";
+        setMedia(new RisipMedia);
+        qDebug() << "✅ [RisipCall] RisipMedia created";
+    } else {
+        qDebug() << "✅ [RisipCall] RisipMedia already exists";
+    }
+
+    qDebug() << "✅ [RisipCall] Calling startCallMedia()...";
     m_data->risipMedia->startCallMedia();
+    qDebug() << "✅ [RisipCall] startCallMedia() returned";
 }
 
 /**
@@ -385,12 +410,18 @@ void RisipCall::call()
     setPjsipCall(new PjsipCall(*m_data->account->pjsipAccount()));
     CallOpParam prm(true);
 
+    // ⭐ 禁用 text 媒体（减小 INVITE 包大小，避免 IP 分片）
+    prm.opt.textCount = 0;
+
     // ⭐ 新增：根据 enableVideo 标志设置视频参数
     if (m_data->enableVideo) {
         prm.opt.videoCount = 1;  // ✅ 启用 1 个视频流（PJSUA2 API）
         prm.opt.audioCount = 1;  // 同时启用音频
-        prm.opt.flag |= PJSUA_CALL_INCLUDE_DISABLED_MEDIA;  // 在 SDP 中包含视频
-        qDebug() << "✅ RisipCall: Enabling video for outgoing call to" << QString::fromStdString(m_data->buddy->uri().toStdString());
+        // ❌ 2025-12-31 删除：PJSUA_CALL_INCLUDE_DISABLED_MEDIA 会强制包含禁用的 text 媒体
+        // 问题：这个标志会让 PJSIP 在 SDP 中包含所有禁用的媒体（m=text 0），增加 50 字节
+        // 原因：videoCount=1 时视频已启用，不需要这个标志
+        // prm.opt.flag |= PJSUA_CALL_INCLUDE_DISABLED_MEDIA;  // ← 旧代码（2025-12-31 删除）
+        qDebug() << "✅ RisipCall: Enabling video with RKMPP hardware encoding";
     }
 
     try {
@@ -414,12 +445,18 @@ void RisipCall::invite(const QString &uri)
     setPjsipCall(new PjsipCall(*m_data->account->pjsipAccount()));
     CallOpParam prm(true);
 
+    // ⭐ 禁用 text 媒体（减小 INVITE 包大小，避免 IP 分片）
+    prm.opt.textCount = 0;
+
     // ⭐ 新增：根据 enableVideo 标志设置视频参数
     if (m_data->enableVideo) {
         prm.opt.videoCount = 1;  // ✅ 启用 1 个视频流（PJSUA2 API）
         prm.opt.audioCount = 1;  // 同时启用音频
-        prm.opt.flag |= PJSUA_CALL_INCLUDE_DISABLED_MEDIA;  // 在 SDP 中包含视频
-        qDebug() << "✅ RisipCall: Enabling video for SIP invite to" << uri;
+        // ❌ 2025-12-31 删除：PJSUA_CALL_INCLUDE_DISABLED_MEDIA 会强制包含禁用的 text 媒体
+        // 问题：这个标志会让 PJSIP 在 SDP 中包含所有禁用的媒体（m=text 0），增加 50 字节
+        // 原因：videoCount=1 时视频已启用，不需要这个标志
+        // prm.opt.flag |= PJSUA_CALL_INCLUDE_DISABLED_MEDIA;  // ← 旧代码（2025-12-31 删除）
+        qDebug() << "✅ RisipCall: Enabling video with RKMPP hardware encoding";
     }
 
     try {

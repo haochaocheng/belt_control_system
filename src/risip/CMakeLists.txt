@@ -393,8 +393,55 @@ else()
             pjsip-aarch64-unknown-linux-gnu           # SIP Core
 
             # 媒体库
-            pjmedia-codec-aarch64-unknown-linux-gnu   # Media Codecs
-            pjmedia-aarch64-unknown-linux-gnu         # Media
+            pjmedia-codec-aarch64-unknown-linux-gnu   # Media Codecs (包含MPP H.264解码器)
+
+            # ✅ CRITICAL: FFmpeg和Opus必须紧跟pjmedia-codec之后
+            # 因为pjmedia-codec依赖这些库，链接器从左到右解析符号
+            avcodec                     # FFmpeg codec library (pjmedia-codec依赖)
+            avformat                    # FFmpeg format library
+            avutil                      # FFmpeg utilities (av_strerror, etc)
+            swscale                     # FFmpeg video scaling/conversion
+            opus                        # Opus codec (pjmedia-codec依赖)
+
+            # ✅ 2025-12-30 关键修复：FFmpeg 编解码器依赖库
+            # Ubuntu 24.04 链接器更严格，必须显式链接 FFmpeg 的所有编解码器依赖
+            # 这些库文件已复制到 rk3588-libs/lib/ (100个文件，56.76 MB)
+            x264                        # H.264 encoder (libavcodec 依赖)
+            x265                        # H.265/HEVC encoder (libavcodec 依赖)
+            # vpx                       # VP8/VP9 codec (在后面第484行链接，避免重复)
+            cairo                       # 2D graphics library (libavcodec 依赖)
+            va                          # VA-API hardware acceleration (libavutil 依赖)
+            va-drm                      # VA-API DRM interface
+            va-x11                      # VA-API X11 interface
+            twolame                     # MPEG Audio Layer 2 encoder (libavcodec 依赖)
+            webp                        # WebP codec (libavcodec 依赖)
+            codec2                      # Codec2 speech codec (libavcodec 依赖)
+            dav1d                       # AV1 decoder (libavcodec 依赖)
+            aom                         # AV1 encoder/decoder (libavcodec 依赖)
+            wavpack                     # WavPack audio codec (libavcodec 依赖)
+            theora                      # Theora video codec (libavcodec 依赖)
+            theoraenc                   # Theora encoder
+            theoradec                   # Theora decoder
+            xvidcore                    # Xvid MPEG-4 codec (libavcodec 依赖)
+            openjp2                     # JPEG 2000 codec (libavcodec 依赖)
+            shine                       # MP3 encoder (libavcodec 依赖)
+            snappy                      # Snappy compression (libavcodec 依赖)
+            zvbi                        # VBI/Teletext decoder (libavcodec 依赖)
+            rsvg-2                      # SVG rendering (libavcodec 依赖)
+            vdpau                       # VDPAU hardware acceleration (libavutil 依赖)
+            rga                         # RK3588 2D graphics accelerator
+
+            rockchip_mpp                              # Rockchip MPP硬件编解码库 (MPP解码器依赖)
+            pjmedia-aarch64-unknown-linux-gnu         # Media (依赖FFmpeg: sws_scale, av_log_*)
+
+            # ✅ CRITICAL: FFmpeg必须在pjmedia之后再次链接
+            # 因为pjmedia库也依赖FFmpeg (converter_libswscale.o, ffmpeg_util.o)
+            # 静态链接器不会回头查找，所以需要重复链接
+            avcodec                     # FFmpeg codec library (pjmedia依赖)
+            avformat                    # FFmpeg format library
+            avutil                      # FFmpeg utilities (pjmedia依赖 av_log_*)
+            swscale                     # FFmpeg video scaling (pjmedia依赖 sws_*)
+
             pjmedia-videodev-aarch64-unknown-linux-gnu # Video Device
             pjmedia-audiodev-aarch64-unknown-linux-gnu # Audio Device
 
@@ -413,25 +460,28 @@ else()
             # 基础库
             pj-aarch64-unknown-linux-gnu              # PJ Base Library
 
+            # ✅ CRITICAL: OpenSSL和UUID必须在pj库之后链接
+            # 因为libpj和libpjsip的SSL/TLS功能依赖OpenSSL
+            # 链接器从左到右解析符号，所以OpenSSL必须在依赖它的库之后
+            ssl                         # OpenSSL SSL/TLS library
+            crypto                      # OpenSSL cryptographic library
+            uuid                        # UUID generation library
+
             # 系统库 (Linux) - PJSIP 媒体库依赖
             pthread
             m
             rt
            asound                      # ALSA audio library
 
-            # FFmpeg 库 (视频编解码)
-            avcodec                     # FFmpeg codec library (for video codecs)
-            avformat                    # FFmpeg format library
-            avutil                      # FFmpeg utilities (av_strerror, etc)
-            swscale                     # FFmpeg video scaling/conversion
-
-            # 音频编解码器
-            opus                        # Opus codec (for opus_strerror)
+            # ✅ 额外编解码器库（已在上面链接过，这里注释掉避免重复）
+            # avcodec, avformat, avutil, swscale - 已在pjmedia-codec之后
+            # opus - 已在pjmedia-codec之后
             # gsm                       # GSM codec (built into PJSIP libgsmcodec)
-            speex                       # Speex codec
+            speex                       # Speex codec (系统库，用于其他模块)
 
             # 视频处理
             yuv                         # libyuv (video format conversion)
+            vpx                         # libvpx (VP8/VP9 codec - REQUIRED by pjmedia-codec)
 
             # 其他 PJSIP 依赖
             # srtp2                     # Secure RTP (built into PJSIP libsrtp)

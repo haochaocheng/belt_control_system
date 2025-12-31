@@ -127,10 +127,10 @@ public:
 //    QList<int> availableCodecs() const;
 //    void setAvailableCodecs(const QList<int> &codecs);
 
-    AccountConfig pjsipAccountConfig();
+    AccountConfig& pjsipAccountConfig();
     void setPjsipAccountConfig(AccountConfig pjsipConfig);
 
-    TransportConfig pjsipTransportConfig();
+    TransportConfig& pjsipTransportConfig();
     void setPjsipTransportConfig(TransportConfig pjsipConfig);
 
 Q_SIGNALS:

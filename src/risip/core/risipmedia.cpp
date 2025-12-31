@@ -243,35 +243,83 @@ QString RisipMedia::errorInfo() const
  */
 void RisipMedia::startCallMedia()
 {
-    if(!m_data->activeCall || !m_data->sipEndpoint)
+    if(!m_data->activeCall || !m_data->sipEndpoint) {
+        qWarning() << "⚠️ startCallMedia: No active call or sipEndpoint";
         return;
+    }
+
+    qDebug() << "✅ [MEDIA] Starting call media initialization...";
 
     CallInfo callInfo = m_data->activeCall->pjsipCall()->getInfo();
+    qDebug() << "✅ [MEDIA] Total media streams:" << callInfo.media.size();
+
     // Iterate all the call medias
     for (int i = 0; i < callInfo.media.size(); ++i) {
+        qDebug() << "✅ [MEDIA] Stream" << i << "- Type:" << callInfo.media[i].type
+                 << "Status:" << callInfo.media[i].status;
+
         if (callInfo.media[i].type == PJMEDIA_TYPE_AUDIO && m_data->activeCall->pjsipCall()->getMedia(i)) {
             m_data->callAudio = (AudioMedia *)m_data->activeCall->pjsipCall()->getMedia(i);
+            qDebug() << "✅ [MEDIA] Found audio media at index" << i;
             break;
         }
     }
+
+    // ⚠️ CRITICAL FIX: Check if audio media was found before using it
+    if (!m_data->callAudio) {
+        qWarning() << "❌ [MEDIA] ERROR: No audio media found in call!";
+        return;
+    }
+
+    // ⚠️ CRITICAL FIX: Check local audio media pointer
+    if (!m_data->localAudioMedia) {
+        qWarning() << "❌ [MEDIA] ERROR: Local audio media is NULL!";
+        return;
+    }
+
+    // ⚠️ CRITICAL FIX: Check audio device pointer
+    if (!m_data->audioDevice) {
+        qWarning() << "❌ [MEDIA] ERROR: Audio device is NULL!";
+        return;
+    }
+
     // Connect the call audio media to sound device
     try {
+        qDebug() << "✅ [MEDIA] Connecting local audio → call audio...";
         m_data->localAudioMedia->startTransmit(*m_data->callAudio);
+        qDebug() << "✅ [MEDIA] Local audio transmission started";
     } catch (Error &err) {
+        qWarning() << "❌ [MEDIA] Failed to start local audio transmission:"
+                   << QString::fromStdString(err.info(true));
         setError(err);
+        return;  // 失败则不继续
     }
 
     try {
+        qDebug() << "✅ [MEDIA] Connecting call audio → audio device...";
         m_data->callAudio->startTransmit(*m_data->audioDevice);
+        qDebug() << "✅ [MEDIA] Call audio playback started";
     } catch (Error &err) {
+        qWarning() << "❌ [MEDIA] Failed to start call audio playback:"
+                   << QString::fromStdString(err.info(true));
         setError(err);
+        return;  // 失败则不继续
     }
 
-    m_data->callAudio->adjustTxLevel(1.5);
-    m_data->callAudio->adjustRxLevel(1.5);
+    // 调整音量
+    try {
+        m_data->callAudio->adjustTxLevel(1.5);
+        m_data->callAudio->adjustRxLevel(1.5);
+        m_data->localAudioMedia->adjustTxLevel(1.5);
+        m_data->localAudioMedia->adjustRxLevel(1.5);
+        qDebug() << "✅ [MEDIA] Audio levels adjusted (1.5x)";
+    } catch (Error &err) {
+        qWarning() << "⚠️ [MEDIA] Failed to adjust audio levels (non-critical):"
+                   << QString::fromStdString(err.info(true));
+        // 音量调整失败不是致命错误，不返回
+    }
 
-    m_data->localAudioMedia->adjustTxLevel(1.5);
-    m_data->localAudioMedia->adjustRxLevel(1.5);
+    qDebug() << "✅ [MEDIA] Call media initialization complete!";
 }
 
 void RisipMedia::setError(Error &error)

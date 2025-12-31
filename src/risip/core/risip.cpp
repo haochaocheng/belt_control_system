@@ -254,10 +254,13 @@ RisipAccount *Risip::accountForConfiguration(RisipAccountConfiguration *configur
  */
 RisipAccount *Risip::createAccount(RisipAccountConfiguration *configuration)
 {
+    qDebug() << "[DEBUG] 🔹 createAccount() 开始";
     if(configuration && configuration->valid()) {
+        qDebug() << "[DEBUG] 🔹 配置有效，URI:" << configuration->uri();
         //create a new account with the given configuration
 
         //FIXME avoid copy - this is a workaround - configuration in QML deleted
+        qDebug() << "[DEBUG] 🔹 创建配置副本...";
         RisipAccountConfiguration *config = new RisipAccountConfiguration;
         config->setUri(configuration->uri());
         config->setUserName(configuration->userName());
@@ -268,17 +271,53 @@ RisipAccount *Risip::createAccount(RisipAccountConfiguration *configuration)
         config->setLocalPort(configuration->localPort());
         config->setRandomLocalPort(configuration->randomLocalPort());
         config->setScheme(configuration->scheme());
+        qDebug() << "[DEBUG] ✅ 配置副本创建完成";
 
+        qDebug() << "[DEBUG] 🔹 创建RisipAccount对象...";
         RisipAccount *account = new RisipAccount(m_data->accountsModel);
-        account->setSipEndPoint(sipEndpoint());
-        account->setConfiguration(config);
-        m_data->accountsModel->addSipAccount(account);
-        RisipContactManager::instance()->createModelsForAccount(account);
-        RisipCallManager::instance()->createModelsForAccount(account);
+        qDebug() << "[DEBUG] ✅ RisipAccount对象创建完成";
 
+        qDebug() << "[DEBUG] 🔹 先设置配置（避免信号处理中访问未初始化的配置）...";
+        account->setConfiguration(config);
+        qDebug() << "[DEBUG] ✅ setConfiguration()完成";
+
+        // ✅ setConfiguration()已经复制了配置内容，现在可以安全删除临时config对象
+        // ⚠️ 使用 deleteLater() 而不是立即删除，避免信号槽机制中的竞态条件
+        qDebug() << "[DEBUG] 🗑️ 标记临时config副本稍后删除...";
+        config->deleteLater();
+        config = nullptr;
+        qDebug() << "[DEBUG] ✅ 临时config副本已标记为稍后删除";
+
+        // ⚠️ 注意：传入的 configuration 参数不在这里删除，由调用者管理（tempParent）
+
+        qDebug() << "[DEBUG] 🔹 获取sipEndpoint指针:" << (void*)sipEndpoint();
+        if (!sipEndpoint()) {
+            qDebug() << "[DEBUG] ❌❌❌ 严重错误：sipEndpoint()返回NULL！";
+        } else {
+            qDebug() << "[DEBUG] ✅ sipEndpoint()指针有效";
+        }
+
+        qDebug() << "[DEBUG] 🔹 调用account->setSipEndPoint()...";
+        account->setSipEndPoint(sipEndpoint());
+        qDebug() << "[DEBUG] ✅ setSipEndPoint()完成";
+
+        qDebug() << "[DEBUG] 🔹 添加到账户模型...";
+        m_data->accountsModel->addSipAccount(account);
+        qDebug() << "[DEBUG] ✅ addSipAccount()完成";
+
+        qDebug() << "[DEBUG] 🔹 为账户创建联系人模型...";
+        RisipContactManager::instance()->createModelsForAccount(account);
+        qDebug() << "[DEBUG] ✅ createModelsForAccount()完成";
+
+        qDebug() << "[DEBUG] 🔹 为账户创建通话模型...";
+        RisipCallManager::instance()->createModelsForAccount(account);
+        qDebug() << "[DEBUG] ✅ createModelsForAccount()完成";
+
+        qDebug() << "[DEBUG] ✅ createAccount()完成，返回账户对象";
         return account;
     }
 
+    qDebug() << "[DEBUG] ⚠️ 配置无效或为NULL，删除配置并返回空账户";
     configuration->deleteLater();
     return new RisipAccount(this);
 }
@@ -311,13 +350,24 @@ bool Risip::readSettings()
     QSettings settings(configPath, QSettings::IniFormat);
     int totaltAccounts = settings.value(RisipSettingsParam::TotalAccounts).toInt();
 
+    qDebug() << "[DEBUG] 🔍 总账户数量:" << totaltAccounts;
+
     QString defaultAccountUri = settings.value(RisipSettingsParam::DefaultAccount).toString();
+    qDebug() << "[DEBUG] 📖 从配置文件读取的defaultAccount:" << defaultAccountUri;
+
+    // ✅ CRITICAL FIX: If defaultAccount is empty or invalid (like "sip:@"),
+    // we'll use the first account's URI later
+    bool needFixDefaultAccount = defaultAccountUri.isEmpty() ||
+                                  defaultAccountUri == "sip:@" ||
+                                  !defaultAccountUri.contains('@');
 
     RisipAccountConfiguration *configuration = NULL;
     settings.beginGroup(RisipSettingsParam::AccountGroup);
     for(int i=0; i<totaltAccounts; ++i) {
+        qDebug() << "[DEBUG] 📝 开始读取账户" << i;
         settings.beginReadArray(QString("account" + QString::number(i))); //settings array for account
 
+        // ✅ 创建配置对象（无父对象）
         configuration = new RisipAccountConfiguration;
         configuration->setUri(settings.value(RisipSettingsParam::Uri).toString());
         configuration->setUserName(settings.value(RisipSettingsParam::Username).toString());
@@ -329,12 +379,32 @@ bool Risip::readSettings()
         configuration->setRandomLocalPort(settings.value(RisipSettingsParam::RandomLocalPort).toInt());
         configuration->setScheme(settings.value(RisipSettingsParam::Scheme).toString());
 
-        RisipAccount *acc = createAccount(configuration); //creating account`
+        qDebug() << "[DEBUG] ✅ 账户配置创建完成，URI:" << configuration->uri();
+
+        // ✅ CRITICAL FIX: 在调用createAccount()之前保存URI（因为createAccount会删除configuration）
+        QString accountUri = configuration->uri();
+        if (needFixDefaultAccount && i == 0) {
+            defaultAccountUri = accountUri;
+            qDebug() << "[DEBUG] 🔧 修复：使用第一个账户的URI作为默认账户:" << defaultAccountUri;
+        }
+
+        qDebug() << "[DEBUG] 🚀 准备调用createAccount()...";
+        RisipAccount *acc = createAccount(configuration); //creating account (内部会复制config内容)
+        qDebug() << "[DEBUG] ✅ createAccount()返回成功";
         acc->setAutoSignIn(settings.value(RisipSettingsParam::AutoSignIn).toBool());
-        settings.endArray(); //end array
+        qDebug() << "[DEBUG] ✅ 账户" << i << "加载完成";
+        settings.endArray();
+
+        // ✅ createAccount()内部已使用deleteLater()标记config副本删除
+        // 现在手动删除传入的configuration对象
+        qDebug() << "[DEBUG] 🗑️ 使用deleteLater()标记configuration删除";
+        configuration->deleteLater();
+        configuration = nullptr;
     }
 
+    qDebug() << "[DEBUG] 🎯 准备设置默认账户:" << defaultAccountUri;
     setDefaultAccount(defaultAccountUri);
+    qDebug() << "[DEBUG] ✅ readSettings()完成";
     return true;
 }
 
