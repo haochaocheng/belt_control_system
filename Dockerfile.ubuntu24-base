@@ -24,6 +24,19 @@ RUN apt-get update && apt-get install -y \
     libopus0 \
     libsdl2-2.0-0 \
     \
+    # Video/Audio codecs (FFmpeg dependencies from device)
+    # These are required by the factory-installed FFmpeg with RKMPP support
+    libvpx9 \
+    libx264-164 \
+    libx265-199 \
+    libmp3lame0 \
+    libspeex1 \
+    libtheora0 \
+    libvorbis0a \
+    libvorbisenc2 \
+    libogg0 \
+    libyuv0 \
+    \
     # Video4Linux
     libv4l-0t64 \
     \
@@ -73,6 +86,15 @@ RUN apt-get update && apt-get install -y \
     \
     # ICU (internationalization)
     libicu74 \
+    \
+    # ✅ 2026-01-08 17:50 [优化] GDB 调试工具（移至基础镜像，避免每次重新安装）
+    # 原因：应用层镜像频繁重建，基础镜像只构建一次
+    # 效果：节省每次编译时 apt-get update 和 GDB 安装时间
+    gdb \
+    \
+    # Hardware acceleration libraries (attempt to install from system)
+    # ✅ 2026-01-07: Try system packages first, fallback to host mount if unavailable
+    libgomp1 \
     \
     # Emoji and symbol fonts (FIX for emoji display in QML)
     fonts-noto-color-emoji \

@@ -4,7 +4,7 @@
 # This layer changes frequently (application updates)
 # ==============================================================================
 
-FROM belt-control-base:ubuntu24
+FROM --platform=linux/arm64 belt-control-base:ubuntu24
 
 # Copy application files
 WORKDIR /app
@@ -15,17 +15,32 @@ COPY lib /app/lib
 COPY plugins /app/plugins
 COPY qml /app/qml
 COPY tts_models /app/tts_models
+# ✅ 2026-01-08 14:10 [修复 81] GDB 调试包装脚本（暂时禁用）
+# 注意：Docker构建上下文问题，如需调试可以手动运行：
+#   docker exec -it belt-control-latest gdb /app/belt_control_system
+# COPY docker/rk3588/gdb-wrapper.sh /app/gdb-wrapper.sh
+
+# NOTE: Hardware-accelerated FFmpeg libraries are copied by build-ubuntu24-apt.ps1
+# into the lib/ directory before Docker build, so they're included in the above COPY lib command
 
 # Setup application
+# ✅ 2026-01-08 17:50 [优化] GDB 已移至基础镜像，此处不再安装
+# 原因：基础镜像只构建一次，应用层频繁重建
+# 效果：每次编译节省 apt-get update 和 GDB 安装时间（约 30-60 秒）
 RUN chmod +x /app/belt_control_system /app/sherpa_tts_service && \
     \
     # Create symlinks for application libraries (Qt6, FFmpeg, custom libs)
     cd /app/lib && \
     for lib in libavcodec libavformat libavutil libavdevice libavfilter libavresample libswresample libswscale \
-               libopus libmp3lame libogg libvorbis libvorbisenc libvorbisfile libtheora libspeex libvo-amrwbenc libyuv \
-               libsherpa-onnx-c-api libsherpa-onnx libonnxruntime libmali libicui18n libicuuc libpcre2-16 librknnrt libxcb-dri2 libx264; do \
+               libopus libmp3lame libogg libvorbis libvorbisenc libvorbisfile libtheora libtheoradec libtheoraenc libspeex libvo-amrwbenc libyuv \
+               libvpx libx264 libx265 libwebp libwebpmux libwebpdemux \
+               libaribb24 libaom libcodec2 libgsm libopencore-amrnb libopencore-amrwb libopenjp2 libshine libsnappy libtwolame libwavpack libxvidcore libzvbi \
+               libva libva-drm libva-x11 libva-wayland libvdpau libOpenCL libsoxr \
+               librockchip_mpp libdav1d \
+               libsherpa-onnx-c-api libsherpa-onnx libonnxruntime libmali libicui18n libicuuc libpcre2-16 librknnrt libxcb-dri2 libssl libcrypto; do \
         if ls ${lib}.so.* 1> /dev/null 2>&1; then \
-            latest=$(ls -v ${lib}.so.* 2>/dev/null | tail -1); \
+            # ✅ 2026-01-01: Exclude backup files (*.backup-*) when selecting latest library version
+            latest=$(ls -v ${lib}.so.* 2>/dev/null | grep -v '\.backup-' | tail -1); \
             [ -z "$latest" ] && continue; \
             basename_file=$(basename "$latest"); \
             version=$(echo "$basename_file" | sed "s/${lib}.so.//"); \
@@ -34,6 +49,9 @@ RUN chmod +x /app/belt_control_system /app/sherpa_tts_service && \
             ln -sf "$basename_file" "${lib}.so" 2>/dev/null || true; \
         fi; \
     done && \
+    \
+    # Special case: libopenjp2 package version (7) != library version (2.3.1)
+    [ -f /app/lib/libopenjp2.so.2.3.1 ] && ln -sf libopenjp2.so.2.3.1 /app/lib/libopenjp2.so.7 && \
     \
     # Configure fontconfig for emoji support
     mkdir -p /etc/fonts/conf.d && \
@@ -50,7 +68,7 @@ RUN chmod +x /app/belt_control_system /app/sherpa_tts_service && \
     echo '</fontconfig>' >> /etc/fonts/conf.d/01-emoji.conf && \
     \
     # Rebuild font cache to ensure emoji fonts are properly registered
-    fc-cache -f -v
+    fc-cache -f -v || true
 
 # Environment variables
 # ✅ Note: QT_QPA_PLATFORM is NOT set in Dockerfile
@@ -69,4 +87,6 @@ WORKDIR /app
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD test -f /app/belt_control_system || exit 1
 
+# ✅ 2026-01-08 14:20 [修复 81] 正常启动（GDB包装脚本已禁用）
+# 如需调试，运行：docker exec -it belt-control-latest gdb /app/belt_control_system
 CMD ["/app/belt_control_system"]
