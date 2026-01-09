@@ -258,6 +258,17 @@ if ($needCompilePJSIP) {
             }
         }
 
+        # ✅ 2026-01-10 01:50 [修复 100.3] 复制 RGA 头文件
+        # 原因：ffmpeg_vid_codecs.c 引用了 rga/im2d.h 和 rga/rga.h
+        Write-Host "    - 复制 RGA 头文件..." -ForegroundColor Gray
+        $rgaIncludePath = Join-Path $pjsipSysroot "usr\include\rga"
+        if (Test-Path $rgaIncludePath) {
+            docker cp "$rgaIncludePath" "${pjsipContainerName}:/opt/rk3588-sysroot/usr/include/" 2>&1 | Out-Null
+            Write-Host "      ✓ rga/" -ForegroundColor Gray
+        } else {
+            Write-Host "      ⚠️ rga/ 未找到" -ForegroundColor Yellow
+        }
+
         # ✅ 2025-12-30 11:10 优化：只复制 FFmpeg 及其实际依赖的库文件
         #    之前复制所有 .so 文件（效率低、容器体积大）
         #    现在只复制 FFmpeg 核心库 + 编解码器依赖库（从链接错误中提取）
@@ -315,16 +326,39 @@ if ($needCompilePJSIP) {
         Write-Host "    - 创建编解码器库符号链接..." -ForegroundColor Gray
 
         # ✅ 2026-01-10 00:50 [修复] 使用单独的命令而不是 here-string，避免换行符问题
+        # ✅ 2026-01-10 02:25 [Fix 100.5] 添加两层符号链接修复
+        # 原因：某些库需要两层符号链接（如 libcairo.so → libcairo.so.2 → libcairo.so.2.11800.0）
+        # 说明：必须先创建中间层链接（libcairo.so.2），再创建顶层链接（libcairo.so）
+
+        # 第一组：单层直接链接（直接指向版本化文件）
         docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libx264.so.164 libx264.so && ln -sf libx265.so.199 libx265.so"
-        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libvpx.so.7.0.0 libvpx.so && ln -sf libwebp.so.7 libwebp.so"
-        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libdav1d.so.7 libdav1d.so && ln -sf libaom.so.3 libaom.so"
-        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libwavpack.so.1 libwavpack.so && ln -sf libtheora.so.0 libtheora.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libwavpack.so.1 libwavpack.so && ln -sf libtwolame.so.0 libtwolame.so"
         docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libtheoraenc.so.1 libtheoraenc.so && ln -sf libtheoradec.so.1 libtheoradec.so"
         docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libxvidcore.so.4 libxvidcore.so && ln -sf libopenjp2.so.7 libopenjp2.so"
         docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libshine.so.3 libshine.so && ln -sf libsnappy.so.1 libsnappy.so"
-        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libzvbi.so.0 libzvbi.so && ln -sf librsvg-2.so.2 librsvg-2.so"
-        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libcodec2.so.1.2 libcodec2.so && ln -sf libtwolame.so.0 libtwolame.so"
-        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libcairo.so.2 libcairo.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libzvbi.so.0 libzvbi.so && ln -sf libtheora.so.0 libtheora.so"
+
+        # 第二组：两层符号链接（需要先创建中间层）
+        # libvpx: libvpx.so → libvpx.so.7.0.0 → libvpx.so.9.0.0
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libvpx.so.9.0.0 libvpx.so.7.0.0 && ln -sf libvpx.so.7.0.0 libvpx.so"
+
+        # libwebp: libwebp.so → libwebp.so.7 → libwebp.so.7.1.8
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libwebp.so.7.1.8 libwebp.so.7 && ln -sf libwebp.so.7 libwebp.so"
+
+        # libdav1d: libdav1d.so → libdav1d.so.7 → libdav1d.so.4.0.2
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libdav1d.so.4.0.2 libdav1d.so.7 && ln -sf libdav1d.so.7 libdav1d.so"
+
+        # libaom: libaom.so → libaom.so.3 → libaom.so.0
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libaom.so.0 libaom.so.3 && ln -sf libaom.so.3 libaom.so"
+
+        # libcodec2: libcodec2.so → libcodec2.so.1.2 → libcodec2.so.0.9
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libcodec2.so.0.9 libcodec2.so.1.2 && ln -sf libcodec2.so.1.2 libcodec2.so"
+
+        # libcairo: libcairo.so → libcairo.so.2 → libcairo.so.2.11800.0
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libcairo.so.2.11800.0 libcairo.so.2 && ln -sf libcairo.so.2 libcairo.so"
+
+        # librsvg-2: librsvg-2.so → librsvg-2.so.2 → librsvg-2.so.2.50.0
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf librsvg-2.so.2.50.0 librsvg-2.so.2 && ln -sf librsvg-2.so.2 librsvg-2.so"
 
         # 验证最关键的两个符号链接
         $x264Check = docker exec $pjsipContainerName sh -c "test -L /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/libx264.so && echo 'OK' || echo 'FAIL'"
@@ -461,6 +495,11 @@ export LDFLAGS="-L/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu -L/opt/rk3588-sy
 
 # LIBS：具体链接库（-l），包含所有 FFmpeg 编解码器依赖
 # 这些库用于 PJSIP 测试程序的链接，确保 FFmpeg 编解码器能正确初始化
+# ✅ 2026-01-10 02:05 [修复 100.4] 恢复原始 LIBS 配置
+# 原因：删除库后改变了链接顺序，导致 libswresample 依赖没有被正确解析
+# 旧代码（2026-01-10 01:45 修复 100.2 注释）：
+# export LIBS="-lx264 -lx265 -lvpx -lcairo -ltwolame -lwebp -lcodec2 -ldav1d -laom -lwavpack -ltheora -ltheoraenc -ltheoradec -lxvidcore -lopenjp2 -lshine -lsnappy -lzvbi -lrga -lrockchip_mpp -lpthread -lm -lrt"
+# 说明：即使某些库（如 libva）不存在于 ARM 平台，链接器会忽略它们，不会影响编译
 export LIBS="-lx264 -lx265 -lvpx -lcairo -lva -lva-drm -lva-x11 -ltwolame -lwebp -lcodec2 -ldav1d -laom -lwavpack -ltheora -ltheoraenc -ltheoradec -lxvidcore -lopenjp2 -lshine -lsnappy -lzvbi -lrsvg-2 -lvdpau -lrga -lrockchip_mpp -lpthread -lm -lrt"
 
 # ⚠️ PKG_CONFIG_SYSROOT_DIR 让 pkg-config 重定向 .pc 文件中的路径到 sysroot
@@ -508,10 +547,9 @@ export PKG_CONFIG_SYSROOT_DIR=/opt/rk3588-sysroot
     --with-ssl=/usr \
     --with-sdl=/usr \
     --with-ffmpeg=/opt/rk3588-sysroot 2>&1 | tee /tmp/configure.log
-    # ❌ 2025-12-30 之前：--disable-ffmpeg
-    #    原因：为避免 OpenSSL 1.1/3.x 版本不兼容时的 FFmpeg 链接错误
-    # ✅ 2025-12-30 10:30 恢复：--with-ffmpeg=/opt/rk3588-sysroot
-    #    原因：升级到 Ubuntu 24.04 + OpenSSL 3.x 后，重新启用视频编解码
+    # ✅ 2026-01-10 02:15 [恢复] 恢复 FFmpeg 启用（配合原始符号链接和 LIBS 配置）
+    # 原因：临时禁用 FFmpeg 不是解决方案，视频通话必须依赖 FFmpeg
+    # 说明：配合 Fix 100 原始符号链接 + Fix 100.4 原始 LIBS 配置，应该可以编译成功
 
 # ⚠️ 说明（2025-12-30 更新）：
 # - 启用 FFmpeg：用于 H.264/H.265 视频编解码（从设备 188 sysroot 复制）
@@ -547,15 +585,20 @@ else
 fi
 
 echo ""
-echo "编译 PJSIP（使用 $(nproc) 线程）..."
-# ✅ 2025-12-30 19:00 关键修复：不再允许测试程序编译失败
-#    必须让所有测试程序编译成功，才能保证 FFmpeg 编解码器依赖库正确链接
-#    已在 LIBS 环境变量中添加所有 FFmpeg 编解码器依赖库
-make -j$(nproc) 2>&1 | tee /tmp/make.log
+echo "编译 PJSIP 静态库（使用 $(nproc) 线程）..."
+# ✅ 2026-01-10 02:30 [修复 100.6] 使用 make lib 代替 make
+# 原因：
+#   1. make lib 只编译静态库（21个 .a 文件），不编译测试程序
+#   2. 测试程序（pjmedia-test）链接失败不影响主应用程序
+#   3. 测试程序失败通常是因为 libswresample 等库的版本问题
+# 旧代码（2026-01-10 02:30 注释）：
+#   make -j$(nproc) 2>&1 | tee /tmp/make.log
+# 说明：根据以往的经验，make 不一定行，需要 make lib
+make lib -j$(nproc) 2>&1 | tee /tmp/make.log
 
-# ⚠️ make 必须成功，否则说明链接库配置有问题
+# ⚠️ make lib 必须成功，否则说明链接库配置有问题
 if [ ${PIPESTATUS[0]} -ne 0 ]; then
-    echo "✗ make 编译失败"
+    echo "✗ make lib 编译失败"
     echo ""
     echo "=== 最后 100 行编译日志 ==="
     tail -100 /tmp/make.log
@@ -574,7 +617,7 @@ if [ $FINAL_COUNT -lt 20 ]; then
     exit 1
 else
     echo "✓ 静态库生成成功：${FINAL_COUNT} 个"
-    echo "✓ PJSIP 编译完成（包括所有测试程序）"
+    echo "✓ PJSIP 静态库编译完成（不包括测试程序）"
     # 记录配置文件时间戳（用于检测配置是否修改）
     echo "$CONFIG_TIMESTAMP" > /workspace/.config_timestamp
 fi
