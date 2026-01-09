@@ -308,6 +308,34 @@ if ($needCompilePJSIP) {
         }
         Write-Host "      复制了 $pcCount 个 .pc 文件" -ForegroundColor Gray
 
+        # ✅ 2026-01-09 23:55 [修复 100] 创建编解码器库符号链接
+        # 原因：链接器需要 libx264.so 等通用链接名，但容器中只有版本化文件（libx264.so.164）
+        # 结果：configure 失败 "cannot find -lx264"
+        # 解决：在复制库文件后自动创建符号链接
+        Write-Host "    - 创建编解码器库符号链接..." -ForegroundColor Gray
+
+        # ✅ 2026-01-10 00:50 [修复] 使用单独的命令而不是 here-string，避免换行符问题
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libx264.so.164 libx264.so && ln -sf libx265.so.199 libx265.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libvpx.so.7.0.0 libvpx.so && ln -sf libwebp.so.7 libwebp.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libdav1d.so.7 libdav1d.so && ln -sf libaom.so.3 libaom.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libwavpack.so.1 libwavpack.so && ln -sf libtheora.so.0 libtheora.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libtheoraenc.so.1 libtheoraenc.so && ln -sf libtheoradec.so.1 libtheoradec.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libxvidcore.so.4 libxvidcore.so && ln -sf libopenjp2.so.7 libopenjp2.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libshine.so.3 libshine.so && ln -sf libsnappy.so.1 libsnappy.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libzvbi.so.0 libzvbi.so && ln -sf librsvg-2.so.2 librsvg-2.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libcodec2.so.1.2 libcodec2.so && ln -sf libtwolame.so.0 libtwolame.so"
+        docker exec $pjsipContainerName sh -c "cd /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu && ln -sf libcairo.so.2 libcairo.so"
+
+        # 验证最关键的两个符号链接
+        $x264Check = docker exec $pjsipContainerName sh -c "test -L /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/libx264.so && echo 'OK' || echo 'FAIL'"
+        $x265Check = docker exec $pjsipContainerName sh -c "test -L /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/libx265.so && echo 'OK' || echo 'FAIL'"
+
+        if ($x264Check.Trim() -eq "OK" -and $x265Check.Trim() -eq "OK") {
+            Write-Host "      ✓ 符号链接创建完成（已验证 libx264.so 和 libx265.so）" -ForegroundColor Green
+        } else {
+            Write-Host "      [警告] 符号链接创建可能失败: x264=$x264Check x265=$x265Check" -ForegroundColor Yellow
+        }
+
         $sysrootCopyElapsed = (Get-Date) - $sysrootCopyStart
         Write-Host "    ✓ FFmpeg + RKMPP 复制完成（耗时 $($sysrootCopyElapsed.TotalSeconds.ToString('F1'))s）" -ForegroundColor Green
 
@@ -1069,22 +1097,31 @@ if (Test-Path $FFmpegHwLibPath) {
     Write-Host "    Copying FFmpeg with RKMPP hardware encoder/decoder..." -ForegroundColor Yellow
 
     # ✅ 2026-01-09 21:30 [FFmpeg 6.0] 复制 FFmpeg 6.0 核心库（libavcodec.so.60.31.102, libavutil.so.58.29.100 等）
+    # ⚠️ 2026-01-09 21:45 [关键修复] 只复制实际文件（> 1KB），跳过 WSL 符号链接（0 字节）
+    # 原因：WSL 符号链接在 Windows 上是 0 字节文本文件，Docker 无法处理
+    # 解决：Dockerfile Line 41-59 会在容器内创建 Linux 原生符号链接
     $ffmpegLibs = Get-ChildItem -Path $FFmpegHwLibPath -Filter "libav*.so.*.*.*" -File
     foreach ($lib in $ffmpegLibs) {
-        Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
-        Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
+        if ($lib.Length -gt 1KB) {  # 跳过 WSL 符号链接
+            Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
+            Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
+        }
     }
     # 复制 libsw*（libswscale, libswresample）
     $ffmpegLibs = Get-ChildItem -Path $FFmpegHwLibPath -Filter "libsw*.so.*.*.*" -File
     foreach ($lib in $ffmpegLibs) {
-        Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
-        Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
+        if ($lib.Length -gt 1KB) {  # 跳过 WSL 符号链接
+            Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
+            Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
+        }
     }
     # ✅ 2026-01-09 21:30 [FFmpeg 6.0] 复制 libpostproc（FFmpeg 6.0 包含）
     $ffmpegLibs = Get-ChildItem -Path $FFmpegHwLibPath -Filter "libpostproc.so.*.*.*" -File
     foreach ($lib in $ffmpegLibs) {
-        Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
-        Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
+        if ($lib.Length -gt 1KB) {  # 跳过 WSL 符号链接
+            Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
+            Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
+        }
     }
 
     # ✅ 2026-01-09 21:30 [FFmpeg 6.0] 统计所有 FFmpeg 6.0 库大小（libav*, libsw*, libpostproc*）
