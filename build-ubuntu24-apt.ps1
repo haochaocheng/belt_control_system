@@ -1080,27 +1080,46 @@ if (Test-Path $FFmpegHwLibPath) {
     $totalSize = [math]::Round((Get-ChildItem -Path "$DockerContextDir\lib\libav*.so.*.*.*" | Measure-Object -Property Length -Sum).Sum / 1MB, 2)
     Write-Host "    OK: FFmpeg libraries copied (${totalSize}MB with RKMPP encoder+decoder)" -ForegroundColor Green
 
-    # ✅ Copy codec libraries (Ubuntu 20.04 versions for ABI compatibility)
-    # This fixes the runtime error: libvpx.so.6: cannot open shared object file
-    Write-Host "    Copying codec libraries (Ubuntu 20.04 for ABI compatibility)..." -ForegroundColor Yellow
+    # ✅ 2026-01-09 20:10 [Fix 97 配套] 从 rk3588-libs 复制所有编解码器库到镜像
+    # 原因：应用程序编译时链接了所有 FFmpeg 编解码器库，运行时必须提供
+    # 方案：将所有库打包到 Docker 镜像，避免运行时依赖宿主机
+    # 路径：docker/rk3588/rk3588-libs/lib/ → docker/rk3588/lib/ → Docker 镜像 /app/lib/
+    Write-Host "    Copying codec libraries from rk3588-libs (all dependencies)..." -ForegroundColor Yellow
 
-    # Codec libraries have various version number formats
+    # ⚠️ 2026-01-09 20:10 关键修复：从 rk3588-libs 复制，不是从 FFmpeg 编译输出
+    # FFmpeg 编译输出只包含 FFmpeg 库本身，不包含编解码器依赖库
+    $rk3588CodecLibDir = "$ProjectRoot\docker\rk3588\rk3588-libs\lib"
+
+    # 添加所有必需的编解码器库模式（包括 Fix 97 需要的库）
     $codecPatterns = @("libvpx.so.*", "libx264.so.*", "libx265.so.*", "libmp3lame.so.*",
                        "libogg.so.*", "libspeex.so.*", "libtheora*.so.*", "libvorbis*.so.*",
                        "libyuv.so.*", "libwebp.so.*", "libwebpmux.so.*", "libwebpdemux.so.*",
-                       "libaribb24.so.*", "libaom.so.*", "libcodec2.so.*", "libgsm.so.*",
-                       "libopencore-amrnb.so.*", "libopencore-amrwb.so.*", "libopenjp2.so.*",
-                       "libshine.so.*", "libsnappy.so.*", "libtwolame.so.*", "libvo-amrwbenc.so.*",
-                       "libwavpack.so.*", "libxvidcore.so.*", "libzvbi.so.*",
-                       "libva.so.*", "libva-*.so.*", "libvdpau.so.*", "libOpenCL.so.*", "libsoxr.so.*")
+                       "libaribb24.so.*", "libaom.so.*", "libcodec2.so.*", "libdav1d.so.*",
+                       "libgsm.so.*", "libopencore-amrnb.so.*", "libopencore-amrwb.so.*",
+                       "libopenjp2.so.*", "libshine.so.*", "libsnappy.so.*", "libtwolame.so.*",
+                       "libvo-amrwbenc.so.*", "libwavpack.so.*", "libxvidcore.so.*", "libzvbi.so.*",
+                       "libva.so.*", "libva-*.so.*", "libvdpau.so.*", "libOpenCL.so.*", "libsoxr.so.*",
+                       "librockchip_mpp.so.*", "librga.so.*")
 
     $codecCount = 0
+    $skippedCount = 0
+
     foreach ($pattern in $codecPatterns) {
-        $codecLibs = Get-ChildItem -Path $FFmpegHwLibPath -Filter $pattern -File
-        foreach ($lib in $codecLibs) {
-            Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
-            Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
-            $codecCount++
+        # 优先从 rk3588-libs 复制
+        $codecLibs = Get-ChildItem -Path $rk3588CodecLibDir -Filter $pattern -File -ErrorAction SilentlyContinue
+
+        if ($codecLibs) {
+            foreach ($lib in $codecLibs) {
+                # ⚠️ 2026-01-03 修复：只复制实际文件（> 1KB），跳过符号链接
+                # 原因：Windows PowerShell 复制 WSL 符号链接会导致 "file too short" 错误
+                if ($lib.Length -gt 1KB) {
+                    Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction SilentlyContinue
+                    Write-Host "      ✓ $($lib.Name) ($([math]::Round($lib.Length / 1KB, 0)) KB)" -ForegroundColor Gray
+                    $codecCount++
+                } else {
+                    $skippedCount++
+                }
+            }
         }
     }
 
@@ -1408,14 +1427,17 @@ if xhost +local:docker 2>/dev/null; then
     QT_RENDER_OPTS="-e LD_PRELOAD=/opt/mali/libmali.so.1"
     QT_RENDER_OPTS="$QT_RENDER_OPTS -e QT_XCB_GL_INTEGRATION=xcb_egl"
 
-    # Hardware video acceleration libraries (V4L2 M2M + Rockchip MPP)
-    # Mount runtime dependencies for hardware-accelerated FFmpeg
-    HW_LIBS_VOLUME="-v /usr/lib/aarch64-linux-gnu/libyuv.so.0.0.1807:/opt/hw-libs/libyuv.so.2:ro"
-    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/librockchip_mpp.so.1:/opt/hw-libs/librockchip_mpp.so.1:ro"
-    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/librga.so.2:/opt/hw-libs/librga.so.2:ro"
-    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/libx264.so.155:/opt/hw-libs/libx264.so.155:ro"
+    # ✅ 2026-01-09 20:35 [Fix 97.2 配套] 最简库挂载配置
+    # 原因：所有编解码器库（包括 librga.so.2）已打包到 Docker 镜像 /app/lib/ 中
+    # 方案：只挂载 RKMPP 硬件编解码器驱动库（必须依赖内核驱动）
+    # 结果：容器完全自包含所有依赖，不依赖宿主机任何编解码器库
+    # 只挂载 RKMPP 硬件编解码器驱动库（依赖内核驱动）
+    HW_LIBS_VOLUME="-v /usr/lib/aarch64-linux-gnu/librockchip_mpp.so.1:/opt/hw-libs/librockchip_mpp.so.1:ro"
+    # ❌ 2026-01-09 20:35 移除 librga.so.2 挂载（已包含在镜像 /app/lib/ 中）
+    # HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/librga.so.2:/opt/hw-libs/librga.so.2:ro"
     HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/libgomp.so.1.0.0:/opt/hw-libs/libgomp.so.1:ro"
-    HW_LIBS_ENV="-e LD_LIBRARY_PATH=/opt/hw-libs:/app/lib:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu"
+    # LD_LIBRARY_PATH: 优先使用镜像内的库 (/app/lib)
+    HW_LIBS_ENV="-e LD_LIBRARY_PATH=/app/lib:/opt/hw-libs:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu"
 
     # Enable FFmpeg hardware acceleration for decoding
     # - AV_LOG_LEVEL=debug: Enable detailed FFmpeg logging to verify hardware decoder usage
@@ -1430,13 +1452,17 @@ else
     MALI_VOLUME=""
     # No LD_PRELOAD needed for EGLFS mode
 
-    # Hardware video acceleration libraries (V4L2 M2M + Rockchip MPP) - also needed in EGLFS mode
-    HW_LIBS_VOLUME="-v /usr/lib/aarch64-linux-gnu/libyuv.so.0.0.1807:/opt/hw-libs/libyuv.so.2:ro"
-    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/librockchip_mpp.so.1:/opt/hw-libs/librockchip_mpp.so.1:ro"
-    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/librga.so.2:/opt/hw-libs/librga.so.2:ro"
-    HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/libx264.so.155:/opt/hw-libs/libx264.so.155:ro"
+    # ✅ 2026-01-09 20:35 [Fix 97.2 配套] 最简库挂载配置（EGLFS 模式）
+    # 原因：所有编解码器库（包括 librga.so.2）已打包到 Docker 镜像 /app/lib/ 中
+    # 方案：只挂载 RKMPP 硬件编解码器驱动库（必须依赖内核驱动）
+    # 结果：容器完全自包含所有依赖，不依赖宿主机任何编解码器库
+    # 只挂载 RKMPP 硬件编解码器驱动库（依赖内核驱动）
+    HW_LIBS_VOLUME="-v /usr/lib/aarch64-linux-gnu/librockchip_mpp.so.1:/opt/hw-libs/librockchip_mpp.so.1:ro"
+    # ❌ 2026-01-09 20:35 移除 librga.so.2 挂载（已包含在镜像 /app/lib/ 中）
+    # HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/librga.so.2:/opt/hw-libs/librga.so.2:ro"
     HW_LIBS_VOLUME="$HW_LIBS_VOLUME -v /usr/lib/aarch64-linux-gnu/libgomp.so.1.0.0:/opt/hw-libs/libgomp.so.1:ro"
-    HW_LIBS_ENV="-e LD_LIBRARY_PATH=/opt/hw-libs:/app/lib:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu"
+    # LD_LIBRARY_PATH: 优先使用镜像内的库 (/app/lib)
+    HW_LIBS_ENV="-e LD_LIBRARY_PATH=/app/lib:/opt/hw-libs:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu"
 
     # Enable FFmpeg hardware acceleration for decoding
     # - AV_LOG_LEVEL=debug: Enable detailed FFmpeg logging to verify hardware decoder usage
