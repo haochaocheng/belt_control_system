@@ -36,13 +36,15 @@ RUN chmod +x /app/belt_control_system /app/sherpa_tts_service && \
     rm -f /app/plugins/multimedia/libffmpegmediaplugin.so && \
     \
     # Create symlinks for application libraries (Qt6, FFmpeg, custom libs)
+    # ✅ 2026-01-09 20:45 [Fix 97.2 配套] 添加 librga 符号链接
+    # 原因：librga.so.2.1.0 已复制到镜像，需创建 librga.so.2 → librga.so.2.1.0 符号链接
     cd /app/lib && \
     for lib in libavcodec libavformat libavutil libavdevice libavfilter libavresample libswresample libswscale \
                libopus libmp3lame libogg libvorbis libvorbisenc libvorbisfile libtheora libtheoradec libtheoraenc libspeex libvo-amrwbenc libyuv \
                libvpx libx264 libx265 libwebp libwebpmux libwebpdemux \
                libaribb24 libaom libcodec2 libgsm libopencore-amrnb libopencore-amrwb libopenjp2 libshine libsnappy libtwolame libwavpack libxvidcore libzvbi \
                libva libva-drm libva-x11 libva-wayland libvdpau libOpenCL libsoxr \
-               librockchip_mpp libdav1d \
+               librockchip_mpp libdav1d librga \
                libsherpa-onnx-c-api libsherpa-onnx libonnxruntime libmali libicui18n libicuuc libpcre2-16 librknnrt libxcb-dri2 libssl libcrypto; do \
         if ls ${lib}.so.* 1> /dev/null 2>&1; then \
             # ✅ 2026-01-01: Exclude backup files (*.backup-*) when selecting latest library version
