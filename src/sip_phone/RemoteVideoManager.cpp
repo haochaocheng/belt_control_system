@@ -2,6 +2,9 @@
 #include <QDebug>
 #include <QImage>
 #include <QDateTime>
+#include <QProcess>
+#include <QFile>
+#include <QCoreApplication>
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
 
@@ -223,6 +226,14 @@ void RemoteVideoManager::onCallConnected(int callId)
 {
     qDebug() << "📹 RemoteVideoManager: Call connected, callId =" << callId;
 
+    /* ✅ 2026-01-09 14:40 [调试 Fix 95] 验证 QVideoSink 连接
+     * 问题：Fix 95 解决解码错误后，视频无法显示
+     * 目的：检查 m_videoSink 指针是否有效
+     * 预期：指针不为空，有效连接到 VideoSinkItem
+     */
+    qDebug() << "📹 [DEBUG Fix 95] m_videoSink pointer:" << m_videoSink;
+    qDebug() << "📹 [DEBUG Fix 95] m_videoSink is valid:" << (m_videoSink != nullptr);
+
     m_currentCallId = callId;
 
     // 发送信号,让 Qt 主线程启动检查定时器
@@ -231,14 +242,19 @@ void RemoteVideoManager::onCallConnected(int callId)
 
 void RemoteVideoManager::onCallDisconnected()
 {
+    qDebug() << "🔴 [FIX 72] RemoteVideoManager::onCallDisconnected() entered";
     qDebug() << "📹 RemoteVideoManager: Call disconnected";
 
     // 发送信号,让 Qt 主线程停止检查定时器
+    qDebug() << "🔴 [FIX 72] Emitting requestStopCheck signal";
     emit requestStopCheck();
 
     // 断开连接并销毁 custom port
+    qDebug() << "🔴 [FIX 72] Calling disconnectFromVideoBridge()";
     disconnectFromVideoBridge();
+    qDebug() << "🔴 [FIX 72] Calling destroyCustomPort()";
     destroyCustomPort();
+    qDebug() << "🔴 [FIX 72] Port cleanup completed";
 
     m_currentCallId = PJSUA_INVALID_ID;
     m_formatMismatch = false;  // 重置格式不匹配标志
@@ -271,22 +287,87 @@ void RemoteVideoManager::checkRemoteVideo()
         return;
     }
 
-    // 如果已经连接,就不需要再检查了
-    if (m_customPort != nullptr) {
-        return;
+    // ✅ Attempt 24: 修复SDP重新协商后连接检查逻辑
+    // 不仅检查custom port是否存在，还要检查call video slot是否仍然连接到custom port
+    // 因为SDP重新协商会创建新的video stream，新stream可能没有连接到我们的custom port
+
+    bool needReconnect = false;
+
+    if (m_customPort != nullptr && m_customSlot != PJSUA_INVALID_ID) {
+        // 检查custom port是否仍然有效
+        pjsua_vid_conf_port_info port_info;
+        pj_status_t status = pjsua_vid_conf_get_port_info(m_customSlot, &port_info);
+
+        if (status != PJ_SUCCESS) {
+            // Custom port已失效，需要重新连接
+            qDebug() << "⚠️ [Attempt 24] Custom port invalid (slot" << m_customSlot << "), reconnecting...";
+            needReconnect = true;
+        } else {
+            // Custom port有效，但需要检查call video slot是否连接到它
+            int call_vid_slot = pjsua_call_get_vid_conf_port(m_currentCallId, PJMEDIA_DIR_DECODING);
+
+            if (call_vid_slot == PJSUA_INVALID_ID) {
+                // Call video slot不存在，可能还没准备好
+                qDebug() << "⚠️ [Attempt 24] Call video slot not ready yet";
+                return;
+            }
+
+            // ✅ 关键检查：验证call video slot是否连接到我们的custom port
+            // 检查方法：尝试获取call video slot的listener列表，看是否包含我们的custom slot
+            pjsua_vid_conf_port_info call_port_info;
+            status = pjsua_vid_conf_get_port_info(call_vid_slot, &call_port_info);
+
+            if (status == PJ_SUCCESS) {
+                // 检查call video port的所有listener
+                bool isConnected = false;
+                for (unsigned i = 0; i < call_port_info.listener_cnt; ++i) {
+                    if (call_port_info.listeners[i] == m_customSlot) {
+                        isConnected = true;
+                        break;
+                    }
+                }
+
+                if (!isConnected) {
+                    // Call video slot没有连接到我们的custom port（SDP重新协商后的常见情况）
+                    qDebug() << "⚠️ [Attempt 24] Call video slot" << call_vid_slot
+                             << "not connected to custom slot" << m_customSlot << ", reconnecting...";
+                    needReconnect = true;
+                } else {
+                    // 连接仍然有效，无需重新连接
+                    return;
+                }
+            } else {
+                // 无法获取call video port信息，可能出错了
+                qDebug() << "⚠️ [Attempt 24] Cannot get call video port info, reconnecting...";
+                needReconnect = true;
+            }
+        }
+    } else {
+        // Custom port不存在，需要创建并连接
+        needReconnect = true;
     }
 
-    // 尝试检测并连接到 video conference bridge
-    bool success = detectAndConnectToVideoBridge();
+    if (needReconnect) {
+        // 断开旧连接并销毁custom port
+        disconnectFromVideoBridge();
+        destroyCustomPort();
 
-    if (success && !m_hasRemoteVideo) {
-        m_hasRemoteVideo = true;
-        emit hasRemoteVideoChanged();
-        qDebug() << "✅ RemoteVideoManager: Connected to video bridge (Push mode)";
+        // 尝试重新连接到video conference bridge
+        bool success = detectAndConnectToVideoBridge();
 
-        // 停止检查定时器,因为已经连接成功
-        m_checkTimer->stop();
+        if (success && !m_hasRemoteVideo) {
+            m_hasRemoteVideo = true;
+            emit hasRemoteVideoChanged();
+            qDebug() << "✅ [Attempt 24] Connected to video bridge (Push mode)";
+        }
+
+        if (success && m_hasRemoteVideo) {
+            qDebug() << "🔄 [Attempt 24] Reconnected to video bridge after SDP renegotiation";
+        }
     }
+
+    // ✅ Attempt 24: 保持检查定时器运行，以便在SDP重新协商后能自动重新连接
+    // m_checkTimer->stop();  // 注释掉这一行，保持定时器运行
 }
 
 bool RemoteVideoManager::detectAndConnectToVideoBridge()
@@ -307,6 +388,41 @@ bool RemoteVideoManager::detectAndConnectToVideoBridge()
 
             m_videoMediaIndex = i;
 
+            // ✅ 打印硬件解码验证信息
+            qDebug() << "==========================================";
+            qDebug() << "🔍 [HARDWARE DECODER VERIFICATION]";
+            qDebug() << "==========================================";
+
+            // ✅ 声明call_vid_slot一次，后续复用
+            int call_vid_slot = PJSUA_INVALID_ID;
+
+            // 获取call video slot用于查询解码器信息
+            call_vid_slot = pjsua_call_get_vid_conf_port(m_currentCallId, PJMEDIA_DIR_DECODING);
+            if (call_vid_slot != PJSUA_INVALID_ID) {
+                pjsua_vid_conf_port_info port_info;
+                pj_status_t info_status = pjsua_vid_conf_get_port_info(call_vid_slot, &port_info);
+
+                if (info_status == PJ_SUCCESS) {
+                    qDebug() << "📹 Video Stream Info:";
+                    qDebug() << "   Port Name:" << QString::fromUtf8(port_info.name.ptr, port_info.name.slen);
+                    qDebug() << "   Format:" << port_info.format.id;
+
+                    // 获取视频格式详情
+                    pjmedia_video_format_detail *vfd = pjmedia_format_get_video_format_detail(&port_info.format, PJ_TRUE);
+                    if (vfd) {
+                        qDebug() << "   Resolution:" << vfd->size.w << "x" << vfd->size.h;
+                        qDebug() << "   FPS:" << vfd->fps.num << "/" << vfd->fps.denum;
+                        qDebug() << "   Avg Bitrate:" << vfd->avg_bps << "bps";
+                        qDebug() << "   Max Bitrate:" << vfd->max_bps << "bps";
+                    }
+                }
+
+                // ✅ 真正的硬件解码验证
+                verifyHardwareDecoder();
+            }
+
+            qDebug() << "==========================================";
+
             // ✅ 直接使用默认格式创建 custom port
             // 注意：不要从 pjsua_vid_conf_get_port_info() 获取格式，
             // 因为它返回的是 bridge 调整后的格式（如 720x480），
@@ -318,8 +434,8 @@ bool RemoteVideoManager::detectAndConnectToVideoBridge()
                 return false;
             }
 
-            // 获取通话的视频端口用于连接
-            int call_vid_slot = pjsua_call_get_vid_conf_port(m_currentCallId, PJMEDIA_DIR_DECODING);
+            // 获取通话的视频端口用于连接（复用之前声明的变量）
+            call_vid_slot = pjsua_call_get_vid_conf_port(m_currentCallId, PJMEDIA_DIR_DECODING);
             if (call_vid_slot == PJSUA_INVALID_ID) {
                 qWarning() << "⚠️ Video port not ready yet, will retry in 500ms...";
                 // 销毁刚创建的 custom port，下次再试
@@ -646,9 +762,36 @@ void RemoteVideoManager::onFrameReceived(pjmedia_frame *frame, const pjmedia_for
 
 void RemoteVideoManager::displayFrame(QVideoFrame frame)
 {
+    /* ✅ 2026-01-09 14:40 [调试 Fix 95] 追踪帧传递到 QVideoSink
+     * 问题：视频帧到达 RemoteVideoManager，但屏幕无显示
+     * 目的：验证帧是否传递到 QVideoSink
+     * 预期：每帧日志输出，m_videoSink 不为空
+     */
+    static int displayCount = 0;
+    displayCount++;
+
+    // 每秒打印一次（假设 ~15fps）
+    if (displayCount % 15 == 1) {
+        qDebug() << "📹 [DISPLAY FRAME] Presenting to QVideoSink:"
+                 << "frame" << displayCount
+                 << "size:" << frame.width() << "x" << frame.height()
+                 << "valid:" << frame.isValid()
+                 << "m_videoSink:" << m_videoSink;
+    }
+
     // 在 Qt 主线程中调用
     if (frame.isValid()) {
-        m_videoSink->setVideoFrame(frame);
+        if (m_videoSink) {
+            m_videoSink->setVideoFrame(frame);
+        } else {
+            qWarning() << "❌ [ERROR Fix 95] m_videoSink is nullptr! Cannot display frame!";
+        }
+    } else {
+        static int invalidCount = 0;
+        if (invalidCount < 5) {
+            qWarning() << "❌ [ERROR Fix 95] Invalid QVideoFrame received!";
+            invalidCount++;
+        }
     }
 }
 
@@ -852,6 +995,82 @@ void RemoteVideoManager::hideAllPjsipVideoWindows()
     } else {
         qDebug() << "ℹ️ [Attempt 22] No SDL windows found to hide";
     }
+}
+
+// ========== 硬件解码真实验证 ==========
+
+void RemoteVideoManager::verifyHardwareDecoder()
+{
+    qDebug() << "🔍 [HARDWARE DECODER VERIFICATION - REAL CHECK]";
+    qDebug() << "==========================================";
+
+#ifndef WIN32
+    // 方法1: 检查硬件设备文件是否被打开
+    qDebug() << "📂 Method 1: Checking hardware device usage...";
+
+    QProcess lsofProc;
+    lsofProc.start("lsof", QStringList() << "-p" << QString::number(QCoreApplication::applicationPid()));
+    lsofProc.waitForFinished(2000);
+    QString lsofOutput = QString::fromUtf8(lsofProc.readAllStandardOutput());
+
+    bool foundV4L2Device = lsofOutput.contains("/dev/video");
+    bool foundMPPDevice = lsofOutput.contains("/dev/mpp_service") || lsofOutput.contains("/dev/rkvdec");
+
+    if (foundV4L2Device) {
+        qDebug() << "   ✅ FOUND: V4L2 device (/dev/video*) is OPEN";
+        qDebug() << "   → h264_v4l2m2m hardware decoder is ACTIVE";
+    }
+
+    if (foundMPPDevice) {
+        qDebug() << "   ✅ FOUND: Rockchip MPP device is OPEN";
+        qDebug() << "   → h264_rkmpp hardware decoder is ACTIVE";
+    }
+
+    if (!foundV4L2Device && !foundMPPDevice) {
+        qDebug() << "   ⚠️ WARNING: No hardware decoder device detected";
+        qDebug() << "   → Likely using SOFTWARE decoding (libx264)";
+        qDebug() << "   → This will cause HIGH CPU usage";
+    }
+
+    // 方法2: 读取当前进程CPU使用率
+    qDebug() << "";
+    qDebug() << "⚙️ Method 2: Checking CPU usage (baseline)...";
+
+    QFile statFile(QString("/proc/%1/stat").arg(QCoreApplication::applicationPid()));
+    if (statFile.open(QIODevice::ReadOnly)) {
+        QStringList stats = QString::fromUtf8(statFile.readAll()).split(' ');
+        if (stats.size() > 14) {
+            qint64 utime = stats[13].toLongLong();  // User mode time
+            qint64 stime = stats[14].toLongLong();  // Kernel mode time
+            qint64 total_time = utime + stime;
+
+            qDebug() << "   ℹ️ Process CPU time (jiffies):" << total_time;
+            qDebug() << "   ℹ️ Recommendation: Monitor CPU% during video call";
+            qDebug() << "      - Hardware decoding: <20% CPU";
+            qDebug() << "      - Software decoding: >60% CPU";
+        }
+        statFile.close();
+    }
+
+    // 方法3: 提示如何启用FFmpeg调试日志
+    qDebug() << "";
+    qDebug() << "📋 Method 3: Enable FFmpeg debug logs to see actual decoder";
+    qDebug() << "   Run with environment variable:";
+    qDebug() << "   export AV_LOG_FORCE_NOCOLOR=1";
+    qDebug() << "   export AV_LOG_LEVEL=info";
+    qDebug() << "   Then check logs for lines like:";
+    qDebug() << "   → '[h264 @ 0x...] decoder: h264_v4l2m2m' (HARDWARE)";
+    qDebug() << "   → '[h264 @ 0x...] decoder: h264' (SOFTWARE)";
+
+#else
+    // Windows - 无法直接检测硬件解码器
+    qDebug() << "   ℹ️ Platform: Windows (hardware decoder detection not available)";
+    qDebug() << "   ℹ️ Monitor CPU usage to verify:";
+    qDebug() << "      - Low CPU (<20%): Likely hardware decoding";
+    qDebug() << "      - High CPU (>60%): Likely software decoding";
+#endif
+
+    qDebug() << "==========================================";
 }
 
 // Push 模式实现完成 ✅

@@ -92,6 +92,22 @@ RUN apt-get update && apt-get install -y \
     # 效果：节省每次编译时 apt-get update 和 GDB 安装时间
     gdb \
     \
+    # ✅ 2026-01-09 15:25 [修复 96] GStreamer 支持（Qt Multimedia 后端）
+    # 问题：Qt Multimedia 插件存在但无法加载，启动日志显示 "could not load multimedia backend"
+    # 根因 1: FFmpeg 插件需要 FFmpeg 4.x，容器使用 FFmpeg 6.x（版本不匹配）
+    # 根因 2: GStreamer 插件缺少 GStreamer 库（完全未安装）
+    # 策略：安装 GStreamer 1.0 库，使用 GStreamer 后端
+    # 效果：VideoSinkItem 可以正常接收和渲染视频帧，解决 Linux 设备视频显示黑屏问题
+    libgstreamer1.0-0 \
+    libgstreamer-plugins-base1.0-0 \
+    libgstreamer-plugins-good1.0-0 \
+    libgstreamer-plugins-bad1.0-0 \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-libav \
+    gstreamer1.0-tools \
+    \
     # Hardware acceleration libraries (attempt to install from system)
     # ✅ 2026-01-07: Try system packages first, fallback to host mount if unavailable
     libgomp1 \
