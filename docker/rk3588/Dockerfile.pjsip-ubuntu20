@@ -1,0 +1,142 @@
+# ==============================================================================
+# PJSIP 专用编译环境 - Ubuntu 24.04 + OpenSSL 3.x + FFmpeg 完整支持
+# 用途：编译 PJSIP 静态库，包含视频通话所需的 FFmpeg 编解码器
+# 关键：必须使用与主程序相同的 OpenSSL 版本（3.x），并启用 FFmpeg 支持
+# 日期：2025-12-30（恢复 FFmpeg 支持）
+# ==============================================================================
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+
+# 配置 Ubuntu 24.04 APT 源（AMD64 + ARM64）
+# ⚠️ Ubuntu 24.04 使用新的 .sources 格式，需要先删除以避免冲突
+RUN rm -f /etc/apt/sources.list.d/ubuntu.sources && \
+    dpkg --add-architecture arm64 && \
+    echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu noble main restricted universe multiverse" > /etc/apt/sources.list && \
+    echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu noble-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu noble-backports main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=amd64] http://security.ubuntu.com/ubuntu noble-security main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-security main restricted universe multiverse" >> /etc/apt/sources.list
+
+# 更新包列表
+RUN apt-get update
+
+# ==============================================================================
+# 安装交叉编译工具链（GCC 13.x for ARM64，Ubuntu 24.04 默认）
+# ==============================================================================
+RUN apt-get install -y --no-install-recommends \
+    # 交叉编译工具链
+    crossbuild-essential-arm64 \
+    g++-aarch64-linux-gnu \
+    gcc-aarch64-linux-gnu \
+    # 构建工具
+    make \
+    cmake \
+    git \
+    pkg-config \
+    file \
+    tar \
+    wget \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ==============================================================================
+# 安装 PJSIP 编译所需的基础开发包（Ubuntu 24.04 官方源）
+# 关键：OpenSSL 3.x + FFmpeg 编解码器依赖库（与主程序编译环境一致）
+# 注意：FFmpeg 本身（libavcodec 等）来自 sysroot（设备 188 的 FFmpeg 4.4 + RKMPP）
+# ==============================================================================
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # ALSA 音频库开发包
+    libasound2-dev:arm64 \
+    # OpenSSL 开发包（TLS 支持）
+    libssl-dev:arm64 \
+    # 其他音频编解码器
+    libspeex-dev:arm64 \
+    libopus-dev:arm64 \
+    # 视频编解码器
+    libvpx-dev:arm64 \
+    # V4L2 支持
+    libv4l-dev:arm64 \
+    # SDL 1.2（PJSIP 需要 SDL 1.x，不是 SDL2）
+    libsdl1.2-dev:arm64 \
+    # UUID
+    uuid-dev:arm64 \
+    # FFmpeg 编解码器依赖库（不包括 FFmpeg 本身）
+    libx264-dev:arm64 \
+    libx265-dev:arm64 \
+    libmp3lame-dev:arm64 \
+    libvorbis-dev:arm64 \
+    libtheora-dev:arm64 \
+    libwebp-dev:arm64 \
+    libaom-dev:arm64 \
+    libcodec2-dev:arm64 \
+    libgsm1-dev:arm64 \
+    libopenjp2-7-dev:arm64 \
+    libshine-dev:arm64 \
+    libsnappy-dev:arm64 \
+    libtwolame-dev:arm64 \
+    libwavpack-dev:arm64 \
+    libxvidcore-dev:arm64 \
+    # 硬件加速支持
+    libva-dev:arm64 \
+    libvdpau-dev:arm64 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 验证 GCC 版本（应该是 GCC 13.x，Ubuntu 24.04 默认版本）
+RUN aarch64-linux-gnu-gcc --version
+
+# ==============================================================================
+# 重要：FFmpeg 从设备 188 复制（包含 FFmpeg 4.4 + RKMPP）
+# 不使用 Ubuntu 官方 FFmpeg 包！
+# 说明：build-ubuntu24-apt.ps1 会在容器启动时复制 FFmpeg 文件到此目录
+# ==============================================================================
+
+# 创建 sysroot 目录（构建脚本会复制 FFmpeg 头文件和库文件到这里）
+RUN mkdir -p /opt/rk3588-sysroot
+
+# 设置 pkg-config 路径
+# ⚠️ CRITICAL: 本地路径必须在前，这样 OpenSSL/ALSA 等基础库使用 Ubuntu 24.04 的版本
+# sysroot 路径在后，用于 FFmpeg 4.4 + RKMPP
+ENV PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/opt/rk3588-sysroot/usr/lib/pkgconfig
+# ⚠️ DISABLED: PKG_CONFIG_SYSROOT_DIR 会强制重定向所有库路径到 sysroot，导致 OpenSSL 链接失败
+# ENV PKG_CONFIG_SYSROOT_DIR=/opt/rk3588-sysroot
+
+# 设置编译环境变量
+ENV CC=aarch64-linux-gnu-gcc
+ENV CXX=aarch64-linux-gnu-g++
+ENV AR=aarch64-linux-gnu-ar
+ENV RANLIB=aarch64-linux-gnu-ranlib
+# ⚠️ CRITICAL: 头文件优先使用容器内的（OpenSSL, ALSA），然后才是 sysroot（FFmpeg）
+ENV CFLAGS="-fPIC -O2 -I/usr/include -I/usr/include/aarch64-linux-gnu -I/opt/rk3588-sysroot/usr/include -I/opt/rk3588-sysroot/usr/include/aarch64-linux-gnu"
+ENV CXXFLAGS="-fPIC -O2 -I/usr/include -I/usr/include/aarch64-linux-gnu -I/opt/rk3588-sysroot/usr/include -I/opt/rk3588-sysroot/usr/include/aarch64-linux-gnu"
+# ⚠️ CRITICAL: 库文件优先搜索容器内的（OpenSSL），然后才是 sysroot（FFmpeg）
+# ✅ 2026-01-10 00:55 [修复 101] 修正 LDFLAGS 优先级
+# 原因：链接器优先搜索容器中的宿主机库（/usr/lib/aarch64-linux-gnu），而不是目标 sysroot
+# 结果：configure 失败 "C compiler cannot create executables"
+# 解决：只搜索 sysroot 路径，移除宿主机库路径
+# 旧值（错误）：ENV LDFLAGS="-L/usr/lib/aarch64-linux-gnu -L/usr/lib -L/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu -L/opt/rk3588-sysroot/usr/lib"
+ENV LDFLAGS="-L/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu -L/opt/rk3588-sysroot/usr/lib -L/usr/lib/aarch64-linux-gnu"
+
+# 说明：
+# - Ubuntu 24.04 的 ALSA、OpenSSL 3.x 等开发包用于基础编译
+# - FFmpeg 编解码器依赖库（x264, x265, aom 等）来自 Ubuntu 24.04
+# - FFmpeg 本身（libavcodec, libavformat 等）来自 sysroot（设备 188 的 FFmpeg 4.4 + RKMPP）
+# - RKMPP 硬件加速从 sysroot 获取
+# - 最终生成的静态库（*.a）包含所有依赖，可在 Ubuntu 24.04 上使用
+
+# 工作目录
+WORKDIR /workspace
+
+# 创建验证脚本
+RUN echo '#!/bin/bash' > /check-env.sh && \
+    echo 'echo "=== PJSIP 编译环境检查 ===" ' >> /check-env.sh && \
+    echo 'echo "GCC 版本: $(aarch64-linux-gnu-gcc --version | head -n1)"' >> /check-env.sh && \
+    echo 'echo "Sysroot: $PKG_CONFIG_SYSROOT_DIR"' >> /check-env.sh && \
+    echo 'echo "PKG_CONFIG_PATH: $PKG_CONFIG_PATH"' >> /check-env.sh && \
+    echo 'ls -lh /opt/rk3588-sysroot/ 2>/dev/null || echo "⚠️  Sysroot 未挂载"' >> /check-env.sh && \
+    chmod +x /check-env.sh
+
+CMD ["/bin/bash"]
