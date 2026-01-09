@@ -117,3 +117,24 @@
  *   - Wireshark 抓包：Frame 73,75,77,79,90 - RTP 到 4006 而非 4002
  */
 #define PJSUA_VID_PREVIEW_DISABLE       1   /* 禁用 PJSIP 自动预览窗口 */
+
+/* ✅ 2026-01-09 23:30 [修复 98] 增加关键帧请求间隔，匹配 GOP 设置 */
+/* 问题：PJSIP 每 3 秒请求关键帧，导致关键帧频率从 10 秒缩短到 1-3 秒，CPU 负载增加 38.5 倍
+ * 根本原因：
+ *   1. 默认 PJSUA_VID_REQ_KEYFRAME_INTERVAL = 3000（3 秒）
+ *   2. 解码格式变化触发 KEYFRAME_MISSING 事件 → 每 3 秒请求一次关键帧
+ *   3. 编码器响应请求（通过 RTCP PLI/FIR）→ 实际关键帧间隔 1-3 秒（应该是 10 秒）
+ *   4. IDR 编码是 P 帧的 5-10 倍 CPU → 关键帧频率增加 7.7 倍 → CPU 负载增加 38.5 倍
+ * 证据：
+ *   - voip.md Line 1211, 2198, 3310: "Sending video keyframe request via SIP INFO"（每 3 秒）
+ *   - wir.md：关键帧间隔 1.28 秒（应该是 10 秒）
+ *   - GOP=250（10 秒 @ 25fps），但实际关键帧间隔只有 1-3 秒
+ * 解决方案：
+ *   - 将关键帧请求间隔从 3 秒增加到 10 秒，匹配 GOP 设置
+ *   - 预期效果：CPU 负载从 ~80% 降至 ~20%
+ * 参考：
+ *   - docs/2026-01-09/58-高CPU负载根本原因-PJSIP频繁请求关键帧.md
+ *   - docs/2026-01-09/57-Wireshark抓包分析-RKMPP编码器正常工作.md
+ *   - cross-compile/src/pjproject-2.16/pjsip/include/pjsua-lib/pjsua.h:381-382（默认值定义）
+ */
+#define PJSUA_VID_REQ_KEYFRAME_INTERVAL 10000  /* 关键帧请求间隔：10 秒（原值 3 秒）*/
