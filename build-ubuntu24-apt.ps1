@@ -1061,24 +1061,39 @@ if (Test-Path $MaliLibPath) {
 # These libraries include both RKMPP encoder and decoder from nyanmisaka/ffmpeg-rockchip fork
 # Hardware encoders: h264_rkmpp_encoder, hevc_rkmpp_encoder
 # Hardware decoders: h264_rkmpp, hevc_rkmpp, vp8_rkmpp
-$FFmpegHwLibPath = "$ProjectRoot\libs\ffmpeg-rkmpp-complete"
+# ✅ 2026-01-09 21:30 [FFmpeg 6.0] 修正库路径，指向 FFmpeg 6.0 真身
+# 原因：docker\rk3588\ffmpeg60-libs\opt\ffmpeg-rockchip 是 FFmpeg 6.0 库的实际位置
+# 旧路径 libs\ffmpeg-rkmpp-complete 已过期（FFmpeg 4.x 时代）
+$FFmpegHwLibPath = "$ProjectRoot\docker\rk3588\ffmpeg60-libs\opt\ffmpeg-rockchip\lib"
 if (Test-Path $FFmpegHwLibPath) {
     Write-Host "    Copying FFmpeg with RKMPP hardware encoder/decoder..." -ForegroundColor Yellow
 
-    # Copy FFmpeg libraries (libavcodec.so.58.54.100, etc.)
+    # ✅ 2026-01-09 21:30 [FFmpeg 6.0] 复制 FFmpeg 6.0 核心库（libavcodec.so.60.31.102, libavutil.so.58.29.100 等）
     $ffmpegLibs = Get-ChildItem -Path $FFmpegHwLibPath -Filter "libav*.so.*.*.*" -File
     foreach ($lib in $ffmpegLibs) {
         Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
         Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
     }
+    # 复制 libsw*（libswscale, libswresample）
     $ffmpegLibs = Get-ChildItem -Path $FFmpegHwLibPath -Filter "libsw*.so.*.*.*" -File
     foreach ($lib in $ffmpegLibs) {
         Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
         Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
     }
+    # ✅ 2026-01-09 21:30 [FFmpeg 6.0] 复制 libpostproc（FFmpeg 6.0 包含）
+    $ffmpegLibs = Get-ChildItem -Path $FFmpegHwLibPath -Filter "libpostproc.so.*.*.*" -File
+    foreach ($lib in $ffmpegLibs) {
+        Copy-Item $lib.FullName "$DockerContextDir\lib\" -Force -ErrorAction Stop
+        Write-Host "      Copied: $($lib.Name)" -ForegroundColor Gray
+    }
 
-    $totalSize = [math]::Round((Get-ChildItem -Path "$DockerContextDir\lib\libav*.so.*.*.*" | Measure-Object -Property Length -Sum).Sum / 1MB, 2)
-    Write-Host "    OK: FFmpeg libraries copied (${totalSize}MB with RKMPP encoder+decoder)" -ForegroundColor Green
+    # ✅ 2026-01-09 21:30 [FFmpeg 6.0] 统计所有 FFmpeg 6.0 库大小（libav*, libsw*, libpostproc*）
+    $totalSize = 0
+    $totalSize += (Get-ChildItem -Path "$DockerContextDir\lib\libav*.so.*.*.*" -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+    $totalSize += (Get-ChildItem -Path "$DockerContextDir\lib\libsw*.so.*.*.*" -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+    $totalSize += (Get-ChildItem -Path "$DockerContextDir\lib\libpostproc.so.*.*.*" -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+    $totalSize = [math]::Round($totalSize / 1MB, 2)
+    Write-Host "    OK: FFmpeg 6.0 libraries copied (${totalSize}MB with RKMPP encoder+decoder)" -ForegroundColor Green
 
     # ✅ 2026-01-09 20:10 [Fix 97 配套] 从 rk3588-libs 复制所有编解码器库到镜像
     # 原因：应用程序编译时链接了所有 FFmpeg 编解码器库，运行时必须提供
