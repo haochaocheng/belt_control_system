@@ -93,8 +93,25 @@ PROJECT_MEMORY.md → Node.js Hooks + HTTP Server → Python Hook
 
 ### 关键文件位置
 - 硬件解码器：`src/pjmedia-codec/rkmpp_h264_codec.c`
+- 硬件编码器：`cross-compile/src/pjproject-2.16/pjmedia/src/pjmedia-codec/ffmpeg_vid_codecs.c`
 - SIP 配置：`docker/rk3588/pjsip_config_site.h`
 - 视频管理：`src/sip_phone/RemoteVideoManager.cpp`
+
+### 🎬 视频编解码器配置（2026-01-09 新增）
+
+**编码器选择**（发送本地视频）:
+```bash
+# 默认：软件编码器 libx264（稳定可靠）
+USE_HARDWARE_ENCODER=0  # 或不设置
+
+# 可选：硬件编码器 h264_rkmpp（性能更好，可能不稳定）
+USE_HARDWARE_ENCODER=1
+```
+
+**解码器配置**（接收对方视频）:
+- ✅ 硬件解码器 `h264_rkmpp` 已启用（稳定工作）
+
+**详细文档**: [docs/2026-01-09/43-Fix97-添加硬件编码器开关.md](docs/2026-01-09/43-Fix97-添加硬件编码器开关.md)
 
 ### ⚠️ PJSIP 库路径（重要！2025-12-26）
 **编译时库路径**（交叉编译容器内）：
