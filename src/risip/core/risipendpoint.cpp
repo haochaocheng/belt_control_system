@@ -790,13 +790,18 @@ int RisipEndpoint::start()
             // 原因：h264_rkmpp 要求高度必须是 16 的倍数（H.264 宏块结构）
             // 360 = 16 × 22.5 ❌，368 = 16 × 23 ✅
             // 问题：V4L2 驱动不支持非标准分辨率 640x368，fallback 到 1280x720
-            // ✅ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480 @ 30fps
+            // ❌ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480 @ 30fps
             // 根据：docs/2026-01-11/06-摄像头支持分辨率调查结果.md
             // 理由：VGA 标准分辨率，100% 硬件支持，完美 16 像素对齐（640=16×40, 480=16×30）
+            // 问题：对方（PortSIP）发送 640x360，视频会议桥缩放为 768x432，编码器仍报-22错误
+            // ✅ 2026-01-11 04:20 [修复 100.34] 匹配对方分辨率 640x360，测试编码器是否接受
+            // 根据：docs/2026-01-11/10-Fix100.33失败分析-对方发送640x360导致缩放.md
+            // 理由：对方发送640x360，本地也用640x360，避免视频会议桥缩放
+            // 风险：360不是16倍数，但可以测试h264_rkmpp是否容忍
             pjmedia_format_init_video(&h264_param.enc_fmt,
                                      PJMEDIA_FORMAT_H264,  // H.264 format ID
-                                     640, 480,             // 640x480 resolution (VGA, hardware-supported)
-                                     30, 1);               // ✅ 30 fps (camera native framerate)
+                                     640, 360,             // 640x360 resolution (match remote)
+                                     30, 1);               // ✅ 30 fps
 
             // ❌ 2025-12-31 18:25 旧代码：30fps 解码器帧率过高
             // pjmedia_format_init_video(&h264_param.dec_fmt,
@@ -815,10 +820,11 @@ int RisipEndpoint::start()
             //                          25, 1);               // 25 fps（与编码器匹配）
             // ❌ 2025-12-31 20:20 旧代码：降低到 640x360，匹配对方实际分辨率
             // ❌ 2026-01-11 01:45 [修复 100.29] 修改为 640x368 以满足 16 像素对齐要求
-            // ✅ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480 @ 30fps
+            // ❌ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480 @ 30fps
+            // ✅ 2026-01-11 04:20 [修复 100.34] 匹配对方分辨率 640x360
             pjmedia_format_init_video(&h264_param.dec_fmt,
                                      PJMEDIA_FORMAT_I420,  // Raw YUV420 for decoder
-                                     640, 480,             // 640x480 resolution (VGA, hardware-supported)
+                                     640, 360,             // 640x360 resolution (match remote)
                                      30, 1);               // ✅ 30 fps (与编码器匹配)
 
             qDebug() << "✅ Format initialized: enc_fmt.detail_type=" << h264_param.enc_fmt.detail_type
@@ -845,9 +851,10 @@ int RisipEndpoint::start()
         // h264_param.enc_fmt.det.vid.size.h = 720;   // 720P height
         // ❌ 2025-12-31 20:20 旧代码：降低到 640x360，匹配对方实际分辨率，避免 RGA 缩放错误
         // ❌ 2026-01-11 01:45 [修复 100.29] 修改为 640x368 以满足 16 像素对齐要求
-        // ✅ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480
-        h264_param.enc_fmt.det.vid.size.w = 640;   // 640x480 width (VGA)
-        h264_param.enc_fmt.det.vid.size.h = 480;   // 640x480 height (16-pixel aligned)
+        // ❌ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480
+        // ✅ 2026-01-11 04:20 [修复 100.34] 匹配对方分辨率 640x360
+        h264_param.enc_fmt.det.vid.size.w = 640;   // 640x360 width
+        h264_param.enc_fmt.det.vid.size.h = 360;   // 640x360 height (match remote)
 
         // ❌ 2025-12-31 18:25 旧代码：30fps 解码器帧率过高
         // h264_param.dec_fmt.det.vid.fps.num = 30;
@@ -870,8 +877,9 @@ int RisipEndpoint::start()
             // qDebug() << "✅ H264 video codec configured: 1280x720 (720P) @ 25fps (TX), 25fps (RX) - using V4L2 default frame rate";
             // ❌ 2025-12-31 20:20 旧代码：更新日志使用 640x360 @ 25fps
             // ❌ 2026-01-11 01:45 [修复 100.29] 更新为 640x368（16像素对齐）
-            // ✅ 2026-01-11 03:30 [修复 100.32] 更新为 640x480 @ 30fps（摄像头硬件支持）
-            qDebug() << "✅ H264 video codec configured: 640x480 (VGA) @ 30fps (TX/RX) - camera hardware-supported resolution";
+            // ❌ 2026-01-11 03:30 [修复 100.32] 更新为 640x480 @ 30fps（摄像头硬件支持）
+            // ✅ 2026-01-11 04:20 [修复 100.34] 更新为 640x360 @ 30fps（匹配对方分辨率）
+            qDebug() << "✅ H264 video codec configured: 640x360 @ 30fps (TX/RX) - match remote PortSIP resolution";
         } else {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(vid_status, errmsg, sizeof(errmsg));
