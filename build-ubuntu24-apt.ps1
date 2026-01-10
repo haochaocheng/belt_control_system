@@ -1687,11 +1687,24 @@ $runScript = $runScript -replace "DEVICE_USER_PLACEHOLDER", $DeviceUser
 $runScript = $runScript -replace "IMAGE_NAME_PLACEHOLDER", $AppImageName
 $runScript = $runScript -replace "IMAGE_TAG_PLACEHOLDER", $AppImageTag
 
-# 修复：转换为 Unix 换行符（LF）- 日期：2026-01-10 17:00
+# 修复：转换为 Unix 换行符（LF）- 日期：2026-01-10 17:30
 # 原因：Windows CRLF（\r\n）导致 bash 5.0 无法识别 fi 关键字
+# 问题：PowerShell 管道会重新添加 CRLF
+# 解决：先保存到临时文件（UTF8 without BOM），然后 scp 上传
 $runScript = $runScript -replace "`r`n", "`n"
 
-$runScript | ssh "${DeviceUser}@${DeviceIP}" "cat > /home/$DeviceUser/run-ubuntu24-apt.sh && chmod +x /home/$DeviceUser/run-ubuntu24-apt.sh"
+# 保存到临时文件（UTF8 without BOM，Unix LF）
+$TempScriptFile = Join-Path $env:TEMP "run-ubuntu24-apt.sh"
+$Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
+[System.IO.File]::WriteAllText($TempScriptFile, $runScript, $Utf8NoBomEncoding)
+
+# 使用 scp 上传（避免管道添加 CRLF）
+$env:SSHPASS = $DevicePassword
+& sshpass -e scp $TempScriptFile "${DeviceUser}@${DeviceIP}:/home/$DeviceUser/run-ubuntu24-apt.sh"
+& sshpass -e ssh "${DeviceUser}@${DeviceIP}" "chmod +x /home/$DeviceUser/run-ubuntu24-apt.sh"
+
+# 清理临时文件
+Remove-Item $TempScriptFile -Force -ErrorAction SilentlyContinue
 
 Write-Host "  [OK] Run script created: /home/$DeviceUser/run-ubuntu24-apt.sh" -ForegroundColor Green
 Write-Host ""
