@@ -798,9 +798,12 @@ int RisipEndpoint::start()
             // 根据：docs/2026-01-11/10-Fix100.33失败分析-对方发送640x360导致缩放.md
             // 理由：对方发送640x360，本地也用640x360，避免视频会议桥缩放
             // 风险：360不是16倍数，但可以测试h264_rkmpp是否容忍
+            // ✅ 2026-01-11 11:20 [修复 100.37] 改回 VGA 640x480（对方已切换到 VGA）
+            // 根据：V4L2 不支持 I420@640x360（只支持 MJPEG@640x360），对方已切换到 VGA
+            // 优点：YUYV@640x480 @ 30fps 未压缩格式，完美 16 像素对齐（640=16×40, 480=16×30）
             pjmedia_format_init_video(&h264_param.enc_fmt,
                                      PJMEDIA_FORMAT_H264,  // H.264 format ID
-                                     640, 360,             // 640x360 resolution (match remote)
+                                     640, 480,             // VGA resolution (perfect 16-aligned)
                                      30, 1);               // ✅ 30 fps
 
             // ❌ 2025-12-31 18:25 旧代码：30fps 解码器帧率过高
@@ -822,9 +825,10 @@ int RisipEndpoint::start()
             // ❌ 2026-01-11 01:45 [修复 100.29] 修改为 640x368 以满足 16 像素对齐要求
             // ❌ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480 @ 30fps
             // ✅ 2026-01-11 04:20 [修复 100.34] 匹配对方分辨率 640x360
+            // ✅ 2026-01-11 11:20 [修复 100.37] 改回 VGA 640x480
             pjmedia_format_init_video(&h264_param.dec_fmt,
                                      PJMEDIA_FORMAT_I420,  // Raw YUV420 for decoder
-                                     640, 360,             // 640x360 resolution (match remote)
+                                     640, 480,             // VGA resolution
                                      30, 1);               // ✅ 30 fps (与编码器匹配)
 
             qDebug() << "✅ Format initialized: enc_fmt.detail_type=" << h264_param.enc_fmt.detail_type
@@ -853,8 +857,9 @@ int RisipEndpoint::start()
         // ❌ 2026-01-11 01:45 [修复 100.29] 修改为 640x368 以满足 16 像素对齐要求
         // ❌ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480
         // ✅ 2026-01-11 04:20 [修复 100.34] 匹配对方分辨率 640x360
-        h264_param.enc_fmt.det.vid.size.w = 640;   // 640x360 width
-        h264_param.enc_fmt.det.vid.size.h = 360;   // 640x360 height (match remote)
+        // ✅ 2026-01-11 11:20 [修复 100.37] 改回 VGA 640x480
+        h264_param.enc_fmt.det.vid.size.w = 640;   // VGA width
+        h264_param.enc_fmt.det.vid.size.h = 480;   // VGA height (perfect 16-aligned)
 
         // ❌ 2025-12-31 18:25 旧代码：30fps 解码器帧率过高
         // h264_param.dec_fmt.det.vid.fps.num = 30;
@@ -879,7 +884,8 @@ int RisipEndpoint::start()
             // ❌ 2026-01-11 01:45 [修复 100.29] 更新为 640x368（16像素对齐）
             // ❌ 2026-01-11 03:30 [修复 100.32] 更新为 640x480 @ 30fps（摄像头硬件支持）
             // ✅ 2026-01-11 04:20 [修复 100.34] 更新为 640x360 @ 30fps（匹配对方分辨率）
-            qDebug() << "✅ H264 video codec configured: 640x360 @ 30fps (TX/RX) - match remote PortSIP resolution";
+            // ✅ 2026-01-11 11:20 [修复 100.37] 改回 VGA 640x480（对方已切换到 VGA）
+            qDebug() << "✅ H264 video codec configured: 640x480 (VGA) @ 30fps (TX/RX) - standard VGA resolution";
         } else {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(vid_status, errmsg, sizeof(errmsg));

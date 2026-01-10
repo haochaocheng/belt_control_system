@@ -140,10 +140,11 @@ void LocalVideoManager::startPreview()
         // 使用与通话相同的分辨率和帧率（640x360 @ 25fps）
         // ❌ 2026-01-11 01:45 [修复 100.29] 修改为 640x368（16像素对齐）
         // ❌ 2026-01-11 04:00 [修复 100.33] 修改为 640x480 @ 30fps（摄像头硬件支持）
-        // ✅ 2026-01-11 04:20 [修复 100.34] 修改为 640x360 @ 30fps（匹配对方）
-        pjmedia_format_init_video(&vp_param.vidparam.fmt, PJMEDIA_FORMAT_I420, 640, 360, 30, 1);
+        // ❌ 2026-01-11 04:20 [修复 100.34] 修改为 640x360 @ 30fps（匹配对方）
+        // ✅ 2026-01-11 11:20 [修复 100.37] 改回 VGA 640x480（对方已切换到 VGA）
+        pjmedia_format_init_video(&vp_param.vidparam.fmt, PJMEDIA_FORMAT_I420, 640, 480, 30, 1);
         vp_param.vidparam.disp_size.w = 640;
-        vp_param.vidparam.disp_size.h = 360;
+        vp_param.vidparam.disp_size.h = 480;
         vp_param.vidparam.flags = PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;  // 隐藏SDL窗口
         vp_param.vidparam.window_hide = PJ_TRUE;
 
@@ -265,11 +266,12 @@ fallback:
     // ✅ 配置摄像头：640x360 @ 25fps，匹配通话分辨率
     // ❌ 2026-01-11 01:45 [修复 100.29] 修改为 640x368（16像素对齐）
     // ❌ 2026-01-11 04:00 [修复 100.33] 修改为 640x480 @ 30fps（摄像头硬件支持）
-    // ✅ 2026-01-11 04:20 [修复 100.34] 修改为 640x360 @ 30fps（匹配对方）
-    pjmedia_format_init_video(&param.format, PJMEDIA_FORMAT_YUY2, 640, 360, 30, 1);
+    // ❌ 2026-01-11 04:20 [修复 100.34] 修改为 640x360 @ 30fps（匹配对方）
+    // ✅ 2026-01-11 11:20 [修复 100.37] 改回 VGA 640x480（对方已切换到 VGA）
+    pjmedia_format_init_video(&param.format, PJMEDIA_FORMAT_YUY2, 640, 480, 30, 1);
     param.show = PJ_FALSE;  // 隐藏SDL窗口
 
-    qDebug() << "📹 Creating independent preview: 640x360 @ 30fps (YUY2), SDL window hidden";
+    qDebug() << "📹 Creating independent preview: 640x480 (VGA) @ 30fps (YUY2), SDL window hidden";
 
     pj_status_t status = pjsua_vid_preview_start(m_captureDevId, &param);
     if (status != PJ_SUCCESS) {
