@@ -526,10 +526,14 @@ int RisipEndpoint::start()
 
     // Video default is controlled by PJSUA_DEFAULT_VID_CNT in config_site.h (set to 0)
 
-    // ✅ CRITICAL FIX: Set default video capture device globally BEFORE libInit
-    // This ensures PJSIP uses device 0 when creating video windows
-    // Must be done AFTER libCreate() but BEFORE libInit()
-    m_data->endpointConfig.medConfig.vidPreviewEnableNative = false;  // Disable auto-preview
+    // ❌ 2025-XX-XX 旧代码：运行时禁用预览窗口（无效，已废弃）
+    // 问题：vidPreviewEnableNative 只禁用"native"预览，PJSIP 仍会创建 SDL 预览窗口
+    // 结果：导致视频端口从 4002 变为 4006，SDP 不匹配 → 无法接收视频
+    // 日志证据：pjsua_vid.c "Creating video window: type=preview, cap_id=1"
+    // ✅ 2026-01-02 14:00 [修复 29]
+    // 已在 pjsip_config_site.h 中添加 PJSUA_VID_PREVIEW_DISABLE 1 编译时禁用
+    // 参考：docs/2026-01-02/视频端口不匹配问题-PJSIP预览窗口分析.md
+    // m_data->endpointConfig.medConfig.vidPreviewEnableNative = false;  // ← 无效，已禁用
 
     try {
         m_data->pjsipEndpoint->libCreate();
@@ -597,6 +601,63 @@ int RisipEndpoint::start()
     // ✅ NOTE: Global default device NOT needed here
     // The cap_id=-1 bug is fixed at PJSIP source level (pjsua_vid.c:1224)
     // PJSIP now uses call_med->strm.v.cap_dev (account-level config) instead of hardcoded -1
+
+    // ✅ 2026-01-10 13:30 [修复 100.10.1] 智能选择音频设备，避免使用无效设备
+    // 问题：pjsua_set_snd_dev(0, 0) 失败，错误 PJMEDIA_EAUD_INVDEV (420004)
+    // 根因：ALSA 找到 11 个设备，但设备 0 不可用
+    // 解决：枚举所有音频设备，找到第一个可用的设备；如果都失败，使用 null audio device
+    // 证据：docs/log/voip.md "Error retrieving default audio device parameters: Invalid audio device"
+    qDebug() << "🎵 [AUDIO DEV] Configuring global audio device (fix PJMEDIA_EAUD_NODEFDEV)...";
+
+    // 枚举所有音频设备
+    unsigned aud_dev_count = pjmedia_aud_dev_count();
+    qDebug() << "  Total audio devices:" << aud_dev_count;
+
+    int first_valid_dev = -1;
+    for (unsigned i = 0; i < aud_dev_count; ++i) {
+        pjmedia_aud_dev_info dev_info;
+        pj_status_t status = pjmedia_aud_dev_get_info(i, &dev_info);
+        if (status == PJ_SUCCESS) {
+            QString dev_name = QString::fromUtf8(dev_info.name);
+            qDebug() << "    Device" << i << ":" << dev_name
+                     << "| Caps:" << dev_info.input_count << "in /" << dev_info.output_count << "out"
+                     << "| Driver:" << dev_info.driver;
+
+            // 跳过 "default" 设备（可能不工作）
+            if (first_valid_dev == -1 &&
+                dev_info.input_count > 0 && dev_info.output_count > 0 &&
+                !dev_name.contains("default", Qt::CaseInsensitive)) {
+                first_valid_dev = i;
+                qDebug() << "      ✅ Selected as first valid device";
+            }
+        }
+    }
+
+    // 尝试设置音频设备
+    pj_status_t snd_status = PJ_ENOTFOUND;
+
+    if (first_valid_dev != -1) {
+        // 尝试使用第一个有效设备
+        qDebug() << "  Trying device" << first_valid_dev << "...";
+        snd_status = pjsua_set_snd_dev(first_valid_dev, first_valid_dev);
+        if (snd_status == PJ_SUCCESS) {
+            qDebug() << "  ✅ Global audio device set:" << "capture=" << first_valid_dev << ", playback=" << first_valid_dev;
+        } else {
+            qDebug() << "  ⚠️ Device" << first_valid_dev << "failed (status=" << snd_status << ")";
+        }
+    }
+
+    // 如果所有设备都失败，使用 null audio device
+    if (snd_status != PJ_SUCCESS) {
+        qDebug() << "  ⚠️ All devices failed, trying null audio device...";
+        snd_status = pjsua_set_null_snd_dev();
+        if (snd_status == PJ_SUCCESS) {
+            qDebug() << "  ✅ Null audio device enabled (no real audio, but calls will work)";
+        } else {
+            qDebug() << "  ❌ Even null audio device failed (status=" << snd_status << ")";
+            qDebug() << "     Video calls may fail - check ALSA configuration";
+        }
+    }
 
     // ✅ 2025-12-31 关键修复：减少音频编解码器以避免 IP 分片
     // 原因：INVITE 消息 1682 字节 > MTU 1500 字节，导致 IP 分片，PortSIP 无响应
@@ -709,15 +770,56 @@ int RisipEndpoint::start()
                      << "), initializing manually...";
 
             // Initialize format structures properly
+            // ❌ 2025-12-31 18:25 旧代码：25fps 编码器帧率过高，导致摄像头资源冲突
+            // pjmedia_format_init_video(&h264_param.enc_fmt,
+            //                          PJMEDIA_FORMAT_H264,  // H.264 format ID
+            //                          1280, 720,            // 720P resolution
+            //                          25, 1);               // 25 fps
+            // ❌ 2025-12-31 19:15 旧代码：降低到 15fps，但测试发现 15fps 反而更糟（V4L2 驱动不稳定）
+            // pjmedia_format_init_video(&h264_param.enc_fmt,
+            //                          PJMEDIA_FORMAT_H264,  // H.264 format ID
+            //                          1280, 720,            // 720P resolution
+            //                          15, 1);               // 15 fps
+            // ❌ 2025-12-31 19:50 旧代码：使用 25fps（V4L2 默认值），但 1280x720 导致 RGA 缩放失败
+            // pjmedia_format_init_video(&h264_param.enc_fmt,
+            //                          PJMEDIA_FORMAT_H264,  // H.264 format ID
+            //                          1280, 720,            // 720P resolution
+            //                          25, 1);               // 25 fps（V4L2 默认值）
+            // ❌ 2025-12-31 20:20 旧代码：降低到 640x360，匹配对方实际分辨率，避免 RGA 缩放错误
+            // ❌ 2026-01-11 01:45 [修复 100.29] 修改为 640x368 以满足 h264_rkmpp 的 16 像素对齐要求
+            // 原因：h264_rkmpp 要求高度必须是 16 的倍数（H.264 宏块结构）
+            // 360 = 16 × 22.5 ❌，368 = 16 × 23 ✅
+            // 问题：V4L2 驱动不支持非标准分辨率 640x368，fallback 到 1280x720
+            // ✅ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480 @ 30fps
+            // 根据：docs/2026-01-11/06-摄像头支持分辨率调查结果.md
+            // 理由：VGA 标准分辨率，100% 硬件支持，完美 16 像素对齐（640=16×40, 480=16×30）
             pjmedia_format_init_video(&h264_param.enc_fmt,
                                      PJMEDIA_FORMAT_H264,  // H.264 format ID
-                                     1280, 720,            // 720P resolution
-                                     25, 1);               // 25 fps
+                                     640, 480,             // 640x480 resolution (VGA, hardware-supported)
+                                     30, 1);               // ✅ 30 fps (camera native framerate)
 
+            // ❌ 2025-12-31 18:25 旧代码：30fps 解码器帧率过高
+            // pjmedia_format_init_video(&h264_param.dec_fmt,
+            //                          PJMEDIA_FORMAT_I420,  // Raw YUV420 for decoder
+            //                          1280, 720,            // 720P resolution
+            //                          30, 1);               // Support up to 30fps
+            // ❌ 2025-12-31 19:15 旧代码：降低到 15fps
+            // pjmedia_format_init_video(&h264_param.dec_fmt,
+            //                          PJMEDIA_FORMAT_I420,  // Raw YUV420 for decoder
+            //                          1280, 720,            // 720P resolution
+            //                          15, 1);               // 15 fps
+            // ❌ 2025-12-31 19:50 旧代码：使用 25fps，但 1280x720 导致 RGA 缩放失败
+            // pjmedia_format_init_video(&h264_param.dec_fmt,
+            //                          PJMEDIA_FORMAT_I420,  // Raw YUV420 for decoder
+            //                          1280, 720,            // 720P resolution
+            //                          25, 1);               // 25 fps（与编码器匹配）
+            // ❌ 2025-12-31 20:20 旧代码：降低到 640x360，匹配对方实际分辨率
+            // ❌ 2026-01-11 01:45 [修复 100.29] 修改为 640x368 以满足 16 像素对齐要求
+            // ✅ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480 @ 30fps
             pjmedia_format_init_video(&h264_param.dec_fmt,
                                      PJMEDIA_FORMAT_I420,  // Raw YUV420 for decoder
-                                     1280, 720,            // 720P resolution
-                                     30, 1);               // Support up to 30fps
+                                     640, 480,             // 640x480 resolution (VGA, hardware-supported)
+                                     30, 1);               // ✅ 30 fps (与编码器匹配)
 
             qDebug() << "✅ Format initialized: enc_fmt.detail_type=" << h264_param.enc_fmt.detail_type
                      << ", dec_fmt.detail_type=" << h264_param.dec_fmt.detail_type;
@@ -727,23 +829,49 @@ int RisipEndpoint::start()
         qDebug() << "    TX size:" << h264_param.enc_fmt.det.vid.size.w << "x" << h264_param.enc_fmt.det.vid.size.h;
         qDebug() << "    TX fps:" << h264_param.enc_fmt.det.vid.fps.num << "/" << h264_param.enc_fmt.det.vid.fps.denum;
 
-        // ✅ Set encoder to 25 fps for smooth video (was 15fps by default)
-        h264_param.enc_fmt.det.vid.fps.num = 25;
+        // ❌ 2025-12-31 18:25 旧代码：25fps 导致摄像头资源冲突，V4L2 "Device or resource busy"
+        // h264_param.enc_fmt.det.vid.fps.num = 25;
+        // h264_param.enc_fmt.det.vid.fps.denum = 1;
+        // ❌ 2025-12-31 19:15 旧代码：降低到 15fps，但测试发现 15fps 反而更糟
+        // h264_param.enc_fmt.det.vid.fps.num = 15;
+        // h264_param.enc_fmt.det.vid.fps.denum = 1;
+        // ❌ 2025-12-31 19:50 旧代码：使用 25fps（V4L2 默认值），驱动稳定性最佳
+        // ✅ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 30fps
+        h264_param.enc_fmt.det.vid.fps.num = 30;  // ✅ 30 fps（摄像头原生帧率）
         h264_param.enc_fmt.det.vid.fps.denum = 1;
 
-        // ✅ ATTEMPT 14: Change to 720P (1280x720) - standard resolution supported by PortSIP UC Client
-        // PortSIP UC Client supports: CIF (352×288), 720P (1280×720), 1080P (1920×1080)
-        // Our previous 720x480 is not a standard resolution and was rejected
-        h264_param.enc_fmt.det.vid.size.w = 1280;  // 720P width
-        h264_param.enc_fmt.det.vid.size.h = 720;   // 720P height
+        // ❌ 2025-12-31 20:20 旧代码：1280x720 导致 RGA 缩放失败（DMA buffer handle 空指针）
+        // h264_param.enc_fmt.det.vid.size.w = 1280;  // 720P width
+        // h264_param.enc_fmt.det.vid.size.h = 720;   // 720P height
+        // ❌ 2025-12-31 20:20 旧代码：降低到 640x360，匹配对方实际分辨率，避免 RGA 缩放错误
+        // ❌ 2026-01-11 01:45 [修复 100.29] 修改为 640x368 以满足 16 像素对齐要求
+        // ✅ 2026-01-11 03:30 [修复 100.32] 使用摄像头硬件支持的 640x480
+        h264_param.enc_fmt.det.vid.size.w = 640;   // 640x480 width (VGA)
+        h264_param.enc_fmt.det.vid.size.h = 480;   // 640x480 height (16-pixel aligned)
 
-        // Decoder supports up to 30fps for incoming video
-        h264_param.dec_fmt.det.vid.fps.num = 30;
+        // ❌ 2025-12-31 18:25 旧代码：30fps 解码器帧率过高
+        // h264_param.dec_fmt.det.vid.fps.num = 30;
+        // h264_param.dec_fmt.det.vid.fps.denum = 1;
+        // ❌ 2025-12-31 19:15 旧代码：降低到 15fps
+        // h264_param.dec_fmt.det.vid.fps.num = 15;
+        // h264_param.dec_fmt.det.vid.fps.denum = 1;
+        // ❌ 2025-12-31 19:50 旧代码：使用 25fps，与编码器帧率匹配
+        // ✅ 2026-01-11 03:30 [修复 100.32] 使用 30fps，与编码器帧率匹配
+        h264_param.dec_fmt.det.vid.fps.num = 30;  // ✅ 30 fps（与编码器匹配）
         h264_param.dec_fmt.det.vid.fps.denum = 1;
 
         vid_status = pjsua_vid_codec_set_param(&h264_codec_id, &h264_param);
         if (vid_status == PJ_SUCCESS) {
-            qDebug() << "✅ H264 video codec configured: 1280x720 (720P) @ 25fps (TX), up to 30fps (RX)";
+            // ❌ 2025-12-31 18:25 旧代码：日志消息未更新，与实际帧率不符
+            // qDebug() << "✅ H264 video codec configured: 1280x720 (720P) @ 25fps (TX), up to 30fps (RX)";
+            // ❌ 2025-12-31 19:15 旧代码：更新日志但使用 15fps
+            // qDebug() << "✅ H264 video codec configured: 1280x720 (720P) @ 15fps (TX), 15fps (RX) - optimized for camera resource sharing";
+            // ❌ 2025-12-31 19:50 旧代码：更新日志使用 25fps 但 1280x720
+            // qDebug() << "✅ H264 video codec configured: 1280x720 (720P) @ 25fps (TX), 25fps (RX) - using V4L2 default frame rate";
+            // ❌ 2025-12-31 20:20 旧代码：更新日志使用 640x360 @ 25fps
+            // ❌ 2026-01-11 01:45 [修复 100.29] 更新为 640x368（16像素对齐）
+            // ✅ 2026-01-11 03:30 [修复 100.32] 更新为 640x480 @ 30fps（摄像头硬件支持）
+            qDebug() << "✅ H264 video codec configured: 640x480 (VGA) @ 30fps (TX/RX) - camera hardware-supported resolution";
         } else {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(vid_status, errmsg, sizeof(errmsg));
