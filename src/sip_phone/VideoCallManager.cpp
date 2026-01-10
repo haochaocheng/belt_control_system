@@ -81,26 +81,52 @@ bool VideoCallManager::initVideoSubsystem()
 
     status = pjsua_vid_codec_get_param(&h264_codec_id, &h264_param);
     if (status == PJ_SUCCESS) {
+        // ✅ CRITICAL: Check if format structure is initialized before accessing det.vid
+        // If detail_type is not PJMEDIA_FORMAT_DETAIL_VIDEO, calling det.vid will crash
+        // This happens when default_attr() hasn't been called yet (e.g. manual codec registration)
+        if (h264_param.enc_fmt.detail_type != PJMEDIA_FORMAT_DETAIL_VIDEO) {
+            qDebug() << "⚠️ H264 format not initialized (detail_type=" << h264_param.enc_fmt.detail_type
+                     << "), initializing manually...";
+
+            // Initialize format structures properly
+            // ❌ 2025-12-31 旧代码：1280x720 @ 25fps
+            // ✅ 2026-01-11 11:35 [修复 100.37.1] 改为 VGA 640x480 @ 30fps（匹配 RisipEndpoint 配置）
+            pjmedia_format_init_video(&h264_param.enc_fmt,
+                                     PJMEDIA_FORMAT_H264,  // H.264 format ID
+                                     640, 480,             // VGA resolution
+                                     30, 1);               // 30 fps
+
+            // ❌ 2025-12-31 旧代码：1280x720 @ 60fps
+            // ✅ 2026-01-11 11:35 [修复 100.37.1] 改为 VGA 640x480 @ 30fps
+            pjmedia_format_init_video(&h264_param.dec_fmt,
+                                     PJMEDIA_FORMAT_I420,  // Raw YUV420 for decoder
+                                     640, 480,             // VGA resolution
+                                     30, 1);               // 30 fps
+
+            qDebug() << "✅ Format initialized: enc_fmt.detail_type=" << h264_param.enc_fmt.detail_type
+                     << ", dec_fmt.detail_type=" << h264_param.dec_fmt.detail_type;
+        }
+
         qDebug() << "  Current H264 encoder FPS:" << h264_param.enc_fmt.det.vid.fps.num
                  << "/" << h264_param.enc_fmt.det.vid.fps.denum;
 
-        // ✅ ATTEMPT 14: Set encoder to 720P (1280x720) @ 25fps - STANDARD resolution
-        // This matches RisipEndpoint configuration and PortSIP UC Client requirements
-        // PortSIP UC Client supports: CIF (352×288), 720P (1280×720), 1080P (1920×1080)
-        h264_param.enc_fmt.det.vid.fps.num = 25;  // Match RisipEndpoint config (was 45)
+        // ❌ ATTEMPT 14 旧代码: Set encoder to 720P (1280x720) @ 25fps
+        // ✅ 2026-01-11 11:35 [修复 100.37.1] 改为 VGA 640x480 @ 30fps（匹配 RisipEndpoint 配置）
+        h264_param.enc_fmt.det.vid.fps.num = 30;  // 30 fps
         h264_param.enc_fmt.det.vid.fps.denum = 1;
 
-        // Set resolution to 720P (1280x720) - STANDARD resolution supported by PortSIP UC Client
-        h264_param.enc_fmt.det.vid.size.w = 1280;  // 720P width (was 720)
-        h264_param.enc_fmt.det.vid.size.h = 720;   // 720P height (was 480)
+        // Set resolution to VGA (640x480) - 匹配 RisipEndpoint 配置和对方分辨率
+        h264_param.enc_fmt.det.vid.size.w = 640;   // VGA width
+        h264_param.enc_fmt.det.vid.size.h = 480;   // VGA height
 
-        // Decoder can adapt to incoming stream - support up to 60fps for remote party's high frame rate
-        h264_param.dec_fmt.det.vid.fps.num = 60;  // Support up to 60fps (was 30)
+        // Decoder to match encoder - 30fps
+        h264_param.dec_fmt.det.vid.fps.num = 30;   // 30 fps
         h264_param.dec_fmt.det.vid.fps.denum = 1;
 
         status = pjsua_vid_codec_set_param(&h264_codec_id, &h264_param);
         if (status == PJ_SUCCESS) {
-            qDebug() << "✅ H264 encoder configured: 1280x720 (720P) @ 25fps (TX), up to 60fps (RX)";
+            // ✅ 2026-01-11 11:35 [修复 100.37.1] 更新日志消息为 VGA 640x480 @ 30fps
+            qDebug() << "✅ H264 encoder configured: 640x480 (VGA) @ 30fps (TX/RX)";
         } else {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(status, errmsg, sizeof(errmsg));
@@ -112,44 +138,15 @@ bool VideoCallManager::initVideoSubsystem()
         qWarning() << "⚠️ Failed to get H264 encoder params:" << errmsg;
     }
 
-    // ✅ CRITICAL: Configure H264 codec parameters to match remote offer
-    // Remote offers: profile-level-id=42001f, packetization-mode=1
-    // We need to configure our H264 to accept these parameters
-    qDebug() << "📹 Configuring H264 codec parameters...";
-
-    pjmedia_vid_codec_param codec_param;
-    pj_str_t codec_id = pj_str((char*)"H264");
-
-    // Get current H264 codec parameters
-    status = pjsua_vid_codec_get_param(&codec_id, &codec_param);
-    if (status == PJ_SUCCESS) {
-        qDebug() << "  Current H264 config:";
-        qDebug() << "    dir:" << codec_param.dir;
-        qDebug() << "    packing:" << codec_param.packing;
-        qDebug() << "    enc_fmt.id:" << codec_param.enc_fmt.id;
-
-        // ✅ Set H264 parameters to match remote offer
-        // profile-level-id=42001f = Baseline Profile (42), Level 3.1 (001f)
-        codec_param.dir = PJMEDIA_DIR_ENCODING_DECODING;  // Both directions
-
-        // ✅ CRITICAL: Set H264 profile and level
-        // These are stored in enc_fmt.id for H.264
-        // We need to support packetization-mode=1 and profile 42 (Baseline)
-
-        // Apply the modified parameters
-        status = pjsua_vid_codec_set_param(&codec_id, &codec_param);
-        if (status == PJ_SUCCESS) {
-            qDebug() << "✅ H264 codec parameters configured successfully";
-        } else {
-            char errmsg[PJ_ERR_MSG_SIZE];
-            pj_strerror(status, errmsg, sizeof(errmsg));
-            qWarning() << "❌ Failed to set H264 parameters:" << errmsg;
-        }
-    } else {
-        char errmsg[PJ_ERR_MSG_SIZE];
-        pj_strerror(status, errmsg, sizeof(errmsg));
-        qWarning() << "❌ Failed to get H264 parameters:" << errmsg;
-    }
+    // 🚫 REMOVED: Manual codec parameter configuration
+    // REASON: Causes crash because pjsua_vid_codec_get_param() returns uninitialized
+    // parameters (enc_fmt.detail_type=0) when default_attr() hasn't been called yet.
+    // PJSIP will automatically negotiate codec parameters during call setup.
+    // See format.c:138 assertion failure in pjmedia_format_get_video_format_detail()
+    //
+    // Previously attempted to set: codec_param.dir = PJMEDIA_DIR_ENCODING_DECODING
+    // But this broke the format structure. PJSIP's default codec negotiation works fine.
+    qDebug() << "✅ Using PJSIP's automatic H264 codec parameter negotiation";
 
     // ✅ Also check and configure video codec priorities
     pjsua_codec_info vid_codecs[32];
