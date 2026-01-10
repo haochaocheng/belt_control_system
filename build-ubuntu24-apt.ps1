@@ -1699,9 +1699,8 @@ $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 [System.IO.File]::WriteAllText($TempScriptFile, $runScript, $Utf8NoBomEncoding)
 
 # 使用 scp 上传（避免管道添加 CRLF）
-$env:SSHPASS = $DevicePassword
-& sshpass -e scp $TempScriptFile "${DeviceUser}@${DeviceIP}:/home/$DeviceUser/run-ubuntu24-apt.sh"
-& sshpass -e ssh "${DeviceUser}@${DeviceIP}" "chmod +x /home/$DeviceUser/run-ubuntu24-apt.sh"
+scp $TempScriptFile "${DeviceUser}@${DeviceIP}:/home/$DeviceUser/run-ubuntu24-apt.sh"
+ssh "${DeviceUser}@${DeviceIP}" "chmod +x /home/$DeviceUser/run-ubuntu24-apt.sh"
 
 # 清理临时文件
 Remove-Item $TempScriptFile -Force -ErrorAction SilentlyContinue
