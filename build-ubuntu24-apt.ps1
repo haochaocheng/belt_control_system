@@ -16,8 +16,8 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # Parse device parameter and setup configuration linaro
 # ============================================================
-$DeviceUser = "linaro"
-$DevicePassword = "linaro"
+$DeviceUser = "pi"
+$DevicePassword = "pi"
 
 switch -Regex ($Device) {
     "^151$" {
@@ -1609,14 +1609,30 @@ if [ $EXIT_CODE -ne 0 ]; then
 fi
 
 # ============================================================
-# 自动 Core Dump 分析（exit code 139 - SIGSEGV）
-# 日期：2026-01-10 16:45
-# 功能：检测到段错误时自动分析 Core Dump 并显示崩溃原因
+# 自动 Core Dump 分析（多种崩溃信号）
+# 日期：2026-01-10 16:45（初版），2026-01-11 11:40（扩展）
+# 功能：检测到各种崩溃时自动分析 Core Dump 并显示崩溃原因
+# 支持的 exit code：
+#   139 = 128+11 = SIGSEGV（段错误）
+#   133 = 128+5  = SIGTRAP（调试陷阱，free() 检测到内存错误）
+#   134 = 128+6  = SIGABRT（中止，assert/abort）
+#   135 = 128+7  = SIGBUS（总线错误）
+#   136 = 128+8  = SIGFPE（浮点异常）
 # ============================================================
-if [ $EXIT_CODE -eq 139 ]; then
+if [ $EXIT_CODE -eq 139 ] || [ $EXIT_CODE -eq 133 ] || [ $EXIT_CODE -eq 134 ] || [ $EXIT_CODE -eq 135 ] || [ $EXIT_CODE -eq 136 ]; then
+    # 确定崩溃类型
+    case $EXIT_CODE in
+        139) CRASH_TYPE="段错误（SIGSEGV）" ;;
+        133) CRASH_TYPE="内存错误（SIGTRAP - free() invalid pointer）" ;;
+        134) CRASH_TYPE="程序中止（SIGABRT - assert/abort）" ;;
+        135) CRASH_TYPE="总线错误（SIGBUS）" ;;
+        136) CRASH_TYPE="浮点异常（SIGFPE）" ;;
+    esac
+
     echo ""
     echo "========================================"
-    echo "检测到段错误（SIGSEGV）- 自动分析 Core Dump"
+    echo "检测到崩溃：$CRASH_TYPE (exit code $EXIT_CODE)"
+    echo "自动分析 Core Dump"
     echo "========================================"
 
     # 查找最新的 Core Dump
