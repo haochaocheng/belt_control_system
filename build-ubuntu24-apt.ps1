@@ -1569,11 +1569,16 @@ fi
 echo "Starting application with persistent data..."
 echo "Qt Platform: $QT_PLATFORM"
 
+# 2026-01-10 18:15 [Core Dump 支持] 创建 Core Dump 目录并启用核心转储
+mkdir -p /tmp/belt-control-cores
+sudo sysctl -w kernel.core_pattern=/tmp/belt-control-cores/core.%e.%p.%t 2>/dev/null || true
+
 sudo docker run \
     --name belt-control-app \
     --privileged \
     --ipc=host \
     --net=host \
+    --ulimit core=-1 \
     $DISPLAY_ARG \
     -e QT_QPA_PLATFORM=$QT_PLATFORM \
     $QT_RENDER_OPTS \
@@ -1590,6 +1595,7 @@ sudo docker run \
     -v /usr/share/fonts:/usr/share/fonts:ro \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/appdata:/app/appdata:rw \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/audio:/app/AUDIO:rw \
+    -v /tmp/belt-control-cores:/tmp/belt-control-cores:rw \
     IMAGE_NAME_PLACEHOLDER:IMAGE_TAG_PLACEHOLDER
 
 EXIT_CODE=$?
