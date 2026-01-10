@@ -1584,7 +1584,6 @@ sudo docker run \
     $QT_RENDER_OPTS \
     $HW_LIBS_ENV \
     $FFMPEG_HW_OPTS \
-    -e USE_HARDWARE_ENCODER=1 \
     -e XDG_RUNTIME_DIR=/tmp \
     $X11_VOLUME \
     $MALI_VOLUME \
