@@ -14,7 +14,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ============================================================
-# Parse device parameter and setup configuration
+# Parse device parameter and setup configuration linaro
 # ============================================================
 $DeviceUser = "linaro"
 $DevicePassword = "linaro"
@@ -1600,6 +1600,85 @@ if [ $EXIT_CODE -ne 0 ]; then
     echo ""
     echo "Last 30 lines of logs:"
     sudo docker logs --tail 30 belt-control-app
+fi
+
+# ============================================================
+# 自动 Core Dump 分析（exit code 139 - SIGSEGV）
+# 日期：2026-01-10 16:45
+# 功能：检测到段错误时自动分析 Core Dump 并显示崩溃原因
+# ============================================================
+if [ $EXIT_CODE -eq 139 ]; then
+    echo ""
+    echo "========================================"
+    echo "检测到段错误（SIGSEGV）- 自动分析 Core Dump"
+    echo "========================================"
+
+    # 查找最新的 Core Dump
+    LATEST_CORE=$(ls -t /tmp/belt-control-cores/core.* 2>/dev/null | head -1)
+
+    if [ -z "$LATEST_CORE" ]; then
+        echo "⚠️ 未找到 Core Dump 文件"
+        echo "   提示：确认容器启动时设置了 --ulimit core=-1"
+        echo "   参考：scripts/2026-01-09/19-enable-core-dump.ps1"
+    else
+        CORE_NAME=$(basename "$LATEST_CORE")
+        ANALYSIS_FILE="/tmp/belt-control-cores/${CORE_NAME}.analysis.txt"
+
+        # 检查是否已经分析过
+        if [ -f "$ANALYSIS_FILE" ]; then
+            echo "ℹ️  Core Dump 已分析（使用缓存）"
+            echo "   分析报告: $ANALYSIS_FILE"
+        else
+            echo "✓ 找到 Core Dump: $LATEST_CORE"
+            echo "  文件大小: $(ls -lh $LATEST_CORE | awk '{print $5}')"
+            echo ""
+            echo "正在分析崩溃原因（这需要几秒钟）..."
+
+            # 执行 GDB 自动分析
+            sudo docker run --rm --security-opt apparmor=unconfined \
+                -v /tmp/belt-control-cores:/cores:ro \
+                IMAGE_NAME_PLACEHOLDER:IMAGE_TAG_PLACEHOLDER \
+                bash -c "gdb -batch -ex 'set pagination off' \
+                    -ex 'echo \n========================================\n' \
+                    -ex 'echo 崩溃分析报告\n' \
+                    -ex 'echo ========================================\n' \
+                    -ex 'echo \n[1] 崩溃位置\n' \
+                    -ex 'bt 3' \
+                    -ex 'echo \n[2] 寄存器状态\n' \
+                    -ex 'info registers rip rsp rbp' \
+                    -ex 'echo \n[3] Frame 2 详情（avcodec_open2）\n' \
+                    -ex 'frame 2' \
+                    -ex 'info locals' \
+                    -ex 'echo \n[4] Frame 3 详情（open_ffmpeg_codec）\n' \
+                    -ex 'frame 3' \
+                    -ex 'info locals' \
+                    -ex 'echo \n========================================\n' \
+                    -ex 'echo 分析完成\n' \
+                    -ex 'echo ========================================\n' \
+                    -ex 'quit' \
+                    /app/belt_control_system /cores/$CORE_NAME" 2>&1 | tee "$ANALYSIS_FILE"
+
+            echo ""
+            echo "✓ 分析完成并保存到: $ANALYSIS_FILE"
+        fi
+
+        # 始终显示崩溃原因摘要
+        echo ""
+        echo "========================================"
+        echo "崩溃原因摘要"
+        echo "========================================"
+        grep -A 3 "\[1\] 崩溃位置" "$ANALYSIS_FILE" 2>/dev/null || echo "（无法提取堆栈信息）"
+        echo ""
+        echo "完整分析: $ANALYSIS_FILE"
+    fi
+
+    echo ""
+    echo "========================================"
+    echo "参考文档"
+    echo "========================================"
+    echo "  Core Dump 分析: docs/2026-01-09/72-Core-Dump分析-编码器初始化崩溃根因.md"
+    echo "  解决方案: docs/2026-01-09/73-Fix100.12-硬件编码器解决DRM_PRIME问题.md"
+    echo ""
 fi
 '@
 
