@@ -1687,7 +1687,8 @@ $runScript = $runScript -replace "DEVICE_USER_PLACEHOLDER", $DeviceUser
 $runScript = $runScript -replace "IMAGE_NAME_PLACEHOLDER", $AppImageName
 $runScript = $runScript -replace "IMAGE_TAG_PLACEHOLDER", $AppImageTag
 
-# Convert Windows CRLF to Unix LF (fix line ending issue)
+# 修复：转换为 Unix 换行符（LF）- 日期：2026-01-10 17:00
+# 原因：Windows CRLF（\r\n）导致 bash 5.0 无法识别 fi 关键字
 $runScript = $runScript -replace "`r`n", "`n"
 
 $runScript | ssh "${DeviceUser}@${DeviceIP}" "cat > /home/$DeviceUser/run-ubuntu24-apt.sh && chmod +x /home/$DeviceUser/run-ubuntu24-apt.sh"
