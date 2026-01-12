@@ -11,6 +11,11 @@ qt_add_qml_module(qml_module
         pages/ParameterSettings.qml
         pages/AlarmPage.qml
         pages/DeviceOperationLog.qml
+        pages/Input1Page.qml
+        # 2026-01-12: Input1 模块 QML 文件已移到独立的 Input1 模块中（见文件末尾）
+        # Input1/Input1Content/Screen01.ui.qml 是实际的 UI 文件
+        # Input1/Input1Content/App.qml 仅用于 QDS 预览，不包含在应用中
+        Input1/Input1Content/Screen01.ui.qml
         components/SpeedGauge.qml
         components/StatusIndicator.qml
         components/MotorControlBtn.qml
@@ -58,6 +63,59 @@ qt_add_qml_module(qml_module
     RESOURCES
         images/header.png
         sounds/ringtone.wav
+        # 2026-01-12: Input1 模块资源文件（53 个图片，全英文文件名）
+        Input1/Input1Content/images/15823432333.svg
+        Input1/Input1Content/images/dd.png
+        Input1/Input1Content/images/GSC10.svg
+        Input1/Input1Content/images/figma_export_1.svg
+        Input1/Input1Content/images/rectangle_34624263.svg
+        Input1/Input1Content/images/rectangle_34624264.svg
+        Input1/Input1Content/images/rectangle_34624265.svg
+        Input1/Input1Content/images/rectangle_34624270.svg
+        Input1/Input1Content/images/rectangle_34624271.svg
+        Input1/Input1Content/images/path_1.svg
+        Input1/Input1Content/images/path_2.svg
+        Input1/Input1Content/images/path.svg
+        Input1/Input1Content/images/path_background.png
+        Input1/Input1Content/images/protection_name.svg
+        Input1/Input1Content/images/input_type.svg
+        Input1/Input1Content/images/current_value.svg
+        Input1/Input1Content/images/switch_value.svg
+        Input1/Input1Content/images/speed.svg
+        Input1/Input1Content/images/fault.svg
+        Input1/Input1Content/images/running_active.svg
+        Input1/Input1Content/images/background_bottom_transparent.png
+        Input1/Input1Content/images/background_full_transparent.png
+        Input1/Input1Content/images/background_top_transparent.png
+        Input1/Input1Content/images/middle_top_status_bg.png
+        Input1/Input1Content/images/middle_top_status_bg_sides.png
+        Input1/Input1Content/images/group2_frame1_top_left.png
+        Input1/Input1Content/images/group2_frame1_middle_left.png
+        Input1/Input1Content/images/group2_frame1_bottom_left.png
+        Input1/Input1Content/images/group2_frame1_top_center.png
+        Input1/Input1Content/images/group2_frame1_bottom_center.png
+        Input1/Input1Content/images/group2_frame1_top_right.png
+        Input1/Input1Content/images/group2_frame1_middle_right.png
+        Input1/Input1Content/images/group2_frame1_bottom_right.png
+        Input1/Input1Content/images/group2_frame2.svg
+        Input1/Input1Content/images/group2_frame2_base.svg
+        Input1/Input1Content/images/group2_frame2_top_left.png
+        Input1/Input1Content/images/group2_frame2_middle_left.png
+        Input1/Input1Content/images/group2_frame2_bottom_left.png
+        Input1/Input1Content/images/group2_frame2_top_center.png
+        Input1/Input1Content/images/group2_frame2_bottom_center.png
+        Input1/Input1Content/images/group2_frame2_top_right.png
+        Input1/Input1Content/images/group2_frame2_middle_right.png
+        Input1/Input1Content/images/group2_frame2_bottom_right.png
+        Input1/Input1Content/images/group2_frame3.png
+        Input1/Input1Content/images/group2_frame3_top_left.png
+        Input1/Input1Content/images/group2_frame3_middle_left.png
+        Input1/Input1Content/images/group2_frame3_bottom_left.png
+        Input1/Input1Content/images/group2_frame3_top_center.png
+        Input1/Input1Content/images/group2_frame3_bottom_center.png
+        Input1/Input1Content/images/group2_frame3_top_right.png
+        Input1/Input1Content/images/group2_frame3_middle_right.png
+        Input1/Input1Content/images/group2_frame3_bottom_center.png
     RESOURCE_PREFIX /qt/qml
     NO_PLUGIN_OPTIONAL
 )
@@ -77,3 +135,30 @@ endif()
 
 # 暴露头文件路径（供main模块调用）
 target_include_directories(qml_module PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+# 2026-01-12: Input1 QML 模块（QDS 项目）
+# 创建独立的 Input1 模块，使 Screen01.ui.qml 能够 import Input1
+qt_add_qml_module(input1_qml_module
+    URI Input1
+    VERSION 1.0
+    STATIC
+    NO_PLUGIN
+    NO_GENERATE_QMLTYPES
+    QML_FILES
+        Input1/Input1/Constants.qml
+        Input1/Input1/EventListModel.qml
+        Input1/Input1/EventListSimulator.qml
+    RESOURCE_PREFIX /qt/qml
+    OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Input1
+)
+
+# Input1 模块依赖
+target_link_libraries(input1_qml_module PRIVATE
+    Qt6::Qml
+    Qt6::Quick
+)
+
+# 将 Input1 模块链接到主 qml_module
+target_link_libraries(qml_module PRIVATE input1_qml_module)
+
+message(STATUS "Input1 QML 模块已创建为独立模块")
