@@ -1,4 +1,4 @@
-# Fix: Screen01.ui.qml 固定尺寸导致 polish() 循环
+# Fix: SwipeView 子项使用 anchors 导致 polish() 循环
 
 **创建时间**：2026-01-12
 **问题编号**：QML polish() 循环卡死（真正根因）
@@ -13,35 +13,37 @@
 滑动到 Input1Page（第5页）时：
 ```
 [DEBUG] Input1Page 激活状态: true
+[WARNING] qrc:/qt/qml/BeltControlQml/App.qml:193:9: QML Input1Page: SwipeView has detected conflicting anchors. Unable to layout the item.
 [WARNING] qrc:/qt-project.org/imports/QtQuick/Controls/Basic/SwipeView.qml:15:18: QML ListView: possible QQuickItem::polish() loop
 [WARNING] qrc:/qt-project.org/imports/QtQuick/Controls/Basic/SwipeView.qml:15:18: QML ListView: ListView called polish() inside updatePolish() of ListView
 （无限重复，应用卡死）
 ```
 
-###  真正根本原因（非图片路径）
+### 🎯 真正根本原因（2026-01-12 深度调试发现）
 
-**尺寸冲突导致布局循环**：
+**关键日志**：
+```
+[WARNING] qrc:/qt/qml/BeltControlQml/App.qml:193:9: QML Input1Page: SwipeView has detected conflicting anchors.
+```
+
+**错误的架构**：
 
 ```qml
-Input1Page (Item)
-  └─ Loader (anchors.fill: parent)  ← 期望子项自适应
-     └─ Screen01.ui.qml (Rectangle, width: 1920, height: 1080)  ← 固定尺寸冲突！
+SwipeView {
+  └─ Input1Page (Item, anchors.fill: parent)  ← ❌ SwipeView 子项不能使用 anchors！
+     └─ Loader (anchors.fill: parent)
+        └─ Screen01.ui.qml (Rectangle, width: 1920, height: 1080)
 ```
 
 **为什么导致 polish() 循环**：
-1. **Loader** 使用 `anchors.fill: parent`，期望加载的内容填充父容器
-2. **Screen01.ui.qml** 根元素使用固定尺寸：
-   ```qml
-   Rectangle {
-       width: Constants.width    // 1920
-       height: Constants.height  // 1080
-       ...
-   }
-   ```
-3. **SwipeView 的内部 ListView** 检测到子项尺寸 (1920x1080) 与容器尺寸不匹配
+1. **Input1Page（Item）** 在 [src/qml/pages/Input1Page.qml:22](../../src/qml/pages/Input1Page.qml#L22) 使用了 `anchors.fill: parent`
+2. **SwipeView 的子项不能使用 anchors！** SwipeView 会自动管理所有子项的尺寸和位置
+3. anchors 冲突 → SwipeView 的内部 ListView 检测到布局错误
 4. ListView 尝试重新计算布局 → 调用 polish()
-5. polish() 完成后尺寸仍然冲突 → 再次触发 polish()
+5. anchors 冲突未解决 → 再次触发 polish()
 6. **无限递归循环 → CPU 100% → 应用卡死** ❌
+
+**注意**：Screen01.ui.qml 的固定尺寸（1920x1080）不是主要原因，虽然也不符合最佳实践。
 
 ---
 
@@ -49,11 +51,41 @@ Input1Page (Item)
 
 ### 策略
 
-将 Screen01.ui.qml 的根元素从 **固定尺寸** 改为 **自适应父容器**。
+**移除 SwipeView 直接子项的 anchors 设置**。
 
 ### 实施
 
-**修改前**（Screen01.ui.qml:13-17）：
+#### 主要修复：Input1Page.qml (src/qml/pages/Input1Page.qml:20-28)
+
+**修改前**：
+```qml
+Item {
+    id: input1Page
+    anchors.fill: parent  // ❌ SwipeView 子项不能使用 anchors！
+
+    // 页面属性
+    property string pageTitle: "输入监控"
+    property bool isActive: false
+```
+
+**修改后**：
+```qml
+Item {
+    id: input1Page
+    // 2026-01-12: 移除 anchors.fill - SwipeView 子项不能使用 anchors
+    // SwipeView 会自动管理子项的尺寸和位置
+    // anchors.fill: parent  // ❌ 与 SwipeView 冲突，导致 polish() 循环
+
+    // 页面属性
+    property string pageTitle: "输入监控"
+    property bool isActive: false
+```
+
+#### 次要优化：Screen01.ui.qml (src/qml/Input1/Input1Content/Screen01.ui.qml:13-20)
+
+虽然不是主要原因，但也改为响应式布局：
+
+**修改前**：
 ```qml
 Rectangle {
     width: Constants.width    // 固定 1920
@@ -73,6 +105,8 @@ Rectangle {
 
     color: Constants.backgroundColor
 ```
+
+**注意**：Loader 内部的 `anchors.fill: parent` **是正确的**，应该保留。
 
 ---
 

@@ -19,7 +19,9 @@ import QtQuick.Controls
 
 Item {
     id: input1Page
-    anchors.fill: parent
+    // 2026-01-12: 移除 anchors.fill - SwipeView 子项不能使用 anchors
+    // SwipeView 会自动管理子项的尺寸和位置
+    // anchors.fill: parent  // ❌ 与 SwipeView 冲突，导致 polish() 循环
 
     // 页面属性
     property string pageTitle: "输入监控"
