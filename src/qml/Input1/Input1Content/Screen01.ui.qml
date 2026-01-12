@@ -11,8 +11,11 @@ import QtQuick.Controls
 import Input1
 
 Rectangle {
-    width: Constants.width
-    height: Constants.height
+    // 2026-01-12: 移除固定尺寸，使用 anchors.fill 自适应父容器
+    // 避免与 SwipeView 的 ListView 产生 polish() 循环
+    // width: Constants.width    // 原始固定尺寸 1920
+    // height: Constants.height  // 原始固定尺寸 1080
+    anchors.fill: parent         // 自适应父容器尺寸
 
     color: Constants.backgroundColor
 
