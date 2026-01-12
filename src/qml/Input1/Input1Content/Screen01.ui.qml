@@ -44,7 +44,7 @@ Rectangle {
         id: image3
         x: 0
         y: -8
-        source: "images/顶部半透明.png"
+        source: "images/background_top_transparent.png"
         fillMode: Image.PreserveAspectFit
 
         Image {
@@ -72,7 +72,7 @@ Rectangle {
                         id: rectangle34624270
                         x: 230
                         y: 5
-                        source: "images/Rectangle 34624270.svg"
+                        source: "images/rectangle_34624270.svg"
                         fillMode: Image.PreserveAspectFit
                     }
 
@@ -92,7 +92,7 @@ Rectangle {
                     id: rectangle34624271
                     x: 6
                     y: 47
-                    source: "images/Rectangle 34624271.svg"
+                    source: "images/rectangle_34624271.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -100,7 +100,7 @@ Rectangle {
                     id: rectangle34624263
                     x: 277
                     y: 108
-                    source: "images/Rectangle 34624263.svg"
+                    source: "images/rectangle_34624263.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -108,7 +108,7 @@ Rectangle {
                     id: rectangle34624264
                     x: 277
                     y: 121
-                    source: "images/Rectangle 34624264.svg"
+                    source: "images/rectangle_34624264.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -116,7 +116,7 @@ Rectangle {
                     id: rectangle34624265
                     x: 277
                     y: 133
-                    source: "images/Rectangle 34624265.svg"
+                    source: "images/rectangle_34624265.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -261,7 +261,7 @@ Rectangle {
             id: _30
             x: 87
             y: 105
-            source: "images/第二组1主框-左中.png"
+            source: "images/group2_frame1_middle_left.png"
             fillMode: Image.PreserveAspectFit
         }
 
@@ -269,14 +269,14 @@ Rectangle {
             id: _32
             x: 437
             y: 66
-            source: "images/第二组2主框.svg"
+            source: "images/group2_frame2.svg"
             fillMode: Image.PreserveAspectFit
 
             Image {
                 id: _39
                 x: 140
                 y: 105
-                source: "images/第二组2主框-下中.png"
+                source: "images/group2_frame2_bottom_center.png"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -284,7 +284,7 @@ Rectangle {
                 id: _41
                 x: 578
                 y: 96
-                source: "images/第二组2主框-右下.png"
+                source: "images/group2_frame2_bottom_right.png"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -292,7 +292,7 @@ Rectangle {
                 id: _42
                 x: 587
                 y: 40
-                source: "images/第二组2主框-右中.png"
+                source: "images/group2_frame2_middle_right.png"
                 fillMode: Image.PreserveAspectFit
             }
         }
@@ -301,7 +301,7 @@ Rectangle {
             id: _33
             x: 140
             y: 66
-            source: "images/第二组1主框-中上.png"
+            source: "images/group2_frame1_top_center.png"
             fillMode: Image.PreserveAspectFit
         }
 
@@ -309,7 +309,7 @@ Rectangle {
             id: _35
             x: 437
             y: 66
-            source: "images/第二组1主框-左上.png"
+            source: "images/group2_frame1_top_left.png"
             fillMode: Image.PreserveAspectFit
         }
 
@@ -317,7 +317,7 @@ Rectangle {
             id: _36
             x: 437
             y: 162
-            source: "images/第二组1主框-左下.png"
+            source: "images/group2_frame1_bottom_left.png"
             fillMode: Image.PreserveAspectFit
         }
 
@@ -325,7 +325,7 @@ Rectangle {
             id: _37
             x: 437
             y: 106
-            source: "images/第二组1主框-左中.png"
+            source: "images/group2_frame1_middle_left.png"
             fillMode: Image.PreserveAspectFit
         }
 
@@ -333,7 +333,7 @@ Rectangle {
             id: _38
             x: 560
             y: 66
-            source: "images/第二组2主框-上中.png"
+            source: "images/group2_frame2_top_center.png"
             fillMode: Image.PreserveAspectFit
         }
 
@@ -341,7 +341,7 @@ Rectangle {
             id: _40
             x: 1015
             y: 66
-            source: "images/第二组2主框-右上.png"
+            source: "images/group2_frame2_top_right.png"
             fillMode: Image.PreserveAspectFit
         }
 
@@ -349,14 +349,14 @@ Rectangle {
             id: _43
             x: 1074
             y: 67
-            source: "images/第二组3主框.png"
+            source: "images/group2_frame3.png"
             fillMode: Image.PreserveAspectFit
 
             Image {
                 id: _45
                 x: 286
                 y: 96
-                source: "images/第二组3主框右下.png"
+                source: "images/group2_frame3_bottom_right.png"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -364,7 +364,7 @@ Rectangle {
                 id: _46
                 x: 295
                 y: 41
-                source: "images/第二组3主框右中.png"
+                source: "images/group2_frame3_middle_right.png"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -372,7 +372,7 @@ Rectangle {
                 id: _48
                 x: 68
                 y: 105
-                source: "images/第二组3主框中下.png"
+                source: "images/group2_frame3_bottom_center.png"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -380,7 +380,7 @@ Rectangle {
                 id: _49
                 x: 0
                 y: 0
-                source: "images/第二组3主框左上.png"
+                source: "images/group2_frame3_top_left.png"
                 fillMode: Image.PreserveAspectFit
             }
         }
@@ -389,7 +389,7 @@ Rectangle {
             id: _44
             x: 1360
             y: 66
-            source: "images/第二组3主框右上.png"
+            source: "images/group2_frame3_top_right.png"
             fillMode: Image.PreserveAspectFit
         }
 
@@ -397,7 +397,7 @@ Rectangle {
             id: _47
             x: 1147
             y: 66
-            source: "images/第二组3主框中上.png"
+            source: "images/group2_frame3_top_center.png"
             fillMode: Image.PreserveAspectFit
         }
 
@@ -405,7 +405,7 @@ Rectangle {
             id: _50
             x: 1074
             y: 163
-            source: "images/第二组3主框左下.png"
+            source: "images/group2_frame3_bottom_left.png"
             fillMode: Image.PreserveAspectFit
         }
 
@@ -413,7 +413,7 @@ Rectangle {
             id: _51
             x: 1074
             y: 108
-            source: "images/第二组3主框左中.png"
+            source: "images/group2_frame3_middle_left.png"
             fillMode: Image.PreserveAspectFit
         }
     }
@@ -422,25 +422,25 @@ Rectangle {
         id: image5
         x: 466
         y: 240
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _3
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _4
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624272
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -460,7 +460,7 @@ Rectangle {
                 id: rectangle34624273
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -468,7 +468,7 @@ Rectangle {
                 id: rectangle34624266
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -476,7 +476,7 @@ Rectangle {
                 id: rectangle34624267
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -484,7 +484,7 @@ Rectangle {
                 id: rectangle34624268
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -544,25 +544,25 @@ Rectangle {
         id: image6
         x: 858
         y: 240
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _5
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _6
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624274
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -582,7 +582,7 @@ Rectangle {
                 id: rectangle34624275
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -590,7 +590,7 @@ Rectangle {
                 id: rectangle34624269
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -598,7 +598,7 @@ Rectangle {
                 id: rectangle34624276
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -606,7 +606,7 @@ Rectangle {
                 id: rectangle34624277
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -666,25 +666,25 @@ Rectangle {
         id: image7
         x: 1308
         y: 245
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _7
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _8
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624278
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -704,7 +704,7 @@ Rectangle {
                 id: rectangle34624279
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -712,7 +712,7 @@ Rectangle {
                 id: rectangle34624280
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -720,7 +720,7 @@ Rectangle {
                 id: rectangle34624281
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -728,7 +728,7 @@ Rectangle {
                 id: rectangle34624282
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -788,25 +788,25 @@ Rectangle {
         id: image8
         x: 101
         y: 468
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _9
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _10
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624283
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -826,7 +826,7 @@ Rectangle {
                 id: rectangle34624284
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -834,7 +834,7 @@ Rectangle {
                 id: rectangle34624285
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -842,7 +842,7 @@ Rectangle {
                 id: rectangle34624286
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -850,7 +850,7 @@ Rectangle {
                 id: rectangle34624287
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -910,25 +910,25 @@ Rectangle {
         id: image9
         x: 479
         y: 460
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _11
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _12
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624288
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -948,7 +948,7 @@ Rectangle {
                 id: rectangle34624289
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -956,7 +956,7 @@ Rectangle {
                 id: rectangle34624290
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -964,7 +964,7 @@ Rectangle {
                 id: rectangle34624291
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -972,7 +972,7 @@ Rectangle {
                 id: rectangle34624292
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1032,25 +1032,25 @@ Rectangle {
         id: image10
         x: 869
         y: 460
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _13
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _14
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624293
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -1070,7 +1070,7 @@ Rectangle {
                 id: rectangle34624294
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1078,7 +1078,7 @@ Rectangle {
                 id: rectangle34624295
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1086,7 +1086,7 @@ Rectangle {
                 id: rectangle34624296
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1094,7 +1094,7 @@ Rectangle {
                 id: rectangle34624297
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1154,25 +1154,25 @@ Rectangle {
         id: image11
         x: 1308
         y: 460
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _15
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _16
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624298
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -1192,7 +1192,7 @@ Rectangle {
                 id: rectangle34624299
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1200,7 +1200,7 @@ Rectangle {
                 id: rectangle34624300
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1208,7 +1208,7 @@ Rectangle {
                 id: rectangle34624301
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1216,7 +1216,7 @@ Rectangle {
                 id: rectangle34624302
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1276,25 +1276,25 @@ Rectangle {
         id: image12
         x: 89
         y: 718
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _17
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _18
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624303
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -1314,7 +1314,7 @@ Rectangle {
                 id: rectangle34624304
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1322,7 +1322,7 @@ Rectangle {
                 id: rectangle34624305
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1330,7 +1330,7 @@ Rectangle {
                 id: rectangle34624306
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1338,7 +1338,7 @@ Rectangle {
                 id: rectangle34624307
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1398,25 +1398,25 @@ Rectangle {
         id: image13
         x: 479
         y: 718
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _19
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _20
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624308
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -1436,7 +1436,7 @@ Rectangle {
                 id: rectangle34624309
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1444,7 +1444,7 @@ Rectangle {
                 id: rectangle34624310
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1452,7 +1452,7 @@ Rectangle {
                 id: rectangle34624311
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1460,7 +1460,7 @@ Rectangle {
                 id: rectangle34624312
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1520,25 +1520,25 @@ Rectangle {
         id: image14
         x: 858
         y: 711
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _21
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _22
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624313
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -1558,7 +1558,7 @@ Rectangle {
                 id: rectangle34624314
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1566,7 +1566,7 @@ Rectangle {
                 id: rectangle34624315
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1574,7 +1574,7 @@ Rectangle {
                 id: rectangle34624316
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1582,7 +1582,7 @@ Rectangle {
                 id: rectangle34624317
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1642,25 +1642,25 @@ Rectangle {
         id: image15
         x: 1308
         y: 733
-        source: "images/路径.svg"
+        source: "images/path.svg"
         fillMode: Image.PreserveAspectFit
         Image {
             id: _23
             x: 0
             y: 0
-            source: "images/路径-1.svg"
+            source: "images/path_1.svg"
             fillMode: Image.PreserveAspectFit
             Image {
                 id: _24
                 x: 6
                 y: 8
-                source: "images/路径-2.svg"
+                source: "images/path_2.svg"
                 fillMode: Image.PreserveAspectFit
                 Image {
                     id: rectangle34624318
                     x: 230
                     y: 5
-                    source: "images/Rectangle 34624270.svg"
+                    source: "images/rectangle_34624270.svg"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -1680,7 +1680,7 @@ Rectangle {
                 id: rectangle34624319
                 x: 6
                 y: 47
-                source: "images/Rectangle 34624271.svg"
+                source: "images/rectangle_34624271.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1688,7 +1688,7 @@ Rectangle {
                 id: rectangle34624320
                 x: 277
                 y: 108
-                source: "images/Rectangle 34624263.svg"
+                source: "images/rectangle_34624263.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1696,7 +1696,7 @@ Rectangle {
                 id: rectangle34624321
                 x: 277
                 y: 121
-                source: "images/Rectangle 34624264.svg"
+                source: "images/rectangle_34624264.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1704,7 +1704,7 @@ Rectangle {
                 id: rectangle34624322
                 x: 277
                 y: 133
-                source: "images/Rectangle 34624265.svg"
+                source: "images/rectangle_34624265.svg"
                 fillMode: Image.PreserveAspectFit
             }
 
@@ -1764,7 +1764,7 @@ Rectangle {
         id: image17
         x: 51
         y: 183
-        source: "images/中上部情况背景-两边.png"
+        source: "images/middle_top_status_bg_sides.png"
         fillMode: Image.PreserveAspectFit
     }
 }
