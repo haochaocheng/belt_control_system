@@ -5,6 +5,17 @@
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
 
+#ifdef __linux__
+#include <unordered_map>
+
+// ✅ 2026-01-12 02:15 [修复 100.62] port → pool 静态映射
+// 原因：port_on_destroy 需要释放 pool，但不能访问 this（可能已析构）
+// 解决：使用静态映射保存 port → pool 关系，on_destroy 时从映射中获取 pool
+// port_data.pdata 仍保存 this（供 port_put_frame 使用）
+// 详细：docs/2026-01-12/72-完整根因分析-崩溃的真正原因.md
+static std::unordered_map<pjmedia_port*, pj_pool_t*> s_portPoolMap;
+#endif
+
 /**
  * @brief 本地视频管理器实现 - 从 PJSIP 预览获取帧
  *
@@ -19,8 +30,17 @@ LocalVideoManager::LocalVideoManager(QObject *parent)
     , m_previewPort(nullptr)
     , m_captureTimer(new QTimer(this))
     , m_captureDevId(PJMEDIA_VID_DEFAULT_CAPTURE_DEV)
+#ifdef __linux__
+    , m_delayedCleanupTimer(new QTimer(this))
+#endif
 {
     qDebug() << "✅ LocalVideoManager created (PJSIP preview mode)";
+
+#ifdef __linux__
+    // ❌ 2026-01-12 02:15 [修复 100.62] 不再需要延迟清理定时器连接
+    // m_delayedCleanupTimer->setSingleShot(true);
+    // connect(m_delayedCleanupTimer, &QTimer::timeout, this, &LocalVideoManager::performDelayedCleanup);
+#endif
 
     // 捕获定时器 - 60fps (17ms) for smooth preview
     m_captureTimer->setInterval(17);  // 60fps to match high frame rate video
@@ -30,6 +50,15 @@ LocalVideoManager::LocalVideoManager(QObject *parent)
 LocalVideoManager::~LocalVideoManager()
 {
     qDebug() << "LocalVideoManager: Shutting down...";
+
+    // ✅ 2026-01-12 01:45 [修复 100.61] 设置析构标志避免pthread_mutex错误
+    // 问题：stopPreview()使用QMutexLocker会导致pthread_mutex_lock失败
+    // 错误：pthread_mutex_lock.c:450 assertion failed: e != ESRCH || !robust
+    // 解决：先设置标志，stopPreview()检测到后跳过mutex（析构时无并发风险）
+#ifdef __linux__
+    m_isDestroying = true;
+#endif
+
     stopPreview();
 }
 
@@ -40,6 +69,13 @@ QObject* LocalVideoManager::videoSink() const
 
 void LocalVideoManager::startPreview()
 {
+    // ❌ 2026-01-11 20:00 [FIX 100.55 已弃用] 禁用预览方案测试失败
+    // 原因：禁用预览导致挂断时程序崩溃，用户要求必须保留预览功能
+    // 证据：Fix 100.55 测试后挂断程序崩溃（SIGTRAP）
+    // 解决：改用 Fix 69（复用 capture port）方案
+    // 详细：docs/2026-01-06/27-Fix69-复用capture-port解决V4L2冲突.md
+
+    // ✅ 2026-01-11 21:00 [FIX 69 重新启用] 复用 PJSIP capture port 避免 V4L2 冲突
     // ✅ 2026-01-01 23:20 [修复 26] 优先使用 PJSIP 自动创建的 preview，避免摄像头资源冲突
     // 背景：PJSIP 在视频通话时自动创建 preview window 并连接摄像头到编码器
     // 策略：
@@ -111,139 +147,99 @@ void LocalVideoManager::startPreview()
     // 详细：docs/2026-01-06/27-Fix69-复用capture-port解决V4L2冲突.md
 
     pjsua_conf_port_id cap_slot = findActiveCallCaptureSlot(m_captureDevId);
+
+    // ✅ 2026-01-12 01:20 [修复 100.60] cap_slot 连接异步延迟，添加重试机制
+    // 问题：第二次通话时 cap_slot → enc_slot 连接可能还在队列中（queued），未完成
+    // 证据：transmitter_cnt=0（第一次为1），说明 PJSIP vid_conf async connect 延迟
+    // 时序：12:00:14.798 connect queued → 12:00:15.073 startPreview() → 12:00:15.127 stream resumed
+    // 解决：延迟 50ms 重试，最多 5 次（总计 250ms），等待异步连接完成
+    // 详细：docs/2026-01-12/69-Fix100.59测试结果-第二次通话时序问题.md
+    if (cap_slot == PJSUA_INVALID_ID) {
+        // 创建重试定时器（如果还未创建）
+        if (!m_capSlotRetryTimer) {
+            m_capSlotRetryTimer = new QTimer(this);
+            m_capSlotRetryTimer->setSingleShot(true);
+            connect(m_capSlotRetryTimer, &QTimer::timeout, this, &LocalVideoManager::startPreview);
+        }
+
+        // 重试最多 5 次
+        if (m_retryCount < 5) {
+            m_retryCount++;
+            qDebug() << "⏳ [FIX 100.60] cap_slot not ready yet, retry" << m_retryCount << "/ 5 in 50ms";
+            qDebug() << "   [FIX 100.60] Reason: PJSIP vid_conf async connect may not be complete yet";
+            m_capSlotRetryTimer->start(50);  // 50ms 后重试
+            return;
+        }
+
+        // 重试 5 次后仍失败
+        qWarning() << "❌ [FIX 100.60] cap_slot still not found after 5 retries (250ms)";
+        qWarning() << "   [FIX 100.60] Fallback to independent preview (may fail on Linux V4L2)";
+        m_retryCount = 0;  // 重置计数
+        goto fallback;
+    }
+
+    // ✅ 成功找到 cap_slot，重置重试计数
+    if (m_retryCount > 0) {
+        qDebug() << "✅ [FIX 100.60] cap_slot found after" << m_retryCount << "retries";
+    }
+    m_retryCount = 0;
+
     if (cap_slot != PJSUA_INVALID_ID) {
-        qDebug() << "✅ [FIX 69.2] Active call found, reusing enc_slot:" << cap_slot;
-        qDebug() << "   Strategy: Create renderer connected to existing capture port";
+        qDebug() << "✅ [FIX 69.12] Active call found, cap_slot:" << cap_slot;
+        qDebug() << "   Strategy: Create custom port (Push mode) connected to capture port";
 
-        // ✅ 2026-01-07 [修复 69.2 完整实施] 创建渲染器并连接到已打开的摄像头端口
-        // 原理：PJSIP 视频会议桥（vid_tee）可以将一个capture port的数据分发到多个目标
-        // 架构：Camera → Capture Port → Vid Tee → Encoder (RTP) + Renderer (预览)
-        // 详细：docs/2026-01-06/27-Fix69-复用capture-port解决V4L2冲突.md
+        // ❌ 2026-01-11 22:45 [FIX 69.11 已弃用] 渲染器方案概念错误
+        // 原因：渲染器是数据消费者，其 passive port 用于接收数据，无法读取帧
+        // 证据：RemoteVideoManager 成功使用自定义 pjmedia_port + put_frame 回调
+        //
+        // ✅ 2026-01-11 22:45 [修复 69.12] 自定义 pjmedia_port + put_frame 回调
+        // 原理：模仿 RemoteVideoManager，创建自定义端口，PJSIP 主动推送帧到回调
+        // 架构：Camera → Capture Port → Vid Tee → Encoder (RTP) + Custom Port (本地预览)
+        // 详细：docs/2026-01-11/64-Fix69.12-自定义port回调接收帧.md
 
-        // Step 1: 获取通话的视频会议桥信息
-        pjsua_vid_win_info cap_win_info;
         pj_status_t status;
 
-        // 尝试从 enc_slot 获取窗口信息
-        // 注意：enc_slot 是视频会议桥的端口ID，不是 window ID
-        // 我们需要在视频会议桥上创建新的渲染器端口
-
-        // Step 2: 创建渲染器端口
-        // ✅ 2026-01-07 23:20 修复编译错误：使用正确的 pjmedia_vid_port_param 类型
-        pjmedia_vid_port_param vp_param;
-        pjmedia_vid_port_param_default(&vp_param);
-
-        // 配置设备参数
-        vp_param.vidparam.dir = PJMEDIA_DIR_RENDER;
-        vp_param.vidparam.rend_id = PJMEDIA_VID_DEFAULT_RENDER_DEV;  // SDL renderer
-        vp_param.vidparam.fmt.type = PJMEDIA_TYPE_VIDEO;
-        // 使用与通话相同的分辨率和帧率（640x360 @ 25fps）
-        // ❌ 2026-01-11 01:45 [修复 100.29] 修改为 640x368（16像素对齐）
-        // ❌ 2026-01-11 04:00 [修复 100.33] 修改为 640x480 @ 30fps（摄像头硬件支持）
-        // ❌ 2026-01-11 04:20 [修复 100.34] 修改为 640x360 @ 30fps（匹配对方）
-        // ✅ 2026-01-11 11:20 [修复 100.37] 改回 VGA 640x480（对方已切换到 VGA）
-        pjmedia_format_init_video(&vp_param.vidparam.fmt, PJMEDIA_FORMAT_I420, 640, 480, 30, 1);
-        vp_param.vidparam.disp_size.w = 640;
-        vp_param.vidparam.disp_size.h = 480;
-        vp_param.vidparam.flags = PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;  // 隐藏SDL窗口
-        vp_param.vidparam.window_hide = PJ_TRUE;
-
-        // 设置为被动模式（从会议桥接收数据）
-        vp_param.active = PJ_FALSE;
-
-        // 创建内存池
-        m_reusedPool = pjsua_pool_create("local_preview_rend", 2000, 2000);
-        if (!m_reusedPool) {
-            qWarning() << "❌ [FIX 69.2] Failed to create memory pool";
+        // Step 1: 创建自定义 pjmedia_port（类似 RemoteVideoManager）
+        // 使用与通话相同的分辨率和帧率（640x480 @ 30fps）
+        if (!createCustomPort(640, 480, 30, 1)) {
+            qWarning() << "❌ [FIX 69.12] Failed to create custom port";
             goto fallback;
         }
 
-        // 创建渲染器 vid_port
-        status = pjmedia_vid_port_create(m_reusedPool, &vp_param, &m_reusedRendPort);
+        qDebug() << "✅ [FIX 69.12] Custom port created for local preview";
+
+        // Step 2: 添加自定义端口到视频会议桥
+        status = pjsua_vid_conf_add_port(m_customPool, m_customPort, NULL, &m_customSlot);
         if (status != PJ_SUCCESS) {
-            qWarning() << "❌ [FIX 69.2] Failed to create renderer port, status:" << status;
-            if (m_reusedPool) {
-                pj_pool_release(m_reusedPool);
-                m_reusedPool = nullptr;
-            }
+            qWarning() << "❌ [FIX 69.12] Failed to add custom port to vid conf, status:" << status;
+            destroyCustomPort();
             goto fallback;
         }
 
-        // Step 3: 添加渲染器到视频会议桥
-        status = pjsua_vid_conf_add_port(m_reusedPool,
-                                         pjmedia_vid_port_get_passive_port(m_reusedRendPort),
-                                         NULL, &m_reusedRendSlot);
-        if (status != PJ_SUCCESS) {
-            qWarning() << "❌ [FIX 69.2] Failed to add renderer to vid conf, status:" << status;
-            pjmedia_vid_port_destroy(m_reusedRendPort);
-            pj_pool_release(m_reusedPool);
-            m_reusedRendPort = nullptr;
-            m_reusedPool = nullptr;
-            goto fallback;
-        }
+        qDebug() << "✅ [FIX 69.12] Custom port added to vid conf, slot:" << m_customSlot;
 
-        qDebug() << "✅ [FIX 69.2] Renderer added to vid conf, slot:" << m_reusedRendSlot;
-
-        // Step 4: 连接 capture → renderer（关键！复用已打开的摄像头）
+        // Step 3: 连接 cap_slot → custom_slot（关键！PJSIP 会推送帧到 put_frame）
         m_reusedCapSlot = cap_slot;
-        status = pjsua_vid_conf_connect(m_reusedCapSlot, m_reusedRendSlot, NULL);
+        status = pjsua_vid_conf_connect(m_reusedCapSlot, m_customSlot, NULL);
         if (status != PJ_SUCCESS) {
-            qWarning() << "❌ [FIX 69.2] Failed to connect cap→rend, status:" << status;
-            pjsua_vid_conf_remove_port(m_reusedRendSlot);
-            pjmedia_vid_port_destroy(m_reusedRendPort);
-            pj_pool_release(m_reusedPool);
-            m_reusedCapSlot = PJSUA_INVALID_ID;
-            m_reusedRendSlot = PJSUA_INVALID_ID;
-            m_reusedRendPort = nullptr;
-            m_reusedPool = nullptr;
+            qWarning() << "❌ [FIX 69.12] Failed to connect cap→custom, status:" << status;
+            pjsua_vid_conf_remove_port(m_customSlot);
+            m_customSlot = PJSUA_INVALID_ID;
+            destroyCustomPort();
             goto fallback;
         }
 
-        qDebug() << "✅ [FIX 69.2] Connected cap_slot:" << m_reusedCapSlot << "→ rend_slot:" << m_reusedRendSlot;
+        qDebug() << "✅ [FIX 69.12] Connected cap_slot:" << m_reusedCapSlot << "→ custom_slot:" << m_customSlot;
 
-        // Step 5: 启动渲染器
-        status = pjmedia_vid_port_start(m_reusedRendPort);
-        if (status != PJ_SUCCESS) {
-            qWarning() << "❌ [FIX 69.2] Failed to start renderer, status:" << status;
-            pjsua_vid_conf_disconnect(m_reusedCapSlot, m_reusedRendSlot);
-            pjsua_vid_conf_remove_port(m_reusedRendSlot);
-            pjmedia_vid_port_destroy(m_reusedRendPort);
-            pj_pool_release(m_reusedPool);
-            m_reusedCapSlot = PJSUA_INVALID_ID;
-            m_reusedRendSlot = PJSUA_INVALID_ID;
-            m_reusedRendPort = nullptr;
-            m_reusedPool = nullptr;
-            goto fallback;
-        }
-
-        qDebug() << "✅ [FIX 69.2] Renderer started successfully";
-
-        // Step 6: 附加到渲染器端口以获取帧数据
-        // 设置 m_previewPort 指向渲染器的被动端口
-        m_previewPort = pjmedia_vid_port_get_passive_port(m_reusedRendPort);
-        if (!m_previewPort) {
-            qWarning() << "❌ [FIX 69.2] Failed to get passive port from renderer";
-            pjmedia_vid_port_stop(m_reusedRendPort);
-            pjsua_vid_conf_disconnect(m_reusedCapSlot, m_reusedRendSlot);
-            pjsua_vid_conf_remove_port(m_reusedRendSlot);
-            pjmedia_vid_port_destroy(m_reusedRendPort);
-            pj_pool_release(m_reusedPool);
-            m_reusedCapSlot = PJSUA_INVALID_ID;
-            m_reusedRendSlot = PJSUA_INVALID_ID;
-            m_reusedRendPort = nullptr;
-            m_reusedPool = nullptr;
-            m_previewPort = nullptr;
-            goto fallback;
-        }
-
-        // ✅ 成功！开始捕获帧
+        // ✅ 成功！PJSIP 会自动调用 put_frame 推送帧
         m_hasLocalVideo = true;
         emit hasLocalVideoChanged();
-        m_captureTimer->start();
+        // ❌ 不再需要定时器，帧会被 PJSIP 主动推送到 put_frame 回调
+        // m_captureTimer->start();
 
-        qDebug() << "🎉 [FIX 69.2] Local video preview activated via reused capture port!";
-        qDebug() << "   Architecture: Camera → Capture Port → Vid Tee → [Encoder (RTP) + Renderer (本地预览)]";
-        qDebug() << "   No duplicate camera access, Linux V4L2 compatible ✅";
+        qDebug() << "🎉 [FIX 69.12] Local video preview activated via custom port (Push mode)!";
+        qDebug() << "   Architecture: Camera → Capture Port → Vid Tee → [Encoder (RTP) + Custom Port (本地预览)]";
+        qDebug() << "   PJSIP will push frames to put_frame() callback automatically ✅";
         return;  // 成功，直接返回
 
 fallback:
@@ -305,59 +301,175 @@ void LocalVideoManager::stopPreview()
 {
     // qDebug() << "📹 LocalVideoManager: Stopping PJSIP video preview";
 
-    // ✅ 2026-01-07 [修复 69.3] 清理复用的渲染器资源
+    // ✅ 2026-01-12 00:10 [修复 100.58] 互斥锁 + 延迟清理组合方案
+    // 问题：Fix 100.56/100.57 仍崩溃，原因是并发清理 + PJSIP异步操作竞态
+    // 根因分析：
+    //   1. 双重调用：两个线程几乎同时调用 stopPreview()
+    //   2. 异步冲突：pjsua_vid_conf_remove_port() 异步执行，立即释放pool崩溃
+    //   3. on_destroy崩溃：vid_conf清理时访问已释放的内存
+    // 解决方案：
+    //   1. 互斥锁：防止并发进入清理代码
+    //   2. 延迟清理：1000ms后清理pool，确保PJSIP异步操作完成
+    //   3. 不在on_destroy释放：避免在回调中访问可能失效的this指针
+    // 详细：docs/2026-01-11/67-Fix100.58-互斥锁+延迟清理.md
 #ifdef __linux__
-    if (m_reusedRendPort) {
-        qDebug() << "🔧 [FIX 69.3] Cleaning up reused renderer (cap_slot:" << m_reusedCapSlot
-                 << "→ rend_slot:" << m_reusedRendSlot << ")";
+    // ✅ 2026-01-12 01:45 [修复 100.61] 析构时跳过mutex避免pthread_mutex错误
+    // 问题：析构中调用stopPreview()时，QMutexLocker导致pthread_mutex_lock失败
+    // 错误：pthread_mutex_lock.c:450 assertion failed: e != ESRCH || !robust (exit code 133)
+    // 根因：对象析构时，QMutex底层pthread_mutex可能已失效
+    // 解决：检查m_isDestroying标志，析构时跳过mutex（析构时无并发风险）
+    // 详细：docs/2026-01-12/71-Fix100.61-析构时避免pthread_mutex.md
 
-        // Step 1: 停止帧捕获
-        m_captureTimer->stop();
+    if (m_isDestroying) {
+        // ✅ 析构期间：不使用mutex（无并发风险）
+        qDebug() << "🔧 [FIX 100.61] stopPreview() called during destruction (no mutex)";
 
-        // Step 2: 分离预览端口
-        detachPreviewPort();
+        // ✅ 2026-01-12 01:20 [修复 100.60] 停止重试定时器
+        if (m_capSlotRetryTimer && m_capSlotRetryTimer->isActive()) {
+            m_capSlotRetryTimer->stop();
+            qDebug() << "   [FIX 100.61] Stopped cap_slot retry timer";
+        }
+        m_retryCount = 0;
 
-        // Step 3: 停止渲染器
-        pjmedia_vid_port_stop(m_reusedRendPort);
-        qDebug() << "   [FIX 69.3] Step 1: Renderer stopped";
-
-        // Step 4: 断开视频会议桥连接
-        if (m_reusedCapSlot != PJSUA_INVALID_ID && m_reusedRendSlot != PJSUA_INVALID_ID) {
-            pjsua_vid_conf_disconnect(m_reusedCapSlot, m_reusedRendSlot);
-            qDebug() << "   [FIX 69.3] Step 2: Disconnected cap_slot → rend_slot";
+        // ✅ 双重清理保护
+        if (m_customSlot == PJSUA_INVALID_ID) {
+            qDebug() << "   [FIX 100.61] Already cleaned up, ignoring";
+            return;
         }
 
-        // Step 5: 从视频会议桥移除渲染器端口
-        if (m_reusedRendSlot != PJSUA_INVALID_ID) {
-            pjsua_vid_conf_remove_port(m_reusedRendSlot);
-            qDebug() << "   [FIX 69.3] Step 3: Removed rend_slot from vid conf";
-        }
-
-        // Step 6: 销毁渲染器 vid_port
-        pjmedia_vid_port_destroy(m_reusedRendPort);
-        qDebug() << "   [FIX 69.3] Step 4: Destroyed renderer vid_port";
-
-        // Step 7: 释放内存池
-        if (m_reusedPool) {
-            pj_pool_release(m_reusedPool);
-            qDebug() << "   [FIX 69.3] Step 5: Released memory pool";
-        }
-
-        // Step 8: 清除所有引用
+        // ✅ 立即标记为已清理
+        pjsua_conf_port_id temp_customSlot = m_customSlot;
+        m_customSlot = PJSUA_INVALID_ID;
         m_reusedCapSlot = PJSUA_INVALID_ID;
-        m_reusedRendSlot = PJSUA_INVALID_ID;
-        m_reusedRendPort = nullptr;
-        m_reusedPool = nullptr;
 
+        qDebug() << "   [FIX 100.61] Cleanup (custom_slot:" << temp_customSlot << ")";
+
+        // ❌ 2026-01-12 02:15 [修复 100.62] 析构时也不手动 disconnect/remove
+        // 原因：与正常路径相同，PJSIP 已自动处理
+        // 解决：让 PJSIP 自动清理，on_destroy 回调会释放 pool
+        // if (temp_capSlot != PJSUA_INVALID_ID && temp_customSlot != PJSUA_INVALID_ID) {
+        //     pjsua_vid_conf_disconnect(temp_capSlot, temp_customSlot);
+        //     qDebug() << "   [FIX 100.61] Disconnected cap_slot → custom_slot";
+        // }
+        //
+        // if (temp_customSlot != PJSUA_INVALID_ID) {
+        //     pjsua_vid_conf_remove_port(temp_customSlot);
+        //     qDebug() << "   [FIX 100.61] Removed custom_slot from vid_conf (queued)";
+        // }
+
+        // ✅ 标记 port 为 nullptr
+        m_customPort = nullptr;
+        qDebug() << "   [FIX 100.62] Port marked as null (pool will be released by on_destroy)";
+
+        // ❌ 2026-01-12 02:15 [修复 100.62] 析构时也不立即释放 pool
+        // 原因：可能导致 on_destroy 回调访问已释放的 pool
+        // 解决：由 on_destroy 回调负责释放（时机正确）
+        // if (m_customPool) {
+        //     qDebug() << "   [FIX 100.61] Releasing pool immediately (during destruction)";
+        //     pj_pool_release(m_customPool);
+        //     m_customPool = nullptr;
+        //     qDebug() << "   [FIX 100.61] Pool released";
+        // }
+
+        // ✅ 停止延迟清理定时器（如果已启动）
+        if (m_delayedCleanupTimer && m_delayedCleanupTimer->isActive()) {
+            m_delayedCleanupTimer->stop();
+            qDebug() << "   [FIX 100.62] Stopped delayed cleanup timer";
+        }
+
+        // ✅ 更新状态
         if (m_hasLocalVideo) {
             m_hasLocalVideo = false;
             emit hasLocalVideoChanged();
         }
 
-        qDebug() << "✅ [FIX 69.3] Reused renderer fully cleaned up";
-        qDebug() << "   Note: Capture port remains active (used by call)";
+        qDebug() << "✅ [FIX 100.62] Custom port cleanup completed (destruction path, PJSIP will auto-cleanup)";
         return;
     }
+
+    // ❌ 2026-01-12 02:30 [修复 100.63] 移除正常路径的mutex使用
+    // ❌ 2026-01-12 14:50 [修复 100.64] 完全删除 m_cleanupMutex 成员变量
+    // 原因：Fix 100.63 已不使用 mutex，但成员变量的存在本身就是问题源
+    // 证据：RemoteVideoManager 无 mutex 成员变量，清理成功；LocalVideoManager 有 mutex，崩溃
+    // 根本原因：Qt 在对象生命周期的某个时刻访问 QMutex，线程状态异常时 pthread_mutex_lock 失败
+    // 解决：完全删除 m_cleanupMutex，彻底消除问题源
+    // 详细：docs/2026-01-12/76-Fix100.64-完全删除m_cleanupMutex.md
+    // QMutexLocker locker(&m_cleanupMutex);  // ✅ 自动加锁/解锁
+
+    // ✅ 2026-01-12 01:20 [修复 100.60] 停止重试定时器
+    if (m_capSlotRetryTimer && m_capSlotRetryTimer->isActive()) {
+        m_capSlotRetryTimer->stop();
+        qDebug() << "⏹️ [FIX 100.60] Stopped cap_slot retry timer";
+    }
+    m_retryCount = 0;  // 重置重试计数
+
+    // ✅ Step 1: 双重清理保护（原子操作，不需要 mutex）
+    if (m_customSlot == PJSUA_INVALID_ID) {
+        qDebug() << "⚠️ [FIX 100.64] stopPreview() called but already cleaned up, ignoring";
+        return;
+    }
+
+    // ✅ Step 2: 立即标记为已清理（防止并发）
+    pjsua_conf_port_id temp_customSlot = m_customSlot;
+    m_customSlot = PJSUA_INVALID_ID;
+    m_reusedCapSlot = PJSUA_INVALID_ID;
+
+    qDebug() << "🔧 [FIX 100.64] Initiating cleanup (custom_slot:" << temp_customSlot << ", no QMutex member)";
+
+    // ✅ 2026-01-14 21:50 [修复 VERSION 156 LOCAL_PUSH 循环 - 真正移除 port]
+    // 问题：Fix 100.62 依赖 PJSIP 自动清理，但在通话挂断场景下 PJSIP 不会自动移除 custom port
+    //       导致 port 仍在 vid_conf 中，port_put_frame 回调持续执行
+    //       表现：[LOCAL PUSH] Video frames: 0 | Total callbacks: 持续增长
+    // 证据：docs/log/voip.md Line 3754+ 显示 [LOCAL PUSH] 仍在输出，Total callbacks 达到 2361
+    // 原因：
+    //   - Fix 100.62（Line 429-435）注释掉了 pjsua_vid_conf_remove_port()
+    //   - 期望 PJSIP 自动清理，但实际上没有
+    //   - port 仍在 vid_conf 中，PJSIP 持续调用 port_put_frame
+    // 解决：手动调用 pjsua_vid_conf_remove_port()，真正移除 port
+    // 风险：可能与 PJSIP 清理竞争，但这是必要的（否则 port 永远不会被移除）
+    // 详细：docs/2026-01-14/14-修复VERSION156-真正移除port-手动调用remove.md
+    if (temp_customSlot != PJSUA_INVALID_ID) {
+        qDebug() << "   [FIX VERSION 156] Manually removing custom_slot from vid_conf to stop callbacks";
+        pj_status_t status = pjsua_vid_conf_remove_port(temp_customSlot);
+        if (status == PJ_SUCCESS) {
+            qDebug() << "   ✅ [FIX VERSION 156] Port removed successfully (custom_slot:" << temp_customSlot << ")";
+        } else {
+            qDebug() << "   ⚠️ [FIX VERSION 156] Port removal returned status:" << status << "(may already be removed)";
+        }
+    }
+
+    // ❌ 2026-01-12 02:15 [修复 100.62 设计已推翻] 不手动 remove 导致 port 永远不会被移除
+    // 原因：在通话挂断场景下，PJSIP 不会自动清理 custom port
+    // 后果：port_put_frame 回调持续执行，[LOCAL PUSH] 日志持续输出
+    // 解决：必须手动调用 pjsua_vid_conf_remove_port()（上面已实施）
+    // if (temp_customSlot != PJSUA_INVALID_ID) {
+    //     pjsua_vid_conf_remove_port(temp_customSlot);
+    //     qDebug() << "   [FIX 100.59] Step 2: Removed custom_slot from vid_conf (queued)";
+    // }
+
+    // ✅ Step 3: 标记 port 为 nullptr（防止重复访问）
+    m_customPort = nullptr;
+    qDebug() << "   [FIX VERSION 156] Port marked as null (pool will be released by on_destroy callback)";
+
+    // ❌ 2026-01-12 02:15 [修复 100.62] 不延迟释放 pool
+    // 原因：无法准确判断释放时机（200ms、500ms、1000ms 都是猜测）
+    // 解决：在 port_on_destroy 回调中释放（时机完全正确，等待 PJSIP 完成所有清理）
+    // m_customPool = nullptr;  // 不再由我们管理，由 on_destroy 释放
+
+    // ✅ Step 4: 停止延迟清理定时器（不再需要）
+    if (m_delayedCleanupTimer && m_delayedCleanupTimer->isActive()) {
+        m_delayedCleanupTimer->stop();
+        qDebug() << "   [FIX 100.64] Delayed cleanup timer stopped (not needed anymore)";
+    }
+
+    // ✅ Step 5: 更新状态
+    if (m_hasLocalVideo) {
+        m_hasLocalVideo = false;
+        emit hasLocalVideoChanged();
+    }
+
+    qDebug() << "✅ [FIX 100.64] Custom port cleanup initiated (PJSIP will auto-cleanup, no QMutex member)";
+    return;
 #endif
 
     // 停止帧捕获
@@ -678,9 +790,18 @@ QVideoFrame LocalVideoManager::convertPjFrameToQt(pjmedia_frame *frame, const pj
     }
 }
 
-// ✅ 2026-01-07 [修复 69.1] 查找活跃通话的摄像头端口
-// 原理：复用通话已打开的capture port，避免V4L2重复打开冲突
-// 详细：docs/2026-01-06/27-Fix69-复用capture-port解决V4L2冲突.md
+// ❌ 2026-01-11 22:00 [FIX 69.6 已弃用] 遍历窗口数组方法失败
+// 原因：Fix 32 启用时，摄像头没有创建窗口（PJSUA_VID_PREVIEW_DISABLE）
+// 证据：日志显示 "No active camera window found"，因为根本没有创建窗口
+// 解决：改用 Fix 69.9（通过 vid_conf API 查询端口连接关系）
+
+// ✅ 2026-01-11 22:00 [修复 69.9] 通过 vid_conf API 获取 cap_slot
+// 原理：查询 enc_slot 的 transmitters（数据源），找到连接的 cap_slot
+// 原因：Fix 32 启用时，摄像头没有创建窗口，无法通过窗口数组查找
+// 解决：使用 pjsua_vid_conf_get_port_info() API 查询端口连接关系
+// 详细：docs/2026-01-11/62-Fix69.9-通过vidconf-API获取capslot.md
+// 架构：cap_slot (摄像头) → enc_slot (编码器) → RTP
+//       我们有 enc_slot，查询其 transmitters[0] 即可得到 cap_slot
 pjsua_conf_port_id LocalVideoManager::findActiveCallCaptureSlot(int capDevId)
 {
     pjsua_call_id call_ids[PJSUA_MAX_CALLS];
@@ -689,51 +810,320 @@ pjsua_conf_port_id LocalVideoManager::findActiveCallCaptureSlot(int capDevId)
     // 获取所有活跃通话
     pj_status_t status = pjsua_enum_calls(call_ids, &call_count);
     if (status != PJ_SUCCESS || call_count == 0) {
-        qDebug() << "   [FIX 69.1] No calls found, status:" << status << ", count:" << call_count;
+        qDebug() << "   [FIX 69.9] No calls found, status:" << status << ", count:" << call_count;
         return PJSUA_INVALID_ID;  // 无活跃通话
     }
 
-    qDebug() << "   [FIX 69.1] Found" << call_count << "calls, searching for video...";
+    qDebug() << "   [FIX 69.9] Found" << call_count << "calls, searching for video...";
 
-    // 遍历通话，查找使用指定摄像头的enc_slot (编码端口，连接摄像头)
+    // 遍历所有通话，查找视频通话
     for (unsigned i = 0; i < call_count; ++i) {
         pjsua_call_info ci;
         status = pjsua_call_get_info(call_ids[i], &ci);
         if (status != PJ_SUCCESS) {
-            qDebug() << "   [FIX 69.1] Failed to get call info for call" << call_ids[i];
             continue;
         }
 
-        qDebug() << "   [FIX 69.1] Call" << call_ids[i] << "has" << ci.media_cnt << "media streams";
+        qDebug() << "   [FIX 69.9] Call" << i << "has" << ci.media_cnt << "media streams";
 
-        // 检查通话是否有视频媒体
-        for (unsigned med_idx = 0; med_idx < ci.media_cnt; ++med_idx) {
-            const pjsua_call_media_info &mi = ci.media[med_idx];
-
-            // 只关心视频媒体
-            if (mi.type != PJMEDIA_TYPE_VIDEO) {
+        // 遍历媒体流，查找视频流
+        for (unsigned mi = 0; mi < ci.media_cnt; ++mi) {
+            if (ci.media[mi].type != PJMEDIA_TYPE_VIDEO) {
                 continue;
             }
 
-            qDebug() << "   [FIX 69.1] Found video media, status:" << mi.status
-                     << ", cap_dev:" << mi.stream.vid.cap_dev
-                     << ", enc_slot:" << mi.stream.vid.enc_slot;
+            if (ci.media[mi].status != PJSUA_CALL_MEDIA_ACTIVE) {
+                continue;
+            }
 
-            // ✅ 2026-01-07 [修复 69.5] 放宽检测条件：
-            // 问题：通话刚建立时，status 可能不是 ACTIVE，cap_dev 可能还未设置
-            // 方案：只要有视频媒体且 enc_slot 有效，就复用
-            // 旧代码：if (mi.status == PJSUA_CALL_MEDIA_ACTIVE && mi.stream.vid.cap_dev == capDevId)
-            if (mi.stream.vid.enc_slot != PJSUA_INVALID_ID) {
-                // 返回编码器的 enc_slot（连接到摄像头的端口）
-                pjsua_conf_port_id enc_slot = mi.stream.vid.enc_slot;
-                qDebug() << "✅ [FIX 69.1] Found video call with enc_slot:" << enc_slot;
-                return enc_slot;  // 返回编码器端口（capture source）
+            // ✅ 找到活跃的视频流
+            qDebug() << "   [FIX 69.9] Found active video media at index" << mi;
+
+            // ✅ 2026-01-11 [修复 69.9] 通过内部结构体访问 enc_slot
+            // 注意：pjsua_call_info 不包含 enc_slot，需要访问 pjsua_var.calls[]
+            pjsua_call *call = &pjsua_var.calls[call_ids[i]];
+            pjsua_call_media *call_med = &call->media[mi];
+
+            if (call_med->strm.v.strm_enc_slot == PJSUA_INVALID_ID) {
+                qDebug() << "   [FIX 69.9] enc_slot is invalid, skipping";
+                continue;
+            }
+
+            pjsua_conf_port_id enc_slot = call_med->strm.v.strm_enc_slot;
+            qDebug() << "   [FIX 69.9] Found enc_slot:" << enc_slot;
+
+            // ✅ 2026-01-11 [修复 69.9] 查询 enc_slot 的端口信息
+            pjsua_vid_conf_port_info port_info;
+            status = pjsua_vid_conf_get_port_info(enc_slot, &port_info);
+            if (status != PJ_SUCCESS) {
+                qDebug() << "   [FIX 69.9] Failed to get port info, status:" << status;
+                continue;
+            }
+
+            qDebug() << "   [FIX 69.9] enc_slot port info:";
+            qDebug() << "      name:" << QString::fromUtf8(port_info.name.ptr, port_info.name.slen);
+            qDebug() << "      transmitter_cnt:" << port_info.transmitter_cnt;
+            qDebug() << "      listener_cnt:" << port_info.listener_cnt;
+
+            // ✅ 2026-01-11 [修复 69.9] 获取 enc_slot 的数据源（cap_slot）
+            // transmitters[0] 应该是摄像头端口
+            if (port_info.transmitter_cnt > 0) {
+                pjsua_conf_port_id cap_slot = port_info.transmitters[0];
+                qDebug() << "✅ [FIX 69.9] Found cap_slot via vid_conf API:" << cap_slot;
+                qDebug() << "   Connection: cap_slot(" << cap_slot << ") → enc_slot(" << enc_slot << ")";
+                return cap_slot;
             } else {
-                qDebug() << "   [FIX 69.1] Video media found but enc_slot invalid, skipping";
+                qDebug() << "   [FIX 69.9] enc_slot has no transmitters (unexpected)";
             }
         }
     }
 
-    qDebug() << "   [FIX 69.1] No video calls with valid enc_slot found";
+    qDebug() << "   [FIX 69.9] No active video call found";
     return PJSUA_INVALID_ID;  // 未找到
 }
+
+// ========== Fix 69.12: 自定义端口管理（模仿 RemoteVideoManager）==========
+
+#ifdef __linux__
+
+bool LocalVideoManager::createCustomPort(int width, int height, int fps_num, int fps_denum)
+{
+    if (m_customPort) {
+        return true;  // 已经创建
+    }
+
+    // 创建内存池
+    m_customPool = pjsua_pool_create("local_video_custom_port", 4000, 4000);
+    if (!m_customPool) {
+        qCritical() << "❌ [FIX 69.12] Failed to create pool for custom port";
+        return false;
+    }
+
+    // 分配 pjmedia_port 结构
+    m_customPort = (pjmedia_port*)pj_pool_zalloc(m_customPool, sizeof(pjmedia_port));
+    if (!m_customPort) {
+        pj_pool_release(m_customPool);
+        m_customPool = nullptr;
+        return false;
+    }
+
+    // 初始化 port 信息
+    pj_str_t name = pj_str((char*)"qt_local_video_sink");
+    pjmedia_port_info_init(&m_customPort->info, &name,
+                           PJMEDIA_SIG_CLASS_PORT_VID('L', 'C'),  // LC = Local Camera
+                           90000,  // clock_rate (90kHz for video)
+                           1,      // channel_count
+                           16,     // bits_per_sample
+                           1);     // samples_per_frame
+
+    // ✅ 设置视频格式 - 使用实际的分辨率和帧率
+    pjmedia_format_init_video(&m_customPort->info.fmt,
+                              PJMEDIA_FORMAT_I420,
+                              width, height,        // 使用实际视频尺寸
+                              fps_num, fps_denum);  // 使用实际帧率
+
+    // ✅ 关键: 设置回调函数
+    m_customPort->put_frame = &LocalVideoManager::port_put_frame;  // PJSIP 推送帧
+    m_customPort->get_frame = &LocalVideoManager::port_get_frame;  // 不需要
+    m_customPort->on_destroy = &LocalVideoManager::port_on_destroy;
+
+    // 将 this 指针存储在 port_data 中,以便在静态回调中访问
+    m_customPort->port_data.pdata = this;
+
+    // ✅ 2026-01-12 02:15 [修复 100.62] 保存 port → pool 映射
+    // 原因：port_on_destroy 需要释放 pool，但不能访问 this（可能已析构）
+    // 解决：将映射保存到静态 map，on_destroy 时从 map 中获取 pool
+    // 详细：docs/2026-01-12/72-完整根因分析-崩溃的真正原因.md
+    s_portPoolMap[m_customPort] = m_customPool;
+
+    qDebug() << "✅ [FIX 69.12] Custom pjmedia_port created for local preview:"
+             << width << "x" << height << "@" << fps_num << "/" << fps_denum << "fps";
+
+    return true;
+}
+
+void LocalVideoManager::destroyCustomPort()
+{
+    if (m_customPort) {
+        m_customPort = nullptr;  // port 由 pool 管理
+    }
+
+    if (m_customPool) {
+        pj_pool_release(m_customPool);
+        m_customPool = nullptr;
+        qDebug() << "✅ [FIX 69.12] Custom port pool released";
+    }
+}
+
+// ========== PJSIP 静态回调函数 (C 风格，模仿 RemoteVideoManager) ==========
+
+pj_status_t LocalVideoManager::port_put_frame(pjmedia_port *port, pjmedia_frame *frame)
+{
+    // ✅ PJSIP 在摄像头有新帧时主动调用这个函数 (Push 模式!)
+    static int callback_count = 0;
+    static int video_frames = 0;
+    static int non_video_frames = 0;
+    static qint64 last_log_time = 0;
+
+    qint64 current_time = QDateTime::currentMSecsSinceEpoch();
+
+    callback_count++;
+
+    // 每秒统计一次回调频率
+    if (last_log_time == 0) {
+        last_log_time = current_time;
+    } else if (current_time - last_log_time >= 1000) {
+        qDebug() << "🎯 [LOCAL PUSH]" << "Video frames:" << video_frames
+                 << "| Non-video:" << non_video_frames
+                 << "| Total callbacks:" << callback_count;
+        last_log_time = current_time;
+        video_frames = 0;
+        non_video_frames = 0;
+    }
+
+    // 从 port_data 恢复 this 指针
+    LocalVideoManager *self = static_cast<LocalVideoManager*>(port->port_data.pdata);
+
+    if (!self) {
+        return PJ_SUCCESS;
+    }
+
+    // ✅ 统计帧类型
+    if (frame->type != PJMEDIA_FRAME_TYPE_VIDEO) {
+        non_video_frames++;
+        return PJ_SUCCESS;
+    }
+
+    // ✅ 安全检查：验证帧数据有效性
+    if (!frame->buf || frame->size == 0) {
+        return PJ_SUCCESS;  // 静默忽略无效帧
+    }
+
+    video_frames++;
+
+    // 调用成员函数处理帧
+    self->onLocalFrameReceived(frame, &port->info.fmt);
+
+    return PJ_SUCCESS;
+}
+
+pj_status_t LocalVideoManager::port_get_frame(pjmedia_port *port, pjmedia_frame *frame)
+{
+    // Sink port 不需要提供帧
+    PJ_UNUSED_ARG(port);
+    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+    return PJ_SUCCESS;
+}
+
+pj_status_t LocalVideoManager::port_on_destroy(pjmedia_port *port)
+{
+    // ✅ 2026-01-12 02:15 [修复 100.62] 从静态映射中获取 pool 并释放
+    // 原因：不能访问 this 指针（可能已析构），但需要释放 pool
+    // 解决：从静态映射中查找 port → pool，释放后从映射中移除
+    // 时机：vid_conf 真正销毁 port 时调用，此时 PJSIP 所有清理已完成
+    // 详细：docs/2026-01-12/72-完整根因分析-崩溃的真正原因.md
+
+    auto it = s_portPoolMap.find(port);
+    if (it != s_portPoolMap.end()) {
+        pj_pool_t *pool = it->second;
+        qDebug() << "📹 [FIX 100.62] port_on_destroy: Found pool in map, releasing...";
+        pj_pool_release(pool);
+        s_portPoolMap.erase(it);
+        qDebug() << "✅ [FIX 100.62] Pool released in on_destroy callback";
+    } else {
+        qDebug() << "⚠️ [FIX 100.62] port_on_destroy: Port not found in map (already cleaned?)";
+    }
+
+    PJ_UNUSED_ARG(port);
+    return PJ_SUCCESS;
+}
+
+// ========== 延迟清理实现 ==========
+
+#ifdef __linux__
+// ❌ 2026-01-12 02:15 [修复 100.62] 不再需要延迟清理函数
+// 原因：pool 由 port_on_destroy 回调释放，时机完全正确
+// 详细：docs/2026-01-12/72-完整根因分析-崩溃的真正原因.md
+//
+// void LocalVideoManager::performDelayedCleanup()
+// {
+//     QMutexLocker locker(&m_cleanupMutex);
+//
+//     qDebug() << "⏰ [FIX 100.59] Delayed cleanup timer triggered (200ms elapsed)";
+//
+//     if (m_customPool) {
+//         qDebug() << "   [FIX 100.59] Releasing pool now (PJSIP async operations should be complete)";
+//         pj_pool_release(m_customPool);
+//         m_customPool = nullptr;
+//         qDebug() << "✅ [FIX 100.59] Custom port pool released safely (delayed cleanup complete)";
+//     } else {
+//         qDebug() << "   [FIX 100.59] Pool already released, nothing to do";
+//     }
+// }
+#endif
+
+// ========== 帧处理 (Push 模式核心) ==========
+
+void LocalVideoManager::onLocalFrameReceived(pjmedia_frame *frame, const pjmedia_format *fmt)
+{
+    // ✅ 在 PJSIP 线程中调用，需要快速处理
+    // 注意：不同于 RemoteVideoManager，这里直接转换发送，因为本地预览帧率较低
+
+    static int frameCount = 0;
+    static qint64 lastLogTime = 0;
+    static qint64 lastFrameTime = 0;
+    static int framesInSecond = 0;
+    static qint64 totalFrameInterval = 0;
+    static int intervalSamples = 0;
+
+    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+
+    // 首帧日志
+    if (frameCount == 0 && fmt) {
+        pjmedia_video_format_detail *vfd = pjmedia_format_get_video_format_detail(fmt, PJ_TRUE);
+        if (vfd) {
+            qDebug() << "🎬 [FIRST LOCAL FRAME] Format:" << vfd->size.w << "x" << vfd->size.h
+                     << "@" << vfd->fps.num << "/" << vfd->fps.denum << "fps"
+                     << "| Buffer size:" << frame->size << "bytes";
+        }
+    }
+
+    // 统计帧间隔
+    if (lastFrameTime > 0) {
+        qint64 interval = currentTime - lastFrameTime;
+        totalFrameInterval += interval;
+        intervalSamples++;
+    }
+    lastFrameTime = currentTime;
+
+    // 转换帧并发送到 QVideoSink
+    QVideoFrame videoFrame = convertPjFrameToQt(frame, fmt);
+    if (videoFrame.isValid()) {
+        m_videoSink->setVideoFrame(videoFrame);
+        frameCount++;
+        framesInSecond++;
+    }
+
+    // 每秒统计一次性能
+    if (lastLogTime == 0) {
+        lastLogTime = currentTime;
+    } else if (currentTime - lastLogTime >= 1000) {
+        qint64 elapsedMs = currentTime - lastLogTime;
+        double actualFps = (framesInSecond * 1000.0) / elapsedMs;
+        double avgInterval = intervalSamples > 0 ? (double)totalFrameInterval / intervalSamples : 0;
+
+        qDebug() << "📤 [LOCAL VIDEO SEND]"
+                 << "FPS:" << QString::number(actualFps, 'f', 1)
+                 << "| Avg interval:" << QString::number(avgInterval, 'f', 1) << "ms"
+                 << "| Total frames:" << frameCount;
+
+        // 重置计数器
+        lastLogTime = currentTime;
+        framesInSecond = 0;
+        totalFrameInterval = 0;
+        intervalSamples = 0;
+    }
+}
+
+#endif  // __linux__
+

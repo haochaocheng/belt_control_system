@@ -143,10 +143,13 @@ static void onCallStateChanged(int call_id, pjsip_inv_state state, const char* s
         }, Qt::QueuedConnection);
         break;
     case PJSIP_INV_STATE_DISCONNECTED:
+        qDebug() << "🔴 [FIX 72 DIAG] PJSIP_INV_STATE_DISCONNECTED triggered, call_id:" << call_id;
         statusText = "通话结束";
         isInCall = false;
         // Notify video managers that call is disconnected
+        qDebug() << "🔴 [FIX 72] About to call notifyCallDisconnected()";
         manager->notifyCallDisconnected();
+        qDebug() << "🔴 [FIX 72] notifyCallDisconnected() completed";
 
         // ✅ 重置视频来电标志和当前通话视频标志
         QMetaObject::invokeMethod(manager, [manager]() {
@@ -476,6 +479,12 @@ bool SipPhoneManager::initializeEndpoint()
     emit isInitializedChanged(true);
     updateServerStatus("已初始化");
 
+    // ✅ 2026-01-01 22:55 [调试] 在PJSIP初始化完成后立即设置详细日志级别
+    // 目的：诊断视频接收失败问题（远程视频接收为0帧）
+    // 时机：必须在PJSIP endpoint启动之后，这样日志设置才能生效
+    pj_log_set_level(5);  // 0=禁用, 5=最详细
+    qDebug() << "✅ PJSIP log level set to 5 (maximum debug) after endpoint initialization";
+
     // ✅ Register call state callback for UI updates
     // This ensures video calls created with C API will update the UI
     risip::RisipEndpoint::registerCallStateCallback(&onCallStateChanged);
@@ -707,14 +716,20 @@ bool SipPhoneManager::initializeEndpoint()
             if (defaultAccount->autoSignIn()) {
                 qDebug() << "Auto-login enabled, starting registration...";
 
-                // ✅ CRITICAL: Configure video device BEFORE login() for existing saved accounts
-                // Existing accounts loaded from settings need vid_cap_dev configured via pjsua_acc_modify()
-                QString accountUri = defaultAccount->configuration()->uri();
-                qDebug() << "Configuring video device for saved default account:" << accountUri;
-                configureAccountVideoDevice(accountUri);
+                // ✅ CRITICAL FIX: Do NOT configure video device before login()
+                // The PJSIP account is created during login(), so video config must happen AFTER
+                // We'll configure video device after successful registration via signal handler
 
                 d->currentAccount->login();
                 updateServerStatus("正在注册到: " + defaultAccount->configuration()->uri());
+
+                // ✅ NEW: Configure video device AFTER login() initiates account creation
+                // Wait a bit for PJSIP account creation to complete
+                QTimer::singleShot(100, this, [this, defaultAccount]() {
+                    QString accountUri = defaultAccount->configuration()->uri();
+                    qDebug() << "✅ Configuring video device AFTER login initiation:" << accountUri;
+                    configureAccountVideoDevice(accountUri);
+                });
             } else {
                 qDebug() << "Auto-login disabled for this account";
                 updateServerStatus("账户已加载,未自动登录");
@@ -751,6 +766,10 @@ bool SipPhoneManager::initializeEndpoint()
         cfg.setUserName(account2_username);
         cfg.setPassword(account2_password);
         cfg.setServerAddress(account2_server);
+
+        // ⚠️ 2026-01-04 强制使用TCP传输（与主账户一致）
+        cfg.setNetworkProtocol(1);  // 强制TCP (0=UDP, 1=TCP, 2=TLS)
+        qDebug() << "🔧 [TCP TRANSPORT] Forced TCP for account 2 (backup account)";
 
         risip::RisipAccount *account2 = d->risipInstance->createAccount(&cfg);
         if (account2) {
@@ -795,6 +814,14 @@ void SipPhoneManager::shutdownEndpoint()
     qDebug() << "SIP endpoint shutdown complete";
 }
 
+// ✅ 2026-01-01 22:45 [调试] 实现PJSIP日志级别控制
+// 目的：在运行时动态设置PJSIP日志级别，用于诊断视频接收失败问题
+void SipPhoneManager::setPjsipLogLevel(int level)
+{
+    pj_log_set_level(level);
+    qDebug() << "✅ PJSIP log level set to" << level << "(0=disabled, 5=maximum debug)";
+}
+
 // Account management
 bool SipPhoneManager::registerAccount(const QString &sipServer,
                                      const QString &username,
@@ -822,6 +849,11 @@ bool SipPhoneManager::registerAccount(const QString &sipServer,
         // Set registrar server address with port
         QString serverWithPort = port == 5060 ? sipServer : QString("%1:%2").arg(sipServer).arg(port);
         config->setServerAddress(serverWithPort);
+
+        // ⚠️ 2026-01-04 强制使用TCP传输：避免UDP分片问题
+        // miniSIP服务器不支持UDP分片（违反RFC 3261），TCP可以绕过此限制
+        config->setNetworkProtocol(1);  // 强制TCP (0=UDP, 1=TCP, 2=TLS)
+        qDebug() << "🔧 [TCP TRANSPORT] Forced TCP transport for registerAccount (miniSIP UDP fragmentation workaround)";
 
         // ✅ CRITICAL FIX: Set video capture device in AccountConfig BEFORE creating account
         // Following PJSIP official example approach: set vid_cap_dev before pjsua_acc_add()
@@ -947,7 +979,15 @@ bool SipPhoneManager::createAccount(const QString &username,
         // Set local port and network protocol
         config->setLocalPort(localPort);
         config->setRandomLocalPort(localPort);  // Use same port
-        config->setNetworkProtocol(networkProtocol);  // 0=UDP, 1=TCP, 2=TLS
+
+        // ⚠️ 2026-01-04 强制使用TCP传输：避免UDP分片问题
+        // miniSIP服务器不支持UDP分片（违反RFC 3261），UDP INVITE 1583字节 > MTU 1500导致分片被拒绝
+        // 解决：强制使用TCP传输（TCP自动分段，无MTU限制）
+        // 参考：docs/2026-01-04/4.TCP传输配置方案.md
+        config->setNetworkProtocol(1);  // 强制TCP (0=UDP, 1=TCP, 2=TLS)
+        qDebug() << "🔧 [TCP TRANSPORT] Forced TCP transport for account (miniSIP UDP fragmentation workaround)";
+
+        // config->setNetworkProtocol(networkProtocol);  // ← 原代码：使用参数值（已禁用）
 
         // ✅ CRITICAL FIX: Set video capture device in AccountConfig BEFORE creating account
         // Following PJSIP official example approach: set vid_cap_dev before pjsua_acc_add()
@@ -1347,13 +1387,16 @@ void SipPhoneManager::makeCall(const QString &number, bool enableVideo)
 // Helper function to handle call status changes (extracted for reuse)
 void SipPhoneManager::handleCallStatusChange(bool isVideoCall)
 {
+    qDebug() << "🔔 [SipPhoneManager] handleCallStatusChange() called, isVideoCall:" << isVideoCall;
+
     if (!d->currentCall) {
         qDebug() << "Call status changed but currentCall is null, ignoring";
         return;
     }
 
+    qDebug() << "🔔 [SipPhoneManager] Calling d->currentCall->status()...";
     int callState = d->currentCall->status();
-    qDebug() << "Call state changed:" << callState;
+    qDebug() << "🔔 [SipPhoneManager] status() returned, callState:" << callState;
 
     // Call states from Risip::RisipCall::Status
     // CallConfirmed = 4 (call connected)
@@ -2450,9 +2493,52 @@ void SipPhoneManager::notifyCallConnected(int callId)
 void SipPhoneManager::notifyCallDisconnected()
 {
     qDebug() << "✅ Notifying video managers: Call disconnected";
+
     if (d->remoteVideoManager) {
         d->remoteVideoManager->onCallDisconnected();
     }
+
+    // ✅ 2026-01-14 21:30 [修复 VERSION 156 LOCAL_PUSH 循环]
+    // 问题：挂断后 LocalVideoManager 的 stopPreview() 从未被调用
+    //       导致 port 仍在 vid_conf 中，port_put_frame 回调持续执行
+    //       表现：[LOCAL PUSH] Video frames: 0 | Total callbacks: 持续增长
+    // 根因：
+    //   - 错误理念：认为"本地预览独立于通话状态"（FIX 100.47.1）
+    //   - 实际：通话结束应停止本地预览（释放摄像头资源）
+    //   - 证据：docs/log/voip.md Line 3389 "Assert failed: port->grp_lock"
+    //          Line 3394+ "[LOCAL PUSH] Video frames: 0 | Total callbacks: 82, 113, 143..."
+    // 解决：挂断时调用 stopPreview()，让 PJSIP 清理 port
+    // 详细：docs/2026-01-14/12-VERSION156新问题分析-挂断后持续输出LOCAL_PUSH日志.md
+    if (d->localVideoManager) {
+        qDebug() << "🔧 [FIX VERSION 156] Stopping local preview on call disconnect";
+
+        // ✅ 使用 QMetaObject::invokeMethod 在 Qt 主线程中调用
+        // 原因：notifyCallDisconnected() 在 PJSIP 线程中执行
+        //       LocalVideoManager 的方法必须在 Qt 主线程中调用
+        QMetaObject::invokeMethod(d->localVideoManager, "stopPreview", Qt::QueuedConnection);
+
+        qDebug() << "✅ [FIX VERSION 156] stopPreview() queued for execution in Qt main thread";
+    }
+
+    // ❌ 2026-01-11 22:10 [FIX 100.47.1 已推翻] 错误理念：LocalVideoManager 独立于通话状态
+    // 原因：导致 stopPreview() 从未被调用，port 未清理，回调持续执行
+    // 移除错误调用：d->localVideoManager->onCallDisconnected() (方法不存在)
+
+    /* ❌ 2026-01-11 22:40 [FIX 100.47 已回退] 延迟 UI 更新方案失败
+     * 原因：
+     *   1. QTimer::singleShot() 在 PJSIP 线程中发出警告
+     *      "[WARNING] QObject::startTimer: Timers can only be used with threads started with QThread"
+     *   2. 延迟未生效，UI 更新仍然立即触发
+     *   3. 崩溃仍在 avcodec_close() 内部 (PJSIP 线程 LWP 80)，与 Qt UI 无关
+     * 真正根因：
+     *   - avcodec_close() 内部 double free
+     *   - hw_frames_ctx 需要手动释放并设置为 NULL
+     * 参考：docs/2026-01-11/37-Fix100.47测试失败分析-延迟方案无效.md
+     */
+    // QTimer::singleShot(150, this, [this]() {
+    //     emit callStatusChanged("通话结束");
+    //     emit currentNumberChanged("");
+    // });
 }
 
 void SipPhoneManager::startCallTimer()
