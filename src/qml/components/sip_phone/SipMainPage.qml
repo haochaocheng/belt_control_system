@@ -316,10 +316,49 @@ Rectangle {
                             anchors.centerIn: parent
                             spacing: 5
 
+                            // 2026-01-17 18:00 [FIX 100.244] 显式指定 emoji 字体
+                            // 问题：Qt 字体回退不自动使用 emoji 字体，虽然 Noto Color Emoji 已安装
+                            // 解决：显式指定 font.family = "Noto Color Emoji"
                             Text {
+                                id: iconText
                                 text: modelData.icon
+                                font.family: "Noto Color Emoji"  // ✅ 显式指定 emoji 字体
                                 font.pixelSize: 24
                                 Layout.alignment: Qt.AlignHCenter
+
+                                // 2026-01-17 17:00 [ICON-DEBUG] 调试日志（修复后可删除）
+                                /*
+                                Component.onCompleted: {
+                                    console.log("[ICON-DEBUG] ===== Icon Debug Info =====")
+                                    console.log("[ICON-DEBUG] Tab index:", index)
+                                    console.log("[ICON-DEBUG] Tab text:", modelData.text)
+                                    console.log("[ICON-DEBUG] Icon character:", modelData.icon)
+                                    console.log("[ICON-DEBUG] Icon Unicode:", modelData.icon.charCodeAt(0).toString(16))
+                                    console.log("[ICON-DEBUG] Font family:", iconText.font.family)
+                                    console.log("[ICON-DEBUG] Font pixelSize:", iconText.font.pixelSize)
+                                    console.log("[ICON-DEBUG] Available font families (first 10):")
+                                    var families = Qt.fontFamilies()
+                                    for (var i = 0; i < Math.min(10, families.length); i++) {
+                                        console.log("[ICON-DEBUG]   ", families[i])
+                                    }
+                                    console.log("[ICON-DEBUG] Total font families available:", families.length)
+
+                                    // 检查是否有 emoji 相关的字体
+                                    console.log("[ICON-DEBUG] Searching for emoji fonts...")
+                                    var emojiFound = false
+                                    for (var j = 0; j < families.length; j++) {
+                                        var family = families[j].toLowerCase()
+                                        if (family.includes("emoji") || family.includes("noto") || family.includes("color")) {
+                                            console.log("[ICON-DEBUG] ✅ Found emoji font:", families[j])
+                                            emojiFound = true
+                                        }
+                                    }
+                                    if (!emojiFound) {
+                                        console.log("[ICON-DEBUG] ❌ No emoji fonts found in Qt.fontFamilies()")
+                                    }
+                                    console.log("[ICON-DEBUG] ========================")
+                                }
+                                */
                             }
 
                             Text {

@@ -113,11 +113,25 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     \
     # Emoji and symbol fonts (FIX for emoji display in QML)
+    # 2026-01-17 17:30 [FIX 100.244] 添加 fontconfig 和字体缓存刷新
+    # 2026-01-17 18:00 [FIX 100.244 方案B] 添加中文字体支持，移除宿主机字体挂载
+    # 问题：原方案通过挂载宿主机字体目录实现中文显示，不符合容器化理念
+    # 方案B：在容器内安装与宿主机相同的字体包，实现自包含部署
+    # 中文字体：arphic-ukai（楷体）, arphic-uming（明体）, wqy-zenhei（黑体）, noto-cjk（全字重）
     fonts-noto-color-emoji \
     fonts-noto-core \
+    fonts-noto-mono \
+    fonts-noto-cjk \
+    fonts-noto-cjk-extra \
     fonts-dejavu-core \
+    fonts-arphic-ukai \
+    fonts-arphic-uming \
+    fonts-wqy-zenhei \
+    fonts-ubuntu \
+    fontconfig \
     \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -fv
 
 # Create application directory structure
 RUN mkdir -p /app/lib /app/plugins /app/qml /app/data /app/config /app/tts_models /app/AUDIO

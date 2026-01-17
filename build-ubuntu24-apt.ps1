@@ -124,7 +124,11 @@ if ($needCompilePJSIP) {
 
     $pjsipOutputDir = "$ProjectRoot\docker\rk3588\pjsip-libs"
     $pjsipConfigSite = "$ProjectRoot\docker\rk3588\pjsip_config_site.h"
+    # ✅ 2026-01-16 23:40 [FIX 100.227] 修复 FFmpeg 头文件版本不匹配
+    # 旧路径（v58 头文件）保留用于非 FFmpeg 文件（rockchip, rga等）
     $pjsipSysroot = "$ProjectRoot\docker\rk3588\sysroot\rk3588-root"
+    # 新路径（v60 头文件）：使用 FFmpeg 6.0 编译的头文件
+    $ffmpeg60Include = "$ProjectRoot\docker\rk3588\ffmpeg60-libs\opt\ffmpeg-rockchip\include"
     $pjsipContainerName = "pjsip-builder-persistent"
     $pjsipImageName = "pjsip-builder-ubuntu20:latest"  # Ubuntu 20.04 + GCC 9
 
@@ -222,25 +226,22 @@ if ($needCompilePJSIP) {
         docker exec $pjsipContainerName mkdir -p /opt/rk3588-sysroot/usr/include | Out-Null
         docker exec $pjsipContainerName mkdir -p /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig | Out-Null
 
-        # 只复制 FFmpeg 头文件（libav*）
-        Write-Host "    - 复制 FFmpeg 头文件..." -ForegroundColor Gray
+        # ✅ 2026-01-16 23:40 [FIX 100.227] 使用 FFmpeg 6.0 头文件
+        Write-Host "    - 复制 FFmpeg 6.0 头文件..." -ForegroundColor Gray
         $ffmpegIncludeDirs = @("libavcodec", "libavformat", "libavutil", "libavdevice", "libswscale", "libswresample", "libavfilter")
         $copiedCount = 0
         foreach ($dir in $ffmpegIncludeDirs) {
-            $srcPath = Join-Path $pjsipSysroot "usr\include\aarch64-linux-gnu\$dir"
+            # ✅ 使用 FFmpeg 6.0 头文件路径
+            $srcPath = Join-Path $ffmpeg60Include $dir
             if (Test-Path $srcPath) {
                 docker cp "$srcPath" "${pjsipContainerName}:/opt/rk3588-sysroot/usr/include/" 2>&1 | Out-Null
                 $copiedCount++
+                Write-Host "      ✓ $dir (v60)" -ForegroundColor Green
             } else {
-                # 尝试另一个可能的路径
-                $srcPath = Join-Path $pjsipSysroot "usr\include\$dir"
-                if (Test-Path $srcPath) {
-                    docker cp "$srcPath" "${pjsipContainerName}:/opt/rk3588-sysroot/usr/include/" 2>&1 | Out-Null
-                    $copiedCount++
-                }
+                Write-Host "      ✗ $dir 未找到" -ForegroundColor Red
             }
         }
-        Write-Host "      复制了 $copiedCount 个 FFmpeg 头文件目录" -ForegroundColor Gray
+        Write-Host "      复制了 $copiedCount 个 FFmpeg 6.0 头文件目录" -ForegroundColor Gray
 
         # 复制 RKMPP 头文件
         Write-Host "    - 复制 RKMPP 头文件..." -ForegroundColor Gray
@@ -1661,7 +1662,6 @@ sudo docker run \
     -v /dev/dri:/dev/dri \
     -v /sys:/sys \
     -v /run/udev:/run/udev:ro \
-    -v /usr/share/fonts:/usr/share/fonts:ro \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/appdata:/app/appdata:rw \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/audio:/app/AUDIO:rw \
     -v /tmp/belt-control-cores:/tmp/belt-control-cores:rw \
