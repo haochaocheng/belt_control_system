@@ -7,6 +7,7 @@
 #include <QCoreApplication>
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
+#include <unordered_map>
 
 /**
  * @brief 远端视频管理器实现 - 事件驱动的 Push 模式 + 异步处理 (v6)
@@ -15,6 +16,15 @@
  * 并连接到 video conference bridge,让 PJSIP 主动推送帧
  * v6: 使用工作线程异步处理视频帧转换,避免阻塞 PJSIP 回调
  */
+
+// ✅ 2026-01-17 22:00 [FIX 100.245 Use-After-Free] port → pool 静态映射
+// 问题：destroyCustomPort() 提前释放 pool，导致 PJSIP 后续访问已释放内存崩溃
+// 根因：本机挂断时，RemoteVideoManager 立即释放 pool，但 PJSIP vid_conf 还持有 port 引用
+// 症状：设备188崩溃(内存立即被覆盖)，设备151不崩溃(内存侥幸保留)，典型的 Use-After-Free
+// 解决：使用静态映射保存 port → pool 关系，pool 由 port_on_destroy 回调释放
+// 时机：PJSIP 真正销毁 port 时（引用计数=0）调用 on_destroy，此时释放 pool 才安全
+// 参考：LocalVideoManager 的正确实现（docs/2026-01-12/72-完整根因分析-崩溃的真正原因.md）
+static std::unordered_map<pjmedia_port*, pj_pool_t*> s_remotePortPoolMap;
 
 // ========== FrameProcessorThread 实现 ==========
 
@@ -242,18 +252,27 @@ void RemoteVideoManager::onCallConnected(int callId)
 
 void RemoteVideoManager::onCallDisconnected()
 {
+    qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
+    qDebug() << "🔴 [HANGUP-DEBUG] RemoteVideoManager::onCallDisconnected() 开始";
+    qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
     qDebug() << "🔴 [FIX 72] RemoteVideoManager::onCallDisconnected() entered";
     qDebug() << "📹 RemoteVideoManager: Call disconnected";
 
     // 发送信号,让 Qt 主线程停止检查定时器
+    qDebug() << "🔴 [HANGUP-DEBUG] 发送 requestStopCheck 信号...";
     qDebug() << "🔴 [FIX 72] Emitting requestStopCheck signal";
     emit requestStopCheck();
 
     // 断开连接并销毁 custom port
+    qDebug() << "🔴 [HANGUP-DEBUG] 调用 disconnectFromVideoBridge()...";
     qDebug() << "🔴 [FIX 72] Calling disconnectFromVideoBridge()";
     disconnectFromVideoBridge();
+    qDebug() << "🔴 [HANGUP-DEBUG] disconnectFromVideoBridge() 完成";
+
+    qDebug() << "🔴 [HANGUP-DEBUG] 调用 destroyCustomPort()...";
     qDebug() << "🔴 [FIX 72] Calling destroyCustomPort()";
     destroyCustomPort();
+    qDebug() << "🔴 [HANGUP-DEBUG] destroyCustomPort() 完成";
     qDebug() << "🔴 [FIX 72] Port cleanup completed";
 
     m_currentCallId = PJSUA_INVALID_ID;
@@ -542,6 +561,12 @@ bool RemoteVideoManager::createCustomPort(int width, int height, int fps_num, in
     // 将 this 指针存储在 port_data 中,以便在静态回调中访问
     m_customPort->port_data.pdata = this;
 
+    // ✅ 2026-01-17 22:00 [FIX 100.245 Use-After-Free] 保存 port → pool 映射
+    // 原因：port_on_destroy 需要释放 pool，但不能访问 this（可能已析构）
+    // 解决：将映射保存到静态 map，on_destroy 时从 map 中获取 pool
+    // 详细：参考 LocalVideoManager 的正确实现
+    s_remotePortPoolMap[m_customPort] = m_pool;
+
     qDebug() << "✅ Custom pjmedia_port created for Qt video sink:"
              << width << "x" << height << "@" << fps_num << "/" << fps_denum << "fps";
 
@@ -550,15 +575,34 @@ bool RemoteVideoManager::createCustomPort(int width, int height, int fps_num, in
 
 void RemoteVideoManager::destroyCustomPort()
 {
+    qDebug() << "🔴 [HANGUP-DEBUG] RemoteVideoManager::destroyCustomPort() 开始";
+    qDebug() << "🔴 [HANGUP-DEBUG] m_customPort:" << m_customPort;
+    qDebug() << "🔴 [HANGUP-DEBUG] m_customSlot:" << m_customSlot;
+    qDebug() << "🔴 [HANGUP-DEBUG] m_pool:" << m_pool;
+
     if (m_customPort) {
-        m_customPort = nullptr;  // port 由 pool 管理
+        // ✅ 2026-01-17 22:00 [FIX 100.245 Use-After-Free] 只清空指针，不释放 pool
+        // ❌ 旧方案：立即释放 pool → PJSIP 后续访问已释放内存 → Use-After-Free 崩溃
+        // ✅ 新方案：pool 由 port_on_destroy 回调释放，时机正确（PJSIP 清理完成后）
+        qDebug() << "🔴 [HANGUP-DEBUG] 清空 m_customPort 指针 (pool 由 on_destroy 回调释放)";
+        m_customPort = nullptr;
+    } else {
+        qDebug() << "🔴 [HANGUP-DEBUG] m_customPort 已经为 NULL，跳过";
     }
 
     if (m_pool) {
-        pj_pool_release(m_pool);
-        m_pool = nullptr;
-        qDebug() << "✅ Custom port pool released";
+        // ❌ 2026-01-17 22:00 [FIX 100.245] 不再立即释放 pool！
+        // qDebug() << "🔴 [HANGUP-DEBUG] 准备释放 pool...";
+        // pj_pool_release(m_pool);  // ← 这行导致 Use-After-Free 崩溃
+        // ✅ pool 将在 port_on_destroy 回调中释放
+        qDebug() << "🔴 [FIX 100.245] Pool 不立即释放，等待 port_on_destroy 回调";
+        m_pool = nullptr;  // 只清空指针
+    } else {
+        qDebug() << "🔴 [HANGUP-DEBUG] m_pool 已经为 NULL，跳过释放";
     }
+
+    qDebug() << "🔴 [HANGUP-DEBUG] RemoteVideoManager::destroyCustomPort() 完成";
+    qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
 }
 
 // ========== PJSIP 静态回调函数 (C 风格) ==========
@@ -635,8 +679,46 @@ pj_status_t RemoteVideoManager::port_get_frame(pjmedia_port *port, pjmedia_frame
 
 pj_status_t RemoteVideoManager::port_on_destroy(pjmedia_port *port)
 {
-    qDebug() << "📹 Custom port on_destroy called";
+    /* ✅ 2026-01-17 21:30 [CRASH-DEBUG-T] RemoteVideoManager::port_on_destroy 入口 */
+    fprintf(stderr, "!!! [CRASH-DEBUG-T] RemoteVideoManager::port_on_destroy ENTRY (port=%p)\n", (void*)port);
+    fflush(stderr);
+
+    /* ✅ 2026-01-17 21:30 [CRASH-DEBUG-U] 准备打印 qDebug 日志 */
+    fprintf(stderr, "!!! [CRASH-DEBUG-U] About to call qDebug\n");
+    fflush(stderr);
+
+    // ✅ 2026-01-17 22:00 [FIX 100.245 Use-After-Free] 从静态映射中获取 pool 并释放
+    // 问题：不能访问 this 指针（可能已析构），但需要释放 pool
+    // 解决：从静态映射中查找 port → pool，释放后从映射中移除
+    // 时机：vid_conf 真正销毁 port 时调用，此时 PJSIP 所有清理已完成
+    // 详细：参考 LocalVideoManager 的正确实现
+
+    auto it = s_remotePortPoolMap.find(port);
+    if (it != s_remotePortPoolMap.end()) {
+        pj_pool_t *pool = it->second;
+        qDebug() << "📹 [FIX 100.245] RemoteVideoManager::port_on_destroy: Found pool in map, releasing...";
+        fprintf(stderr, "!!! [CRASH-DEBUG-U2] port_on_destroy: Found pool=%p in map, releasing...\n", (void*)pool);
+        fflush(stderr);
+
+        pj_pool_release(pool);
+
+        fprintf(stderr, "!!! [CRASH-DEBUG-V] port_on_destroy: pool released successfully\n");
+        fflush(stderr);
+
+        s_remotePortPoolMap.erase(it);
+        qDebug() << "✅ [FIX 100.245] Pool released in on_destroy callback";
+    } else {
+        qDebug() << "⚠️ [FIX 100.245] port_on_destroy: Port not found in map (already cleaned?)";
+        fprintf(stderr, "!!! [CRASH-DEBUG-V] port_on_destroy: Port not found in map\n");
+        fflush(stderr);
+    }
+
     PJ_UNUSED_ARG(port);
+
+    /* ✅ 2026-01-17 21:30 [CRASH-DEBUG-W] 准备返回 PJ_SUCCESS */
+    fprintf(stderr, "!!! [CRASH-DEBUG-W] About to return PJ_SUCCESS\n");
+    fflush(stderr);
+
     return PJ_SUCCESS;
 }
 
