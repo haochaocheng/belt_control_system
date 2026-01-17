@@ -113,22 +113,26 @@ if (-not (Test-Path $BinaryFile)) {
 Write-Host ""
 Write-Host "Step 2: Uploading binary to device..." -ForegroundColor Cyan
 
-# 创建部署目录（使用 plink）
+# 创建部署目录
 Write-Host "  Creating deploy directory on device..." -ForegroundColor Gray
-& plink -batch -pw $DevicePassword "$DeviceUser@$DeviceIP" "mkdir -p $DeviceDeployDir" 2>$null
+ssh "${DeviceUser}@${DeviceIP}" "mkdir -p $DeviceDeployDir" 2>$null
 
-# 上传二进制（使用 pscp）
+# 上传二进制
 Write-Host "  Uploading belt_control_system..." -ForegroundColor Gray
-& pscp -batch -pw $DevicePassword "$BinaryFile" "${DeviceUser}@${DeviceIP}:${DeviceDeployDir}/belt_control_system"
+scp "$BinaryFile" "${DeviceUser}@${DeviceIP}:${DeviceDeployDir}/belt_control_system"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  [ERROR] Upload failed" -ForegroundColor Red
-    Write-Host "  Please ensure PuTTY is installed (plink and pscp commands)" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Please configure SSH key-based authentication:" -ForegroundColor Yellow
+    Write-Host "    1. Generate key (if not exists): ssh-keygen" -ForegroundColor White
+    Write-Host "    2. Copy to device: type `$env:USERPROFILE\.ssh\id_rsa.pub | ssh $DeviceUser@$DeviceIP 'cat >> ~/.ssh/authorized_keys'" -ForegroundColor White
+    Write-Host "    3. Test: ssh $DeviceUser@$DeviceIP" -ForegroundColor White
     exit 1
 }
 
 # 设置可执行权限
-& plink -batch -pw $DevicePassword "$DeviceUser@$DeviceIP" "chmod +x $DeviceDeployDir/belt_control_system"
+ssh "${DeviceUser}@${DeviceIP}" "chmod +x $DeviceDeployDir/belt_control_system"
 
 Write-Host "  [OK] Binary uploaded successfully" -ForegroundColor Green
 
@@ -140,11 +144,11 @@ Write-Host "Step 3: Stopping old processes..." -ForegroundColor Cyan
 
 # 停止容器内的程序
 Write-Host "  Stopping container processes..." -ForegroundColor Gray
-& plink -batch -pw $DevicePassword "$DeviceUser@$DeviceIP" "docker exec belt_control bash -c 'pkill -9 belt_control_system || true' 2>/dev/null || true"
+ssh "${DeviceUser}@${DeviceIP}" "docker exec belt_control bash -c 'pkill -9 belt_control_system || true' 2>/dev/null || true"
 
 # 停止宿主机的程序
 Write-Host "  Stopping host processes..." -ForegroundColor Gray
-& plink -batch -pw $DevicePassword "$DeviceUser@$DeviceIP" "pkill -9 belt_control_system || true"
+ssh "${DeviceUser}@${DeviceIP}" "pkill -9 belt_control_system || true"
 
 Start-Sleep -Seconds 2
 Write-Host "  [OK] Old processes stopped" -ForegroundColor Green
@@ -156,18 +160,18 @@ Write-Host ""
 Write-Host "Step 4: Starting application..." -ForegroundColor Cyan
 
 # 检测容器是否运行
-$containerStatus = & plink -batch -pw $DevicePassword "$DeviceUser@$DeviceIP" "docker ps --filter name=belt_control --format '{{.Names}}' 2>/dev/null"
+$containerStatus = ssh "${DeviceUser}@${DeviceIP}" "docker ps --filter name=belt_control --format '{{.Names}}' 2>/dev/null"
 
 if ($containerStatus -match "belt_control") {
     Write-Host "  [INFO] Container is running, starting inside container..." -ForegroundColor Yellow
 
     # 复制二进制到容器
-    & plink -batch -pw $DevicePassword "$DeviceUser@$DeviceIP" "docker cp $DeviceDeployDir/belt_control_system belt_control:/app/belt_control_system"
-    & plink -batch -pw $DevicePassword "$DeviceUser@$DeviceIP" "docker exec belt_control chmod +x /app/belt_control_system"
+    ssh "${DeviceUser}@${DeviceIP}" "docker cp $DeviceDeployDir/belt_control_system belt_control:/app/belt_control_system"
+    ssh "${DeviceUser}@${DeviceIP}" "docker exec belt_control chmod +x /app/belt_control_system"
 
     # 在容器内后台启动
     Write-Host "  Starting in container..." -ForegroundColor Gray
-    & plink -batch -pw $DevicePassword "$DeviceUser@$DeviceIP" "docker exec -d belt_control bash -c 'cd /app && nohup ./belt_control_system > /tmp/belt_control.log 2>&1 &'"
+    ssh "${DeviceUser}@${DeviceIP}" "docker exec -d belt_control bash -c 'cd /app && nohup ./belt_control_system > /tmp/belt_control.log 2>&1 &'"
 
     Write-Host "  [OK] Application started in container" -ForegroundColor Green
     Write-Host ""
@@ -179,7 +183,7 @@ if ($containerStatus -match "belt_control") {
 
     # 在宿主机后台启动（需要设置库路径）
     Write-Host "  Starting on host with LD_LIBRARY_PATH..." -ForegroundColor Gray
-    & plink -batch -pw $DevicePassword "$DeviceUser@$DeviceIP" "cd $DeviceDeployDir && export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/aarch64-linux-gnu:`$LD_LIBRARY_PATH && nohup ./belt_control_system > /tmp/belt_control.log 2>&1 &"
+    ssh "${DeviceUser}@${DeviceIP}" "cd $DeviceDeployDir && export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/aarch64-linux-gnu:`$LD_LIBRARY_PATH && nohup ./belt_control_system > /tmp/belt_control.log 2>&1 &"
 
     Write-Host "  [OK] Application started on host" -ForegroundColor Green
     Write-Host ""
@@ -195,7 +199,7 @@ Write-Host "Step 5: Verifying application status..." -ForegroundColor Cyan
 
 Start-Sleep -Seconds 2
 
-$processCheck = & plink -batch -pw $DevicePassword "$DeviceUser@$DeviceIP" "ps aux | grep belt_control_system | grep -v grep | wc -l"
+$processCheck = ssh "${DeviceUser}@${DeviceIP}" "ps aux | grep belt_control_system | grep -v grep | wc -l"
 
 if ([int]$processCheck -gt 0) {
     Write-Host "  [OK] Application is running ($processCheck process(es))" -ForegroundColor Green
