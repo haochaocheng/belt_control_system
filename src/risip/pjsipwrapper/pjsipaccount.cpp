@@ -28,6 +28,8 @@
 #include <QDebug>
 #include <QMetaObject>
 #include <QPointer>
+#include <QThread>
+#include <QCoreApplication>
 
 namespace risip {
 
