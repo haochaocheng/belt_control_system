@@ -123,6 +123,17 @@ public slots:
     void setSpeakerVolume(int volume);     // 0-100
     void muteMicrophone(bool mute);
 
+    // ✅ 2026-01-17 22:30 [FIX 100.246] 设备枚举和选择
+    Q_INVOKABLE QStringList getAudioInputDevices();   // 获取音频输入设备列表（麦克风）
+    Q_INVOKABLE QStringList getAudioOutputDevices();  // 获取音频输出设备列表（扬声器）
+    Q_INVOKABLE QStringList getVideoDevices();        // 获取视频设备列表（摄像头）
+    Q_INVOKABLE int getCurrentAudioInputDevice();     // 获取当前音频输入设备索引
+    Q_INVOKABLE int getCurrentAudioOutputDevice();    // 获取当前音频输出设备索引
+    Q_INVOKABLE int getCurrentVideoDevice();          // 获取当前视频设备索引
+    Q_INVOKABLE bool setAudioInputDevice(int index);  // 设置音频输入设备
+    Q_INVOKABLE bool setAudioOutputDevice(int index); // 设置音频输出设备
+    Q_INVOKABLE bool setVideoDevice(int index);       // 设置视频设备
+
     // DTMF (dial tone)
     void sendDtmf(const QString &digits);
 

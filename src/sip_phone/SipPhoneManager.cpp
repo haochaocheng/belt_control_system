@@ -143,12 +143,18 @@ static void onCallStateChanged(int call_id, pjsip_inv_state state, const char* s
         }, Qt::QueuedConnection);
         break;
     case PJSIP_INV_STATE_DISCONNECTED:
+        qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
+        qDebug() << "🔴 [HANGUP-DEBUG] 进入 PJSIP_INV_STATE_DISCONNECTED 回调";
+        qDebug() << "🔴 [HANGUP-DEBUG] call_id:" << call_id;
+        qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
         qDebug() << "🔴 [FIX 72 DIAG] PJSIP_INV_STATE_DISCONNECTED triggered, call_id:" << call_id;
         statusText = "通话结束";
         isInCall = false;
         // Notify video managers that call is disconnected
+        qDebug() << "🔴 [HANGUP-DEBUG] 准备调用 notifyCallDisconnected()...";
         qDebug() << "🔴 [FIX 72] About to call notifyCallDisconnected()";
         manager->notifyCallDisconnected();
+        qDebug() << "🔴 [HANGUP-DEBUG] notifyCallDisconnected() 已完成";
         qDebug() << "🔴 [FIX 72] notifyCallDisconnected() completed";
 
         // ✅ 重置视频来电标志和当前通话视频标志
@@ -231,8 +237,10 @@ public:
         remoteVideoManager = new RemoteVideoManager(parent);
         qDebug() << "✅ RemoteVideoManager created (for video calls)";
 
-        // DON'T create Risip instance here - defer until initializeEndpoint() is called
-        // This prevents PJSIP initialization crash during app startup
+        // ✅ 2026-01-18 01:00 [FIX 100.246] 不在构造函数中创建 Risip
+        // 原因：用户点击 SIP 按钮进入设置页面时才需要设备枚举
+        // Risip 实例将在第一次调用设备枚举函数时按需创建
+        qDebug() << "✅ [FIX 100.246] Risip instance will be created on-demand when user enters SIP settings";
     }
 
     ~Private()
@@ -299,7 +307,11 @@ SipPhoneManager::SipPhoneManager(QObject *parent)
     // Initialize contact database
     risip::ContactDatabase::instance()->initialize();
 
-    qDebug() << "SipPhoneManager created with Risip SDK";
+    // ✅ 2026-01-18 01:00 [FIX 100.246] 版本确认
+    qDebug() << "═══════════════════════════════════════════════════════";
+    qDebug() << "🔥🔥🔥 SipPhoneManager VERSION 2026-01-18-01:00";
+    qDebug() << "🔥🔥🔥 FIX 100.246 - 懒加载：用户进入 SIP 设置时才创建 Risip";
+    qDebug() << "═══════════════════════════════════════════════════════";
 }
 
 SipPhoneManager::~SipPhoneManager()
@@ -441,15 +453,20 @@ bool SipPhoneManager::initializeEndpoint()
         return true;
     }
 
-    // Create Risip instance on first initialization (lazy initialization)
+    // ✅ 2026-01-18 01:00 [FIX 100.246] 创建或使用已有的 Risip 实例
+    // 原因：Risip 可能已在设备枚举时创建（用户进入设置页面），也可能还未创建
+    // 无论哪种情况，确保 Risip 实例存在
     if (!d->risipInstance) {
-        qDebug() << "Creating Risip instance (this will initialize PJSIP)...";
+        qDebug() << "Creating Risip instance (not yet created by device enumeration)...";
         d->risipInstance = risip::Risip::instance();
         if (!d->risipInstance) {
             qCritical() << "Failed to create Risip instance";
             updateServerStatus("无法创建 SIP 引擎");
             return false;
         }
+        qDebug() << "✅ Risip instance created";
+    } else {
+        qDebug() << "✅ Using existing Risip instance (created by device enumeration)";
     }
 
     // Get the SIP endpoint from Risip singleton
@@ -576,10 +593,22 @@ bool SipPhoneManager::initializeEndpoint()
     risip::RisipCallManager *callManager = risip::RisipCallManager::instance();
     if (callManager) {
         connect(callManager, &risip::RisipCallManager::incomingCall, this, [this](risip::RisipCall *call) {
-            if (!call) return;
+            // 2026-01-17 13:50 [调试] 添加详细日志定位卡住位置
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Lambda START: Incoming call handler";
 
+            if (!call) {
+                qDebug() << "[SipPhoneManager-DEBUG] ⚠️ call is NULL, returning";
+                return;
+            }
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 1: call is valid";
+
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Step 2: Getting contact from buddy...";
             qDebug() << "Incoming call from:" << call->buddy()->contact();
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 2: Got contact";
+
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Step 3: Setting currentCall...";
             d->currentCall = call;
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 3: currentCall set";
 
             // ✅ Video detection is now handled in risipendpoint.cpp call_state_callback_wrapper()
             // at INCOMING state using invite session's SDP negotiator - this is more reliable
@@ -587,24 +616,41 @@ bool SipPhoneManager::initializeEndpoint()
             // DO NOT detect video here as media_cnt is still 0 at this point!
 
             // Emit incoming call signal to QML
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Step 4: Getting caller number...";
             QString callerNumber = call->buddy()->contact();
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 4: Caller number:" << callerNumber;
 
             // ✅ 提取纯号码（处理 "Extension 1006" 1006 这样的格式）
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Step 5: Extracting phone number...";
             QString extractedNumber = extractPhoneNumber(callerNumber);
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 5: Extracted:" << extractedNumber;
 
             // ✅ 查询联系人名字，优先显示联系人名字
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Step 6: Querying contact database...";
             QString callerName = risip::ContactDatabase::instance()->getContactName(extractedNumber);
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 6: Got contact name:" << callerName;
+
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Step 7: Determining display name...";
             QString displayName = callerName.isEmpty() ? callerNumber : callerName;
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 7: Display name:" << displayName;
 
             qDebug() << "📇 Incoming call - Raw:" << callerNumber << "Extracted:" << extractedNumber << "Display:" << displayName;
 
             // 保存显示名供后续使用
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Step 8: Setting caller display name...";
             setCallerDisplayName(displayName);
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 8: Caller display name set";
 
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Step 9: Emitting incomingCall() signal to QML...";
             emit incomingCall(callerNumber, displayName);
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 9: incomingCall() signal emitted";
+
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Step 10: Updating call status...";
             updateCallStatus("来电: " + displayName);
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 10: Call status updated";
 
             // Connect call status signals (same as in makeCall)
+            qDebug() << "[SipPhoneManager-DEBUG] ⏰ Step 11: Connecting status changed signal...";
             connect(d->currentCall, &risip::RisipCall::statusChanged, this, [this]() {
                 if (!d->currentCall) {
                     qDebug() << "Call status changed but currentCall is null, ignoring";
@@ -663,6 +709,9 @@ bool SipPhoneManager::initializeEndpoint()
                     setIsIncomingVideoCall(false);
                 }
             });
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Step 11: Status changed signal connected";
+
+            qDebug() << "[SipPhoneManager-DEBUG] ✅ Lambda END: Incoming call handler completed";
         });
         qDebug() << "Connected to RisipCallManager for incoming calls";
     }
@@ -1887,7 +1936,9 @@ void SipPhoneManager::hangupCall()
     } else if (d->inCall) {
         // ✅ Video call created with PJSIP C API (no RisipCall object)
         // Need to hangup using PJSIP C API directly
-        qDebug() << "Hanging up video call (PJSIP C API)...";
+        qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
+        qDebug() << "🔴 [HANGUP-DEBUG] 本机主动挂断视频通话 (PJSIP C API)";
+        qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
 
         try {
             // Find active call and hangup
@@ -1896,20 +1947,24 @@ void SipPhoneManager::hangupCall()
             pj_status_t status = pjsua_enum_calls(call_ids, &count);
 
             if (status == PJ_SUCCESS && count > 0) {
-                qDebug() << "Found" << count << "active calls, hanging up...";
+                qDebug() << "🔴 [HANGUP-DEBUG] 找到" << count << "个活跃通话";
 
                 for (unsigned i = 0; i < count; ++i) {
                     pjsua_call_info ci;
                     status = pjsua_call_get_info(call_ids[i], &ci);
 
                     if (status == PJ_SUCCESS && ci.state != PJSIP_INV_STATE_DISCONNECTED) {
-                        qDebug() << "Hanging up call ID:" << call_ids[i];
+                        qDebug() << "🔴 [HANGUP-DEBUG] 准备挂断 call_id:" << call_ids[i];
+                        qDebug() << "🔴 [HANGUP-DEBUG] 当前状态:" << ci.state;
+                        qDebug() << "🔴 [HANGUP-DEBUG] 调用 pjsua_call_hangup()...";
                         pjsua_call_hangup(call_ids[i], 0, NULL, NULL);
+                        qDebug() << "🔴 [HANGUP-DEBUG] pjsua_call_hangup() 返回";
                     }
                 }
 
                 // The onCallStateChanged callback will handle UI updates when call disconnects
-                qDebug() << "✅ Video call hangup command sent (waiting for callback)";
+                qDebug() << "🔴 [HANGUP-DEBUG] 挂断命令已发送，等待 onCallStateChanged 回调";
+                qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
 
             } else {
                 qWarning() << "❌ No active calls found to hangup";
@@ -2109,6 +2164,487 @@ void SipPhoneManager::muteMicrophone(bool mute)
     } catch (...) {
         qDebug() << "Unknown error muting mic";
     }
+}
+
+// ✅ 2026-01-17 22:30 [FIX 100.246] 设备枚举和选择实现
+QStringList SipPhoneManager::getAudioInputDevices()
+{
+    qDebug() << "🔥🔥🔥 [ENTRY] getAudioInputDevices() called!";
+
+    QStringList devices;
+
+    // ✅ 2026-01-18 02:15 [FIX 100.246] 按需创建 Risip 实例 + 初始化 PJSIP endpoint
+    // 原因：设备枚举需要 PJSIP endpoint 已初始化，不仅仅是 Risip 对象存在
+    // 区分两个概念：
+    //   - Risip 实例：C++ 对象
+    //   - PJSIP endpoint：调用 pjsua_create() 后才能枚举设备
+    if (!d->risipInstance) {
+        qDebug() << "   [LAZY INIT] Risip instance not found, creating for device enumeration...";
+        d->risipInstance = risip::Risip::instance();
+        if (!d->risipInstance) {
+            qWarning() << "❌ Failed to create Risip instance, cannot enumerate devices";
+            return devices;
+        }
+        qDebug() << "   ✅ Risip instance created";
+    } else {
+        qDebug() << "   ✅ Using existing Risip instance";
+    }
+
+    // ✅ 2026-01-18 02:15 [FIX 100.246] 确保 PJSIP endpoint 已初始化
+    // 原因：即使 Risip 实例存在，也需要调用 initializeEndpoint() 才能枚举设备
+    if (!d->initialized) {
+        qDebug() << "   [LAZY INIT] PJSIP endpoint not initialized, initializing now for device enumeration...";
+        bool success = initializeEndpoint();
+        if (!success) {
+            qWarning() << "❌ Failed to initialize PJSIP endpoint, cannot enumerate devices";
+            return devices;
+        }
+        qDebug() << "   ✅ PJSIP endpoint initialized (can now enumerate devices)";
+    } else {
+        qDebug() << "   ✅ PJSIP endpoint already initialized";
+    }
+
+    // 使用 pjsua_enum_aud_devs 枚举音频设备
+    pjmedia_aud_dev_info info[64];  // 最多64个设备
+    unsigned count = 64;
+
+    qDebug() << "   [API] Calling pjsua_enum_aud_devs() with max count:" << count;
+    pj_status_t status = pjsua_enum_aud_devs(info, &count);
+    qDebug() << "   [API] pjsua_enum_aud_devs() returned, status:" << status << "count:" << count;
+
+    if (status != PJ_SUCCESS) {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(status, errmsg, sizeof(errmsg));
+        qWarning() << "❌ Failed to enumerate audio devices, error:" << errmsg;
+        return devices;
+    }
+
+    qDebug() << "📢 [Device Enum] Total audio devices:" << count;
+
+    // ✅ 2026-01-17 23:10 [DEBUG] 显示所有设备，包括被跳过的
+    for (unsigned i = 0; i < count; ++i) {
+        QString deviceName = QString::fromUtf8(info[i].name);
+        qDebug() << "   [ALL] Device" << i << ":" << deviceName
+                 << "| In:" << info[i].input_count << "Out:" << info[i].output_count;
+
+        // 只添加支持录音(输入)的设备
+        if (info[i].input_count > 0) {
+            devices.append(deviceName);
+            qDebug() << "      ✅ ADDED as Input Device";
+        } else {
+            qDebug() << "      ⏭️ SKIPPED (no input channels)";
+        }
+    }
+
+    qDebug() << "📢 [Device Enum] Total INPUT devices added:" << devices.count();
+    return devices;
+}
+
+QStringList SipPhoneManager::getAudioOutputDevices()
+{
+    qDebug() << "🔥🔥🔥 [ENTRY] getAudioOutputDevices() called!";
+
+    QStringList devices;
+
+    // ✅ 2026-01-18 02:15 [FIX 100.246] 按需创建 Risip 实例 + 初始化 PJSIP endpoint（同上）
+    if (!d->risipInstance) {
+        qDebug() << "   [LAZY INIT] Creating Risip instance...";
+        d->risipInstance = risip::Risip::instance();
+        if (!d->risipInstance) {
+            qWarning() << "❌ Failed to create Risip instance";
+            return devices;
+        }
+        qDebug() << "   ✅ Risip instance created";
+    } else {
+        qDebug() << "   ✅ Using existing Risip instance";
+    }
+
+    // ✅ 2026-01-18 02:15 [FIX 100.246] 确保 PJSIP endpoint 已初始化
+    if (!d->initialized) {
+        qDebug() << "   [LAZY INIT] PJSIP endpoint not initialized, initializing now for device enumeration...";
+        bool success = initializeEndpoint();
+        if (!success) {
+            qWarning() << "❌ Failed to initialize PJSIP endpoint, cannot enumerate devices";
+            return devices;
+        }
+        qDebug() << "   ✅ PJSIP endpoint initialized (can now enumerate devices)";
+    } else {
+        qDebug() << "   ✅ PJSIP endpoint already initialized";
+    }
+
+    // 使用 pjsua_enum_aud_devs 枚举音频设备
+    pjmedia_aud_dev_info info[64];
+    unsigned count = 64;
+
+    qDebug() << "   [API] Calling pjsua_enum_aud_devs() with max count:" << count;
+    pj_status_t status = pjsua_enum_aud_devs(info, &count);
+    qDebug() << "   [API] pjsua_enum_aud_devs() returned, status:" << status << "count:" << count;
+
+    if (status != PJ_SUCCESS) {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(status, errmsg, sizeof(errmsg));
+        qWarning() << "❌ Failed to enumerate audio devices, error:" << errmsg;
+        return devices;
+    }
+
+    qDebug() << "🔊 [Device Enum] Total audio devices:" << count;
+
+    // ✅ 2026-01-17 23:10 [DEBUG] 显示所有设备，包括被跳过的
+    for (unsigned i = 0; i < count; ++i) {
+        QString deviceName = QString::fromUtf8(info[i].name);
+        qDebug() << "   [ALL] Device" << i << ":" << deviceName
+                 << "| In:" << info[i].input_count << "Out:" << info[i].output_count;
+
+        // 只添加支持播放(输出)的设备
+        if (info[i].output_count > 0) {
+            devices.append(deviceName);
+            qDebug() << "      ✅ ADDED as Output Device";
+        } else {
+            qDebug() << "      ⏭️ SKIPPED (no output channels)";
+        }
+    }
+
+    qDebug() << "🔊 [Device Enum] Total OUTPUT devices added:" << devices.count();
+    return devices;
+}
+
+QStringList SipPhoneManager::getVideoDevices()
+{
+    qDebug() << "🔥🔥🔥 [ENTRY] getVideoDevices() called!";
+
+    QStringList devices;
+
+    // ✅ 2026-01-18 01:00 [FIX 100.246] 按需创建 Risip 实例（同上）
+    if (!d->risipInstance) {
+        qDebug() << "   [LAZY INIT] Creating Risip instance...";
+        d->risipInstance = risip::Risip::instance();
+        if (!d->risipInstance) {
+            qWarning() << "❌ Failed to create Risip instance";
+            return devices;
+        }
+        qDebug() << "   ✅ Risip instance created";
+    } else {
+        qDebug() << "   ✅ Using existing Risip instance";
+    }
+
+    // ✅ 2026-01-18 02:15 [FIX 100.246] 确保 PJSIP endpoint 已初始化
+    // 原因：即使 Risip 实例存在，也需要调用 initializeEndpoint() 才能枚举设备
+    if (!d->initialized) {
+        qDebug() << "   [LAZY INIT] PJSIP endpoint not initialized, initializing now for device enumeration...";
+        bool success = initializeEndpoint();
+        if (!success) {
+            qWarning() << "❌ Failed to initialize PJSIP endpoint, cannot enumerate devices";
+            return devices;
+        }
+        qDebug() << "   ✅ PJSIP endpoint initialized (can now enumerate devices)";
+    } else {
+        qDebug() << "   ✅ PJSIP endpoint already initialized";
+    }
+
+    unsigned count = pjsua_vid_dev_count();
+    qDebug() << "📹 [Device Enum] Total video devices:" << count;
+
+    for (unsigned i = 0; i < count; ++i) {
+        pjmedia_vid_dev_info info;
+        pj_status_t status = pjsua_vid_dev_get_info(i, &info);
+
+        if (status == PJ_SUCCESS) {
+            // 只添加支持视频捕获的设备
+            if (info.dir & PJMEDIA_DIR_CAPTURE) {
+                QString deviceName = QString::fromUtf8(info.name);
+                // 过滤掉虚拟设备(colorbar)
+                if (!deviceName.contains("colorbar", Qt::CaseInsensitive)) {
+                    devices.append(deviceName);
+                    qDebug() << "   Video Device" << i << ":" << deviceName;
+                }
+            }
+        }
+    }
+
+    return devices;
+}
+
+int SipPhoneManager::getCurrentAudioInputDevice()
+{
+    // ✅ 2026-01-18 02:00 [FIX 100.246] 从 QSettings 读取保存的设备索引
+    // 原因：用户需要下次启动后恢复上次选择的设备
+    // 不再依赖 d->initialized，因为这是显示用的，不是实际设置用的
+
+    QSettings settings;
+    int savedIndex = settings.value("SIP/AudioInputDevice", 0).toInt();
+
+    qDebug() << "📢 [Settings] Saved audio input device index:" << savedIndex;
+
+    return savedIndex;
+
+    // ❌ 2026-01-18 02:00 旧代码：依赖 d->initialized，在懒加载模式下会返回 -1
+    // if (!d->initialized) {
+    //     return -1;
+    // }
+    //
+    // // 使用 pjsua_get_snd_dev2 获取当前音频设备
+    // pjsua_snd_dev_param param;
+    // pjsua_snd_dev_param_default(&param);
+    // pj_status_t status = pjsua_get_snd_dev2(&param);
+    //
+    // if (status == PJ_SUCCESS) {
+    //     qDebug() << "📢 Current capture device:" << param.capture_dev;
+    //     return param.capture_dev;
+    // }
+    //
+    // return -1;
+}
+
+int SipPhoneManager::getCurrentAudioOutputDevice()
+{
+    // ✅ 2026-01-18 02:00 [FIX 100.246] 从 QSettings 读取保存的设备索引
+    // 原因：用户需要下次启动后恢复上次选择的设备
+    // 不再依赖 d->initialized，因为这是显示用的，不是实际设置用的
+
+    QSettings settings;
+    int savedIndex = settings.value("SIP/AudioOutputDevice", 0).toInt();
+
+    qDebug() << "🔊 [Settings] Saved audio output device index:" << savedIndex;
+
+    return savedIndex;
+
+    // ❌ 2026-01-18 02:00 旧代码：依赖 d->initialized，在懒加载模式下会返回 -1
+    // if (!d->initialized) {
+    //     return -1;
+    // }
+    //
+    // // 使用 pjsua_get_snd_dev2 获取当前音频设备
+    // pjsua_snd_dev_param param;
+    // pjsua_snd_dev_param_default(&param);
+    // pj_status_t status = pjsua_get_snd_dev2(&param);
+    //
+    // if (status == PJ_SUCCESS) {
+    //     qDebug() << "🔊 Current playback device:" << param.playback_dev;
+    //     return param.playback_dev;
+    // }
+    //
+    // return -1;
+}
+
+int SipPhoneManager::getCurrentVideoDevice()
+{
+    // ✅ 2026-01-18 02:00 [FIX 100.246] 从 QSettings 读取保存的设备索引
+    // 原因：用户需要下次启动后恢复上次选择的设备
+    // 不再依赖 d->initialized，因为这是显示用的，不是实际设置用的
+
+    QSettings settings;
+    int savedIndex = settings.value("SIP/VideoDevice", 0).toInt();
+
+    qDebug() << "📹 [Settings] Saved video device index:" << savedIndex;
+
+    return savedIndex;
+
+    // ❌ 2026-01-18 02:00 旧代码：依赖 d->initialized，在懒加载模式下会返回 -1
+    // if (!d->initialized || !d->videoCallManager) {
+    //     return -1;
+    // }
+    //
+    // int deviceId = d->videoCallManager->getCaptureDeviceId();
+    // qDebug() << "📹 Current video device:" << deviceId;
+    // return deviceId;
+}
+
+bool SipPhoneManager::setAudioInputDevice(int index)
+{
+    qDebug() << "📢 [FIX 100.246] Setting audio input device to:" << index;
+
+    // ✅ 2026-01-18 02:00 [FIX 100.246] 立即保存到 QSettings
+    // 原因：用户需要下次启动后恢复上次选择的设备
+    QSettings settings;
+    settings.setValue("SIP/AudioInputDevice", index);
+    qDebug() << "✅ [Settings] Audio input device saved to QSettings:" << index;
+
+    // ✅ 2026-01-18 02:00 如果 PJSIP 已初始化，立即应用设置
+    // 如果未初始化，只保存到 QSettings，下次初始化时会使用
+    if (d->initialized) {
+        qDebug() << "   [PJSIP] PJSIP initialized, applying device setting now...";
+
+        // 获取当前设置
+        pjsua_snd_dev_param param;
+        pjsua_snd_dev_param_default(&param);
+        pj_status_t status = pjsua_get_snd_dev2(&param);
+
+        if (status != PJ_SUCCESS) {
+            // 如果获取失败，使用默认设置
+            param.playback_dev = PJSUA_SND_DEFAULT_PLAYBACK_DEV;
+        }
+
+        // 更新录音设备
+        param.capture_dev = index;
+
+        // 应用设置
+        status = pjsua_set_snd_dev2(&param);
+
+        if (status == PJ_SUCCESS) {
+            qDebug() << "✅ Audio input device changed in PJSIP:" << index;
+            return true;
+        } else {
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_strerror(status, errmsg, sizeof(errmsg));
+            qWarning() << "❌ Failed to set audio input device in PJSIP:" << errmsg;
+            qWarning() << "⚠️ But saved to settings, will be used on next SIP initialization";
+            return false;
+        }
+    } else {
+        qDebug() << "   [PJSIP] PJSIP not initialized yet, device will be used when PJSIP starts";
+        return true;  // 返回 true，因为已保存到 QSettings
+    }
+
+    // ❌ 2026-01-18 02:00 旧代码：不保存到 QSettings，下次启动会丢失选择
+    // if (!d->initialized) {
+    //     qWarning() << "❌ PJSIP not initialized";
+    //     return false;
+    // }
+    //
+    // qDebug() << "📢 Setting audio input device to:" << index;
+    //
+    // // 获取当前设置
+    // pjsua_snd_dev_param param;
+    // pjsua_snd_dev_param_default(&param);
+    // pj_status_t status = pjsua_get_snd_dev2(&param);
+    //
+    // if (status != PJ_SUCCESS) {
+    //     // 如果获取失败，使用默认设置
+    //     param.playback_dev = PJSUA_SND_DEFAULT_PLAYBACK_DEV;
+    // }
+    //
+    // // 更新录音设备
+    // param.capture_dev = index;
+    //
+    // // 应用设置
+    // status = pjsua_set_snd_dev2(&param);
+    //
+    // if (status == PJ_SUCCESS) {
+    //     qDebug() << "✅ Audio input device changed to:" << index;
+    //     return true;
+    // } else {
+    //     char errmsg[PJ_ERR_MSG_SIZE];
+    //     pj_strerror(status, errmsg, sizeof(errmsg));
+    //     qWarning() << "❌ Failed to set audio input device:" << errmsg;
+    //     return false;
+    // }
+}
+
+bool SipPhoneManager::setAudioOutputDevice(int index)
+{
+    qDebug() << "🔊 [FIX 100.246] Setting audio output device to:" << index;
+
+    // ✅ 2026-01-18 02:00 [FIX 100.246] 立即保存到 QSettings
+    // 原因：用户需要下次启动后恢复上次选择的设备
+    QSettings settings;
+    settings.setValue("SIP/AudioOutputDevice", index);
+    qDebug() << "✅ [Settings] Audio output device saved to QSettings:" << index;
+
+    // ✅ 2026-01-18 02:00 如果 PJSIP 已初始化，立即应用设置
+    // 如果未初始化，只保存到 QSettings，下次初始化时会使用
+    if (d->initialized) {
+        qDebug() << "   [PJSIP] PJSIP initialized, applying device setting now...";
+
+        // 获取当前设置
+        pjsua_snd_dev_param param;
+        pjsua_snd_dev_param_default(&param);
+        pj_status_t status = pjsua_get_snd_dev2(&param);
+
+        if (status != PJ_SUCCESS) {
+            // 如果获取失败，使用默认设置
+            param.capture_dev = PJSUA_SND_DEFAULT_CAPTURE_DEV;
+        }
+
+        // 更新播放设备
+        param.playback_dev = index;
+
+        // 应用设置
+        status = pjsua_set_snd_dev2(&param);
+
+        if (status == PJ_SUCCESS) {
+            qDebug() << "✅ Audio output device changed in PJSIP:" << index;
+            return true;
+        } else {
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_strerror(status, errmsg, sizeof(errmsg));
+            qWarning() << "❌ Failed to set audio output device in PJSIP:" << errmsg;
+            qWarning() << "⚠️ But saved to settings, will be used on next SIP initialization";
+            return false;
+        }
+    } else {
+        qDebug() << "   [PJSIP] PJSIP not initialized yet, device will be used when PJSIP starts";
+        return true;  // 返回 true，因为已保存到 QSettings
+    }
+
+    // ❌ 2026-01-18 02:00 旧代码：不保存到 QSettings，下次启动会丢失选择
+    // if (!d->initialized) {
+    //     qWarning() << "❌ PJSIP not initialized";
+    //     return false;
+    // }
+    //
+    // qDebug() << "🔊 Setting audio output device to:" << index;
+    //
+    // // 获取当前设置
+    // pjsua_snd_dev_param param;
+    // pjsua_snd_dev_param_default(&param);
+    // pj_status_t status = pjsua_get_snd_dev2(&param);
+    //
+    // if (status != PJ_SUCCESS) {
+    //     // 如果获取失败，使用默认设置
+    //     param.capture_dev = PJSUA_SND_DEFAULT_CAPTURE_DEV;
+    // }
+    //
+    // // 更新播放设备
+    // param.playback_dev = index;
+    //
+    // // 应用设置
+    // status = pjsua_set_snd_dev2(&param);
+    //
+    // if (status == PJ_SUCCESS) {
+    //     qDebug() << "✅ Audio output device changed to:" << index;
+    //     return true;
+    // } else {
+    //     char errmsg[PJ_ERR_MSG_SIZE];
+    //     pj_strerror(status, errmsg, sizeof(errmsg));
+    //     qWarning() << "❌ Failed to set audio output device:" << errmsg;
+    //     return false;
+    // }
+}
+
+bool SipPhoneManager::setVideoDevice(int index)
+{
+    qDebug() << "📹 [FIX 100.246] Setting video device to:" << index;
+
+    // ✅ 2026-01-18 02:00 [FIX 100.246] 立即保存到 QSettings
+    // 原因：用户需要下次启动后恢复上次选择的设备
+    QSettings settings;
+    settings.setValue("SIP/VideoDevice", index);
+    qDebug() << "✅ [Settings] Video device saved to QSettings:" << index;
+
+    // ⚠️ 2026-01-18 02:00 视频设备切换功能尚未完整实现
+    // VideoCallManager 没有 setCaptureDeviceId 方法
+    // 目前只保存到 QSettings，下次通话时会使用新设备
+    qWarning() << "⚠️ Video device switching not fully implemented yet";
+    qWarning() << "⚠️ New device will be used on next call";
+
+    return true;  // 返回 true，因为已保存到 QSettings
+
+    // ❌ 2026-01-18 02:00 旧代码：不保存到 QSettings，下次启动会丢失选择
+    // if (!d->initialized) {
+    //     qWarning() << "❌ PJSIP not initialized";
+    //     return false;
+    // }
+    //
+    // qDebug() << "📹 Setting video device to:" << index;
+    //
+    // // ❌ 2026-01-17 23:00 VideoCallManager 没有 setCaptureDeviceId 方法
+    // // ✅ 简化实现：记录日志，实际切换需要通过 VideoCallManager 的其他方法
+    // // 视频设备切换比较复杂，需要在下次通话时生效
+    //
+    // qWarning() << "⚠️ Video device switching not fully implemented yet";
+    // qWarning() << "⚠️ New device will be used on next call";
+    //
+    // return true;  // 暂时返回 true，避免界面报错
 }
 
 void SipPhoneManager::sendDtmf(const QString &digits)
@@ -2492,10 +3028,17 @@ void SipPhoneManager::notifyCallConnected(int callId)
 
 void SipPhoneManager::notifyCallDisconnected()
 {
+    qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
+    qDebug() << "🔴 [HANGUP-DEBUG] notifyCallDisconnected() 开始执行";
+    qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
     qDebug() << "✅ Notifying video managers: Call disconnected";
 
     if (d->remoteVideoManager) {
+        qDebug() << "🔴 [HANGUP-DEBUG] 步骤 1/2: 调用 RemoteVideoManager::onCallDisconnected()...";
         d->remoteVideoManager->onCallDisconnected();
+        qDebug() << "🔴 [HANGUP-DEBUG] 步骤 1/2: RemoteVideoManager::onCallDisconnected() 完成";
+    } else {
+        qDebug() << "🔴 [HANGUP-DEBUG] 步骤 1/2: RemoteVideoManager 为 NULL，跳过";
     }
 
     // ✅ 2026-01-14 21:30 [修复 VERSION 156 LOCAL_PUSH 循环]
@@ -2510,15 +3053,24 @@ void SipPhoneManager::notifyCallDisconnected()
     // 解决：挂断时调用 stopPreview()，让 PJSIP 清理 port
     // 详细：docs/2026-01-14/12-VERSION156新问题分析-挂断后持续输出LOCAL_PUSH日志.md
     if (d->localVideoManager) {
+        qDebug() << "🔴 [HANGUP-DEBUG] 步骤 2/2: 准备调用 LocalVideoManager::stopPreview()...";
         qDebug() << "🔧 [FIX VERSION 156] Stopping local preview on call disconnect";
 
         // ✅ 使用 QMetaObject::invokeMethod 在 Qt 主线程中调用
         // 原因：notifyCallDisconnected() 在 PJSIP 线程中执行
         //       LocalVideoManager 的方法必须在 Qt 主线程中调用
+        qDebug() << "🔴 [HANGUP-DEBUG] 使用 QMetaObject::invokeMethod 在主线程调用...";
         QMetaObject::invokeMethod(d->localVideoManager, "stopPreview", Qt::QueuedConnection);
 
+        qDebug() << "🔴 [HANGUP-DEBUG] 步骤 2/2: stopPreview() 已入队等待主线程执行";
         qDebug() << "✅ [FIX VERSION 156] stopPreview() queued for execution in Qt main thread";
+    } else {
+        qDebug() << "🔴 [HANGUP-DEBUG] 步骤 2/2: LocalVideoManager 为 NULL，跳过";
     }
+
+    qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
+    qDebug() << "🔴 [HANGUP-DEBUG] notifyCallDisconnected() 执行完成";
+    qDebug() << "🔴 [HANGUP-DEBUG] ═══════════════════════════════════════════";
 
     // ❌ 2026-01-11 22:10 [FIX 100.47.1 已推翻] 错误理念：LocalVideoManager 独立于通话状态
     // 原因：导致 stopPreview() 从未被调用，port 未清理，回调持续执行

@@ -7,6 +7,14 @@ import BeltControl.SipPhone 1.0
 Page {
     id: root
 
+    // ✅ 2026-01-18 02:00 [FIX 100.246] 版本确认
+    Component.onCompleted: {
+        console.log("═══════════════════════════════════════════════════════")
+        console.log("🔥🔥🔥 SIP SETTINGS PAGE LOADED - VERSION 2026-01-18-02:00")
+        console.log("🔥🔥🔥 FIX 100.246 - 设备选择持久化：下次启动恢复上次选择")
+        console.log("═══════════════════════════════════════════════════════")
+    }
+
     // Inline RisipButton component
     component RisipButton: Button {
         id: control
@@ -689,6 +697,156 @@ Page {
                     anchors.fill: parent
                     anchors.margins: 20
                     spacing: 20
+
+                    // ✅ 2026-01-17 22:30 [FIX 100.246] 扬声器选择
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 5
+
+                        Text {
+                            text: "扬声器设备"
+                            font.pixelSize: 13
+                            color: "#ffffff"
+                        }
+
+                        ComboBox {
+                            id: speakerDeviceCombo
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 45
+                            model: SipPhoneManager.getAudioOutputDevices()
+                            currentIndex: SipPhoneManager.getCurrentAudioOutputDevice()
+
+                            // ✅ 2026-01-17 23:50 [DEBUG] 监控初始化
+                            Component.onCompleted: {
+                                console.log("🔥 [QML Speaker] ComboBox initialized")
+                                console.log("   Model type:", typeof model)
+                                console.log("   Model:", JSON.stringify(model))
+                                console.log("   Count:", count)
+                                console.log("   CurrentIndex:", currentIndex)
+                            }
+
+                            background: Rectangle {
+                                color: "#0f3460"
+                                radius: 10
+                                border.color: speakerDeviceCombo.activeFocus ? "#00ff88" : "#00d4ff"
+                                border.width: 2
+                            }
+
+                            contentItem: Text {
+                                text: speakerDeviceCombo.displayText
+                                color: "#ffffff"
+                                font.pixelSize: 14
+                                verticalAlignment: Text.AlignVCenter
+                                leftPadding: 15
+                                elide: Text.ElideRight
+                            }
+
+                            onActivated: function(index) {
+                                console.log("🔊 Changing speaker device to index:", index)
+                                SipPhoneManager.setAudioOutputDevice(index)
+                            }
+                        }
+                    }
+
+                    // ✅ 2026-01-17 22:30 [FIX 100.246] 麦克风选择
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 5
+
+                        Text {
+                            text: "麦克风设备"
+                            font.pixelSize: 13
+                            color: "#ffffff"
+                        }
+
+                        ComboBox {
+                            id: micDeviceCombo
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 45
+                            model: SipPhoneManager.getAudioInputDevices()
+                            currentIndex: SipPhoneManager.getCurrentAudioInputDevice()
+
+                            // ✅ 2026-01-17 23:50 [DEBUG] 监控初始化
+                            Component.onCompleted: {
+                                console.log("🔥 [QML Mic] ComboBox initialized")
+                                console.log("   Model type:", typeof model)
+                                console.log("   Model:", JSON.stringify(model))
+                                console.log("   Count:", count)
+                                console.log("   CurrentIndex:", currentIndex)
+                            }
+
+                            background: Rectangle {
+                                color: "#0f3460"
+                                radius: 10
+                                border.color: micDeviceCombo.activeFocus ? "#00ff88" : "#00d4ff"
+                                border.width: 2
+                            }
+
+                            contentItem: Text {
+                                text: micDeviceCombo.displayText
+                                color: "#ffffff"
+                                font.pixelSize: 14
+                                verticalAlignment: Text.AlignVCenter
+                                leftPadding: 15
+                                elide: Text.ElideRight
+                            }
+
+                            onActivated: function(index) {
+                                console.log("📢 Changing microphone device to index:", index)
+                                SipPhoneManager.setAudioInputDevice(index)
+                            }
+                        }
+                    }
+
+                    // ✅ 2026-01-17 22:30 [FIX 100.246] 摄像头选择
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 5
+
+                        Text {
+                            text: "摄像头设备"
+                            font.pixelSize: 13
+                            color: "#ffffff"
+                        }
+
+                        ComboBox {
+                            id: cameraDeviceCombo
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 45
+                            model: SipPhoneManager.getVideoDevices()
+                            currentIndex: SipPhoneManager.getCurrentVideoDevice()
+
+                            // ✅ 2026-01-17 23:50 [DEBUG] 监控初始化
+                            Component.onCompleted: {
+                                console.log("🔥 [QML Camera] ComboBox initialized")
+                                console.log("   Model type:", typeof model)
+                                console.log("   Model:", JSON.stringify(model))
+                                console.log("   Count:", count)
+                                console.log("   CurrentIndex:", currentIndex)
+                            }
+
+                            background: Rectangle {
+                                color: "#0f3460"
+                                radius: 10
+                                border.color: cameraDeviceCombo.activeFocus ? "#00ff88" : "#00d4ff"
+                                border.width: 2
+                            }
+
+                            contentItem: Text {
+                                text: cameraDeviceCombo.displayText
+                                color: "#ffffff"
+                                font.pixelSize: 14
+                                verticalAlignment: Text.AlignVCenter
+                                leftPadding: 15
+                                elide: Text.ElideRight
+                            }
+
+                            onActivated: function(index) {
+                                console.log("📹 Changing camera device to index:", index)
+                                SipPhoneManager.setVideoDevice(index)
+                            }
+                        }
+                    }
 
                     // Microphone volume
                     ColumnLayout {
