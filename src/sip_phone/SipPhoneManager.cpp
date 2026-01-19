@@ -307,6 +307,17 @@ public:
     QStringList cachedAudioOutputDevices;  // 音频输出设备列表（扬声器）
     QStringList cachedVideoDevices;        // 视频设备列表（摄像头）
 
+    // ✅ 2026-01-19 08:15 [FIX 100.250] 设备索引映射数组
+    // 原因：用户层设备索引（过滤后）≠ PJSIP 层设备索引（原始）
+    // 问题：设备枚举时过滤了 Loopback、HDMI、虚拟设备，用户看到的索引 [0,1,2]
+    //       但 PJSIP 原始索引可能是 [6,7,21]，直接使用用户索引会选错设备
+    // 解决：枚举时建立映射数组，选择时转换索引
+    // 示例：用户选择索引 1（USB 麦克风）→ 映射到 PJSIP 索引 21
+    // 参考：docs/2026-01-19/02-三个问题完整修复方案.md Lines 257-407
+    QVector<int> audioInputDeviceMapping;   // 用户索引 → PJSIP 索引（麦克风）
+    QVector<int> audioOutputDeviceMapping;  // 用户索引 → PJSIP 索引（扬声器）
+    QVector<int> videoDeviceMapping;        // 用户索引 → PJSIP 索引（摄像头）
+
     // ✅ ATTEMPT 13: Pending video activation (CHANGE_DIR approach)
     pjsua_call_id pendingVideoActivationCallId = PJSUA_INVALID_ID;
 };
@@ -2349,6 +2360,11 @@ QStringList SipPhoneManager::getAudioInputDevices()
 
     qDebug() << "📢 [Device Enum] Total audio devices:" << count;
 
+    // ✅ 2026-01-19 08:15 [FIX 100.250] 清空设备索引映射数组
+    // 原因：每次枚举设备时都要重建映射，避免使用旧的索引
+    d->audioInputDeviceMapping.clear();
+    qDebug() << "   [FIX 100.250] Device index mapping cleared";
+
     // ✅ 2026-01-18 22:00 [FIX 100.248] 优先使用 plughw 设备（支持所有采样率）
     // 原因：
     //   - hw: 设备只支持硬件原生采样率（如 22050 Hz），不支持 PCMA 需要的 8000 Hz
@@ -2417,6 +2433,11 @@ QStringList SipPhoneManager::getAudioInputDevices()
             devices.append(friendlyName);
             seenCards.insert(cardName);
 
+            // ✅ 2026-01-19 08:15 [FIX 100.250] 保存 PJSIP 原始索引到映射数组
+            // 用户索引 = devices.count() - 1, PJSIP 索引 = i
+            d->audioInputDeviceMapping.append(i);
+            qDebug() << "         [FIX 100.250] Mapping saved: User" << (devices.count() - 1) << "→ PJSIP" << i;
+
             // 移除对应的 hw 设备（如果之前暂存了）
             if (hwDeviceIndex.contains(cardName)) {
                 qDebug() << "         [INFO] Removed hw: fallback (plughw: is better)";
@@ -2472,6 +2493,11 @@ QStringList SipPhoneManager::getAudioInputDevices()
 
             devices.append(friendlyName);
             seenCards.insert(cardName);
+
+            // ✅ 2026-01-19 08:15 [FIX 100.250] 保存 PJSIP 原始索引到映射数组
+            // 用户索引 = devices.count() - 1, PJSIP 索引 = deviceIndex
+            d->audioInputDeviceMapping.append(deviceIndex);
+            qDebug() << "         [FIX 100.250] Mapping saved: User" << (devices.count() - 1) << "→ PJSIP" << deviceIndex;
         }
     }
 
@@ -2525,6 +2551,11 @@ QStringList SipPhoneManager::getAudioOutputDevices()
     }
 
     qDebug() << "🔊 [Device Enum] Total audio devices:" << count;
+
+    // ✅ 2026-01-19 08:15 [FIX 100.250] 清空设备索引映射数组
+    // 原因：每次枚举设备时都要重建映射，避免使用旧的索引
+    d->audioOutputDeviceMapping.clear();
+    qDebug() << "   [FIX 100.250] Device index mapping cleared";
 
     // ✅ 2026-01-18 12:30 [FIX 100.246] 智能过滤和友好命名
     // 原因：ALSA 为每个物理设备创建多个别名（hw, plughw, default, front 等）
@@ -2612,6 +2643,11 @@ QStringList SipPhoneManager::getAudioOutputDevices()
             qDebug() << "         [INDEX MAPPING] User index:" << devices.count() << "→ PJSIP index:" << i;
 
             devices.append(friendlyName);
+
+            // ✅ 2026-01-19 08:15 [FIX 100.250] 保存 PJSIP 原始索引到映射数组
+            // 用户索引 = devices.count() - 1, PJSIP 索引 = i
+            d->audioOutputDeviceMapping.append(i);
+            qDebug() << "         [FIX 100.250] Mapping saved: User" << (devices.count() - 1) << "→ PJSIP" << i;
         } else {
             qDebug() << "      ⏭️ SKIPPED (no output channels)";
         }
@@ -2685,13 +2721,29 @@ QStringList SipPhoneManager::getVideoDevices()
 int SipPhoneManager::getCurrentAudioInputDevice()
 {
     // ✅ 2026-01-18 02:00 [FIX 100.246] 从 QSettings 读取保存的设备索引
+    // ✅ 2026-01-19 08:30 [FIX 100.250] 验证索引有效性，防止设备配置变化后崩溃
     // 原因：用户需要下次启动后恢复上次选择的设备
     // 不再依赖 d->initialized，因为这是显示用的，不是实际设置用的
 
     QSettings settings;
     int savedIndex = settings.value("SIP/AudioInputDevice", 0).toInt();
 
-    qDebug() << "📢 [Settings] Saved audio input device index:" << savedIndex;
+    qDebug() << "📢 [FIX 100.250] Reading saved audio input device index:" << savedIndex;
+
+    // ✅ 2026-01-19 08:30 [FIX 100.250] 验证索引是否在映射数组范围内
+    // 原因：设备配置可能在两次运行之间发生变化（插拔USB设备等）
+    // 如果索引无效，返回 0（默认第一个设备）
+    if (savedIndex < 0 || savedIndex >= d->audioInputDeviceMapping.size()) {
+        qWarning() << "   ⚠️ [FIX 100.250] Saved index" << savedIndex << "is out of range";
+        qWarning() << "      Valid range: 0 -" << (d->audioInputDeviceMapping.size() - 1);
+        qWarning() << "      Mapping size:" << d->audioInputDeviceMapping.size();
+        qWarning() << "      Returning default index 0";
+        return 0;
+    }
+
+    qDebug() << "   ✅ [FIX 100.250] Saved index is valid";
+    qDebug() << "      User index:" << savedIndex;
+    qDebug() << "      Maps to PJSIP index:" << d->audioInputDeviceMapping[savedIndex];
 
     return savedIndex;
 
@@ -2716,13 +2768,29 @@ int SipPhoneManager::getCurrentAudioInputDevice()
 int SipPhoneManager::getCurrentAudioOutputDevice()
 {
     // ✅ 2026-01-18 02:00 [FIX 100.246] 从 QSettings 读取保存的设备索引
+    // ✅ 2026-01-19 08:30 [FIX 100.250] 验证索引有效性，防止设备配置变化后崩溃
     // 原因：用户需要下次启动后恢复上次选择的设备
     // 不再依赖 d->initialized，因为这是显示用的，不是实际设置用的
 
     QSettings settings;
     int savedIndex = settings.value("SIP/AudioOutputDevice", 0).toInt();
 
-    qDebug() << "🔊 [Settings] Saved audio output device index:" << savedIndex;
+    qDebug() << "🔊 [FIX 100.250] Reading saved audio output device index:" << savedIndex;
+
+    // ✅ 2026-01-19 08:30 [FIX 100.250] 验证索引是否在映射数组范围内
+    // 原因：设备配置可能在两次运行之间发生变化（插拔USB设备等）
+    // 如果索引无效，返回 0（默认第一个设备）
+    if (savedIndex < 0 || savedIndex >= d->audioOutputDeviceMapping.size()) {
+        qWarning() << "   ⚠️ [FIX 100.250] Saved index" << savedIndex << "is out of range";
+        qWarning() << "      Valid range: 0 -" << (d->audioOutputDeviceMapping.size() - 1);
+        qWarning() << "      Mapping size:" << d->audioOutputDeviceMapping.size();
+        qWarning() << "      Returning default index 0";
+        return 0;
+    }
+
+    qDebug() << "   ✅ [FIX 100.250] Saved index is valid";
+    qDebug() << "      User index:" << savedIndex;
+    qDebug() << "      Maps to PJSIP index:" << d->audioOutputDeviceMapping[savedIndex];
 
     return savedIndex;
 
@@ -2767,14 +2835,29 @@ int SipPhoneManager::getCurrentVideoDevice()
     // return deviceId;
 }
 
-bool SipPhoneManager::setAudioInputDevice(int index)
+bool SipPhoneManager::setAudioInputDevice(int userIndex)
 {
-    qDebug() << "📢 [FIX 100.246] Setting audio input device to:" << index;
+    qDebug() << "════════════════════════════════════════════════";
+    qDebug() << "📢 [FIX 100.250] Setting audio input device to user index:" << userIndex;
+    qDebug() << "════════════════════════════════════════════════";
 
-    // ✅ 2026-01-18 16:30 [DEBUG] 打印用户选择的索引
-    qDebug() << "   [INDEX DEBUG] User selected device index:" << index;
-    qDebug() << "   [INDEX DEBUG] This will be passed directly to PJSIP as device index:" << index;
-    qDebug() << "   ⚠️  WARNING: If user index ≠ PJSIP index, this will cause EAUD_INVDEV error!";
+    // ✅ 2026-01-19 08:15 [FIX 100.250] 索引映射：用户索引 → PJSIP 索引
+    // 原因：设备枚举时过滤了 Loopback、HDMI、虚拟设备，用户索引 ≠ PJSIP 索引
+    // 问题：直接使用用户索引会导致 PJMEDIA_EAUD_INVDEV 错误（设备不存在）
+    // 解决：使用映射数组转换索引
+    // 示例：用户选择索引 1（USB 麦克风）→ 映射到 PJSIP 索引 21
+    if (userIndex < 0 || userIndex >= d->audioInputDeviceMapping.size()) {
+        qWarning() << "❌ [FIX 100.250] Invalid user device index:" << userIndex;
+        qWarning() << "   Valid range: 0 -" << (d->audioInputDeviceMapping.size() - 1);
+        qWarning() << "   Mapping size:" << d->audioInputDeviceMapping.size();
+        return false;
+    }
+
+    int pjsipIndex = d->audioInputDeviceMapping[userIndex];
+    qDebug() << "   [FIX 100.250] Index mapping:";
+    qDebug() << "      User index:" << userIndex << "→ PJSIP index:" << pjsipIndex;
+    qDebug() << "      Mapping array size:" << d->audioInputDeviceMapping.size();
+    qDebug() << "      Full mapping:" << d->audioInputDeviceMapping;
 
     // ✅ 2026-01-18 15:50 [FIX 100.246.2] 禁止在通话中切换设备（防止崩溃）
     // 原因：通话中重复创建/销毁音频设备可能导致堆内存损坏（Exit code 133）
@@ -2786,11 +2869,12 @@ bool SipPhoneManager::setAudioInputDevice(int index)
         return false;
     }
 
-    // ✅ 2026-01-18 02:00 [FIX 100.246] 立即保存到 QSettings
+    // ✅ 2026-01-19 08:15 [FIX 100.250] 保存用户索引到 QSettings（不是 PJSIP 索引！）
     // 原因：用户需要下次启动后恢复上次选择的设备
+    // 重要：保存的是用户索引，读取后再通过映射数组转换为 PJSIP 索引
     QSettings settings;
-    settings.setValue("SIP/AudioInputDevice", index);
-    qDebug() << "✅ [Settings] Audio input device saved to QSettings:" << index;
+    settings.setValue("SIP/AudioInputDevice", userIndex);
+    qDebug() << "✅ [Settings] Audio input device (user index) saved to QSettings:" << userIndex;
 
     // ✅ 2026-01-18 02:00 如果 PJSIP 已初始化，立即应用设置
     // 如果未初始化，只保存到 QSettings，下次初始化时会使用
@@ -2807,24 +2891,28 @@ bool SipPhoneManager::setAudioInputDevice(int index)
             param.playback_dev = PJSUA_SND_DEFAULT_PLAYBACK_DEV;
         }
 
-        // 更新录音设备
-        param.capture_dev = index;
+        // ✅ 2026-01-19 08:15 [FIX 100.250] 使用 PJSIP 索引（不是用户索引！）
+        param.capture_dev = pjsipIndex;  // ← 使用映射后的 PJSIP 索引
 
         // 应用设置
         status = pjsua_set_snd_dev2(&param);
 
         if (status == PJ_SUCCESS) {
-            qDebug() << "✅ Audio input device changed in PJSIP:" << index;
+            qDebug() << "✅ Audio input device changed in PJSIP:";
+            qDebug() << "   User index:" << userIndex << "→ PJSIP index:" << pjsipIndex;
+            qDebug() << "════════════════════════════════════════════════";
             return true;
         } else {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(status, errmsg, sizeof(errmsg));
             qWarning() << "❌ Failed to set audio input device in PJSIP:" << errmsg;
             qWarning() << "⚠️ But saved to settings, will be used on next SIP initialization";
+            qDebug() << "════════════════════════════════════════════════";
             return false;
         }
     } else {
         qDebug() << "   [PJSIP] PJSIP not initialized yet, device will be used when PJSIP starts";
+        qDebug() << "════════════════════════════════════════════════";
         return true;  // 返回 true，因为已保存到 QSettings
     }
 
@@ -2863,9 +2951,24 @@ bool SipPhoneManager::setAudioInputDevice(int index)
     // }
 }
 
-bool SipPhoneManager::setAudioOutputDevice(int index)
+bool SipPhoneManager::setAudioOutputDevice(int userIndex)
 {
-    qDebug() << "🔊 [FIX 100.246] Setting audio output device to:" << index;
+    qDebug() << "════════════════════════════════════════════════";
+    qDebug() << "🔊 [FIX 100.250] Setting audio output device to user index:" << userIndex;
+    qDebug() << "════════════════════════════════════════════════";
+
+    // ✅ 2026-01-19 08:15 [FIX 100.250] 索引映射：用户索引 → PJSIP 索引
+    if (userIndex < 0 || userIndex >= d->audioOutputDeviceMapping.size()) {
+        qWarning() << "❌ [FIX 100.250] Invalid user device index:" << userIndex;
+        qWarning() << "   Valid range: 0 -" << (d->audioOutputDeviceMapping.size() - 1);
+        qWarning() << "   Mapping size:" << d->audioOutputDeviceMapping.size();
+        return false;
+    }
+
+    int pjsipIndex = d->audioOutputDeviceMapping[userIndex];
+    qDebug() << "   [FIX 100.250] Index mapping:";
+    qDebug() << "      User index:" << userIndex << "→ PJSIP index:" << pjsipIndex;
+    qDebug() << "      Mapping array size:" << d->audioOutputDeviceMapping.size();
 
     // ✅ 2026-01-18 15:50 [FIX 100.246.2] 禁止在通话中切换设备（防止崩溃）
     // 原因：通话中重复创建/销毁音频设备可能导致堆内存损坏（Exit code 133）
@@ -2877,11 +2980,10 @@ bool SipPhoneManager::setAudioOutputDevice(int index)
         return false;
     }
 
-    // ✅ 2026-01-18 02:00 [FIX 100.246] 立即保存到 QSettings
-    // 原因：用户需要下次启动后恢复上次选择的设备
+    // ✅ 2026-01-19 08:15 [FIX 100.250] 保存用户索引到 QSettings（不是 PJSIP 索引！）
     QSettings settings;
-    settings.setValue("SIP/AudioOutputDevice", index);
-    qDebug() << "✅ [Settings] Audio output device saved to QSettings:" << index;
+    settings.setValue("SIP/AudioOutputDevice", userIndex);
+    qDebug() << "✅ [Settings] Audio output device (user index) saved to QSettings:" << userIndex;
 
     // ✅ 2026-01-18 02:00 如果 PJSIP 已初始化，立即应用设置
     // 如果未初始化，只保存到 QSettings，下次初始化时会使用
@@ -2898,24 +3000,28 @@ bool SipPhoneManager::setAudioOutputDevice(int index)
             param.capture_dev = PJSUA_SND_DEFAULT_CAPTURE_DEV;
         }
 
-        // 更新播放设备
-        param.playback_dev = index;
+        // ✅ 2026-01-19 08:15 [FIX 100.250] 使用 PJSIP 索引（不是用户索引！）
+        param.playback_dev = pjsipIndex;  // ← 使用映射后的 PJSIP 索引
 
         // 应用设置
         status = pjsua_set_snd_dev2(&param);
 
         if (status == PJ_SUCCESS) {
-            qDebug() << "✅ Audio output device changed in PJSIP:" << index;
+            qDebug() << "✅ Audio output device changed in PJSIP:";
+            qDebug() << "   User index:" << userIndex << "→ PJSIP index:" << pjsipIndex;
+            qDebug() << "════════════════════════════════════════════════";
             return true;
         } else {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(status, errmsg, sizeof(errmsg));
             qWarning() << "❌ Failed to set audio output device in PJSIP:" << errmsg;
             qWarning() << "⚠️ But saved to settings, will be used on next SIP initialization";
+            qDebug() << "════════════════════════════════════════════════";
             return false;
         }
     } else {
         qDebug() << "   [PJSIP] PJSIP not initialized yet, device will be used when PJSIP starts";
+        qDebug() << "════════════════════════════════════════════════";
         return true;  // 返回 true，因为已保存到 QSettings
     }
 
