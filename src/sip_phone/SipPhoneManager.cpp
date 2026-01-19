@@ -2193,10 +2193,13 @@ void SipPhoneManager::activatePendingVideo(int call_id)
 // 原因：用户反馈"对方听到本机音量很小"
 // 方案：使用 PJSIP 会议桥 API 调整麦克风输出音量
 // 参考：docs/2026-01-19/02-三个问题完整修复方案.md
+// ✅ 2026-01-19 05:20 [DEBUG] 添加详细调试信息
 // Audio control
 void SipPhoneManager::setMicrophoneVolume(int volume)
 {
+    qDebug() << "════════════════════════════════════════════════";
     qDebug() << "🎤 [FIX 100.249] Setting microphone volume:" << volume << "%";
+    qDebug() << "════════════════════════════════════════════════";
 
     // ✅ 保存到 QSettings（下次启动恢复）
     QSettings settings;
@@ -2206,29 +2209,70 @@ void SipPhoneManager::setMicrophoneVolume(int volume)
     // ✅ 如果有活动通话，立即应用音量到会议桥
     // 原理：pjsua_conf_adjust_tx_level() 调整麦克风音量（会议桥 slot 0 → 网络）
     if (d->inCall && d->currentCall) {
+        qDebug() << "  📞 [Call State] Active call detected, applying volume now";
+
         try {
-            // 转换百分比 (0-100) 到 PJSIP 音量 (0.0-1.0)
+            // 转换百分比 (0-100) 到 PJSIP 音量 (0.0-2.0)
             // 允许超过 1.0 实现增益效果（最大 2.0 = 200%）
             float level = (volume / 100.0f) * 2.0f;  // 0% → 0.0, 50% → 1.0, 100% → 2.0
 
+            qDebug() << "  🔢 [Volume Calc] UI slider:" << volume << "% → PJSIP level:" << level;
+            qDebug() << "     Interpretation: 0.0=静音, 1.0=正常, 2.0=200%增益";
+
+            // ✅ 2026-01-19 05:20 [DEBUG] 检查会议桥状态
+            unsigned port_count = pjsua_conf_get_max_ports();
+            qDebug() << "  🎛️ [Conference Bridge] Max ports:" << port_count;
+
+            // 检查 slot 0 (声卡设备) 的连接信息
+            pjsua_conf_port_info port_info;
+            pj_status_t info_status = pjsua_conf_get_port_info(0, &port_info);
+            if (info_status == PJ_SUCCESS) {
+                qDebug() << "  🎛️ [Slot 0 Info] Name:" << QString::fromUtf8(port_info.name.ptr, port_info.name.slen);
+                qDebug() << "     Clock rate:" << port_info.clock_rate << "Hz";
+                qDebug() << "     Samples per frame:" << port_info.samples_per_frame;
+                qDebug() << "     Channel count:" << port_info.channel_count;
+                qDebug() << "     Current TX level:" << port_info.tx_level_adj;
+                qDebug() << "     Listener count:" << port_info.listener_cnt;
+                if (port_info.listener_cnt > 0) {
+                    qDebug() << "     Connected to slots:";
+                    for (unsigned i = 0; i < port_info.listener_cnt; ++i) {
+                        qDebug() << "       - Slot" << port_info.listeners[i];
+                    }
+                }
+            }
+
             // 调整会议桥 slot 0 (声卡设备) 的发送音量
+            qDebug() << "  🔧 [Adjust TX] Calling pjsua_conf_adjust_tx_level(slot=0, level=" << level << ")";
             pj_status_t status = pjsua_conf_adjust_tx_level(0, level);
 
             if (status == PJ_SUCCESS) {
-                qDebug() << "  ✅ [PJSIP] Microphone volume applied in call (level:" << level << ")";
+                qDebug() << "  ✅ [SUCCESS] Microphone volume applied successfully!";
+                qDebug() << "     New level:" << level << "(0.0=静音, 1.0=正常, 2.0=最大)";
+
+                // 验证设置是否生效
+                pjsua_conf_port_info verify_info;
+                if (pjsua_conf_get_port_info(0, &verify_info) == PJ_SUCCESS) {
+                    qDebug() << "  ✅ [Verify] Current TX level after adjustment:" << verify_info.tx_level_adj;
+                }
             } else {
                 char errmsg[PJ_ERR_MSG_SIZE];
                 pj_strerror(status, errmsg, sizeof(errmsg));
-                qWarning() << "  ⚠️ [PJSIP] Failed to set mic volume:" << errmsg;
+                qWarning() << "  ❌ [FAILED] pjsua_conf_adjust_tx_level() error:" << errmsg;
+                qWarning() << "     Error code:" << status;
             }
         } catch (const std::exception &ex) {
-            qWarning() << "  ❌ Error setting mic volume:" << ex.what();
+            qWarning() << "  ❌ [Exception] Error setting mic volume:" << ex.what();
         } catch (...) {
-            qWarning() << "  ❌ Unknown error setting mic volume";
+            qWarning() << "  ❌ [Exception] Unknown error setting mic volume";
         }
     } else {
-        qDebug() << "  📌 [PJSIP] No active call, volume will be applied when call starts";
+        qDebug() << "  📌 [Call State] No active call";
+        qDebug() << "     d->inCall:" << d->inCall;
+        qDebug() << "     d->currentCall:" << (d->currentCall ? "exists" : "null");
+        qDebug() << "     Volume will be applied when call starts";
     }
+
+    qDebug() << "════════════════════════════════════════════════";
 }
 
 void SipPhoneManager::setSpeakerVolume(int volume)
