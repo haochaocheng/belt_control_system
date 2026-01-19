@@ -901,6 +901,97 @@ bool SipPhoneManager::initializeEndpoint()
     qDebug() << "════════════════════════════════════════════════════════════";
     qDebug() << "";
 
+    // ✅ 2026-01-19 10:00 [FIX 100.250] 设备枚举完成后，自动恢复保存的设备设置
+    // 原因：解决设备选择重启后不保存的问题
+    // 问题：用户选择设备 → 保存到 QSettings → 重启后 UI 显示旧设备
+    // 根因：启动时 getCurrentAudioInputDevice() 在映射数组建立之前被调用 → 返回默认值 0
+    //       映射数组建立后，没有代码主动恢复保存的设备到 PJSIP
+    // 解决：枚举完成后（映射数组已建立），从 QSettings 读取保存的设备索引，
+    //       映射到 PJSIP 索引，调用 pjsua_set_snd_dev2() 恢复设备
+    // 参考：docs/2026-01-19/06-FIX100.250完成-设备索引映射.md
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "📱 [FIX 100.250] Restoring saved audio devices from QSettings";
+    qDebug() << "════════════════════════════════════════════════════════════";
+
+    QSettings settings;
+    int savedInputIndex = settings.value("SIP/AudioInputDevice", -1).toInt();
+    int savedOutputIndex = settings.value("SIP/AudioOutputDevice", -1).toInt();
+
+    qDebug() << "   [QSettings] Saved input device (user index):" << savedInputIndex;
+    qDebug() << "   [QSettings] Saved output device (user index):" << savedOutputIndex;
+    qDebug() << "   [Mapping] Input mapping array size:" << d->audioInputDeviceMapping.size();
+    qDebug() << "   [Mapping] Output mapping array size:" << d->audioOutputDeviceMapping.size();
+
+    // ✅ 验证输入设备索引有效性
+    bool inputIndexValid = (savedInputIndex >= 0 && savedInputIndex < d->audioInputDeviceMapping.size());
+    // ✅ 验证输出设备索引有效性
+    bool outputIndexValid = (savedOutputIndex >= 0 && savedOutputIndex < d->audioOutputDeviceMapping.size());
+
+    if (!inputIndexValid && !outputIndexValid) {
+        qDebug() << "   ℹ️ [FIX 100.250] No valid saved devices found, using PJSIP defaults";
+        qDebug() << "      This is normal for first run or after device configuration changes";
+        qDebug() << "════════════════════════════════════════════════════════════";
+        qDebug() << "";
+        return true;
+    }
+
+    // ✅ 至少有一个设备索引有效，准备恢复设备
+    pjsua_snd_dev_param param;
+    pjsua_snd_dev_param_default(&param);
+
+    // 获取当前 PJSIP 设备设置（作为默认值）
+    pj_status_t get_status = pjsua_get_snd_dev2(&param);
+    if (get_status != PJ_SUCCESS) {
+        qDebug() << "   ⚠️ [PJSIP] Failed to get current sound device, using PJSIP defaults";
+        param.capture_dev = PJSUA_SND_DEFAULT_CAPTURE_DEV;
+        param.playback_dev = PJSUA_SND_DEFAULT_PLAYBACK_DEV;
+    }
+
+    int pjsipInputIndex = param.capture_dev;   // 默认保持当前设备
+    int pjsipOutputIndex = param.playback_dev; // 默认保持当前设备
+
+    // ✅ 如果保存的输入设备索引有效，映射到 PJSIP 索引
+    if (inputIndexValid) {
+        pjsipInputIndex = d->audioInputDeviceMapping[savedInputIndex];
+        qDebug() << "   ✅ [Mapping] Input device: User index" << savedInputIndex << "→ PJSIP index" << pjsipInputIndex;
+    } else {
+        qDebug() << "   ⚠️ [Mapping] Input device index" << savedInputIndex << "invalid, using current PJSIP device" << pjsipInputIndex;
+    }
+
+    // ✅ 如果保存的输出设备索引有效，映射到 PJSIP 索引
+    if (outputIndexValid) {
+        pjsipOutputIndex = d->audioOutputDeviceMapping[savedOutputIndex];
+        qDebug() << "   ✅ [Mapping] Output device: User index" << savedOutputIndex << "→ PJSIP index" << pjsipOutputIndex;
+    } else {
+        qDebug() << "   ⚠️ [Mapping] Output device index" << savedOutputIndex << "invalid, using current PJSIP device" << pjsipOutputIndex;
+    }
+
+    // ✅ 使用映射后的 PJSIP 索引恢复设备
+    param.capture_dev = pjsipInputIndex;
+    param.playback_dev = pjsipOutputIndex;
+
+    qDebug() << "   [PJSIP] Calling pjsua_set_snd_dev2() to restore devices...";
+    qDebug() << "      capture_dev (input):" << param.capture_dev;
+    qDebug() << "      playback_dev (output):" << param.playback_dev;
+
+    pj_status_t set_status = pjsua_set_snd_dev2(&param);
+
+    if (set_status == PJ_SUCCESS) {
+        qDebug() << "   ✅ [SUCCESS] Audio devices restored from QSettings!";
+        qDebug() << "      Input: User index" << savedInputIndex << "→ PJSIP index" << pjsipInputIndex;
+        qDebug() << "      Output: User index" << savedOutputIndex << "→ PJSIP index" << pjsipOutputIndex;
+        qDebug() << "      Effect: UI and PJSIP now both use saved devices";
+    } else {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(set_status, errmsg, sizeof(errmsg));
+        qWarning() << "   ❌ [FAILED] pjsua_set_snd_dev2() error:" << errmsg;
+        qWarning() << "      Devices will remain at PJSIP defaults";
+        qWarning() << "      UI may display different devices than actually used";
+    }
+
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "";
+
     return true;
 }
 
