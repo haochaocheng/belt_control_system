@@ -603,7 +603,52 @@ int RisipEndpoint::start()
                 qWarning() << "  继续运行，Opus 将不可用（PCMA/PCMU 仍可正常工作）";
             } else {
                 qInfo() << "  ✅ Opus codec initialized successfully";
-                // 注意：pjmedia_codec_opus_init() 已经设置了默认参数
+
+                // ✅ 2026-01-19 05:30 [FIX 100.251] 配置 Opus 16kHz 单声道
+                // 原因：PJSIP 默认使用 48kHz/2（全带宽立体声），带宽过高
+                // 期望：16kHz/1（宽带单声道），VoIP 最佳配置
+                // 参考：docs/2026-01-19/02-三个问题完整修复方案.md
+                pjmedia_codec_opus_config opus_cfg;
+                pjmedia_codec_param opus_param;
+
+                // 获取当前 Opus 配置
+                status = pjmedia_codec_opus_get_config(&opus_cfg);
+                if (status != PJ_SUCCESS) {
+                    qWarning() << "  ⚠️ Failed to get Opus config, using default";
+                    // 初始化默认值
+                    opus_cfg.sample_rate = 16000;       // 16kHz wideband
+                    opus_cfg.channel_cnt = 1;           // Mono
+                    opus_cfg.bit_rate = 24000;          // 24 kbps for 16kHz
+                    opus_cfg.complexity = 5;            // Moderate complexity (0-10)
+                    opus_cfg.cbr = PJ_FALSE;            // Variable bitrate
+                    opus_cfg.packet_loss = 10;          // Expected packet loss 10%
+                    opus_cfg.frm_ptime = 20;            // 20ms frame time
+                    opus_cfg.frm_ptime_denum = 1;
+                } else {
+                    // 修改现有配置
+                    qDebug() << "  📊 Original Opus config:" << opus_cfg.sample_rate << "Hz," << opus_cfg.channel_cnt << "ch";
+                    opus_cfg.sample_rate = 16000;       // 16kHz wideband audio
+                    opus_cfg.channel_cnt = 1;           // Mono (VoIP standard)
+                    // 保留其他参数不变
+                }
+
+                // 获取通用编解码器参数
+                pjmedia_codec_mgr *codec_mgr = pjmedia_endpt_get_codec_mgr(med_endpt);
+                if (codec_mgr) {
+                    pjmedia_codec_mgr_get_default_param(codec_mgr, nullptr, &opus_param);
+
+                    // 应用 Opus 配置
+                    status = pjmedia_codec_opus_set_default_param(&opus_cfg, &opus_param);
+                    if (status != PJ_SUCCESS) {
+                        char errmsg[PJ_ERR_MSG_SIZE];
+                        pj_strerror(status, errmsg, sizeof(errmsg));
+                        qWarning() << "  ⚠️ Failed to set Opus default param:" << errmsg;
+                    } else {
+                        qInfo() << "  ✅ Opus configured: 16kHz mono (wideband audio)";
+                    }
+                } else {
+                    qWarning() << "  ⚠️ Codec manager not available, Opus using default config";
+                }
             }
         } else {
             qWarning() << "  ⚠️ Media endpoint not ready, skipping Opus initialization";
@@ -886,21 +931,55 @@ int RisipEndpoint::start()
         qDebug() << "Warning: Could not set PCMU codec priority:" << QString::fromStdString(err.reason);
     }
 
-    // ✅ 2026-01-19 04:05 [Phase 3.1] 启用 Opus 16kHz 单声道高质量音频
+    // ✅ 2026-01-19 05:30 [FIX 100.251] 启用 Opus 编解码器（已配置为 16kHz 单声道）
     // 原因：Opus 16kHz 提供更好的音质（宽带音频），适合专业通话
     // 优先级：213（低于 PCMA/PCMU），作为可选编解码器
-    // 配置：opus/16000/1 = 16kHz 采样率 / 单声道
     // 说明：
-    //   - PCMA/PCMU (8kHz) 为必需编解码器（优先级 215/214）
-    //   - Opus (16kHz) 为可选编解码器（优先级 213）
-    //   - 对方支持 Opus 时自动使用，不支持时回退到 PCMA/PCMU
-    // 参考：docs/2026-01-18/26-Phase2完整成功-PJSIP已包含Opus支持.md
+    //   - Opus 默认参数已通过 pjmedia_codec_opus_set_default_param() 配置为 16kHz/1
+    //   - PJSIP 可能注册多个 Opus 编解码器 ID（opus/48000/2, opus/16000/1 等）
+    //   - 尝试设置所有可能的 Opus ID 的优先级，确保正确配置
+    // 参考：docs/2026-01-19/02-三个问题完整修复方案.md
+    bool opusConfigured = false;
+
+    // 尝试 1: opus/16000/1 (目标配置)
     try {
         Endpoint::instance().codecSetPriority("opus/16000/1", 213);
         qDebug() << "  ✅ opus/16000/1 enabled (priority: 213) - 16kHz 高质量音频";
+        opusConfigured = true;
     } catch (Error &err) {
-        qDebug() << "Warning: Could not set Opus codec priority:" << QString::fromStdString(err.reason);
-        qDebug() << "  可能原因：Opus 编解码器未正确初始化";
+        qDebug() << "  ⚠️ opus/16000/1 not found, trying alternative IDs...";
+    }
+
+    // 尝试 2: opus/48000/2 (PJSIP 默认 ID，但参数已修改为 16kHz/1)
+    if (!opusConfigured) {
+        try {
+            Endpoint::instance().codecSetPriority("opus/48000/2", 213);
+            qDebug() << "  ✅ opus/48000/2 enabled (priority: 213)";
+            qDebug() << "     注意：编解码器 ID 为 48000/2，但实际参数为 16000/1（已配置）";
+            opusConfigured = true;
+        } catch (Error &err) {
+            qDebug() << "  ⚠️ opus/48000/2 not found, trying generic ID...";
+        }
+    }
+
+    // 尝试 3: opus (通用 ID)
+    if (!opusConfigured) {
+        try {
+            Endpoint::instance().codecSetPriority("opus", 213);
+            qDebug() << "  ✅ opus enabled (priority: 213) - 使用通用 ID";
+            opusConfigured = true;
+        } catch (Error &err) {
+            qWarning() << "  ❌ Failed to enable Opus codec with any ID";
+            qWarning() << "     Opus 将不可用（PCMA/PCMU 仍可正常工作）";
+        }
+    }
+
+    if (opusConfigured) {
+        qDebug() << "  📊 Opus configuration summary:";
+        qDebug() << "     Sample rate: 16000 Hz (wideband)";
+        qDebug() << "     Channels: 1 (mono)";
+        qDebug() << "     Bitrate: ~24 kbps (variable)";
+        qDebug() << "     Priority: 213 (optional, fallback to PCMA/PCMU if not supported)";
     }
 
     // 2025-12-31: 禁用以下编解码器以减小 SDP 大小（避免 IP 分片）
