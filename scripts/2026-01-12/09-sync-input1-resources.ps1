@@ -1,12 +1,15 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-    自动同步 Input1 资源文件到 CMakeLists.txt
+    自动同步 Input1 资源文件和 QML 组件到 CMakeLists.txt
 .DESCRIPTION
-    扫描 Input1/Input1Content/images 目录，自动生成 CMakeLists.txt 的 RESOURCES 列表
+    1. 扫描 Input1/Input1Content/images 目录，自动生成 CMakeLists.txt 的 RESOURCES 列表
+    2. 扫描 Input1/Input1Content/*.ui.qml 文件，自动生成 CMakeLists.txt 的 QML_FILES 列表
     QDS 设计修改后运行此脚本即可自动更新
 .EXAMPLE
     .\09-sync-input1-resources.ps1
+.NOTES
+    2026-01-19: 增强版 - 添加 QML 组件自动检测功能（方案1：简单扫描所有 .ui.qml）
 #>
 param()
 
@@ -15,33 +18,76 @@ param()
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
 $ProjectRoot = "E:\2025\3_gongkongji\belt_control_system"
-$ImagesDir = "$ProjectRoot\src\qml\Input1\Input1Content\images"
+$Input1ContentDir = "$ProjectRoot\src\qml\Input1\Input1Content"
+$ImagesDir = "$Input1ContentDir\images"
 $CMakeListsPath = "$ProjectRoot\src\qml\CMakeLists.txt"
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  同步 Input1 资源文件到 CMakeLists.txt" -ForegroundColor Cyan
+Write-Host "  同步 Input1 资源和组件到 CMakeLists.txt" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # 检查目录是否存在
-if (-not (Test-Path $ImagesDir)) {
-    Write-Host "❌ 错误：Input1 images 目录不存在：$ImagesDir" -ForegroundColor Red
+if (-not (Test-Path $Input1ContentDir)) {
+    Write-Host "❌ 错误：Input1Content 目录不存在：$Input1ContentDir" -ForegroundColor Red
     exit 1
 }
 
-# 扫描所有图片文件（排除 .txt 文件）
-Write-Host "📋 扫描图片文件..." -ForegroundColor Yellow
-$imageFiles = Get-ChildItem -Path $ImagesDir -File |
-              Where-Object { $_.Extension -match '\.(svg|png|jpg|jpeg)$' } |
-              Sort-Object Name
+# ============================================================
+# 第一步：扫描 QML 组件文件（.ui.qml）
+# ============================================================
+Write-Host "📋 [步骤 1/2] 扫描 QML 组件文件..." -ForegroundColor Yellow
 
-Write-Host "   找到 $($imageFiles.Count) 个图片文件" -ForegroundColor Green
+# 扫描所有 .ui.qml 文件（递归）
+$qmlFiles = Get-ChildItem -Path $Input1ContentDir -Filter "*.ui.qml" -Recurse |
+            Where-Object {
+                # 排除 App.qml（QDS 预览专用，不需要在应用中使用）
+                $_.Name -ne "App.ui.qml"
+            } |
+            Sort-Object Name
+
+Write-Host "   找到 $($qmlFiles.Count) 个 QML 组件文件" -ForegroundColor Green
+
+# 生成 QML_FILES 列表（相对于 src/qml/ 的路径）
+$qmlFilesList = ""
+foreach ($file in $qmlFiles) {
+    # 计算相对路径：Input1/Input1Content/xxx.ui.qml
+    $relativePath = $file.FullName.Replace("$ProjectRoot\src\qml\", "").Replace("\", "/")
+    $qmlFilesList += "        $relativePath`n"
+}
+
+# 移除最后的换行符
+$qmlFilesList = $qmlFilesList.TrimEnd("`n")
+
 Write-Host ""
 
-# 生成 RESOURCES 列表
+# ============================================================
+# 第二步：扫描图片资源文件
+# ============================================================
+Write-Host "📋 [步骤 2/2] 扫描图片资源文件..." -ForegroundColor Yellow
+
+# 检查图片目录
+if (-not (Test-Path $ImagesDir)) {
+    Write-Host "⚠️ 警告：images 目录不存在，跳过图片扫描" -ForegroundColor Yellow
+    $imageFiles = @()
+} else {
+    # 扫描所有图片文件（排除 .txt 文件）
+    $imageFiles = Get-ChildItem -Path $ImagesDir -File |
+                  Where-Object { $_.Extension -match '\.(svg|png|jpg|jpeg)$' } |
+                  Sort-Object Name
+
+    Write-Host "   找到 $($imageFiles.Count) 个图片文件" -ForegroundColor Green
+}
+
+Write-Host ""
+
+# ============================================================
+# 生成 CMakeLists.txt 内容
+# ============================================================
 Write-Host "📝 生成 CMakeLists.txt 内容..." -ForegroundColor Yellow
 Write-Host ""
 
+# 生成 RESOURCES 列表
 $resourcesList = @"
     RESOURCES
         images/header.png
@@ -53,9 +99,20 @@ foreach ($file in $imageFiles) {
     $resourcesList += "`n        Input1/Input1Content/images/$($file.Name)"
 }
 
+# ============================================================
 # 显示预览
+# ============================================================
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "预览（复制以下内容到 CMakeLists.txt）：" -ForegroundColor Green
+Write-Host "预览 - QML 组件列表（共 $($qmlFiles.Count) 个）：" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "    QML_FILES" -ForegroundColor White
+Write-Host "        ... (其他文件)" -ForegroundColor DarkGray
+Write-Host "        # 2026-01-19: Input1 模块 QML 组件（$($qmlFiles.Count) 个，自动检测）" -ForegroundColor White
+Write-Host $qmlFilesList -ForegroundColor White
+Write-Host ""
+
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "预览 - 图片资源列表（共 $($imageFiles.Count) 个）：" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host $resourcesList -ForegroundColor White
 Write-Host "    RESOURCE_PREFIX /qt/qml" -ForegroundColor White
@@ -63,7 +120,9 @@ Write-Host "    NO_PLUGIN_OPTIONAL" -ForegroundColor White
 Write-Host ")" -ForegroundColor White
 Write-Host ""
 
+# ============================================================
 # 询问是否自动更新 CMakeLists.txt
+# ============================================================
 Write-Host "========================================" -ForegroundColor Yellow
 Write-Host "是否自动更新 CMakeLists.txt？" -ForegroundColor Yellow
 Write-Host "  [Y] 是（推荐）" -ForegroundColor Gray
@@ -75,32 +134,103 @@ if ($choice -eq 'Y' -or $choice -eq 'y') {
     Write-Host ""
     Write-Host "🔧 自动更新 CMakeLists.txt..." -ForegroundColor Yellow
 
-    # 读取 CMakeLists.txt
-    $content = Get-Content -Path $CMakeListsPath -Raw
+    # 读取 CMakeLists.txt（逐行读取，保留原始格式）
+    $lines = Get-Content -Path $CMakeListsPath
+    $newLines = [System.Collections.ArrayList]::new()
 
-    # 查找 RESOURCES 部分的起始位置
-    $resourcesStart = $content.IndexOf("    RESOURCES")
-    if ($resourcesStart -eq -1) {
-        Write-Host "❌ 错误：未找到 RESOURCES 部分" -ForegroundColor Red
+    $inQmlFilesSection = $false
+    $qmlFilesSectionStart = $false
+    $skipInput1Lines = $false
+    $qmlFilesInserted = $false
+
+    $inResourcesSection = $false
+    $resourcesSectionFound = $false
+
+    # 逐行处理
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+
+        # ============================================================
+        # 处理 QML_FILES 部分
+        # ============================================================
+        if ($line -match '^\s*QML_FILES\s*$') {
+            $inQmlFilesSection = $true
+            $qmlFilesSectionStart = $true
+            [void]$newLines.Add($line)
+            Write-Host "   ✅ 找到 QML_FILES 部分（行 $($i+1)）" -ForegroundColor Gray
+            continue
+        }
+
+        # 检测到 Input1 QML 文件区域开始
+        if ($inQmlFilesSection -and $line -match '^\s*#.*Input1.*模块') {
+            $skipInput1Lines = $true
+            # 插入新的注释和 QML 文件列表
+            [void]$newLines.Add("        # 2026-01-19: Input1 模块 QML 组件（$($qmlFiles.Count) 个，自动检测）")
+            $qmlFilesList -split "`n" | ForEach-Object { [void]$newLines.Add($_) }
+            $qmlFilesInserted = $true
+            Write-Host "   ✅ 插入 $($qmlFiles.Count) 个 Input1 QML 组件" -ForegroundColor Gray
+            continue
+        }
+
+        # 跳过旧的 Input1 QML 文件行
+        if ($skipInput1Lines -and $line -match '^\s*Input1/Input1Content/.*\.ui\.qml') {
+            continue
+        }
+
+        # 检测到非 Input1 行，结束跳过
+        if ($skipInput1Lines -and $line -notmatch '^\s*Input1/' -and $line -notmatch '^\s*$') {
+            $skipInput1Lines = $false
+            $inQmlFilesSection = $false
+        }
+
+        # ============================================================
+        # 处理 RESOURCES 部分
+        # ============================================================
+        if ($line -match '^\s*RESOURCES\s*$') {
+            $inResourcesSection = $true
+            $resourcesSectionFound = $true
+            # 替换整个 RESOURCES 部分
+            $resourcesList -split "`n" | ForEach-Object { [void]$newLines.Add($_) }
+            Write-Host "   ✅ 替换 RESOURCES 部分（行 $($i+1)）" -ForegroundColor Gray
+            continue
+        }
+
+        # 跳过旧的 RESOURCES 内容（直到 RESOURCE_PREFIX）
+        if ($inResourcesSection -and $line -notmatch '^\s*RESOURCE_PREFIX') {
+            continue
+        }
+
+        # 遇到 RESOURCE_PREFIX，结束 RESOURCES 替换
+        if ($inResourcesSection -and $line -match '^\s*RESOURCE_PREFIX') {
+            $inResourcesSection = $false
+        }
+
+        # 保留其他所有行
+        [void]$newLines.Add($line)
+    }
+
+    # 验证是否成功插入
+    if (-not $qmlFilesInserted) {
+        Write-Host "   ⚠️ 警告：未找到 Input1 QML 组件插入位置" -ForegroundColor Yellow
+        Write-Host "   请手动将以下内容添加到 QML_FILES 部分：" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "        # 2026-01-19: Input1 模块 QML 组件（$($qmlFiles.Count) 个，自动检测）" -ForegroundColor White
+        Write-Host $qmlFilesList -ForegroundColor White
+    }
+
+    if (-not $resourcesSectionFound) {
+        Write-Host "   ❌ 错误：未找到 RESOURCES 部分" -ForegroundColor Red
         exit 1
     }
 
-    # 查找 RESOURCES 部分的结束位置（RESOURCE_PREFIX）
-    $resourcesEnd = $content.IndexOf("    RESOURCE_PREFIX", $resourcesStart)
-    if ($resourcesEnd -eq -1) {
-        Write-Host "❌ 错误：未找到 RESOURCE_PREFIX" -ForegroundColor Red
-        exit 1
-    }
+    # 写回文件（UTF-8 without BOM）
+    $newContent = $newLines -join "`n"
+    [System.IO.File]::WriteAllText($CMakeListsPath, $newContent, [System.Text.UTF8Encoding]::new($false))
 
-    # 替换 RESOURCES 部分
-    $before = $content.Substring(0, $resourcesStart)
-    $after = $content.Substring($resourcesEnd)
-    $newContent = $before + $resourcesList + "`n" + $after
-
-    # 写回文件
-    Set-Content -Path $CMakeListsPath -Value $newContent -Encoding UTF8 -NoNewline
-
+    Write-Host ""
     Write-Host "   ✅ CMakeLists.txt 已更新" -ForegroundColor Green
+    Write-Host "      - 更新了 $($qmlFiles.Count) 个 QML 组件" -ForegroundColor Gray
+    Write-Host "      - 更新了 $($imageFiles.Count) 个图片资源" -ForegroundColor Gray
     Write-Host ""
     Write-Host "下一步：运行编译" -ForegroundColor Yellow
     Write-Host "  .\build-ubuntu24-apt.ps1 188" -ForegroundColor Gray
