@@ -41,6 +41,7 @@
 
 #include <QDebug>
 #include <QSet>
+#include <QSettings>  // ✅ 2026-01-19 07:30 [FIX 100.249] For microphone volume persistence
 
 namespace risip {
 
@@ -882,6 +883,36 @@ int RisipEndpoint::start()
             qDebug() << "     Video calls may fail - check ALSA configuration";
         }
     }
+
+    // ✅ 2026-01-19 07:30 [FIX 100.249] 从 QSettings 恢复麦克风音量（硬件增益）
+    // 原因：用户设置的麦克风音量需要在 PJSIP 初始化后立即恢复
+    // 新方案：使用硬件增益 API，无需等待通话建立
+    // 参考：docs/2026-01-19/02-三个问题完整修复方案.md Lines 225-248
+    qDebug() << "🎤 [FIX 100.249] Restoring microphone volume from settings...";
+    QSettings settings;
+    int savedVolume = settings.value("SIP/MicrophoneVolume", 80).toInt();
+    qDebug() << "   Saved volume:" << savedVolume << "%";
+
+    // 转换百分比 (0-100) 到 PJSIP 音量 (0-255)
+    unsigned int pj_volume = (savedVolume * 255) / 100;
+
+    // 使用硬件增益 API 恢复音量
+    pj_status_t vol_status = pjsua_snd_set_setting(
+        PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING,
+        &pj_volume,
+        PJ_TRUE
+    );
+
+    if (vol_status == PJ_SUCCESS) {
+        qDebug() << "   ✅ Microphone volume restored:" << savedVolume << "% (PJSIP level:" << pj_volume << "/255)";
+        qDebug() << "   Effect: 硬件增益已设置，所有通话自动使用此音量";
+    } else {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(vol_status, errmsg, sizeof(errmsg));
+        qWarning() << "   ⚠️ Failed to restore microphone volume:" << errmsg;
+        qWarning() << "   Volume will remain at system default";
+    }
+    qDebug() << "";
 
     // ✅ 2026-01-18 22:30 [FIX 100.248] 媒体配置说明
     // 注意：媒体配置（8000 Hz, 单声道）已在 Endpoint 初始化时设置（Line 525-552）
