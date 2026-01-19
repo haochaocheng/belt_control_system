@@ -12,6 +12,7 @@
 #include <QJSEngine>
 #include <QQmlContext>
 #include <QRegularExpression>
+#include <QSet>  // ✅ 2026-01-18 12:30 [FIX 100.246] 用于过滤重复声卡
 #include <QFileDialog>
 #include <QFile>
 #include <QDir>
@@ -135,6 +136,27 @@ static void onCallStateChanged(int call_id, pjsip_inv_state state, const char* s
         isInCall = true;
         // Notify video managers that call is connected
         manager->notifyCallConnected(call_id);
+
+        // ✅ 2026-01-19 05:15 [FIX 100.249] 通话建立时恢复保存的麦克风音量
+        // 原因：用户设置的音量需要在通话开始时自动应用
+        QMetaObject::invokeMethod(manager, [manager]() {
+            QSettings settings;
+            int savedVolume = settings.value("SIP/MicrophoneVolume", 80).toInt();
+            qDebug() << "🎤 [FIX 100.249] Restoring microphone volume from settings:" << savedVolume << "%";
+
+            // 转换百分比到 PJSIP 音量 level
+            float level = (savedVolume / 100.0f) * 2.0f;  // 0% → 0.0, 50% → 1.0, 100% → 2.0
+
+            // 调整会议桥 slot 0 的发送音量
+            pj_status_t status = pjsua_conf_adjust_tx_level(0, level);
+            if (status == PJ_SUCCESS) {
+                qDebug() << "  ✅ Microphone volume restored (level:" << level << ")";
+            } else {
+                char errmsg[PJ_ERR_MSG_SIZE];
+                pj_strerror(status, errmsg, sizeof(errmsg));
+                qWarning() << "  ⚠️ Failed to restore mic volume:" << errmsg;
+            }
+        }, Qt::QueuedConnection);
 
         // ✅ ATTEMPT 13: Activate video via CHANGE_DIR after call is CONFIRMED
         // Check if this call has pending video activation
@@ -286,6 +308,12 @@ public:
 
     // Remote video manager (for displaying remote party's video in calls)
     RemoteVideoManager *remoteVideoManager;
+
+    // ✅ 2026-01-18 12:00 [FIX 100.246] 设备列表缓存（前后端分离）
+    // 原因：QML 绑定 property，PJSIP 初始化后更新这些列表并发射 signal
+    QStringList cachedAudioInputDevices;   // 音频输入设备列表（麦克风）
+    QStringList cachedAudioOutputDevices;  // 音频输出设备列表（扬声器）
+    QStringList cachedVideoDevices;        // 视频设备列表（摄像头）
 
     // ✅ ATTEMPT 13: Pending video activation (CHANGE_DIR approach)
     pjsua_call_id pendingVideoActivationCallId = PJSUA_INVALID_ID;
@@ -446,6 +474,14 @@ void SipPhoneManager::setCallerDisplayName(const QString &name)
 // SIP endpoint control
 bool SipPhoneManager::initializeEndpoint()
 {
+    // ✅ 2026-01-18 11:30 [DEBUG] 添加调用时机追踪
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "🔥🔥🔥 [ENTRY] initializeEndpoint() called!";
+    qDebug() << "   [TIMING] Called at:" << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+    qDebug() << "   [STATE] d->initialized =" << d->initialized;
+    qDebug() << "   [STATE] d->risipInstance =" << (d->risipInstance ? "EXISTS" : "NULL");
+    qDebug() << "════════════════════════════════════════════════════════════";
+
     qDebug() << "Initializing SIP endpoint with Risip SDK...";
 
     if (d->initialized) {
@@ -834,6 +870,34 @@ bool SipPhoneManager::initializeEndpoint()
         emit accountsModelChanged();
     }
 
+    // ✅ 2026-01-18 12:00 [FIX 100.246] PJSIP 初始化成功后枚举设备并发射信号
+    // 原因：QML 通过 property 绑定监听这些信号，PJSIP 初始化完成后才更新设备列表
+    // 时机：必须在 PJSIP endpoint 启动且视频子系统初始化之后
+    qDebug() << "";
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "📱 [FIX 100.246] Enumerating devices after PJSIP initialization";
+    qDebug() << "════════════════════════════════════════════════════════════";
+
+    // Enumerate audio input devices
+    d->cachedAudioInputDevices = getAudioInputDevices();
+    qDebug() << "✅ Audio input devices enumerated:" << d->cachedAudioInputDevices.count();
+    emit audioInputDevicesChanged(d->cachedAudioInputDevices);
+
+    // Enumerate audio output devices
+    d->cachedAudioOutputDevices = getAudioOutputDevices();
+    qDebug() << "✅ Audio output devices enumerated:" << d->cachedAudioOutputDevices.count();
+    emit audioOutputDevicesChanged(d->cachedAudioOutputDevices);
+
+    // Enumerate video devices
+    d->cachedVideoDevices = getVideoDevices();
+    qDebug() << "✅ Video devices enumerated:" << d->cachedVideoDevices.count();
+    emit videoDevicesChanged(d->cachedVideoDevices);
+
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "📱 [FIX 100.246] All devices enumerated, signals emitted to QML";
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "";
+
     return true;
 }
 
@@ -877,6 +941,16 @@ bool SipPhoneManager::registerAccount(const QString &sipServer,
                                      const QString &password,
                                      int port)
 {
+    // ✅ 2026-01-18 11:30 [DEBUG] 添加调用时机追踪
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "🔥🔥🔥 [ENTRY] registerAccount() called!";
+    qDebug() << "   [TIMING] Called at:" << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+    qDebug() << "   [PARAMS] Server:" << sipServer << "Port:" << port;
+    qDebug() << "   [PARAMS] Username:" << username;
+    qDebug() << "   [STATE] d->initialized =" << d->initialized;
+    qDebug() << "   [STATE] d->risipInstance =" << (d->risipInstance ? "EXISTS" : "NULL");
+    qDebug() << "════════════════════════════════════════════════════════════";
+
     if (!d->initialized) {
         qDebug() << "Cannot register: endpoint not initialized";
         emit errorOccurred("SIP引擎未初始化");
@@ -2094,29 +2168,66 @@ void SipPhoneManager::activatePendingVideo(int call_id)
     }
 }
 
+// ❌ 2026-01-19 05:10 删除旧代码：依赖 d->inCall，导致通话前无法设置音量
+// 旧实现：只在通话中才能设置音量，且功能未实现（"Media control not fully implemented yet"）
+// void SipPhoneManager::setMicrophoneVolume(int volume)
+// {
+//     qDebug() << "Set microphone volume:" << volume;
+//     if (!d->inCall || !d->currentCall) {
+//         qDebug() << "No active call for audio control";
+//         return;
+//     }
+//     try {
+//         risip::RisipMedia *media = d->currentCall->media();
+//         if (media) {
+//             qDebug() << "Media control not fully implemented yet";
+//         }
+//     } catch (const std::exception &ex) {
+//         qDebug() << "Error setting mic volume:" << ex.what();
+//     } catch (...) {
+//         qDebug() << "Unknown error setting mic volume";
+//     }
+// }
+
+// ✅ 2026-01-19 05:10 [FIX 100.249] 麦克风音量控制实现
+// 原因：用户反馈"对方听到本机音量很小"
+// 方案：使用 PJSIP 会议桥 API 调整麦克风输出音量
+// 参考：docs/2026-01-19/02-三个问题完整修复方案.md
 // Audio control
 void SipPhoneManager::setMicrophoneVolume(int volume)
 {
-    qDebug() << "Set microphone volume:" << volume;
+    qDebug() << "🎤 [FIX 100.249] Setting microphone volume:" << volume << "%";
 
-    // Note: Audio control through RisipMedia requires an active call
-    if (!d->inCall || !d->currentCall) {
-        qDebug() << "No active call for audio control";
-        return;
-    }
+    // ✅ 保存到 QSettings（下次启动恢复）
+    QSettings settings;
+    settings.setValue("SIP/MicrophoneVolume", volume);
+    qDebug() << "  ✅ [Settings] Microphone volume saved:" << volume;
 
-    try {
-        risip::RisipMedia *media = d->currentCall->media();
-        if (media) {
-            // Volume range is typically 0.0 - 1.0
-            // Note: RisipMedia may not have these exact methods
-            // This is a placeholder - actual implementation may need adjustment
-            qDebug() << "Media control not fully implemented yet";
+    // ✅ 如果有活动通话，立即应用音量到会议桥
+    // 原理：pjsua_conf_adjust_tx_level() 调整麦克风音量（会议桥 slot 0 → 网络）
+    if (d->inCall && d->currentCall) {
+        try {
+            // 转换百分比 (0-100) 到 PJSIP 音量 (0.0-1.0)
+            // 允许超过 1.0 实现增益效果（最大 2.0 = 200%）
+            float level = (volume / 100.0f) * 2.0f;  // 0% → 0.0, 50% → 1.0, 100% → 2.0
+
+            // 调整会议桥 slot 0 (声卡设备) 的发送音量
+            pj_status_t status = pjsua_conf_adjust_tx_level(0, level);
+
+            if (status == PJ_SUCCESS) {
+                qDebug() << "  ✅ [PJSIP] Microphone volume applied in call (level:" << level << ")";
+            } else {
+                char errmsg[PJ_ERR_MSG_SIZE];
+                pj_strerror(status, errmsg, sizeof(errmsg));
+                qWarning() << "  ⚠️ [PJSIP] Failed to set mic volume:" << errmsg;
+            }
+        } catch (const std::exception &ex) {
+            qWarning() << "  ❌ Error setting mic volume:" << ex.what();
+        } catch (...) {
+            qWarning() << "  ❌ Unknown error setting mic volume";
         }
-    } catch (const std::exception &ex) {
-        qDebug() << "Error setting mic volume:" << ex.what();
-    } catch (...) {
-        qDebug() << "Unknown error setting mic volume";
+    } else {
+        qDebug() << "  📌 [PJSIP] No active call, volume will be applied when call starts";
     }
 }
 
@@ -2167,41 +2278,27 @@ void SipPhoneManager::muteMicrophone(bool mute)
 }
 
 // ✅ 2026-01-17 22:30 [FIX 100.246] 设备枚举和选择实现
+// ⚠️ 2026-01-18 12:00 [DEPRECATED] 此函数已废弃，仅保留用于内部枚举
+// QML 应使用 audioInputDevices property 而不是调用此函数
 QStringList SipPhoneManager::getAudioInputDevices()
 {
+    // ✅ 2026-01-18 12:00 [DEBUG] 添加调用时机追踪
+    qDebug() << "════════════════════════════════════════════════════════════";
     qDebug() << "🔥🔥🔥 [ENTRY] getAudioInputDevices() called!";
+    qDebug() << "   [TIMING] Called at:" << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+    qDebug() << "   [STATE] d->initialized =" << d->initialized;
+    qDebug() << "   [STATE] d->risipInstance =" << (d->risipInstance ? "EXISTS" : "NULL");
+    qDebug() << "════════════════════════════════════════════════════════════";
 
     QStringList devices;
 
-    // ✅ 2026-01-18 02:15 [FIX 100.246] 按需创建 Risip 实例 + 初始化 PJSIP endpoint
-    // 原因：设备枚举需要 PJSIP endpoint 已初始化，不仅仅是 Risip 对象存在
-    // 区分两个概念：
-    //   - Risip 实例：C++ 对象
-    //   - PJSIP endpoint：调用 pjsua_create() 后才能枚举设备
-    if (!d->risipInstance) {
-        qDebug() << "   [LAZY INIT] Risip instance not found, creating for device enumeration...";
-        d->risipInstance = risip::Risip::instance();
-        if (!d->risipInstance) {
-            qWarning() << "❌ Failed to create Risip instance, cannot enumerate devices";
-            return devices;
-        }
-        qDebug() << "   ✅ Risip instance created";
-    } else {
-        qDebug() << "   ✅ Using existing Risip instance";
-    }
-
-    // ✅ 2026-01-18 02:15 [FIX 100.246] 确保 PJSIP endpoint 已初始化
-    // 原因：即使 Risip 实例存在，也需要调用 initializeEndpoint() 才能枚举设备
+    // ✅ 2026-01-18 12:00 [FIX 100.246] 只在 PJSIP 已初始化时枚举设备
+    // 原因：避免 QML 绑定时立即触发 PJSIP 初始化
+    // QML 应监听 audioInputDevicesChanged signal 获取设备列表
     if (!d->initialized) {
-        qDebug() << "   [LAZY INIT] PJSIP endpoint not initialized, initializing now for device enumeration...";
-        bool success = initializeEndpoint();
-        if (!success) {
-            qWarning() << "❌ Failed to initialize PJSIP endpoint, cannot enumerate devices";
-            return devices;
-        }
-        qDebug() << "   ✅ PJSIP endpoint initialized (can now enumerate devices)";
-    } else {
-        qDebug() << "   ✅ PJSIP endpoint already initialized";
+        qDebug() << "   ⚠️ PJSIP not initialized yet, returning empty list";
+        qDebug() << "   ℹ️ Devices will be enumerated after PJSIP initialization";
+        return devices;  // 返回空列表
     }
 
     // 使用 pjsua_enum_aud_devs 枚举音频设备
@@ -2221,55 +2318,164 @@ QStringList SipPhoneManager::getAudioInputDevices()
 
     qDebug() << "📢 [Device Enum] Total audio devices:" << count;
 
-    // ✅ 2026-01-17 23:10 [DEBUG] 显示所有设备，包括被跳过的
+    // ✅ 2026-01-18 22:00 [FIX 100.248] 优先使用 plughw 设备（支持所有采样率）
+    // 原因：
+    //   - hw: 设备只支持硬件原生采样率（如 22050 Hz），不支持 PCMA 需要的 8000 Hz
+    //   - plughw: 设备支持所有采样率（ALSA 自动重采样），确保 PCMA/PCMU 在任意设备都能工作
+    // 核心理念：程序适应设备，而不是设备适应程序（容器化部署要求）
+    // 参考：docs/2026-01-18/16-FIX100.248-优先使用plughw设备.md
+    QSet<QString> seenCards;  // 记录已添加的声卡，避免重复
+    QMap<QString, int> hwDeviceIndex;  // 暂存 hw: 设备索引，作为备选
+
+    qDebug() << "";
+    qDebug() << "🔍 [FIX 100.248] Device selection strategy:";
+    qDebug() << "   1️⃣ Prefer: plughw:CARD=X (supports all sample rates)";
+    qDebug() << "   2️⃣ Fallback: hw:CARD=X (only if no plughw available)";
+    qDebug() << "   3️⃣ Skip: other aliases (default, sysdefault, etc.)";
+    qDebug() << "";
+
     for (unsigned i = 0; i < count; ++i) {
         QString deviceName = QString::fromUtf8(info[i].name);
         qDebug() << "   [ALL] Device" << i << ":" << deviceName
                  << "| In:" << info[i].input_count << "Out:" << info[i].output_count;
 
         // 只添加支持录音(输入)的设备
-        if (info[i].input_count > 0) {
-            devices.append(deviceName);
-            qDebug() << "      ✅ ADDED as Input Device";
-        } else {
+        if (info[i].input_count == 0) {
             qDebug() << "      ⏭️ SKIPPED (no input channels)";
+            continue;
+        }
+
+        // ✅ 提取声卡名称（CARD=xxx）
+        QString cardName;
+        QRegularExpression cardRegex("CARD=([^,\\s]+)");
+        QRegularExpressionMatch match = cardRegex.match(deviceName);
+        if (match.hasMatch()) {
+            cardName = match.captured(1);
+        } else {
+            cardName = deviceName;  // 没有 CARD= 的情况，使用完整名称
+        }
+
+        // ✅ 过滤虚拟设备
+        if (cardName.contains("Loopback", Qt::CaseInsensitive) ||
+            deviceName.contains("dmix:", Qt::CaseInsensitive) ||
+            deviceName.contains("dsnoop:", Qt::CaseInsensitive) ||
+            deviceName.contains("surround", Qt::CaseInsensitive)) {
+            qDebug() << "      ⏭️ SKIPPED (virtual device):" << cardName;
+            continue;
+        }
+
+        // ✅ 2026-01-18 22:00 [FIX 100.248] 优先选择 plughw
+        bool isPlughw = deviceName.startsWith("plughw:");
+        bool isHw = deviceName.startsWith("hw:");
+
+        // 情况 1: plughw 设备 - 立即添加（最优选择）
+        if (isPlughw && deviceName.contains("DEV=0")) {
+            if (seenCards.contains(cardName)) {
+                qDebug() << "      ⏭️ SKIPPED (card already added):" << cardName;
+                continue;
+            }
+
+            // 添加 plughw 设备
+            QString friendlyName = cardName + " (麦克风)";
+            qDebug() << "      ✅ ADDED:" << friendlyName << "(" << cardName << ")";
+            qDebug() << "         [DEVICE TYPE] plughw (supports all sample rates) ⭐";
+            qDebug() << "         [SAMPLE RATES] 8k/16k/22.05k/32k/44.1k/48k/96k all supported";
+            qDebug() << "         [RESAMPLING] ALSA automatic resampling enabled";
+            qDebug() << "         [INDEX MAPPING] User index:" << devices.count() << "→ PJSIP index:" << i;
+
+            devices.append(friendlyName);
+            seenCards.insert(cardName);
+
+            // 移除对应的 hw 设备（如果之前暂存了）
+            if (hwDeviceIndex.contains(cardName)) {
+                qDebug() << "         [INFO] Removed hw: fallback (plughw: is better)";
+                hwDeviceIndex.remove(cardName);
+            }
+        }
+        // 情况 2: hw 设备 - 暂存，等待对应的 plughw
+        else if (isHw && deviceName.contains("DEV=0")) {
+            if (seenCards.contains(cardName)) {
+                qDebug() << "      ⏭️ SKIPPED (already added as plughw):" << cardName;
+                continue;
+            }
+
+            // 暂存 hw 设备索引，作为备选
+            if (!hwDeviceIndex.contains(cardName)) {
+                hwDeviceIndex[cardName] = i;
+                qDebug() << "      📦 STORED as fallback:" << cardName;
+                qDebug() << "         [DEVICE TYPE] hw (limited sample rate support)";
+                qDebug() << "         [WAITING] Will use if no plughw: available";
+            } else {
+                qDebug() << "      ⏭️ SKIPPED (duplicate hw alias)";
+            }
+        }
+        // 情况 3: 其他设备（default, sysdefault 等）- 跳过
+        else {
+            if (seenCards.contains(cardName)) {
+                qDebug() << "      ⏭️ SKIPPED (card already added):" << cardName;
+            } else {
+                qDebug() << "      ⏭️ SKIPPED (not plughw:CARD=X,DEV=0)";
+            }
+        }
+    }
+
+    // ✅ 2026-01-18 22:00 [FIX 100.248] 添加备选 hw 设备（没有 plughw 的情况）
+    if (!hwDeviceIndex.isEmpty()) {
+        qDebug() << "";
+        qDebug() << "🔄 [FIX 100.248] Processing fallback hw: devices:";
+    }
+
+    for (auto it = hwDeviceIndex.constBegin(); it != hwDeviceIndex.constEnd(); ++it) {
+        QString cardName = it.key();
+        int deviceIndex = it.value();
+
+        if (!seenCards.contains(cardName)) {
+            QString deviceName = QString::fromUtf8(info[deviceIndex].name);
+            QString friendlyName = cardName + " (麦克风)";
+
+            qDebug() << "      ✅ ADDED (fallback):" << friendlyName << "(" << cardName << ")";
+            qDebug() << "         [DEVICE TYPE] hw (limited sample rate support) ⚠️";
+            qDebug() << "         [SAMPLE RATES] Only hardware native rates (e.g., 22.05k, 32k, 44.1k, 48k)";
+            qDebug() << "         [WARNING] May not support 8kHz (PCMA) or 16kHz (AEC)";
+            qDebug() << "         [INDEX MAPPING] User index:" << devices.count() << "→ PJSIP index:" << deviceIndex;
+
+            devices.append(friendlyName);
+            seenCards.insert(cardName);
         }
     }
 
     qDebug() << "📢 [Device Enum] Total INPUT devices added:" << devices.count();
+
+    // ✅ 2026-01-18 16:10 [FIX 100.246.4] 如果没有可用设备，显示提示信息
+    if (devices.isEmpty()) {
+        devices.append("无可用麦克风");
+        qDebug() << "⚠️ [Device Enum] No input devices found, added placeholder";
+    }
+
     return devices;
 }
 
+// ⚠️ 2026-01-18 12:00 [DEPRECATED] 此函数已废弃，仅保留用于内部枚举
+// QML 应使用 audioOutputDevices property 而不是调用此函数
 QStringList SipPhoneManager::getAudioOutputDevices()
 {
+    // ✅ 2026-01-18 12:00 [DEBUG] 添加调用时机追踪
+    qDebug() << "════════════════════════════════════════════════════════════";
     qDebug() << "🔥🔥🔥 [ENTRY] getAudioOutputDevices() called!";
+    qDebug() << "   [TIMING] Called at:" << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+    qDebug() << "   [STATE] d->initialized =" << d->initialized;
+    qDebug() << "   [STATE] d->risipInstance =" << (d->risipInstance ? "EXISTS" : "NULL");
+    qDebug() << "════════════════════════════════════════════════════════════";
 
     QStringList devices;
 
-    // ✅ 2026-01-18 02:15 [FIX 100.246] 按需创建 Risip 实例 + 初始化 PJSIP endpoint（同上）
-    if (!d->risipInstance) {
-        qDebug() << "   [LAZY INIT] Creating Risip instance...";
-        d->risipInstance = risip::Risip::instance();
-        if (!d->risipInstance) {
-            qWarning() << "❌ Failed to create Risip instance";
-            return devices;
-        }
-        qDebug() << "   ✅ Risip instance created";
-    } else {
-        qDebug() << "   ✅ Using existing Risip instance";
-    }
-
-    // ✅ 2026-01-18 02:15 [FIX 100.246] 确保 PJSIP endpoint 已初始化
+    // ✅ 2026-01-18 12:00 [FIX 100.246] 只在 PJSIP 已初始化时枚举设备
+    // 原因：避免 QML 绑定时立即触发 PJSIP 初始化
+    // QML 应监听 audioOutputDevicesChanged signal 获取设备列表
     if (!d->initialized) {
-        qDebug() << "   [LAZY INIT] PJSIP endpoint not initialized, initializing now for device enumeration...";
-        bool success = initializeEndpoint();
-        if (!success) {
-            qWarning() << "❌ Failed to initialize PJSIP endpoint, cannot enumerate devices";
-            return devices;
-        }
-        qDebug() << "   ✅ PJSIP endpoint initialized (can now enumerate devices)";
-    } else {
-        qDebug() << "   ✅ PJSIP endpoint already initialized";
+        qDebug() << "   ⚠️ PJSIP not initialized yet, returning empty list";
+        qDebug() << "   ℹ️ Devices will be enumerated after PJSIP initialization";
+        return devices;  // 返回空列表
     }
 
     // 使用 pjsua_enum_aud_devs 枚举音频设备
@@ -2289,56 +2495,129 @@ QStringList SipPhoneManager::getAudioOutputDevices()
 
     qDebug() << "🔊 [Device Enum] Total audio devices:" << count;
 
-    // ✅ 2026-01-17 23:10 [DEBUG] 显示所有设备，包括被跳过的
+    // ✅ 2026-01-18 12:30 [FIX 100.246] 智能过滤和友好命名
+    // 原因：ALSA 为每个物理设备创建多个别名（hw, plughw, default, front 等）
+    // 解决：只保留代表性设备，过滤虚拟设备，添加中文友好名称
+    QSet<QString> seenCards;  // 记录已添加的声卡，避免重复
+
     for (unsigned i = 0; i < count; ++i) {
         QString deviceName = QString::fromUtf8(info[i].name);
         qDebug() << "   [ALL] Device" << i << ":" << deviceName
                  << "| In:" << info[i].input_count << "Out:" << info[i].output_count;
 
+        // ✅ 2026-01-18 17:00 [DEBUG] HDMI 设备深度调试 - 为什么 output_count=0
+        if (deviceName.contains("hdmi", Qt::CaseInsensitive) ||
+            deviceName.contains("rockchip", Qt::CaseInsensitive)) {
+            qDebug() << "      [HDMI DEEP DEBUG] ═══════════════════════════════════";
+            qDebug() << "      [HDMI] Device name:" << deviceName;
+            qDebug() << "      [HDMI] Driver:" << QString::fromUtf8(info[i].driver);
+            qDebug() << "      [HDMI] input_count:" << info[i].input_count;
+            qDebug() << "      [HDMI] output_count:" << info[i].output_count << "← 为什么是 0？";
+            qDebug() << "      [HDMI] default_samples_per_sec:" << info[i].default_samples_per_sec;
+            qDebug() << "      [HDMI] caps (能力标志):" << info[i].caps;
+            qDebug() << "      [HDMI] routes (路由数量):" << info[i].routes;
+            qDebug() << "      [HDMI] ext_fmt_cnt (扩展格式数量):" << info[i].ext_fmt_cnt;
+            // ⚠️ 2026-01-18 17:00 ext_fmt 是 pjmedia_format 数组，结构复杂
+            // 只打印数量即可，详细信息不影响分析 output_count=0 问题
+            qDebug() << "      [HDMI DEEP DEBUG] ═══════════════════════════════════";
+
+            // ⚠️ 可能的原因分析
+            qDebug() << "      [HDMI ANALYSIS] 可能的原因:";
+            qDebug() << "         1. HDMI 未连接显示器 → 音频通道未激活";
+            qDebug() << "         2. ALSA 驱动 bug → 未正确报告音频能力";
+            qDebug() << "         3. PJSIP ALSA 适配问题 → 枚举逻辑有问题";
+            qDebug() << "         4. 设备需要先打开 → 才能获取正确的通道数";
+            qDebug() << "         5. 权限问题 → 需要特定权限查询设备能力";
+        }
+
         // 只添加支持播放(输出)的设备
         if (info[i].output_count > 0) {
-            devices.append(deviceName);
-            qDebug() << "      ✅ ADDED as Output Device";
+            // ✅ 提取声卡名称（CARD=xxx）
+            QString cardName;
+            QRegularExpression cardRegex("CARD=([^,\\s]+)");
+            QRegularExpressionMatch match = cardRegex.match(deviceName);
+            if (match.hasMatch()) {
+                cardName = match.captured(1);
+            } else {
+                cardName = deviceName;  // 没有 CARD= 的情况，使用完整名称
+            }
+
+            // ✅ 过滤虚拟设备
+            if (cardName.contains("Loopback", Qt::CaseInsensitive) ||
+                deviceName.contains("dmix:", Qt::CaseInsensitive) ||
+                deviceName.contains("dsnoop:", Qt::CaseInsensitive) ||
+                deviceName.contains("surround", Qt::CaseInsensitive)) {
+                qDebug() << "      ⏭️ SKIPPED (virtual device):" << cardName;
+                continue;
+            }
+
+            // ✅ 只保留代表性设备（优先 default:CARD=xxx，其次 plughw:CARD=xxx,DEV=0）
+            bool isRepresentative = deviceName.startsWith("default:CARD=") ||
+                                   (deviceName.startsWith("plughw:CARD=") && deviceName.contains("DEV=0"));
+
+            if (!isRepresentative) {
+                qDebug() << "      ⏭️ SKIPPED (duplicate alias)";
+                continue;
+            }
+
+            // ✅ 避免同一声卡重复添加
+            if (seenCards.contains(cardName)) {
+                qDebug() << "      ⏭️ SKIPPED (card already added):" << cardName;
+                continue;
+            }
+            seenCards.insert(cardName);
+
+            // ✅ 2026-01-18 15:50 [FIX 100.246.3] 显示实际设备名称（CARD 名称 + 类型标签）
+            // 原因：所有 HDMI 设备都显示"HDMI 音频输出"，无法区分不同设备
+            // 解决：保留 CARD 原始名称，添加类型标签
+            // ❌ 2026-01-18 12:30 旧代码：使用通用友好名称，无法区分设备
+            // if (cardName.contains("hdmi", Qt::CaseInsensitive)) {
+            //     friendlyName = "HDMI 音频输出";
+            // }
+            QString friendlyName = cardName + " (扬声器)";  // 显示 "rockchiphdmi0 (扬声器)"
+
+            // ✅ 2026-01-18 16:30 [DEBUG] 打印设备索引映射关系
+            qDebug() << "      ✅ ADDED:" << friendlyName << "(" << cardName << ")";
+            qDebug() << "         [INDEX MAPPING] User index:" << devices.count() << "→ PJSIP index:" << i;
+
+            devices.append(friendlyName);
         } else {
             qDebug() << "      ⏭️ SKIPPED (no output channels)";
         }
     }
 
     qDebug() << "🔊 [Device Enum] Total OUTPUT devices added:" << devices.count();
+
+    // ✅ 2026-01-18 16:10 [FIX 100.246.4] 如果没有可用设备，显示提示信息
+    if (devices.isEmpty()) {
+        devices.append("无可用扬声器");
+        qDebug() << "⚠️ [Device Enum] No output devices found, added placeholder";
+    }
+
     return devices;
 }
 
+// ⚠️ 2026-01-18 12:00 [DEPRECATED] 此函数已废弃，仅保留用于内部枚举
+// QML 应使用 videoDevices property 而不是调用此函数
 QStringList SipPhoneManager::getVideoDevices()
 {
+    // ✅ 2026-01-18 12:00 [DEBUG] 添加调用时机追踪
+    qDebug() << "════════════════════════════════════════════════════════════";
     qDebug() << "🔥🔥🔥 [ENTRY] getVideoDevices() called!";
+    qDebug() << "   [TIMING] Called at:" << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
+    qDebug() << "   [STATE] d->initialized =" << d->initialized;
+    qDebug() << "   [STATE] d->risipInstance =" << (d->risipInstance ? "EXISTS" : "NULL");
+    qDebug() << "════════════════════════════════════════════════════════════";
 
     QStringList devices;
 
-    // ✅ 2026-01-18 01:00 [FIX 100.246] 按需创建 Risip 实例（同上）
-    if (!d->risipInstance) {
-        qDebug() << "   [LAZY INIT] Creating Risip instance...";
-        d->risipInstance = risip::Risip::instance();
-        if (!d->risipInstance) {
-            qWarning() << "❌ Failed to create Risip instance";
-            return devices;
-        }
-        qDebug() << "   ✅ Risip instance created";
-    } else {
-        qDebug() << "   ✅ Using existing Risip instance";
-    }
-
-    // ✅ 2026-01-18 02:15 [FIX 100.246] 确保 PJSIP endpoint 已初始化
-    // 原因：即使 Risip 实例存在，也需要调用 initializeEndpoint() 才能枚举设备
+    // ✅ 2026-01-18 12:00 [FIX 100.246] 只在 PJSIP 已初始化时枚举设备
+    // 原因：避免 QML 绑定时立即触发 PJSIP 初始化
+    // QML 应监听 videoDevicesChanged signal 获取设备列表
     if (!d->initialized) {
-        qDebug() << "   [LAZY INIT] PJSIP endpoint not initialized, initializing now for device enumeration...";
-        bool success = initializeEndpoint();
-        if (!success) {
-            qWarning() << "❌ Failed to initialize PJSIP endpoint, cannot enumerate devices";
-            return devices;
-        }
-        qDebug() << "   ✅ PJSIP endpoint initialized (can now enumerate devices)";
-    } else {
-        qDebug() << "   ✅ PJSIP endpoint already initialized";
+        qDebug() << "   ⚠️ PJSIP not initialized yet, returning empty list";
+        qDebug() << "   ℹ️ Devices will be enumerated after PJSIP initialization";
+        return devices;  // 返回空列表
     }
 
     unsigned count = pjsua_vid_dev_count();
@@ -2359,6 +2638,14 @@ QStringList SipPhoneManager::getVideoDevices()
                 }
             }
         }
+    }
+
+    qDebug() << "📹 [Device Enum] Total video devices found:" << devices.count();
+
+    // ✅ 2026-01-18 16:10 [FIX 100.246.4] 如果没有可用设备，显示提示信息
+    if (devices.isEmpty()) {
+        devices.append("无可用摄像头");
+        qDebug() << "⚠️ [Device Enum] No video devices found, added placeholder";
     }
 
     return devices;
@@ -2453,6 +2740,21 @@ bool SipPhoneManager::setAudioInputDevice(int index)
 {
     qDebug() << "📢 [FIX 100.246] Setting audio input device to:" << index;
 
+    // ✅ 2026-01-18 16:30 [DEBUG] 打印用户选择的索引
+    qDebug() << "   [INDEX DEBUG] User selected device index:" << index;
+    qDebug() << "   [INDEX DEBUG] This will be passed directly to PJSIP as device index:" << index;
+    qDebug() << "   ⚠️  WARNING: If user index ≠ PJSIP index, this will cause EAUD_INVDEV error!";
+
+    // ✅ 2026-01-18 15:50 [FIX 100.246.2] 禁止在通话中切换设备（防止崩溃）
+    // 原因：通话中重复创建/销毁音频设备可能导致堆内存损坏（Exit code 133）
+    // 日志证据：docs/2026-01-18/05-FIX100.246失败分析-HDMI设备无输出通道.md
+    if (d->inCall) {
+        qWarning() << "⚠️ [FIX 100.246.2] Cannot change audio device during active call!";
+        qWarning() << "   Reason: May cause heap corruption (SIGTRAP Exit 133)";
+        qWarning() << "   Solution: Please end call before changing audio device";
+        return false;
+    }
+
     // ✅ 2026-01-18 02:00 [FIX 100.246] 立即保存到 QSettings
     // 原因：用户需要下次启动后恢复上次选择的设备
     QSettings settings;
@@ -2533,6 +2835,16 @@ bool SipPhoneManager::setAudioInputDevice(int index)
 bool SipPhoneManager::setAudioOutputDevice(int index)
 {
     qDebug() << "🔊 [FIX 100.246] Setting audio output device to:" << index;
+
+    // ✅ 2026-01-18 15:50 [FIX 100.246.2] 禁止在通话中切换设备（防止崩溃）
+    // 原因：通话中重复创建/销毁音频设备可能导致堆内存损坏（Exit code 133）
+    // 日志证据：docs/2026-01-18/05-FIX100.246失败分析-HDMI设备无输出通道.md
+    if (d->inCall) {
+        qWarning() << "⚠️ [FIX 100.246.2] Cannot change audio device during active call!";
+        qWarning() << "   Reason: May cause heap corruption (SIGTRAP Exit 133)";
+        qWarning() << "   Solution: Please end call before changing audio device";
+        return false;
+    }
 
     // ✅ 2026-01-18 02:00 [FIX 100.246] 立即保存到 QSettings
     // 原因：用户需要下次启动后恢复上次选择的设备
@@ -2976,6 +3288,22 @@ QObject* SipPhoneManager::localVideoManager() const
 QObject* SipPhoneManager::remoteVideoManager() const
 {
     return d->remoteVideoManager;
+}
+
+// ✅ 2026-01-18 12:00 [FIX 100.246] 设备列表 property getters（前后端分离）
+QStringList SipPhoneManager::audioInputDevices() const
+{
+    return d->cachedAudioInputDevices;
+}
+
+QStringList SipPhoneManager::audioOutputDevices() const
+{
+    return d->cachedAudioOutputDevices;
+}
+
+QStringList SipPhoneManager::videoDevices() const
+{
+    return d->cachedVideoDevices;
 }
 
 // ✅ Public methods for call state callback to update UI
