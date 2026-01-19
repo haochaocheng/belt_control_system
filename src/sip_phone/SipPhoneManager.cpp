@@ -3291,6 +3291,278 @@ bool SipPhoneManager::setVideoDevice(int userIndex)
     // return true;  // 暂时返回 true，避免界面报错
 }
 
+// ===========================================================================================
+// ✅ 2026-01-19 18:00 [FIX 100.252] Codec Management (编解码器管理)
+// ===========================================================================================
+
+QStringList SipPhoneManager::getAudioCodecs()
+{
+    QStringList codecs;
+
+    if (!d->initialized) {
+        qDebug() << "⚠️ [FIX 100.252] PJSIP not initialized, returning empty codec list";
+        return codecs;
+    }
+
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "🎵 [FIX 100.252] Enumerating audio codecs...";
+    qDebug() << "════════════════════════════════════════════════════════════";
+
+    // PJSIP 编解码器枚举
+    pjsua_codec_info codec_info[32];
+    unsigned count = 32;
+
+    pj_status_t status = pjsua_codec_enum_info(codec_info, &count);
+    if (status != PJ_SUCCESS) {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(status, errmsg, sizeof(errmsg));
+        qWarning() << "❌ [FIX 100.252] Failed to enumerate audio codecs:" << errmsg;
+        return codecs;
+    }
+
+    qDebug() << "   Total codecs found:" << count;
+
+    // 用户要求的编解码器列表（按顺序）
+    QStringList requestedCodecs = {
+        "opus",      // Opus（默认启用）
+        "PCMU",      // G.711 µ-law
+        "PCMA",      // G.711 A-law
+        "G722",      // G.722 宽带
+        "iLBC",      // iLBC
+        "AMR",       // AMR (不包含 AMR-WB)
+        "AMR-WB",    // AMR-WB
+        "speex",     // Speex (窄带)
+        "GSM",       // GSM
+        "speex-wb"   // Speex 宽带
+    };
+
+    // 匹配用户要求的编解码器
+    for (const QString& requested : requestedCodecs) {
+        for (unsigned i = 0; i < count; ++i) {
+            QString codecId = QString::fromUtf8(codec_info[i].codec_id.ptr,
+                                               codec_info[i].codec_id.slen);
+
+            // 特殊处理：避免 AMR-WB 被 AMR 匹配
+            if (requested == "AMR" && codecId.contains("AMR-WB", Qt::CaseInsensitive)) {
+                continue;
+            }
+
+            // 特殊处理：避免 speex-wb 被 speex 匹配
+            if (requested == "speex" && !requested.contains("wb") &&
+                (codecId.contains("16000", Qt::CaseInsensitive) ||
+                 codecId.contains("wideband", Qt::CaseInsensitive))) {
+                continue;
+            }
+
+            // 匹配编解码器名称
+            if (codecId.contains(requested, Qt::CaseInsensitive)) {
+                if (!codecs.contains(codecId)) {  // 避免重复添加
+                    codecs.append(codecId);
+                    qDebug() << "   ✅ Found codec:" << codecId;
+                }
+                break;  // 每个请求的编解码器只添加一次
+            }
+        }
+    }
+
+    qDebug() << "   Final audio codec list count:" << codecs.count();
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "";
+
+    return codecs;
+}
+
+bool SipPhoneManager::isAudioCodecEnabled(const QString& codecName)
+{
+    if (!d->initialized) {
+        return false;
+    }
+
+    pj_str_t codec_id = pj_str(const_cast<char*>(codecName.toUtf8().constData()));
+    unsigned char priority = 0;
+
+    pj_status_t status = pjsua_codec_get_priority(&codec_id, &priority);
+
+    if (status == PJ_SUCCESS) {
+        bool enabled = (priority > 0);
+        qDebug() << "📊 [FIX 100.252] Codec" << codecName
+                 << "priority:" << priority
+                 << (enabled ? "(enabled)" : "(disabled)");
+        return enabled;
+    } else {
+        qWarning() << "❌ [FIX 100.252] Failed to get codec priority:" << codecName;
+        return false;
+    }
+}
+
+bool SipPhoneManager::setAudioCodecEnabled(const QString& codecName, bool enabled)
+{
+    if (!d->initialized) {
+        qWarning() << "❌ [FIX 100.252] PJSIP not initialized";
+        return false;
+    }
+
+    qDebug() << "════════════════════════════════════════════════";
+    qDebug() << "🎵 [FIX 100.252]" << (enabled ? "Enabling" : "Disabling")
+             << "audio codec:" << codecName;
+    qDebug() << "════════════════════════════════════════════════";
+
+    pj_str_t codec_id = pj_str(const_cast<char*>(codecName.toUtf8().constData()));
+
+    // 设置优先级：0 = 禁用，128 = 中等优先级（启用）
+    unsigned char priority = enabled ? 128 : 0;
+
+    pj_status_t status = pjsua_codec_set_priority(&codec_id, priority);
+
+    if (status == PJ_SUCCESS) {
+        qDebug() << "✅ [FIX 100.252] Audio codec" << codecName
+                 << "set to priority" << priority;
+
+        // ✅ 持久化到 QSettings
+        QString settingsPath = Private::getPersistentSettingsPath();
+        QSettings settings(settingsPath, QSettings::IniFormat);
+        settings.setValue("SIP/AudioCodec/" + codecName, enabled);
+        qDebug() << "✅ [FIX 100.252] Saved to QSettings: SIP/AudioCodec/"
+                 << codecName << "=" << enabled;
+
+        emit audioCodecsChanged();
+        qDebug() << "════════════════════════════════════════════════";
+        qDebug() << "";
+        return true;
+    } else {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(status, errmsg, sizeof(errmsg));
+        qWarning() << "❌ [FIX 100.252] Failed to set codec priority:" << errmsg;
+        qDebug() << "════════════════════════════════════════════════";
+        qDebug() << "";
+        return false;
+    }
+}
+
+QStringList SipPhoneManager::getVideoCodecs()
+{
+    QStringList codecs;
+
+    if (!d->initialized) {
+        qDebug() << "⚠️ [FIX 100.252] PJSIP not initialized, returning empty video codec list";
+        return codecs;
+    }
+
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "📹 [FIX 100.252] Enumerating video codecs...";
+    qDebug() << "════════════════════════════════════════════════════════════";
+
+    // PJSIP 视频编解码器枚举
+    pjsua_codec_info codec_info[32];
+    unsigned count = 32;
+
+    pj_status_t status = pjsua_vid_codec_enum_info(codec_info, &count);
+    if (status != PJ_SUCCESS) {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(status, errmsg, sizeof(errmsg));
+        qWarning() << "❌ [FIX 100.252] Failed to enumerate video codecs:" << errmsg;
+        return codecs;
+    }
+
+    qDebug() << "   Total video codecs found:" << count;
+
+    // 用户要求的视频编解码器列表
+    QStringList requestedCodecs = {
+        "H264",  // H.264（默认启用）
+        "VP8",   // Google VP8
+        "VP9"    // Google VP9
+    };
+
+    // 匹配用户要求的编解码器
+    for (const QString& requested : requestedCodecs) {
+        for (unsigned i = 0; i < count; ++i) {
+            QString codecId = QString::fromUtf8(codec_info[i].codec_id.ptr,
+                                               codec_info[i].codec_id.slen);
+
+            if (codecId.contains(requested, Qt::CaseInsensitive)) {
+                if (!codecs.contains(codecId)) {  // 避免重复添加
+                    codecs.append(codecId);
+                    qDebug() << "   ✅ Found video codec:" << codecId;
+                }
+                break;
+            }
+        }
+    }
+
+    qDebug() << "   Final video codec list count:" << codecs.count();
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "";
+
+    return codecs;
+}
+
+bool SipPhoneManager::isVideoCodecEnabled(const QString& codecName)
+{
+    if (!d->initialized) {
+        return false;
+    }
+
+    pj_str_t codec_id = pj_str(const_cast<char*>(codecName.toUtf8().constData()));
+    unsigned char priority = 0;
+
+    pj_status_t status = pjsua_vid_codec_get_priority(&codec_id, &priority);
+
+    if (status == PJ_SUCCESS) {
+        bool enabled = (priority > 0);
+        qDebug() << "📊 [FIX 100.252] Video codec" << codecName
+                 << "priority:" << priority
+                 << (enabled ? "(enabled)" : "(disabled)");
+        return enabled;
+    } else {
+        qWarning() << "❌ [FIX 100.252] Failed to get video codec priority:" << codecName;
+        return false;
+    }
+}
+
+bool SipPhoneManager::setVideoCodecEnabled(const QString& codecName, bool enabled)
+{
+    if (!d->initialized) {
+        qWarning() << "❌ [FIX 100.252] PJSIP not initialized";
+        return false;
+    }
+
+    qDebug() << "════════════════════════════════════════════════";
+    qDebug() << "📹 [FIX 100.252]" << (enabled ? "Enabling" : "Disabling")
+             << "video codec:" << codecName;
+    qDebug() << "════════════════════════════════════════════════";
+
+    pj_str_t codec_id = pj_str(const_cast<char*>(codecName.toUtf8().constData()));
+
+    // 设置优先级：0 = 禁用，128 = 中等优先级（启用）
+    unsigned char priority = enabled ? 128 : 0;
+
+    pj_status_t status = pjsua_vid_codec_set_priority(&codec_id, priority);
+
+    if (status == PJ_SUCCESS) {
+        qDebug() << "✅ [FIX 100.252] Video codec" << codecName
+                 << "set to priority" << priority;
+
+        // ✅ 持久化到 QSettings
+        QString settingsPath = Private::getPersistentSettingsPath();
+        QSettings settings(settingsPath, QSettings::IniFormat);
+        settings.setValue("SIP/VideoCodec/" + codecName, enabled);
+        qDebug() << "✅ [FIX 100.252] Saved to QSettings: SIP/VideoCodec/"
+                 << codecName << "=" << enabled;
+
+        emit videoCodecsChanged();
+        qDebug() << "════════════════════════════════════════════════";
+        qDebug() << "";
+        return true;
+    } else {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(status, errmsg, sizeof(errmsg));
+        qWarning() << "❌ [FIX 100.252] Failed to set video codec priority:" << errmsg;
+        qDebug() << "════════════════════════════════════════════════";
+        qDebug() << "";
+        return false;
+    }
+}
+
 void SipPhoneManager::sendDtmf(const QString &digits)
 {
     if (!d->inCall || !d->currentCall) {

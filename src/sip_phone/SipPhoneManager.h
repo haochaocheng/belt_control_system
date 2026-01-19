@@ -38,6 +38,13 @@ class SipPhoneManager : public QObject
     Q_PROPERTY(QObject* localVideoManager READ localVideoManager CONSTANT)
     Q_PROPERTY(QObject* remoteVideoManager READ remoteVideoManager CONSTANT)
 
+    // ✅ 2026-01-18 12:00 [FIX 100.246] 设备列表 Q_PROPERTY（前后端分离）
+    // 原因：QML 绑定函数调用会立即求值导致 PJSIP 提前初始化
+    // 解决：使用 Q_PROPERTY + Signal 通知机制，PJSIP 初始化后才更新设备列表
+    Q_PROPERTY(QStringList audioInputDevices READ audioInputDevices NOTIFY audioInputDevicesChanged)
+    Q_PROPERTY(QStringList audioOutputDevices READ audioOutputDevices NOTIFY audioOutputDevicesChanged)
+    Q_PROPERTY(QStringList videoDevices READ videoDevices NOTIFY videoDevicesChanged)
+
 public:
     explicit SipPhoneManager(QObject *parent = nullptr);
     ~SipPhoneManager();
@@ -62,6 +69,11 @@ public:
     QObject* qtVideoPreview() const;
     QObject* localVideoManager() const;
     QObject* remoteVideoManager() const;
+
+    // ✅ 2026-01-18 12:00 [FIX 100.246] 设备列表 property getters
+    QStringList audioInputDevices() const;
+    QStringList audioOutputDevices() const;
+    QStringList videoDevices() const;
 
     // Property setters
     void setCurrentNumber(const QString &number);
@@ -124,15 +136,28 @@ public slots:
     void muteMicrophone(bool mute);
 
     // ✅ 2026-01-17 22:30 [FIX 100.246] 设备枚举和选择
-    Q_INVOKABLE QStringList getAudioInputDevices();   // 获取音频输入设备列表（麦克风）
-    Q_INVOKABLE QStringList getAudioOutputDevices();  // 获取音频输出设备列表（扬声器）
-    Q_INVOKABLE QStringList getVideoDevices();        // 获取视频设备列表（摄像头）
+    // ⚠️ 2026-01-18 12:00 [DEPRECATED] 这些函数将废弃，请使用 Q_PROPERTY 访问
+    // 原因：QML 绑定函数调用会立即求值，导致 PJSIP 提前初始化
+    // 新用法：SipPhoneManager.audioInputDevices（property）
+    Q_INVOKABLE QStringList getAudioInputDevices();   // ❌ 已废弃：使用 audioInputDevices property
+    Q_INVOKABLE QStringList getAudioOutputDevices();  // ❌ 已废弃：使用 audioOutputDevices property
+    Q_INVOKABLE QStringList getVideoDevices();        // ❌ 已废弃：使用 videoDevices property
     Q_INVOKABLE int getCurrentAudioInputDevice();     // 获取当前音频输入设备索引
     Q_INVOKABLE int getCurrentAudioOutputDevice();    // 获取当前音频输出设备索引
     Q_INVOKABLE int getCurrentVideoDevice();          // 获取当前视频设备索引
     Q_INVOKABLE bool setAudioInputDevice(int index);  // 设置音频输入设备
     Q_INVOKABLE bool setAudioOutputDevice(int index); // 设置音频输出设备
     Q_INVOKABLE bool setVideoDevice(int index);       // 设置视频设备
+
+    // ✅ 2026-01-19 18:00 [FIX 100.252] 音频编解码器管理
+    Q_INVOKABLE QStringList getAudioCodecs();  // 获取支持的音频编解码器列表
+    Q_INVOKABLE bool isAudioCodecEnabled(const QString& codecName);  // 查询编解码器是否启用
+    Q_INVOKABLE bool setAudioCodecEnabled(const QString& codecName, bool enabled);  // 启用/禁用编解码器
+
+    // ✅ 2026-01-19 18:00 [FIX 100.252] 视频编解码器管理
+    Q_INVOKABLE QStringList getVideoCodecs();  // 获取支持的视频编解码器列表
+    Q_INVOKABLE bool isVideoCodecEnabled(const QString& codecName);  // 查询编解码器是否启用
+    Q_INVOKABLE bool setVideoCodecEnabled(const QString& codecName, bool enabled);  // 启用/禁用编解码器
 
     // DTMF (dial tone)
     void sendDtmf(const QString &digits);
@@ -166,6 +191,15 @@ signals:
     void serverStatusChanged(const QString &status);
     void accountsModelChanged();
     void ringtonePathChanged(const QString &ringtonePath);  // 铃声路径变化
+
+    // ✅ 2026-01-18 12:00 [FIX 100.246] 设备列表变化 signals（前后端分离）
+    void audioInputDevicesChanged(const QStringList &devices);
+    void audioOutputDevicesChanged(const QStringList &devices);
+    void videoDevicesChanged(const QStringList &devices);
+
+    // ✅ 2026-01-19 18:00 [FIX 100.252] 编解码器列表变化 signals
+    void audioCodecsChanged();
+    void videoCodecsChanged();
 
     // Event signals
     void incomingCall(const QString &callerNumber, const QString &callerName);

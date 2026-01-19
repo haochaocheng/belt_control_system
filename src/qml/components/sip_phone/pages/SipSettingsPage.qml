@@ -1056,6 +1056,142 @@ Page {
                 }
             }
 
+            // ✅ 2026-01-19 18:00 [FIX 100.252] Audio Codec Selection (音频编解码器选择)
+            Text {
+                text: "音频编解码器"
+                font.pixelSize: 16
+                font.bold: true
+                color: "#00d4ff"
+                Layout.topMargin: 20
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: audioCodecLayout.implicitHeight + 40
+                color: "#0f3460"
+                radius: 10
+                border.color: "#00d4ff"
+                border.width: 1
+
+                ColumnLayout {
+                    id: audioCodecLayout
+                    anchors.fill: parent
+                    anchors.margins: 20
+                    spacing: 10
+
+                    Repeater {
+                        model: SipPhoneManager.getAudioCodecs()
+
+                        CheckBox {
+                            id: audioCodecCheckbox
+                            Layout.fillWidth: true
+                            checked: SipPhoneManager.isAudioCodecEnabled(modelData)
+
+                            indicator: Rectangle {
+                                implicitWidth: 26
+                                implicitHeight: 26
+                                x: audioCodecCheckbox.leftPadding
+                                y: parent.height / 2 - height / 2
+                                radius: 5
+                                border.color: "#00d4ff"
+                                border.width: 2
+                                color: audioCodecCheckbox.checked ? "#00d4ff" : "transparent"
+
+                                Text {
+                                    text: "✓"
+                                    font.pixelSize: 18
+                                    font.bold: true
+                                    color: "#ffffff"
+                                    anchors.centerIn: parent
+                                    visible: audioCodecCheckbox.checked
+                                }
+                            }
+
+                            contentItem: Text {
+                                text: modelData
+                                font.pixelSize: 13
+                                color: "#ffffff"
+                                leftPadding: audioCodecCheckbox.indicator.width + audioCodecCheckbox.spacing
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            onCheckedChanged: {
+                                console.log("🎵 [FIX 100.252] Audio codec", modelData, checked ? "enabled" : "disabled")
+                                SipPhoneManager.setAudioCodecEnabled(modelData, checked)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ✅ 2026-01-19 18:00 [FIX 100.252] Video Codec Selection (视频编解码器选择)
+            Text {
+                text: "视频编解码器"
+                font.pixelSize: 16
+                font.bold: true
+                color: "#00d4ff"
+                Layout.topMargin: 20
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: videoCodecLayout.implicitHeight + 40
+                color: "#0f3460"
+                radius: 10
+                border.color: "#00d4ff"
+                border.width: 1
+
+                ColumnLayout {
+                    id: videoCodecLayout
+                    anchors.fill: parent
+                    anchors.margins: 20
+                    spacing: 10
+
+                    Repeater {
+                        model: SipPhoneManager.getVideoCodecs()
+
+                        CheckBox {
+                            id: videoCodecCheckbox
+                            Layout.fillWidth: true
+                            checked: SipPhoneManager.isVideoCodecEnabled(modelData)
+
+                            indicator: Rectangle {
+                                implicitWidth: 26
+                                implicitHeight: 26
+                                x: videoCodecCheckbox.leftPadding
+                                y: parent.height / 2 - height / 2
+                                radius: 5
+                                border.color: "#00d4ff"
+                                border.width: 2
+                                color: videoCodecCheckbox.checked ? "#00d4ff" : "transparent"
+
+                                Text {
+                                    text: "✓"
+                                    font.pixelSize: 18
+                                    font.bold: true
+                                    color: "#ffffff"
+                                    anchors.centerIn: parent
+                                    visible: videoCodecCheckbox.checked
+                                }
+                            }
+
+                            contentItem: Text {
+                                text: modelData
+                                font.pixelSize: 13
+                                color: "#ffffff"
+                                leftPadding: videoCodecCheckbox.indicator.width + videoCodecCheckbox.spacing
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            onCheckedChanged: {
+                                console.log("📹 [FIX 100.252] Video codec", modelData, checked ? "enabled" : "disabled")
+                                SipPhoneManager.setVideoCodecEnabled(modelData, checked)
+                            }
+                        }
+                    }
+                }
+            }
+
             // Ringtone settings section (铃声设置)
             Text {
                 text: "铃声设置"
