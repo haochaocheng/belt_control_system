@@ -5,6 +5,7 @@
 #include "VideoSinkItem.h"
 #include "LocalVideoManager.h"
 #include "RemoteVideoManager.h"
+#include "control/DataPathConfig.h"  // ✅ 2026-01-19 11:45 [FIX 100.250.2] 用于获取持久化配置路径
 #include <QDebug>
 #include <QTimer>
 #include <QThread>
