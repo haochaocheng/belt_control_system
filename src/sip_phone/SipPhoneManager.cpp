@@ -1017,8 +1017,9 @@ bool SipPhoneManager::initializeEndpoint()
     qDebug() << "📹 [FIX 100.251] Restoring saved video device from QSettings";
     qDebug() << "════════════════════════════════════════════════════════════";
 
-    QString settingsPath = Private::getPersistentSettingsPath();
-    QSettings settings(settingsPath, QSettings::IniFormat);
+    // ✅ 2026-01-19 17:30 [FIX 100.251.1] 修复编译错误 - 重用已有的 settings 变量
+    // 原因：settingsPath 和 settings 已在音频设备恢复部分声明，无需重复声明
+    // 音频和视频设备配置都在同一个 sip_accounts.ini 文件中
     int savedVideoIndex = settings.value("SIP/VideoDevice", -1).toInt();
 
     qDebug() << "   [QSettings] Settings file path:" << settingsPath;
