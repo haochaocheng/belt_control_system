@@ -262,6 +262,13 @@ public:
         // Cleanup is handled in shutdownEndpoint
     }
 
+    // ✅ 2026-01-19 11:30 [FIX 100.250.2] 辅助函数：获取持久化的 QSettings
+    // 原因：统一所有 QSettings 使用持久化路径，避免容器重启后配置丢失
+    // 用法：所有需要保存配置的地方使用 getPersistentSettings() 替代 QSettings()
+    static QString getPersistentSettingsPath() {
+        return DataPathConfig::getDataDirectory() + "/sip_settings.ini";
+    }
+
     SipPhoneManager *q;
 
     // State variables
@@ -913,10 +920,14 @@ bool SipPhoneManager::initializeEndpoint()
     qDebug() << "📱 [FIX 100.250] Restoring saved audio devices from QSettings";
     qDebug() << "════════════════════════════════════════════════════════════";
 
-    QSettings settings;
+    // ✅ 2026-01-19 11:30 [FIX 100.250.2] 使用持久化目录存储 QSettings
+    // 原因：容器重启后 ~/.config/ 目录会丢失，但 /app/appdata 是持久化的
+    QString settingsPath = Private::getPersistentSettingsPath();
+    QSettings settings(settingsPath, QSettings::IniFormat);
     int savedInputIndex = settings.value("SIP/AudioInputDevice", -1).toInt();
     int savedOutputIndex = settings.value("SIP/AudioOutputDevice", -1).toInt();
 
+    qDebug() << "   [QSettings] Settings file path:" << settingsPath;
     qDebug() << "   [QSettings] Saved input device (user index):" << savedInputIndex;
     qDebug() << "   [QSettings] Saved output device (user index):" << savedOutputIndex;
     qDebug() << "   [Mapping] Input mapping array size:" << d->audioInputDeviceMapping.size();
@@ -2815,8 +2826,9 @@ int SipPhoneManager::getCurrentAudioInputDevice()
     // ✅ 2026-01-19 08:30 [FIX 100.250] 验证索引有效性，防止设备配置变化后崩溃
     // 原因：用户需要下次启动后恢复上次选择的设备
     // 不再依赖 d->initialized，因为这是显示用的，不是实际设置用的
-
-    QSettings settings;
+    // ✅ 2026-01-19 11:30 [FIX 100.250.2] 使用持久化路径读取配置
+    QString settingsPath = Private::getPersistentSettingsPath();
+    QSettings settings(settingsPath, QSettings::IniFormat);
     int savedIndex = settings.value("SIP/AudioInputDevice", 0).toInt();
 
     qDebug() << "📢 [FIX 100.250] Reading saved audio input device index:" << savedIndex;
@@ -2862,8 +2874,9 @@ int SipPhoneManager::getCurrentAudioOutputDevice()
     // ✅ 2026-01-19 08:30 [FIX 100.250] 验证索引有效性，防止设备配置变化后崩溃
     // 原因：用户需要下次启动后恢复上次选择的设备
     // 不再依赖 d->initialized，因为这是显示用的，不是实际设置用的
-
-    QSettings settings;
+    // ✅ 2026-01-19 11:30 [FIX 100.250.2] 使用持久化路径读取配置
+    QString settingsPath = Private::getPersistentSettingsPath();
+    QSettings settings(settingsPath, QSettings::IniFormat);
     int savedIndex = settings.value("SIP/AudioOutputDevice", 0).toInt();
 
     qDebug() << "🔊 [FIX 100.250] Reading saved audio output device index:" << savedIndex;
@@ -2963,9 +2976,12 @@ bool SipPhoneManager::setAudioInputDevice(int userIndex)
     // ✅ 2026-01-19 08:15 [FIX 100.250] 保存用户索引到 QSettings（不是 PJSIP 索引！）
     // 原因：用户需要下次启动后恢复上次选择的设备
     // 重要：保存的是用户索引，读取后再通过映射数组转换为 PJSIP 索引
-    QSettings settings;
+    // ✅ 2026-01-19 11:30 [FIX 100.250.2] 使用持久化路径保存配置
+    QString settingsPath = Private::getPersistentSettingsPath();
+    QSettings settings(settingsPath, QSettings::IniFormat);
     settings.setValue("SIP/AudioInputDevice", userIndex);
     qDebug() << "✅ [Settings] Audio input device (user index) saved to QSettings:" << userIndex;
+    qDebug() << "   [Settings] File path:" << settingsPath;
 
     // ✅ 2026-01-18 02:00 如果 PJSIP 已初始化，立即应用设置
     // 如果未初始化，只保存到 QSettings，下次初始化时会使用
@@ -3072,9 +3088,12 @@ bool SipPhoneManager::setAudioOutputDevice(int userIndex)
     }
 
     // ✅ 2026-01-19 08:15 [FIX 100.250] 保存用户索引到 QSettings（不是 PJSIP 索引！）
-    QSettings settings;
+    // ✅ 2026-01-19 11:30 [FIX 100.250.2] 使用持久化路径保存配置
+    QString settingsPath = Private::getPersistentSettingsPath();
+    QSettings settings(settingsPath, QSettings::IniFormat);
     settings.setValue("SIP/AudioOutputDevice", userIndex);
     qDebug() << "✅ [Settings] Audio output device (user index) saved to QSettings:" << userIndex;
+    qDebug() << "   [Settings] File path:" << settingsPath;
 
     // ✅ 2026-01-18 02:00 如果 PJSIP 已初始化，立即应用设置
     // 如果未初始化，只保存到 QSettings，下次初始化时会使用
