@@ -263,11 +263,12 @@ public:
         // Cleanup is handled in shutdownEndpoint
     }
 
-    // ✅ 2026-01-19 11:30 [FIX 100.250.2] 辅助函数：获取持久化的 QSettings
-    // 原因：统一所有 QSettings 使用持久化路径，避免容器重启后配置丢失
-    // 用法：所有需要保存配置的地方使用 getPersistentSettings() 替代 QSettings()
+    // ✅ 2026-01-19 11:30 [FIX 100.250.2] 辅助函数：获取持久化的 QSettings 路径
+    // ✅ 2026-01-19 16:30 [FIX 100.250.3] 统一使用 sip_accounts.ini（与其他 SIP 配置一致）
+    // 原因：容器重启后 ~/.config/ 目录会丢失，只有 /app/appdata 是持久化的
+    // 参考：DataPathConfig::getDataDirectory() → "/app/appdata"
     static QString getPersistentSettingsPath() {
-        return DataPathConfig::getDataDirectory() + "/sip_settings.ini";
+        return DataPathConfig::getDataDirectory() + "/sip_accounts.ini";
     }
 
     SipPhoneManager *q;
@@ -957,6 +958,11 @@ bool SipPhoneManager::initializeEndpoint()
         qDebug() << "   ⚠️ [PJSIP] Failed to get current sound device, using PJSIP defaults";
         param.capture_dev = PJSUA_SND_DEFAULT_CAPTURE_DEV;
         param.playback_dev = PJSUA_SND_DEFAULT_PLAYBACK_DEV;
+    } else {
+        // ✅ 2026-01-19 16:30 [FIX 100.250.3] 打印当前 PJSIP 设备（调试用）
+        qDebug() << "   📌 [CURRENT DEVICES] PJSIP current devices before restore:";
+        qDebug() << "      Current capture_dev (input):" << param.capture_dev;
+        qDebug() << "      Current playback_dev (output):" << param.playback_dev;
     }
 
     int pjsipInputIndex = param.capture_dev;   // 默认保持当前设备
@@ -1000,6 +1006,45 @@ bool SipPhoneManager::initializeEndpoint()
         qWarning() << "      Devices will remain at PJSIP defaults";
         qWarning() << "      UI may display different devices than actually used";
     }
+
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "";
+
+    // ✅ 2026-01-19 17:00 [FIX 100.251] 视频设备恢复（参考音频设备恢复逻辑）
+    // 原因：解决视频设备选择重启后不保存的问题
+    // 时序：设备枚举完成 → 从 QSettings 读取保存的设备索引 → 更新 VideoCallManager
+    qDebug() << "════════════════════════════════════════════════════════════";
+    qDebug() << "📹 [FIX 100.251] Restoring saved video device from QSettings";
+    qDebug() << "════════════════════════════════════════════════════════════";
+
+    QString settingsPath = Private::getPersistentSettingsPath();
+    QSettings settings(settingsPath, QSettings::IniFormat);
+    int savedVideoIndex = settings.value("SIP/VideoDevice", -1).toInt();
+
+    qDebug() << "   [QSettings] Settings file path:" << settingsPath;
+    qDebug() << "   [QSettings] Saved video device (user index):" << savedVideoIndex;
+    qDebug() << "   [Mapping] Video mapping array size:" << d->videoDeviceMapping.size();
+
+    // ✅ 验证视频设备索引有效性
+    bool videoIndexValid = (savedVideoIndex >= 0 && savedVideoIndex < d->videoDeviceMapping.size());
+
+    if (!videoIndexValid) {
+        qDebug() << "   ℹ️ [FIX 100.251] No valid saved video device found, using PJSIP defaults";
+        qDebug() << "      This is normal for first run or after device configuration changes";
+        qDebug() << "════════════════════════════════════════════════════════════";
+        qDebug() << "";
+        return true;
+    }
+
+    // ✅ 视频设备索引有效，映射到 PJSIP 索引
+    int pjsipVideoIndex = d->videoDeviceMapping[savedVideoIndex];
+    qDebug() << "   ✅ [Mapping] Video device: User index" << savedVideoIndex << "→ PJSIP index" << pjsipVideoIndex;
+
+    // ⚠️ 注意：视频设备切换需要在通话时生效
+    // VideoCallManager 会在 makeCall 时使用保存的设备索引
+    // 这里只是验证索引有效性，实际设备在通话时设置
+    qDebug() << "   ℹ️ [FIX 100.251] Video device will be applied on next call";
+    qDebug() << "      VideoCallManager will use saved device index:" << pjsipVideoIndex;
 
     qDebug() << "════════════════════════════════════════════════════════════";
     qDebug() << "";
@@ -2790,6 +2835,10 @@ QStringList SipPhoneManager::getVideoDevices()
         return devices;  // 返回空列表
     }
 
+    // ✅ 2026-01-19 17:00 [FIX 100.251] 清空旧的视频设备映射数组
+    d->videoDeviceMapping.clear();
+    qDebug() << "   [FIX 100.251] Video device index mapping cleared";
+
     unsigned count = pjsua_vid_dev_count();
     qDebug() << "📹 [Device Enum] Total video devices:" << count;
 
@@ -2804,7 +2853,11 @@ QStringList SipPhoneManager::getVideoDevices()
                 // 过滤掉虚拟设备(colorbar)
                 if (!deviceName.contains("colorbar", Qt::CaseInsensitive)) {
                     devices.append(deviceName);
+                    // ✅ 2026-01-19 17:00 [FIX 100.251] 保存索引映射
+                    d->videoDeviceMapping.append(i);
                     qDebug() << "   Video Device" << i << ":" << deviceName;
+                    qDebug() << "          [INDEX MAPPING] User index:" << (devices.size() - 1) << "→ PJSIP index:" << i;
+                    qDebug() << "          [FIX 100.251] Mapping saved: User" << (devices.size() - 1) << "→ PJSIP" << i;
                 }
             }
         }
@@ -2920,13 +2973,27 @@ int SipPhoneManager::getCurrentAudioOutputDevice()
 int SipPhoneManager::getCurrentVideoDevice()
 {
     // ✅ 2026-01-18 02:00 [FIX 100.246] 从 QSettings 读取保存的设备索引
+    // ✅ 2026-01-19 17:00 [FIX 100.251] 使用持久化路径和索引验证
     // 原因：用户需要下次启动后恢复上次选择的设备
     // 不再依赖 d->initialized，因为这是显示用的，不是实际设置用的
-
-    QSettings settings;
+    QString settingsPath = Private::getPersistentSettingsPath();
+    QSettings settings(settingsPath, QSettings::IniFormat);
     int savedIndex = settings.value("SIP/VideoDevice", 0).toInt();
 
-    qDebug() << "📹 [Settings] Saved video device index:" << savedIndex;
+    qDebug() << "📹 [FIX 100.251] Reading saved video device index:" << savedIndex;
+
+    // ✅ 2026-01-19 17:00 [FIX 100.251] 验证索引是否在映射数组范围内
+    if (savedIndex < 0 || savedIndex >= d->videoDeviceMapping.size()) {
+        qWarning() << "   ⚠️ [FIX 100.251] Saved index" << savedIndex << "is out of range";
+        qWarning() << "      Valid range: 0 -" << (d->videoDeviceMapping.size() - 1);
+        qWarning() << "      Mapping size:" << d->videoDeviceMapping.size();
+        qWarning() << "      Returning default index 0";
+        return 0;
+    }
+
+    qDebug() << "   ✅ [FIX 100.251] Saved index is valid";
+    qDebug() << "      User index:" << savedIndex;
+    qDebug() << "      Maps to PJSIP index:" << d->videoDeviceMapping[savedIndex];
 
     return savedIndex;
 
@@ -3171,15 +3238,31 @@ bool SipPhoneManager::setAudioOutputDevice(int userIndex)
     // }
 }
 
-bool SipPhoneManager::setVideoDevice(int index)
+bool SipPhoneManager::setVideoDevice(int userIndex)
 {
-    qDebug() << "📹 [FIX 100.246] Setting video device to:" << index;
+    qDebug() << "════════════════════════════════════════════════";
+    qDebug() << "📹 [FIX 100.251] Setting video device to user index:" << userIndex;
+    qDebug() << "════════════════════════════════════════════════";
 
-    // ✅ 2026-01-18 02:00 [FIX 100.246] 立即保存到 QSettings
-    // 原因：用户需要下次启动后恢复上次选择的设备
-    QSettings settings;
-    settings.setValue("SIP/VideoDevice", index);
-    qDebug() << "✅ [Settings] Video device saved to QSettings:" << index;
+    // ✅ 2026-01-19 17:00 [FIX 100.251] 索引映射：用户索引 → PJSIP 索引
+    if (userIndex < 0 || userIndex >= d->videoDeviceMapping.size()) {
+        qWarning() << "❌ [FIX 100.251] Invalid user device index:" << userIndex;
+        qWarning() << "   Valid range: 0 -" << (d->videoDeviceMapping.size() - 1);
+        qWarning() << "   Mapping size:" << d->videoDeviceMapping.size();
+        return false;
+    }
+
+    int pjsipIndex = d->videoDeviceMapping[userIndex];
+    qDebug() << "   [FIX 100.251] Index mapping:";
+    qDebug() << "      User index:" << userIndex << "→ PJSIP index:" << pjsipIndex;
+    qDebug() << "      Mapping array size:" << d->videoDeviceMapping.size();
+    qDebug() << "      Full mapping:" << d->videoDeviceMapping;
+
+    // ✅ 2026-01-19 17:00 [FIX 100.251] 保存用户索引到 QSettings（使用持久化路径）
+    QString settingsPath = Private::getPersistentSettingsPath();
+    QSettings settings(settingsPath, QSettings::IniFormat);
+    settings.setValue("SIP/VideoDevice", userIndex);
+    qDebug() << "✅ [FIX 100.251] Video device saved to QSettings:" << userIndex;
 
     // ⚠️ 2026-01-18 02:00 视频设备切换功能尚未完整实现
     // VideoCallManager 没有 setCaptureDeviceId 方法

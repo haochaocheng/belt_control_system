@@ -7,11 +7,11 @@ import BeltControl.SipPhone 1.0
 Page {
     id: root
 
-    // ✅ 2026-01-18 02:00 [FIX 100.246] 版本确认
+    // ✅ 2026-01-18 12:00 [FIX 100.246] 版本确认 - 前后端分离完成
     Component.onCompleted: {
         console.log("═══════════════════════════════════════════════════════")
-        console.log("🔥🔥🔥 SIP SETTINGS PAGE LOADED - VERSION 2026-01-18-02:00")
-        console.log("🔥🔥🔥 FIX 100.246 - 设备选择持久化：下次启动恢复上次选择")
+        console.log("🔥🔥🔥 SIP SETTINGS PAGE LOADED - VERSION 2026-01-18-12:00")
+        console.log("🔥🔥🔥 FIX 100.246: 前后端分离完成，设备枚举通过 signal 更新")
         console.log("═══════════════════════════════════════════════════════")
     }
 
@@ -713,16 +713,29 @@ Page {
                             id: speakerDeviceCombo
                             Layout.fillWidth: true
                             Layout.preferredHeight: 45
-                            model: SipPhoneManager.getAudioOutputDevices()
+                            // ✅ 2026-01-18 12:00 [FIX 100.246] 使用 property 绑定代替函数调用
+                            // 原因：函数调用会立即求值触发 PJSIP 初始化，property 绑定响应 signal 更新
+                            model: SipPhoneManager.audioOutputDevices
                             currentIndex: SipPhoneManager.getCurrentAudioOutputDevice()
 
-                            // ✅ 2026-01-17 23:50 [DEBUG] 监控初始化
+                            // ✅ 2026-01-18 12:00 [DEBUG] 监控初始化和信号接收
                             Component.onCompleted: {
                                 console.log("🔥 [QML Speaker] ComboBox initialized")
-                                console.log("   Model type:", typeof model)
-                                console.log("   Model:", JSON.stringify(model))
-                                console.log("   Count:", count)
+                                console.log("   Initial model count:", count)
                                 console.log("   CurrentIndex:", currentIndex)
+                            }
+
+                            Connections {
+                                target: SipPhoneManager
+                                function onAudioOutputDevicesChanged(devices) {
+                                    console.log("📱 [QML Speaker] Received audioOutputDevicesChanged signal")
+                                    console.log("   New device count:", devices.length)
+                                    // ✅ 2026-01-19 16:45 [FIX 100.250.3] 更新 currentIndex 到保存的设备索引
+                                    // 原因：设备枚举完成后，从 QSettings 读取保存的设备索引并更新 UI
+                                    // 时序：QML 加载 → 设备枚举 → 发射信号 → 更新 currentIndex
+                                    speakerDeviceCombo.currentIndex = SipPhoneManager.getCurrentAudioOutputDevice()
+                                    console.log("   Updated currentIndex to:", speakerDeviceCombo.currentIndex)
+                                }
                             }
 
                             background: Rectangle {
@@ -763,16 +776,28 @@ Page {
                             id: micDeviceCombo
                             Layout.fillWidth: true
                             Layout.preferredHeight: 45
-                            model: SipPhoneManager.getAudioInputDevices()
+                            // ✅ 2026-01-18 12:00 [FIX 100.246] 使用 property 绑定代替函数调用
+                            model: SipPhoneManager.audioInputDevices
                             currentIndex: SipPhoneManager.getCurrentAudioInputDevice()
 
-                            // ✅ 2026-01-17 23:50 [DEBUG] 监控初始化
+                            // ✅ 2026-01-18 12:00 [DEBUG] 监控初始化和信号接收
                             Component.onCompleted: {
                                 console.log("🔥 [QML Mic] ComboBox initialized")
-                                console.log("   Model type:", typeof model)
-                                console.log("   Model:", JSON.stringify(model))
-                                console.log("   Count:", count)
+                                console.log("   Initial model count:", count)
                                 console.log("   CurrentIndex:", currentIndex)
+                            }
+
+                            Connections {
+                                target: SipPhoneManager
+                                function onAudioInputDevicesChanged(devices) {
+                                    console.log("📱 [QML Mic] Received audioInputDevicesChanged signal")
+                                    console.log("   New device count:", devices.length)
+                                    // ✅ 2026-01-19 16:45 [FIX 100.250.3] 更新 currentIndex 到保存的设备索引
+                                    // 原因：设备枚举完成后，从 QSettings 读取保存的设备索引并更新 UI
+                                    // 时序：QML 加载 → 设备枚举 → 发射信号 → 更新 currentIndex
+                                    micDeviceCombo.currentIndex = SipPhoneManager.getCurrentAudioInputDevice()
+                                    console.log("   Updated currentIndex to:", micDeviceCombo.currentIndex)
+                                }
                             }
 
                             background: Rectangle {
@@ -813,16 +838,26 @@ Page {
                             id: cameraDeviceCombo
                             Layout.fillWidth: true
                             Layout.preferredHeight: 45
-                            model: SipPhoneManager.getVideoDevices()
+                            // ✅ 2026-01-18 12:00 [FIX 100.246] 使用 property 绑定代替函数调用
+                            model: SipPhoneManager.videoDevices
                             currentIndex: SipPhoneManager.getCurrentVideoDevice()
 
-                            // ✅ 2026-01-17 23:50 [DEBUG] 监控初始化
+                            // ✅ 2026-01-18 12:00 [DEBUG] 监控初始化和信号接收
                             Component.onCompleted: {
                                 console.log("🔥 [QML Camera] ComboBox initialized")
-                                console.log("   Model type:", typeof model)
-                                console.log("   Model:", JSON.stringify(model))
-                                console.log("   Count:", count)
+                                console.log("   Initial model count:", count)
                                 console.log("   CurrentIndex:", currentIndex)
+                            }
+
+                            Connections {
+                                target: SipPhoneManager
+                                function onVideoDevicesChanged(devices) {
+                                    console.log("📱 [QML Camera] Received videoDevicesChanged signal")
+                                    console.log("   New device count:", devices.length)
+                                    // ✅ 2026-01-19 17:30 [FIX 100.251] 更新 currentIndex 到保存的设备索引
+                                    cameraDeviceCombo.currentIndex = SipPhoneManager.getCurrentVideoDevice()
+                                    console.log("   Updated currentIndex to:", cameraDeviceCombo.currentIndex)
+                                }
                             }
 
                             background: Rectangle {
