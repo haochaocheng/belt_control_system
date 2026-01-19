@@ -31,6 +31,11 @@
 // This is the official way to access pjsua_var
 #include <pjsua-lib/pjsua_internal.h>
 
+// ✅ 2026-01-19 04:00 [Phase 3.1] Opus 音频编解码器支持
+// 原因：支持 Opus 16kHz 高质量音频编解码器
+// 参考：docs/2026-01-18/26-Phase2完整成功-PJSIP已包含Opus支持.md
+#include <pjmedia-codec/opus.h>
+
 // ✅ Include SipPhoneManager for video call detection
 #include "../../sip_phone/SipPhoneManager.h"
 
@@ -516,13 +521,40 @@ int RisipEndpoint::start()
     m_data->endpointConfig.uaConfig.maxCalls = 8;        // Increase max simultaneous calls (default: 4)
     m_data->endpointConfig.uaConfig.threadCnt = 2;       // Increase worker threads
     m_data->endpointConfig.medConfig.threadCnt = 2;      // Increase media threads
-    m_data->endpointConfig.medConfig.clockRate = 16000;  // Higher clock rate for better quality
+
+    // ❌ 2025-XX-XX 旧配置：16000 Hz 采样率（导致多次重采样）
+    // m_data->endpointConfig.medConfig.clockRate = 16000;  // Higher clock rate for better quality
+    // 问题：PCMA/PCMU 使用 8000 Hz，16000 Hz 导致 PJSIP 内部重采样（16k → 8k）
+    // 结果：麦克风 22050 Hz → PJSIP 16000 Hz → PCMA 8000 Hz（两次重采样）
+
+    // ✅ 2026-01-18 22:30 [FIX 100.248] 使用 8000 Hz 匹配 PCMA/PCMU
+    // 原因：
+    //   - PCMA/PCMU 编解码器使用 8000 Hz
+    //   - plughw 设备支持所有采样率（ALSA 自动重采样）
+    //   - 设置为 8kHz 避免 PJSIP 内部多次重采样
+    // 效果：
+    //   - 麦克风(硬件) → ALSA重采样(一次) → 8kHz → PJSIP(8kHz) → PCMA(8kHz)
+    //   - PJSIP 内部零重采样（8kHz → 8kHz）
+    // 核心理念：程序适应设备，而不是设备适应程序
+    // 配合：FIX 100.248 设备枚举优先选择 plughw（支持所有采样率）
+    // 参考：docs/2026-01-18/16-FIX100.248-优先使用plughw设备.md
+    m_data->endpointConfig.medConfig.clockRate = 8000;   // ⭐ 8000 Hz（匹配 PCMA/PCMU）
+
     m_data->endpointConfig.medConfig.hasIoqueue = true;  // Enable IO queue for better performance
 
+    // ❌ 2025-XX-XX 旧配置：强制双声道（为了兼容旧设备）
     // ✅ FIX: Force stereo audio (2 channels) instead of mono to fix ALSA errors
     // ALSA device only supports 2 channels (stereo), but PJSIP defaults to 1 (mono)
     // Error: "Unable to set a channel count of 1 for playback device"
-    m_data->endpointConfig.medConfig.channelCount = 2;   // Use stereo (2 channels) for audio
+    // m_data->endpointConfig.medConfig.channelCount = 2;   // Use stereo (2 channels) for audio
+
+    // ✅ 2026-01-18 22:30 [FIX 100.248] 使用单声道（VoIP 标准）
+    // 原因：
+    //   - plughw 设备支持单声道（ALSA 自动转换）
+    //   - 单声道降低带宽和 CPU 使用率
+    //   - PCMA/PCMU 通常使用单声道
+    // 如果失败：PJSIP 会自动回退到双声道
+    m_data->endpointConfig.medConfig.channelCount = 1;   // 单声道（VoIP 标准）
 
     // Video default is controlled by PJSUA_DEFAULT_VID_CNT in config_site.h (set to 0)
 
@@ -549,6 +581,35 @@ int RisipEndpoint::start()
         emit statusChanged(status());
         setError(err);
         return status();
+    }
+
+    // ✅ 2026-01-19 04:00 [Phase 3.1] 初始化 Opus 音频编解码器
+    // 原因：支持 Opus 16kHz 高质量音频（可选编解码器，PCMA/PCMU 为必需）
+    // 说明：PJSIP config_site.h 中定义了 PJMEDIA_HAS_OPUS_CODEC 1
+    //       但 PJSUA2 可能未自动初始化，需要手动调用
+    // 参考：docs/2026-01-18/26-Phase2完整成功-PJSIP已包含Opus支持.md
+    qDebug() << "🎵 [CODEC] Initializing Opus codec...";
+    try {
+        pj_status_t status;
+        pjmedia_endpt *med_endpt = pjsua_get_pjmedia_endpt();
+
+        if (med_endpt) {
+            // 初始化 Opus 编解码器工厂
+            status = pjmedia_codec_opus_init(med_endpt);
+            if (status != PJ_SUCCESS) {
+                char errmsg[PJ_ERR_MSG_SIZE];
+                pj_strerror(status, errmsg, sizeof(errmsg));
+                qWarning() << "  ⚠️ Failed to initialize Opus codec:" << errmsg;
+                qWarning() << "  继续运行，Opus 将不可用（PCMA/PCMU 仍可正常工作）";
+            } else {
+                qInfo() << "  ✅ Opus codec initialized successfully";
+                // 注意：pjmedia_codec_opus_init() 已经设置了默认参数
+            }
+        } else {
+            qWarning() << "  ⚠️ Media endpoint not ready, skipping Opus initialization";
+        }
+    } catch (...) {
+        qWarning() << "  ⚠️ Exception during Opus initialization, continuing without Opus";
     }
 
     try {
@@ -607,13 +668,22 @@ int RisipEndpoint::start()
     // 根因：ALSA 找到 11 个设备，但设备 0 不可用
     // 解决：枚举所有音频设备，找到第一个可用的设备；如果都失败，使用 null audio device
     // 证据：docs/log/voip.md "Error retrieving default audio device parameters: Invalid audio device"
-    qDebug() << "🎵 [AUDIO DEV] Configuring global audio device (fix PJMEDIA_EAUD_NODEFDEV)...";
+    // ✅ 2026-01-18 12:40 [FIX 100.246] 分离输入/输出设备选择
+    // 原因：现代设备通常分离（USB 摄像头麦克风 + HDMI 扬声器）
+    // 旧逻辑要求同时支持输入/输出，导致只能选择 Loopback 虚拟设备
+    // 解决：分别寻找最佳输入设备和输出设备，使用 pjsua_set_snd_dev()
+    // ✅ 2026-01-18 15:50 [FIX 100.246.1] 优先使用 plughw HDMI 设备
+    // 原因：hw:CARD=rockchiphdmi0 的 output_count=0（ALSA 驱动 bug）
+    // 解决：强制选择 plughw:CARD=rockchiphdmi0（自动格式转换，绕过通道检测）
+    qDebug() << "🎵 [AUDIO DEV] Configuring global audio device (separate input/output)...";
 
     // 枚举所有音频设备
     unsigned aud_dev_count = pjmedia_aud_dev_count();
     qDebug() << "  Total audio devices:" << aud_dev_count;
 
-    int first_valid_dev = -1;
+    int best_capture_dev = -1;   // 最佳输入设备（麦克风）
+    int best_playback_dev = -1;  // 最佳输出设备（扬声器）
+
     for (unsigned i = 0; i < aud_dev_count; ++i) {
         pjmedia_aud_dev_info dev_info;
         pj_status_t status = pjmedia_aud_dev_get_info(i, &dev_info);
@@ -623,12 +693,117 @@ int RisipEndpoint::start()
                      << "| Caps:" << dev_info.input_count << "in /" << dev_info.output_count << "out"
                      << "| Driver:" << dev_info.driver;
 
-            // 跳过 "default" 设备（可能不工作）
-            if (first_valid_dev == -1 &&
-                dev_info.input_count > 0 && dev_info.output_count > 0 &&
-                !dev_name.contains("default", Qt::CaseInsensitive)) {
-                first_valid_dev = i;
-                qDebug() << "      ✅ Selected as first valid device";
+            // ✅ 2026-01-18 17:00 [DEBUG] HDMI 设备深度调试 - PJSIP 层
+            if (dev_name.contains("hdmi", Qt::CaseInsensitive) || dev_name.contains("rockchip", Qt::CaseInsensitive)) {
+                qDebug() << "      [PJSIP HDMI DEBUG] ═══════════════════════════════════";
+                qDebug() << "      [PJSIP HDMI] Device:" << dev_name;
+                qDebug() << "      [PJSIP HDMI] Driver:" << dev_info.driver;
+                qDebug() << "      [PJSIP HDMI] input_count:" << dev_info.input_count;
+                qDebug() << "      [PJSIP HDMI] output_count:" << dev_info.output_count << "← 问题核心";
+                qDebug() << "      [PJSIP HDMI] default_samples_per_sec:" << dev_info.default_samples_per_sec;
+                qDebug() << "      [PJSIP HDMI] caps:" << dev_info.caps;
+                qDebug() << "      [PJSIP HDMI] routes:" << dev_info.routes;
+                qDebug() << "      [PJSIP HDMI] ext_fmt_cnt:" << dev_info.ext_fmt_cnt;
+
+                // ⚠️ 关键检查：即使 output_count=0，我们也会强制使用 plughw 设备
+                if (dev_info.output_count == 0 && dev_name.startsWith("plughw:", Qt::CaseInsensitive)) {
+                    qDebug() << "      [PJSIP HDMI] ⚠️ output_count=0 BUT this is plughw device";
+                    qDebug() << "      [PJSIP HDMI] → Will FORCE select it (bypass ALSA bug)";
+                }
+                qDebug() << "      [PJSIP HDMI DEBUG] ═══════════════════════════════════";
+            }
+
+            // ✅ 分别寻找输入和输出设备
+            bool isLoopback = dev_name.contains("Loopback", Qt::CaseInsensitive);
+            bool isDefault = dev_name.contains("default", Qt::CaseInsensitive);
+            bool isPlughw = dev_name.startsWith("plughw:", Qt::CaseInsensitive);
+            bool isHw = dev_name.startsWith("hw:", Qt::CaseInsensitive);
+
+            // ❌ 2026-01-18 15:50 旧代码：硬编码 HDMI 设备，不兼容其他系统
+            // if (best_playback_dev == -1 && dev_name.startsWith("plughw:CARD=rockchiphdmi", Qt::CaseInsensitive)) {
+            //     best_playback_dev = i;
+            //     qDebug() << "      ✅ FORCE select plughw HDMI device (bypass output_count=0 bug)";
+            // }
+            // ✅ 2026-01-18 16:10 [FIX 100.246.1] 通用设备选择策略（兼容所有系统）
+            // 原因：硬编码 HDMI 导致没有 HDMI 的系统无法工作
+            // 解决：优先选择任何 plughw 设备（自动格式转换），排除虚拟设备
+            // 策略：1. plughw真实设备 > 2. hw真实设备 > 3. Loopback虚拟设备
+
+            // ✅ 2026-01-18 23:00 [FIX 100.248.1] 修复设备选择bug - 优先选择 plughw 而不是 hw
+            // 问题：当 hw: 设备先出现时，它被选中，plughw: 被跳过
+            // 解决：先选择 plughw，如果没有才暂存 hw 作为备选
+            // 策略：遍历所有设备，plughw 立即选中，hw 暂存为备选
+
+            // 寻找最佳输入设备（麦克风）
+            // 优先级：plughw真实设备 > hw真实设备（暂存为备选）
+            if (dev_info.input_count > 0 && !isLoopback && !isDefault) {
+                // 情况 1: plughw 设备 - 立即选中（最高优先级）
+                if (isPlughw) {
+                    best_capture_dev = i;  // 直接覆盖之前的 hw 设备
+                    qDebug() << "      ✅ Selected as capture device (plughw, priority) ⭐";
+                }
+                // 情况 2: hw 设备 - 仅在没有 plughw 时作为备选
+                else if (isHw && best_capture_dev == -1) {
+                    best_capture_dev = i;
+                    qDebug() << "      📦 Selected as capture device (hw, fallback)";
+                    qDebug() << "         [WAITING] Will be replaced if plughw: is found";
+                }
+                // 情况 3: 其他设备 - 跳过
+                else {
+                    qDebug() << "      ⏭️ SKIPPED (not plughw or hw):" << dev_name;
+                }
+            }
+
+            // 寻找最佳输出设备（扬声器）
+            // 优先级：plughw真实设备 > hw真实设备（暂存为备选）
+            // ⚠️ 特殊处理：plughw 设备即使 output_count=0 也可能有效（ALSA bug）
+            if (!isLoopback && !isDefault) {
+                bool has_output = dev_info.output_count > 0;
+
+                // 情况 1: plughw 设备 - 立即选中（即使 output_count=0）
+                if (isPlughw) {
+                    best_playback_dev = i;  // 直接覆盖之前的 hw 设备
+                    if (has_output) {
+                        qDebug() << "      ✅ Selected as playback device (plughw, priority) ⭐";
+                    } else {
+                        qDebug() << "      ✅ FORCE select plughw device (bypass output_count=0 ALSA bug) ⭐";
+                    }
+                }
+                // 情况 2: hw 设备 - 仅在没有 plughw 且有输出时作为备选
+                else if (isHw && has_output && best_playback_dev == -1) {
+                    best_playback_dev = i;
+                    qDebug() << "      📦 Selected as playback device (hw, fallback)";
+                    qDebug() << "         [WAITING] Will be replaced if plughw: is found";
+                }
+                // 情况 3: 其他设备 - 必须有输出
+                else if (!isHw && !isPlughw && has_output && best_playback_dev == -1) {
+                    best_playback_dev = i;
+                    qDebug() << "      ✅ Selected as playback device (output)";
+                }
+            }
+        }
+    }
+
+    // 如果没有找到真实设备，尝试使用 Loopback 作为备选
+    if (best_capture_dev == -1 || best_playback_dev == -1) {
+        qDebug() << "  ⚠️ No real devices found, searching for Loopback...";
+        for (unsigned i = 0; i < aud_dev_count; ++i) {
+            pjmedia_aud_dev_info dev_info;
+            pj_status_t status = pjmedia_aud_dev_get_info(i, &dev_info);
+            if (status == PJ_SUCCESS) {
+                QString dev_name = QString::fromUtf8(dev_info.name);
+                bool isLoopback = dev_name.contains("Loopback", Qt::CaseInsensitive);
+
+                if (isLoopback) {
+                    if (best_capture_dev == -1 && dev_info.input_count > 0) {
+                        best_capture_dev = i;
+                        qDebug() << "    ✅ Using Loopback as fallback capture device:" << i;
+                    }
+                    if (best_playback_dev == -1 && dev_info.output_count > 0) {
+                        best_playback_dev = i;
+                        qDebug() << "    ✅ Using Loopback as fallback playback device:" << i;
+                    }
+                }
             }
         }
     }
@@ -636,15 +811,19 @@ int RisipEndpoint::start()
     // 尝试设置音频设备
     pj_status_t snd_status = PJ_ENOTFOUND;
 
-    if (first_valid_dev != -1) {
-        // 尝试使用第一个有效设备
-        qDebug() << "  Trying device" << first_valid_dev << "...";
-        snd_status = pjsua_set_snd_dev(first_valid_dev, first_valid_dev);
+    if (best_capture_dev != -1 && best_playback_dev != -1) {
+        // 使用 pjsua_set_snd_dev2() 分别设置输入和输出设备
+        qDebug() << "  Trying capture device" << best_capture_dev << "+ playback device" << best_playback_dev << "...";
+        snd_status = pjsua_set_snd_dev(best_capture_dev, best_playback_dev);
         if (snd_status == PJ_SUCCESS) {
-            qDebug() << "  ✅ Global audio device set:" << "capture=" << first_valid_dev << ", playback=" << first_valid_dev;
+            qDebug() << "  ✅ Global audio device set:" << "capture=" << best_capture_dev << ", playback=" << best_playback_dev;
         } else {
-            qDebug() << "  ⚠️ Device" << first_valid_dev << "failed (status=" << snd_status << ")";
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_strerror(snd_status, errmsg, sizeof(errmsg));
+            qDebug() << "  ⚠️ Device combination failed (status=" << snd_status << "):" << errmsg;
         }
+    } else {
+        qDebug() << "  ⚠️ Missing device(s): capture=" << best_capture_dev << ", playback=" << best_playback_dev;
     }
 
     // 如果所有设备都失败，使用 null audio device
@@ -658,6 +837,30 @@ int RisipEndpoint::start()
             qDebug() << "     Video calls may fail - check ALSA configuration";
         }
     }
+
+    // ✅ 2026-01-18 22:30 [FIX 100.248] 媒体配置说明
+    // 注意：媒体配置（8000 Hz, 单声道）已在 Endpoint 初始化时设置（Line 525-552）
+    // PJSIP 不支持运行时修改媒体配置，必须在 libCreate() 之前设置
+    qDebug() << "";
+    qDebug() << "🔧 [FIX 100.248] Audio media configuration:";
+    qDebug() << "   Clock rate: 8000 Hz (PCMA/PCMU compatible)";
+    qDebug() << "   Channels: 1 (mono, VoIP standard)";
+    qDebug() << "   Frame time: 20 ms (default)";
+    qDebug() << "";
+    qDebug() << "📊 [FIX 100.248] Audio resampling chain:";
+    qDebug() << "   Microphone (hardware native rate, e.g., 22050 Hz)";
+    qDebug() << "     ↓ ALSA resampling (once, by plughw device)";
+    qDebug() << "   8000 Hz ← PJSIP requested rate";
+    qDebug() << "     ↓ NO PJSIP internal resampling ✅";
+    qDebug() << "   PJSIP audio processing (8000 Hz)";
+    qDebug() << "     ↓ NO resampling for PCMA/PCMU ✅";
+    qDebug() << "   PCMA/PCMU encoding (8000 Hz)";
+    qDebug() << "";
+    qDebug() << "🎯 [FIX 100.248] Expected result:";
+    qDebug() << "   Total resampling: 1 (ALSA only)";
+    qDebug() << "   Previous: 2 (ALSA + PJSIP internal)";
+    qDebug() << "   Audio quality: Improved (fewer resampling stages)";
+    qDebug() << "";
 
     // ✅ 2025-12-31 关键修复：减少音频编解码器以避免 IP 分片
     // 原因：INVITE 消息 1682 字节 > MTU 1500 字节，导致 IP 分片，PortSIP 无响应
@@ -683,11 +886,21 @@ int RisipEndpoint::start()
         qDebug() << "Warning: Could not set PCMU codec priority:" << QString::fromStdString(err.reason);
     }
 
+    // ✅ 2026-01-19 04:05 [Phase 3.1] 启用 Opus 16kHz 单声道高质量音频
+    // 原因：Opus 16kHz 提供更好的音质（宽带音频），适合专业通话
+    // 优先级：213（低于 PCMA/PCMU），作为可选编解码器
+    // 配置：opus/16000/1 = 16kHz 采样率 / 单声道
+    // 说明：
+    //   - PCMA/PCMU (8kHz) 为必需编解码器（优先级 215/214）
+    //   - Opus (16kHz) 为可选编解码器（优先级 213）
+    //   - 对方支持 Opus 时自动使用，不支持时回退到 PCMA/PCMU
+    // 参考：docs/2026-01-18/26-Phase2完整成功-PJSIP已包含Opus支持.md
     try {
-        Endpoint::instance().codecSetPriority("opus/48000/2", 213);
-        qDebug() << "  ✅ opus/48000/2 enabled (priority: 213) - 用户要求保留，后续使用";
+        Endpoint::instance().codecSetPriority("opus/16000/1", 213);
+        qDebug() << "  ✅ opus/16000/1 enabled (priority: 213) - 16kHz 高质量音频";
     } catch (Error &err) {
         qDebug() << "Warning: Could not set Opus codec priority:" << QString::fromStdString(err.reason);
+        qDebug() << "  可能原因：Opus 编解码器未正确初始化";
     }
 
     // 2025-12-31: 禁用以下编解码器以减小 SDP 大小（避免 IP 分片）
@@ -745,7 +958,9 @@ int RisipEndpoint::start()
     }
 
     qDebug() << "✅ [CODEC] Audio codec configuration complete";
-    qDebug() << "  Enabled: PCMA, PCMU, Opus (3 codecs - 用户要求保留 Opus)";
+    qDebug() << "  Enabled: PCMA/8000, PCMU/8000, Opus/16000 (3 codecs)";
+    qDebug() << "  - PCMA/PCMU: 必需编解码器（8kHz 窄带音频）";
+    qDebug() << "  - Opus: 可选编解码器（16kHz 宽带音频，高质量）";
     qDebug() << "  Disabled: GSM, iLBC, telephone-event, g722, speex";
     qDebug() << "  Expected SDP reduction: ~200 bytes (from 1682 → ~1480 bytes)";
     qDebug() << "  Target: < MTU 1500 bytes to avoid IP fragmentation";

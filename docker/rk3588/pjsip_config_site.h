@@ -40,6 +40,7 @@
 #define PJMEDIA_HAS_LIBYUV              1
 
 /* 启用 Opus 音频编解码 - 高质量音频 */
+/* ✅ 2026-01-19 02:10 修复 Opus 链接测试失败（configure 前后分离 LIBS 设置）*/
 #define PJMEDIA_HAS_OPUS_CODEC          1
 
 /* ✅ 2025-12-31 关键修复：启用 RTCP-FB 反馈机制（兼容 PortSIP UC Client） */
@@ -67,7 +68,8 @@
 /* This is the account-level keep-alive that PJSIP uses for UDP transports */
 /* Default value is 15 seconds if not defined */
 /* Setting to 0 completely disables the timer */
-#define PJ_ENABLE_EXTRA_CHECK           0   /* 禁用额外检查以避免 assertion */
+// ❌ 2026-01-19 04:15 删除过时宏：PJ_ENABLE_EXTRA_CHECK 在 PJSIP 2.16 中已废弃
+// 旧代码（已注释）：#define PJ_ENABLE_EXTRA_CHECK 0
 #define PJSUA_UDP_KA_INTERVAL           0   /* 禁用 UDP Keep-alive */
 
 /* ⭐ FIX: Disable text/RTT media to reduce SIP INVITE message size */
