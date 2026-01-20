@@ -65,6 +65,14 @@ Item {
     // 页面激活/停用事件
     Component.onCompleted: {
         console.log("Input1Page 已加载")
+
+        // ✅ 2026-01-20 [FIX 100.262]: 在页面完成时输出缩放调试信息
+        console.log("🔍 [Input1Page] 缩放调试（Component.onCompleted）:")
+        console.log("   input1Page.width:", width)
+        console.log("   input1Page.height:", height)
+        console.log("   xScale (宽度缩放):", (width / 1920).toFixed(3))
+        console.log("   yScale (高度缩放):", (height / 1080).toFixed(3))
+        console.log("   预期显示尺寸:", width, "x", height)
     }
 
     Component.onDestruction: {
