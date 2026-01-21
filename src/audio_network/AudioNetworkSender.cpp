@@ -273,27 +273,41 @@ AudioNetworkSender::AudioData AudioNetworkSender::decodeAudioFile(const QString&
 
         qDebug() << "      原始音频格式:";
         qDebug() << "         采样率:" << codecCtx->sample_rate << "Hz";
-        qDebug() << "         声道数:" << codecCtx->ch_layout.nb_channels;
+        // ❌ 2026-01-21 20:50 [FFmpeg 兼容性] 旧版 API 不支持 ch_layout.nb_channels，改用 channels
+        // qDebug() << "         声道数:" << codecCtx->ch_layout.nb_channels;
+        qDebug() << "         声道数:" << codecCtx->channels;
         qDebug() << "         格式:" << av_get_sample_fmt_name(codecCtx->sample_fmt);
 
         // ========== 4. 初始化重采样器（统一转换为 16kHz, 16bit, mono）==========
 
-        // 输入声道布局（兼容 FFmpeg 6.x ch_layout 和旧版 channel_layout）
-        AVChannelLayout in_ch_layout = codecCtx->ch_layout;
+        // ❌ 2026-01-21 20:50 [FFmpeg 兼容性] 旧版 API 使用 uint64_t channel_layout，不支持 AVChannelLayout
+        // 输入声道布局（兼容 FFmpeg 4.x/5.x channel_layout）
+        // AVChannelLayout in_ch_layout = codecCtx->ch_layout;
+        uint64_t in_channel_layout = codecCtx->channel_layout;
+
+        // 如果 channel_layout 为 0，则根据声道数推断（自动适配单声道、立体声等）
+        if (in_channel_layout == 0) {
+            in_channel_layout = av_get_default_channel_layout(codecCtx->channels);
+        }
 
         // 输出声道布局（单声道）
-        AVChannelLayout out_ch_layout = AV_CHANNEL_LAYOUT_MONO;
+        // AVChannelLayout out_ch_layout = AV_CHANNEL_LAYOUT_MONO;
+        uint64_t out_channel_layout = AV_CH_LAYOUT_MONO;
 
-        // 创建重采样器上下文
-        if (swr_alloc_set_opts2(
-                &swrCtx,
-                &out_ch_layout,              // 输出：单声道
+        // ❌ 2026-01-21 20:50 [FFmpeg 兼容性] 旧版 API 使用 swr_alloc_set_opts()，不支持 swr_alloc_set_opts2()
+        // 创建重采样器上下文（旧版 API）
+        // if (swr_alloc_set_opts2(...) < 0) { ... }
+        swrCtx = swr_alloc_set_opts(
+                nullptr,                     // 新分配上下文
+                out_channel_layout,          // 输出：单声道
                 AV_SAMPLE_FMT_S16,           // 输出：16bit PCM
                 16000,                       // 输出：16kHz
-                &in_ch_layout,               // 输入：原始声道
+                in_channel_layout,           // 输入：原始声道
                 codecCtx->sample_fmt,        // 输入：原始格式
                 codecCtx->sample_rate,       // 输入：原始采样率
-                0, nullptr) < 0) {
+                0, nullptr);
+
+        if (!swrCtx) {
             throw std::runtime_error("Failed to allocate resampler");
         }
 
