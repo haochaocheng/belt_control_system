@@ -125,27 +125,28 @@ if (-not $needSync) {
 Write-Host "[3/6] 打包音频文件..." -ForegroundColor Yellow
 $packStart = Get-Date
 
-$tarFileName = "audio-files-$(Get-Date -Format 'yyyyMMdd-HHmmss').tar.gz"
-$tarFilePath = Join-Path $env:TEMP $tarFileName
+# ✅ 2026-01-21 修复：使用 PowerShell Compress-Archive 替代 tar
+# 原因：Windows tar.exe 无法处理包含 # 等特殊字符的目录名（编码问题）
+# 方案：Compress-Archive 创建 zip 文件，Linux 用 unzip 解压
+$zipFileName = "audio-files-$(Get-Date -Format 'yyyyMMdd-HHmmss').zip"
+$zipFilePath = Join-Path $env:TEMP $zipFileName
 
-# 切换到项目根目录（tar 需要相对路径）
-Push-Location $ProjectRoot
+Write-Host "  正在打包 AUDIO 目录（使用 Compress-Archive）..." -ForegroundColor Gray
 
-# 创建 tar.gz（使用 gzip 压缩）
-tar -czf $tarFilePath AUDIO/ 2>$null
-$tarExitCode = $LASTEXITCODE
+try {
+    # Compress-Archive 直接支持特殊字符，无需切换目录
+    Compress-Archive -Path $AudioSourceDir -DestinationPath $zipFilePath -CompressionLevel Optimal -Force
 
-Pop-Location
-
-if ($tarExitCode -ne 0) {
-    Write-Host "  ❌ 打包失败（退出码: $tarExitCode）" -ForegroundColor Red
+    $zipSize = [math]::Round((Get-Item $zipFilePath).Length / 1MB, 2)
+    $packElapsed = (Get-Date) - $packStart
+    Write-Host "  ✅ 打包完成: ${zipSize} MB（耗时 $($packElapsed.TotalSeconds.ToString('F1'))s）" -ForegroundColor Green
+    Write-Host ""
+}
+catch {
+    Write-Host "  ❌ 打包失败" -ForegroundColor Red
+    Write-Host "  错误信息：$($_.Exception.Message)" -ForegroundColor Yellow
     exit 1
 }
-
-$tarSize = [math]::Round((Get-Item $tarFilePath).Length / 1MB, 2)
-$packElapsed = (Get-Date) - $packStart
-Write-Host "  ✅ 打包完成: ${tarSize} MB（耗时 $($packElapsed.TotalSeconds.ToString('F1'))s）" -ForegroundColor Green
-Write-Host ""
 
 # ============================================================
 # Step 4: 上传到设备
@@ -153,12 +154,12 @@ Write-Host ""
 Write-Host "[4/6] 上传到设备..." -ForegroundColor Yellow
 $uploadStart = Get-Date
 
-$remoteTarPath = "/tmp/$tarFileName"
-scp $tarFilePath "${DeviceUser}@${DeviceIP}:${remoteTarPath}"
+$remoteZipPath = "/tmp/$zipFileName"
+scp $zipFilePath "${DeviceUser}@${DeviceIP}:${remoteZipPath}"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  ❌ 上传失败" -ForegroundColor Red
-    Remove-Item $tarFilePath -Force
+    Remove-Item $zipFilePath -Force
     exit 1
 }
 
@@ -178,8 +179,9 @@ set -e
 echo "  创建目标目录..."
 mkdir -p /home/${DeviceUser}/belt-control-data/audio
 
-echo "  解压音频文件..."
-tar -xzf ${remoteTarPath} -C /home/${DeviceUser}/belt-control-data/
+echo "  解压音频文件（zip 格式）..."
+# ✅ 2026-01-21: Windows 使用 Compress-Archive 创建 zip，Linux 用 unzip 解压
+unzip -q ${remoteZipPath} -d /home/${DeviceUser}/belt-control-data/
 
 # 移动 AUDIO 目录内容到 audio 目录
 echo "  整理目录结构..."
@@ -194,7 +196,7 @@ sudo chown -R ${DeviceUser}:${DeviceUser} /home/${DeviceUser}/belt-control-data/
 sudo chmod -R 755 /home/${DeviceUser}/belt-control-data/audio
 
 echo "  清理临时文件..."
-rm -f ${remoteTarPath}
+rm -f ${remoteZipPath}
 
 echo "  ✅ 音频文件部署完成"
 
@@ -240,8 +242,8 @@ $cacheData | ConvertTo-Json | Set-Content $CacheFile -Encoding UTF8
 Write-Host "  ✅ 缓存已更新" -ForegroundColor Green
 Write-Host ""
 
-# 清理本地 tar 文件
-Remove-Item $tarFilePath -Force
+# 清理本地 zip 文件
+Remove-Item $zipFilePath -Force
 
 # ============================================================
 # 完成
