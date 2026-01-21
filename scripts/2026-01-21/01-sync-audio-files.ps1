@@ -176,34 +176,34 @@ $deployScript = @"
 set -e
 
 echo "  创建目标目录..."
-mkdir -p /home/$DeviceUser/belt-control-data/audio
+mkdir -p /home/${DeviceUser}/belt-control-data/audio
 
 echo "  解压音频文件..."
-tar -xzf $remoteTarPath -C /home/$DeviceUser/belt-control-data/
+tar -xzf ${remoteTarPath} -C /home/${DeviceUser}/belt-control-data/
 
 # 移动 AUDIO 目录内容到 audio 目录
 echo "  整理目录结构..."
-if [ -d "/home/$DeviceUser/belt-control-data/AUDIO" ]; then
+if [ -d "/home/${DeviceUser}/belt-control-data/AUDIO" ]; then
     # 移动 AUDIO/* 到 audio/
-    mv /home/$DeviceUser/belt-control-data/AUDIO/* /home/$DeviceUser/belt-control-data/audio/ 2>/dev/null || true
-    rmdir /home/$DeviceUser/belt-control-data/AUDIO 2>/dev/null || true
+    mv /home/${DeviceUser}/belt-control-data/AUDIO/* /home/${DeviceUser}/belt-control-data/audio/ 2>/dev/null || true
+    rmdir /home/${DeviceUser}/belt-control-data/AUDIO 2>/dev/null || true
 fi
 
 echo "  设置权限..."
-sudo chown -R $DeviceUser:$DeviceUser /home/$DeviceUser/belt-control-data/audio
-sudo chmod -R 755 /home/$DeviceUser/belt-control-data/audio
+sudo chown -R ${DeviceUser}:${DeviceUser} /home/${DeviceUser}/belt-control-data/audio
+sudo chmod -R 755 /home/${DeviceUser}/belt-control-data/audio
 
 echo "  清理临时文件..."
-rm -f $remoteTarPath
+rm -f ${remoteTarPath}
 
 echo "  ✅ 音频文件部署完成"
 
 # 显示目录结构（前10个文件）
 echo ""
 echo "  音频目录内容（前10个）:"
-find /home/$DeviceUser/belt-control-data/audio -type f | head -10 | sed 's/^/    /'
-TOTAL_FILES=\$(find /home/$DeviceUser/belt-control-data/audio -type f | wc -l)
-echo "    ... 共 \$TOTAL_FILES 个文件"
+find /home/${DeviceUser}/belt-control-data/audio -type f | head -10 | sed 's/^/    /'
+TOTAL_FILES=\`$(find /home/${DeviceUser}/belt-control-data/audio -type f | wc -l)
+echo "    ... 共 \`$TOTAL_FILES 个文件"
 "@
 
 # 使用 UTF-8 编码写入脚本
