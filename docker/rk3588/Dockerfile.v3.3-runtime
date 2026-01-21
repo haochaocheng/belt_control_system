@@ -13,8 +13,15 @@ COPY lib /app/lib
 COPY plugins /app/plugins
 COPY qml /app/qml
 
-# Copy AUDIO files
-COPY AUDIO /app/AUDIO
+# ❌ 2026-01-21 [音频优化] 移除 AUDIO 复制（改用 Volume 映射）
+# 原因：音频文件大（可能几百MB），每次编译都复制浪费时间
+# 方案：使用 -v /home/linaro/belt-control-data/audio:/app/AUDIO:rw 映射
+# 部署：使用 scripts/2026-01-21/01-sync-audio-files.ps1 单独同步到设备
+# 优势：
+#   1. 镜像更小（不包含音频）
+#   2. 编译更快（减少打包时间）
+#   3. 音频持久化（容器重启不丢失）
+# COPY AUDIO /app/AUDIO  # ← 已注释，不再复制到镜像
 
 # Set executable permissions
 RUN chmod +x /app/belt_control_system
