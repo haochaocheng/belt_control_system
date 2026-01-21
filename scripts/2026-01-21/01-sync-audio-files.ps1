@@ -32,12 +32,12 @@ param(
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
 # ============================================================
-# 配置
+# 配置 linaro
 # ============================================================
 $ProjectRoot = "E:\2025\3_gongkongji\belt_control_system"
 $AudioSourceDir = Join-Path $ProjectRoot "AUDIO"
 $CacheFile = Join-Path $env:TEMP "audio-sync-cache.json"
-$DeviceUser = "linaro"
+$DeviceUser = "pi"
 
 # 扩展 IP 地址（支持简写）
 if ($DeviceIP -match '^\d{1,3}$') {
@@ -125,17 +125,33 @@ if (-not $needSync) {
 Write-Host "[3/6] 打包音频文件..." -ForegroundColor Yellow
 $packStart = Get-Date
 
-# ✅ 2026-01-21 修复：使用 PowerShell Compress-Archive 替代 tar
-# 原因：Windows tar.exe 无法处理包含 # 等特殊字符的目录名（编码问题）
-# 方案：Compress-Archive 创建 zip 文件，Linux 用 unzip 解压
+# ✅ 2026-01-21 修复：使用 7-Zip 替代 tar 和 Compress-Archive
+# 原因：
+#   1. Windows tar.exe 无法处理 # 等特殊字符（编码问题）
+#   2. PowerShell Compress-Archive 不支持 UTF-8 中文文件名（CP437 编码）
+#      导致解压后文件名乱码："1号皮带启动.mp3" → "хП╖ц▓┐..."
+# 方案：使用 7-Zip 创建 UTF-8 编码的 zip 文件
 $zipFileName = "audio-files-$(Get-Date -Format 'yyyyMMdd-HHmmss').zip"
 $zipFilePath = Join-Path $env:TEMP $zipFileName
 
-Write-Host "  正在打包 AUDIO 目录（使用 Compress-Archive）..." -ForegroundColor Gray
+# 检查 7-Zip 是否安装
+$7zipPath = "C:\Program Files\7-Zip\7z.exe"
+if (-not (Test-Path $7zipPath)) {
+    Write-Host "  ❌ 错误：未找到 7-Zip" -ForegroundColor Red
+    Write-Host "  请下载安装：https://www.7-zip.org/" -ForegroundColor Yellow
+    Write-Host "  或使用 winget install -e --id 7zip.7zip" -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host "  正在打包 AUDIO 目录（使用 7-Zip UTF-8 编码）..." -ForegroundColor Gray
 
 try {
-    # Compress-Archive 直接支持特殊字符，无需切换目录
-    Compress-Archive -Path $AudioSourceDir -DestinationPath $zipFilePath -CompressionLevel Optimal -Force
+    # 使用 7-Zip 创建 zip 文件（-tzip 格式，-mx5 压缩级别，-mcu=on UTF-8 编码）
+    & $7zipPath a -tzip -mx5 -mcu=on "$zipFilePath" "$AudioSourceDir" | Out-Null
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "7-Zip 打包失败（退出码: $LASTEXITCODE）"
+    }
 
     $zipSize = [math]::Round((Get-Item $zipFilePath).Length / 1MB, 2)
     $packElapsed = (Get-Date) - $packStart
@@ -180,9 +196,12 @@ echo "  创建临时解压目录..."
 rm -rf /tmp/audio-extract
 mkdir -p /tmp/audio-extract
 
-echo "  解压音频文件（zip 格式）..."
-# ✅ 2026-01-21: Windows 使用 Compress-Archive 创建 zip，Linux 用 unzip 解压
-unzip -q ${remoteZipPath} -d /tmp/audio-extract/
+echo "  解压音频文件（zip 格式，UTF-8 编码）..."
+# ❌ 2026-01-21 20:50 [修复] 设备 unzip 6.00 不支持 -O UTF-8 参数
+# 旧代码：unzip -O UTF-8 -q ${remoteZipPath} -d /tmp/audio-extract/ 2>&1 | grep -v "mismatching" || true
+# 修复：使用环境变量 LANG=C.UTF-8 确保 UTF-8 编码
+# ✅ 2026-01-21: 7-Zip 使用 UTF-8 编码，通过环境变量设置解压编码
+LANG=C.UTF-8 LC_ALL=C.UTF-8 unzip -q ${remoteZipPath} -d /tmp/audio-extract/ 2>&1 | grep -v "mismatching" || true
 
 # ✅ 2026-01-21 修复：直接移动 AUDIO 目录，避免 mv * 对特殊字符的问题
 echo "  移动到目标位置..."
