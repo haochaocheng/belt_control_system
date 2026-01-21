@@ -6,6 +6,12 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>      // ✅ 2026-01-21 16:00 [DEBUG] 获取文件信息（大小、格式）
+#include <QElapsedTimer>  // ✅ 2026-01-21 16:00 [DEBUG] 测量播放各阶段耗时
+// ❌ 2026-01-21 15:30 [FIX 100.278] 移除不需要的头文件
+// 原因：不再枚举音频设备，直接使用默认 QAudioOutput
+// #include <QMediaDevices>  // ✅ 2026-01-21 [音频设备] 枚举音频设备
+// #include <QAudioDevice>   // ✅ 2026-01-21 [音频设备] QAudioDevice 类定义
 
 // 前向声明NetworkTask，不include头文件避免依赖Qt::SerialBus
 class NetworkTask;
@@ -13,11 +19,14 @@ class NetworkTask;
 CommonControl::CommonControl(QObject *parent)
     : QObject(parent)
     , m_mediaPlayer(new QMediaPlayer(this))
-    , m_audioOutput(new QAudioOutput(this))
+    , m_audioOutput(nullptr)  // ✅ 2026-01-21 [音频设备] 延迟初始化，需要先选择设备
     , m_systemConfig(nullptr)
     , m_networkTask(nullptr)
     , m_operationLogDB(nullptr)
     , m_runtimeTracker(nullptr)
+    // ✅ 2026-01-21 20:20 [音频网络传输] 初始化音频网络发送器
+    , m_audioNetworkSender(new AudioNetworkSender(this))
+    , m_audioOutputMode(DualOutput)  // 默认：本地 + 网络同时输出
     , m_warningTimer(new QTimer(this))
     , m_currentPlayCount(0)
     , m_isWarningPlaying(false)
@@ -31,18 +40,80 @@ CommonControl::CommonControl(QObject *parent)
 {
     qDebug() << "✅ CommonControl: 公共控制模块已创建";
 
-    // 配置音频输出
-    m_audioOutput->setVolume(1.0);  // 音量100%
+    // ✅ 2026-01-21 15:30 [FIX 100.278] 使用 ALSA 默认设备播放音频
+    // 背景：
+    //   - Qt Multimedia 无法在容器中枚举 ALSA 设备（无 PulseAudio）
+    //   - 已配置 /etc/asound.conf 设置 ES8388（Card 1）为默认设备
+    //   - GStreamer alsasink 自动使用 ALSA "default" 设备
+    // 工作流程：
+    //   QMediaPlayer → GStreamer → alsasink → ALSA default → ES8388 🔊
+    // 优点：
+    //   - 无需设备枚举，代码简洁
+    //   - 符合 ALSA/GStreamer 标准用法
+    //   - 容器环境下稳定工作
+    //
+    // ❌ 2026-01-21 14:30 旧方案：枚举设备并选择 ES8388（容器中失败）
+    // const QList<QAudioDevice> devices = QMediaDevices::audioOutputs();  // 返回空列表
+    // 原因：容器内没有 PulseAudio 服务，Qt 枚举机制失效
+
+    m_audioOutput = new QAudioOutput(this);  // 使用默认音频输出
+    m_audioOutput->setVolume(1.0);           // 音量100%
     m_mediaPlayer->setAudioOutput(m_audioOutput);
 
-    // 连接信号
+    qDebug() << "🔊 CommonControl: 音频输出已配置（使用 ALSA 默认设备 → ES8388）";
+
+    // ✅ 2026-01-21 16:00 [DEBUG] 连接播放状态变化信号
+    // 原因：监控播放状态转换时间，定位卡顿发生的阶段
     connect(m_mediaPlayer, &QMediaPlayer::errorOccurred,
             this, &CommonControl::onMediaPlayerError);
+
     connect(m_mediaPlayer, &QMediaPlayer::playbackStateChanged,
             this, [this](QMediaPlayer::PlaybackState state) {
+                static QElapsedTimer stateTimer;
+                static bool timerStarted = false;
+                if (!timerStarted) {
+                    stateTimer.start();
+                    timerStarted = true;
+                }
+
+                qint64 elapsed = stateTimer.restart();
+                qDebug() << "   [状态变化] 播放状态:"
+                         << (state == QMediaPlayer::StoppedState ? "Stopped" :
+                             state == QMediaPlayer::PlayingState ? "Playing" : "Paused")
+                         << "| 距上次状态变化:" << elapsed << "ms";
+
                 if (state == QMediaPlayer::StoppedState) {
                     onPlaybackFinished();
                 }
+            });
+
+    // ✅ 2026-01-21 16:00 [DEBUG] 连接媒体状态变化信号
+    // 原因：监控媒体加载过程（LoadingMedia → LoadedMedia → BufferedMedia）
+    connect(m_mediaPlayer, &QMediaPlayer::mediaStatusChanged,
+            this, [this](QMediaPlayer::MediaStatus status) {
+                static QElapsedTimer mediaTimer;
+                static bool mediaTimerStarted = false;
+                if (!mediaTimerStarted) {
+                    mediaTimer.start();
+                    mediaTimerStarted = true;
+                }
+
+                qint64 elapsed = mediaTimer.restart();
+                QString statusName;
+                switch (status) {
+                    case QMediaPlayer::NoMedia: statusName = "NoMedia"; break;
+                    case QMediaPlayer::LoadingMedia: statusName = "LoadingMedia"; break;
+                    case QMediaPlayer::LoadedMedia: statusName = "LoadedMedia"; break;
+                    case QMediaPlayer::StalledMedia: statusName = "StalledMedia"; break;
+                    case QMediaPlayer::BufferingMedia: statusName = "BufferingMedia"; break;
+                    case QMediaPlayer::BufferedMedia: statusName = "BufferedMedia"; break;
+                    case QMediaPlayer::EndOfMedia: statusName = "EndOfMedia"; break;
+                    case QMediaPlayer::InvalidMedia: statusName = "InvalidMedia"; break;
+                    default: statusName = "Unknown"; break;
+                }
+
+                qDebug() << "   [媒体状态] " << statusName
+                         << "| 距上次状态变化:" << elapsed << "ms";
             });
 
     // 连接预警定时器
@@ -110,34 +181,107 @@ bool CommonControl::eventFilter(QObject *watched, QEvent *event)
 
 void CommonControl::playAudio(const QString &audioPath)
 {
+    // ✅ 2026-01-21 16:00 [DEBUG] 添加详细的播放时间测量日志
+    // 原因：用户报告播放起车预警时中间卡一下（时间很短）
+    // 目的：定位卡顿是发生在哪个阶段（文件加载、解码器初始化、设备打开）
+    QElapsedTimer timer;
+    timer.start();
+
     // 检查文件是否存在
     if (!QFile::exists(audioPath)) {
         qWarning() << "❌ CommonControl: 音频文件不存在:" << audioPath;
         return;
     }
 
-    qDebug() << "🔊 CommonControl: 播放音频:" << audioPath;
+    // ✅ 2026-01-21 16:00 [DEBUG] 记录文件信息
+    QFileInfo fileInfo(audioPath);
+    qint64 fileSize = fileInfo.size();
+    QString fileName = fileInfo.fileName();
+    qDebug() << "🔊 CommonControl: 播放音频:" << fileName
+             << "| 大小:" << (fileSize / 1024) << "KB"
+             << "| 格式:" << fileInfo.suffix().toUpper();
+
+    // 记录当前播放状态
+    QMediaPlayer::PlaybackState currentState = m_mediaPlayer->playbackState();
+    qDebug() << "   [状态] 当前播放状态:"
+             << (currentState == QMediaPlayer::StoppedState ? "Stopped" :
+                 currentState == QMediaPlayer::PlayingState ? "Playing" : "Paused");
 
     // 先停止当前播放
-    if (m_mediaPlayer->playbackState() != QMediaPlayer::StoppedState) {
+    if (currentState != QMediaPlayer::StoppedState) {
+        qint64 stopTime = timer.elapsed();
         m_mediaPlayer->stop();
+        qDebug() << "   [停止] 停止当前播放耗时:" << (timer.elapsed() - stopTime) << "ms";
     }
 
-    // 检查是否是同一个音频文件
-    QUrl currentSource = m_mediaPlayer->source();
+    // ❌ 2026-01-21 17:00 [FIX 100.279.1] 弃用重置位置方案（卡顿 300ms+）
+    // 问题：根据日志分析，setPosition(0) 导致状态转换延迟
+    //   [媒体状态] "LoadedMedia" | 距上次状态变化: 337 ms  ← 卡顿300ms+
+    // 原因：QMediaPlayer/GStreamer 状态机切换复杂，setPosition(0) 需要重新初始化
+    // 旧代码：
+    //   if (currentSource == newSource) {
+    //       m_mediaPlayer->setPosition(0);  ← 慢！
+    //   }
+
+    // ✅ 2026-01-21 17:00 [FIX 100.279.1] 新方案：总是重新加载源（避免状态切换延迟）
+    // 原理：清空源 + 重新加载 比 setPosition(0) 快得多
+    // 效果：避免 GStreamer 内部状态机复杂切换
+    qDebug() << "   [清空] 清空音频源";
+    qint64 clearTime = timer.elapsed();
+    m_mediaPlayer->setSource(QUrl());  // 清空源
+    qDebug() << "   [清空] 清空源耗时:" << (timer.elapsed() - clearTime) << "ms";
+
+    qDebug() << "   [新源] 设置新音频源:" << fileName;
+    qint64 setSourceTime = timer.elapsed();
     QUrl newSource = QUrl::fromLocalFile(audioPath);
+    m_mediaPlayer->setSource(newSource);
+    qDebug() << "   [加载] setSource() 耗时:" << (timer.elapsed() - setSourceTime) << "ms";
 
-    if (currentSource == newSource) {
-        // 同一个文件，只需重置位置并播放
-        qDebug() << "🔄 CommonControl: 重用音频源，重置位置";
-        m_mediaPlayer->setPosition(0);
-    } else {
-        // 不同文件，需要重新设置源
-        qDebug() << "🆕 CommonControl: 设置新音频源";
-        m_mediaPlayer->setSource(newSource);
+    // ✅ 2026-01-21 20:25 [音频网络传输] 根据输出模式选择播放方式
+    const char* modeName = (m_audioOutputMode == LocalOnly ? "本地" :
+                            m_audioOutputMode == NetworkOnly ? "网络" : "本地+网络");
+    qDebug() << "   [输出模式]" << modeName;
+
+    switch (m_audioOutputMode) {
+        case LocalOnly:
+            // 仅播放到本地 ES8388
+            qDebug() << "   [本地播放] 开始播放到 ES8388...";
+            qint64 playTime = timer.elapsed();
+            m_mediaPlayer->play();
+            qDebug() << "   [播放] play() 调用耗时:" << (timer.elapsed() - playTime) << "ms";
+            break;
+
+        case NetworkOnly:
+            // 仅发送到网络音频模块
+            qDebug() << "   [网络发送] 开始发送到音频模块（224.1.1.1:8800）...";
+            m_audioNetworkSender->playAudioToNetwork(audioPath);
+            break;
+
+        case DualOutput:
+            // 本地 + 网络同时
+            qDebug() << "   [双输出] 本地播放 + 网络发送...";
+            qint64 playTime2 = timer.elapsed();
+            m_mediaPlayer->play();
+            qDebug() << "      本地 play() 耗时:" << (timer.elapsed() - playTime2) << "ms";
+
+            qint64 networkTime = timer.elapsed();
+            m_audioNetworkSender->playAudioToNetwork(audioPath);
+            qDebug() << "      网络发送启动耗时:" << (timer.elapsed() - networkTime) << "ms";
+            break;
     }
 
-    m_mediaPlayer->play();
+    qDebug() << "   [总计] playAudio() 总耗时:" << timer.elapsed() << "ms";
+
+    // ✅ 2026-01-21 16:00 [DEBUG] 记录 QMediaPlayer 内部状态
+    qDebug() << "   [媒体] 当前源:" << m_mediaPlayer->source().toString();
+    qDebug() << "   [媒体] 媒体状态:"
+             << (m_mediaPlayer->mediaStatus() == QMediaPlayer::NoMedia ? "NoMedia" :
+                 m_mediaPlayer->mediaStatus() == QMediaPlayer::LoadingMedia ? "LoadingMedia" :
+                 m_mediaPlayer->mediaStatus() == QMediaPlayer::LoadedMedia ? "LoadedMedia" :
+                 m_mediaPlayer->mediaStatus() == QMediaPlayer::BufferingMedia ? "BufferingMedia" :
+                 m_mediaPlayer->mediaStatus() == QMediaPlayer::BufferedMedia ? "BufferedMedia" : "Other");
+    qDebug() << "   [媒体] 音频可用:" << m_mediaPlayer->hasAudio();
+    qDebug() << "   [媒体] 时长:" << m_mediaPlayer->duration() << "ms";
 }
 
 void CommonControl::startBelt(int beltNumber)
@@ -880,3 +1024,34 @@ QString CommonControl::getWorkModeName() const
         default: return "未知";
     }
 }
+
+// ========================================
+// ✅ 2026-01-21 20:30 [音频网络传输] 新增配置方法
+// ========================================
+
+void CommonControl::setAudioOutputMode(AudioOutputMode mode)
+{
+    m_audioOutputMode = mode;
+
+    const char* modeName = (mode == LocalOnly ? "仅本地" :
+                            mode == NetworkOnly ? "仅网络" : "本地+网络");
+    qDebug() << "✅ CommonControl: 设置音频输出模式:" << modeName;
+}
+
+void CommonControl::configureNetworkAudio(const QString &multicastAddress,
+                                          quint16 port,
+                                          int bitrate)
+{
+    qDebug() << "✅ CommonControl: 配置网络音频";
+    qDebug() << "   组播地址:" << multicastAddress << ":" << port;
+    qDebug() << "   Opus 比特率:" << bitrate << "bps";
+
+    m_audioNetworkSender->setUdpMulticastAddress(multicastAddress, port);
+    m_audioNetworkSender->setOpusBitrate(bitrate);
+}
+
+CommonControl::AudioOutputMode CommonControl::audioOutputMode() const
+{
+    return m_audioOutputMode;
+}
+

@@ -16,6 +16,8 @@ target_link_libraries(belt_control_system PRIVATE
     real_hal_module
     utils_module
     sip_phone_module
+    # ✅ 2026-01-21 19:50 [音频网络传输] 添加音频网络发送模块
+    audio_network
 )
 
 # Link risip_sdk with whole-archive to force inclusion of stub symbols

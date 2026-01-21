@@ -7,6 +7,9 @@
 #include <QKeyEvent>
 #include <QTimer>
 
+// ✅ 2026-01-21 20:15 [音频网络传输] 添加音频网络发送器
+#include "../audio_network/AudioNetworkSender.h"
+
 // 前向声明
 class SystemConfig;
 class NetworkTask;
@@ -26,6 +29,17 @@ class CommonControl : public QObject
     Q_OBJECT
 
 public:
+    // ✅ 2026-01-21 20:15 [音频网络传输] 添加音频输出模式枚举
+    /**
+     * @brief 音频输出模式
+     */
+    enum AudioOutputMode {
+        LocalOnly,      ///< 仅本地音频设备（ES8388）
+        NetworkOnly,    ///< 仅网络音频模块（UDP 组播）
+        DualOutput      ///< 本地 + 网络同时输出
+    };
+    Q_ENUM(AudioOutputMode)
+
     explicit CommonControl(QObject *parent = nullptr);
     ~CommonControl();
 
@@ -43,6 +57,29 @@ public:
 
     // 设置设备运行时间跟踪器（用于状态跟踪）
     void setRuntimeTracker(DeviceRuntimeTracker *tracker);
+
+    // ✅ 2026-01-21 20:15 [音频网络传输] 添加音频输出配置方法
+    /**
+     * @brief 设置音频输出模式
+     * @param mode 输出模式（LocalOnly, NetworkOnly, DualOutput）
+     */
+    Q_INVOKABLE void setAudioOutputMode(AudioOutputMode mode);
+
+    /**
+     * @brief 配置网络音频参数
+     * @param multicastAddress 组播地址（默认：224.1.1.1）
+     * @param port 组播端口（默认：8800）
+     * @param bitrate Opus 比特率（默认：16000，范围：16000-32000）
+     */
+    Q_INVOKABLE void configureNetworkAudio(const QString &multicastAddress = "224.1.1.1",
+                                           quint16 port = 8800,
+                                           int bitrate = 16000);
+
+    /**
+     * @brief 获取当前音频输出模式
+     * @return 当前输出模式
+     */
+    Q_INVOKABLE AudioOutputMode audioOutputMode() const;
 
 signals:
     void beltStartRequested(int beltNumber);  // 皮带启动请求
@@ -82,6 +119,10 @@ private:
     NetworkTask *m_networkTask;    // 网络任务（Modbus控制）
     class OperationLogDatabase *m_operationLogDB;  // 运行日志数据库
     DeviceRuntimeTracker *m_runtimeTracker;  // 设备运行时间跟踪器
+
+    // ✅ 2026-01-21 20:15 [音频网络传输] 添加音频网络发送器
+    AudioNetworkSender *m_audioNetworkSender;  // 音频网络发送器（UDP 组播 Opus）
+    AudioOutputMode m_audioOutputMode;         // 音频输出模式（本地/网络/双输出）
 
     // 预警播放相关
     QTimer *m_warningTimer;        // 按时间模式的定时器

@@ -71,6 +71,10 @@ add_subdirectory(src/control)
 add_subdirectory(src/network)  # Network module (Modbus TCP)
 add_subdirectory(src/risip)  # Risip VoIP SDK (PJSIP wrapper)
 add_subdirectory(src/sip_phone)  # SIP Phone module
+# ✅ 2026-01-21 19:50 [音频网络传输] 添加音频网络发送模块
+# 功能：MP3/WAV → Opus → UDP 组播（224.1.1.1:8800）
+# 参考：docs/2026-01-21/12-音频网络传输实施计划-最终版.md
+add_subdirectory(src/audio_network)  # Audio network transmission module
 add_subdirectory(src/qml)  # QML模块需在控制模块之后（依赖C++逻辑）
 add_subdirectory(src/main)
 
