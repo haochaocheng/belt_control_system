@@ -16,8 +16,8 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # Parse device parameter and setup configuration linaro
 # ============================================================
-$DeviceUser = "linaro"
-$DevicePassword = "linaro"
+$DeviceUser = "pi"
+$DevicePassword = "pi"
 
 switch -Regex ($Device) {
     "^151$" {
@@ -270,6 +270,66 @@ if ($needCompilePJSIP) {
             Write-Host "      ⚠️ rga/ 未找到" -ForegroundColor Yellow
         }
 
+        # ✅ 2026-01-19 01:10 添加 Opus 音频编解码器支持
+        # 原因：支持高质量 Opus 编解码器（16kHz）
+        # 依赖：需要先运行 .\scripts\2026-01-18\02-compile-opus-in-container.ps1
+        Write-Host "    - 复制 Opus 库和头文件..." -ForegroundColor Gray
+        $opusLibFile = "$ProjectRoot\docker\rk3588\rk3588-libs\lib\libopus.a"
+        $opusIncludeDir = "$ProjectRoot\docker\rk3588\rk3588-libs\include\opus"
+
+        if (Test-Path $opusLibFile) {
+            # 创建 Opus 目录
+            docker exec $pjsipContainerName mkdir -p /opt/opus/lib | Out-Null
+            docker exec $pjsipContainerName mkdir -p /opt/opus/include | Out-Null
+
+            # ✅ 2026-01-19 03:00 修复：移除错误抑制，添加复制验证
+            # 复制 Opus 静态库
+            docker cp $opusLibFile "${pjsipContainerName}:/opt/opus/lib/"
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "      ✗ libopus.a 复制失败" -ForegroundColor Red
+                exit 1
+            }
+
+            # 复制 Opus 头文件
+            if (Test-Path $opusIncludeDir) {
+                docker cp "$opusIncludeDir" "${pjsipContainerName}:/opt/opus/include/"
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "      ✗ Opus 头文件复制失败" -ForegroundColor Red
+                    exit 1
+                }
+            }
+
+            # 创建 opus.pc 文件（PJSIP configure 需要通过 pkg-config 检测 Opus）
+            docker exec $pjsipContainerName mkdir -p /opt/opus/lib/pkgconfig | Out-Null
+            $opusPkgConfig = @"
+prefix=/opt/opus
+exec_prefix=`${prefix}
+libdir=`${exec_prefix}/lib
+includedir=`${prefix}/include
+
+Name: Opus
+Description: Opus IETF audio codec
+Version: 1.5.2
+Requires:
+Conflicts:
+Libs: -L`${libdir} -lopus -lm
+Cflags: -I`${includedir}/opus
+"@
+            $opusPkgConfig | docker exec -i $pjsipContainerName bash -c "cat > /opt/opus/lib/pkgconfig/opus.pc"
+
+            # 验证复制结果
+            $verifyLib = docker exec $pjsipContainerName bash -c "test -f /opt/opus/lib/libopus.a && echo 'exists'" 2>$null
+            if ($verifyLib -ne "exists") {
+                Write-Host "      ✗ libopus.a 验证失败" -ForegroundColor Red
+                exit 1
+            }
+
+            Write-Host "      ✓ Opus 1.5.2 (libopus.a + 头文件 + opus.pc)" -ForegroundColor Green
+        } else {
+            Write-Host "      ⚠️ Opus 库未找到：$opusLibFile" -ForegroundColor Yellow
+            Write-Host "      提示：运行 .\scripts\2026-01-18\04-compile-opus-in-pjsip-container.ps1 编译 Opus" -ForegroundColor Gray
+        }
+
         # ✅ 2025-12-30 11:10 优化：只复制 FFmpeg 及其实际依赖的库文件
         #    之前复制所有 .so 文件（效率低、容器体积大）
         #    现在只复制 FFmpeg 核心库 + 编解码器依赖库（从链接错误中提取）
@@ -453,6 +513,8 @@ if ($needCompilePJSIP) {
         Write-Host "    复制配置文件..." -ForegroundColor Gray
         docker exec $pjsipContainerName mkdir -p /workspace/pjlib/include/pj | Out-Null
         docker cp $pjsipConfigSite "${pjsipContainerName}:/workspace/pjlib/include/pj/config_site.h" | Out-Null
+        # ✅ 2026-01-19 03:35 验证配置文件复制成功
+        docker exec $pjsipContainerName bash -c "test -f /workspace/pjlib/include/pj/config_site.h && echo '  ✓ config_site.h 已复制' || echo '  ✗ config_site.h 复制失败'" | Out-Null
 
         $fullCopyElapsed = (Get-Date) - $fullCopyStartTime
         Write-Host "    ✓ 全量复制完成（耗时 $($fullCopyElapsed.TotalSeconds.ToString('F1'))s）" -ForegroundColor Green
@@ -487,12 +549,14 @@ fi
 echo "检测到 FFmpeg 头文件: $FFMPEG_INCLUDE_DIR"
 
 # ⚠️ CFLAGS 必须包含 sysroot 头文件路径（FFmpeg、RKMPP）
-export CFLAGS="-fPIC -O2 -I/opt/rk3588-sysroot/usr/include -I/opt/rk3588-sysroot/usr/include/aarch64-linux-gnu -I$FFMPEG_INCLUDE_DIR"
+# ✅ 2026-01-19 01:55 添加 Opus 头文件路径
+export CFLAGS="-fPIC -O2 -I/opt/rk3588-sysroot/usr/include -I/opt/rk3588-sysroot/usr/include/aarch64-linux-gnu -I$FFMPEG_INCLUDE_DIR -I/opt/opus/include/opus"
 export CXXFLAGS="-fPIC -O2 -I/opt/rk3588-sysroot/usr/include -I/opt/rk3588-sysroot/usr/include/aarch64-linux-gnu -I$FFMPEG_INCLUDE_DIR"
 
 # ✅ 2025-12-30 19:00 关键修复：为 PJSIP 测试程序提供完整的 FFmpeg 编解码器依赖库
 # LDFLAGS：库搜索路径（-L）
-export LDFLAGS="-L/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu -L/opt/rk3588-sysroot/usr/lib -L/usr/lib/aarch64-linux-gnu"
+# ✅ 2026-01-19 01:55 添加 Opus 库路径
+export LDFLAGS="-L/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu -L/opt/rk3588-sysroot/usr/lib -L/usr/lib/aarch64-linux-gnu -L/opt/opus/lib"
 
 # LIBS：具体链接库（-l），包含所有 FFmpeg 编解码器依赖
 # 这些库用于 PJSIP 测试程序的链接，确保 FFmpeg 编解码器能正确初始化
@@ -501,19 +565,24 @@ export LDFLAGS="-L/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu -L/opt/rk3588-sy
 # 旧代码（2026-01-10 01:45 修复 100.2 注释）：
 # export LIBS="-lx264 -lx265 -lvpx -lcairo -ltwolame -lwebp -lcodec2 -ldav1d -laom -lwavpack -ltheora -ltheoraenc -ltheoradec -lxvidcore -lopenjp2 -lshine -lsnappy -lzvbi -lrga -lrockchip_mpp -lpthread -lm -lrt"
 # 说明：即使某些库（如 libva）不存在于 ARM 平台，链接器会忽略它们，不会影响编译
-export LIBS="-lx264 -lx265 -lvpx -lcairo -lva -lva-drm -lva-x11 -ltwolame -lwebp -lcodec2 -ldav1d -laom -lwavpack -ltheora -ltheoraenc -ltheoradec -lxvidcore -lopenjp2 -lshine -lsnappy -lzvbi -lrsvg-2 -lvdpau -lrga -lrockchip_mpp -lpthread -lm -lrt"
+# ✅ 2026-01-19 02:10 修复 Opus 链接测试失败
+# 问题：完整的 LIBS 列表会干扰 configure 的 AC_CHECK_LIB 测试
+# 解决：configure 之前只设置 -lm（math 库），完整 LIBS 在 configure 之后设置
+export LIBS="-lm"
 
 # ⚠️ PKG_CONFIG_SYSROOT_DIR 让 pkg-config 重定向 .pc 文件中的路径到 sysroot
 export PKG_CONFIG_SYSROOT_DIR=/opt/rk3588-sysroot
 
 # ⚠️ PKG_CONFIG_PATH 必须包含 sysroot 的 pkgconfig 目录
-export PKG_CONFIG_PATH=/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/opt/rk3588-sysroot/usr/lib/pkgconfig
+# ✅ 2026-01-19 01:15 添加 Opus pkgconfig 路径
+export PKG_CONFIG_PATH=/opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/opt/rk3588-sysroot/usr/lib/pkgconfig:/opt/opus/lib/pkgconfig
 
 echo "环境变量："
 echo "  CC=$CC"
 echo "  CFLAGS=$CFLAGS"
 echo "  CPPFLAGS=$CPPFLAGS"
 echo "  LDFLAGS=$LDFLAGS"
+echo "  LIBS=$LIBS"
 echo "  PKG_CONFIG_SYSROOT_DIR=$PKG_CONFIG_SYSROOT_DIR"
 echo "  PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
 echo ""
@@ -535,10 +604,27 @@ ln -sf /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig/libavfilter.pc /o
 echo "创建 sysroot 标准布局符号链接（让 PJSIP configure 检测到 FFmpeg）..."
 ln -sfn /opt/rk3588-sysroot/usr/lib/aarch64-linux-gnu /opt/rk3588-sysroot/lib 2>/dev/null || true
 ln -sfn /opt/rk3588-sysroot/usr/include /opt/rk3588-sysroot/include 2>/dev/null || true
+
+# ✅ 2026-01-19 03:20 创建 Opus 符号链接到 sysroot
+# 原因：PKG_CONFIG_SYSROOT_DIR 会将 /opt/opus 重定向到 /opt/rk3588-sysroot/opt/opus
+# 解决：创建符号链接让重定向后的路径也能找到 Opus
+echo "创建 Opus 符号链接到 sysroot（解决 PKG_CONFIG_SYSROOT_DIR 重定向问题）..."
+mkdir -p /opt/rk3588-sysroot/opt 2>/dev/null || true
+ln -sfn /opt/opus /opt/rk3588-sysroot/opt/opus 2>/dev/null || true
 echo ""
 
 # ⚠️ 设置 PKG_CONFIG_SYSROOT_DIR 让 pkg-config 正确处理 sysroot 路径
 export PKG_CONFIG_SYSROOT_DIR=/opt/rk3588-sysroot
+
+# ✅ 2026-01-19 01:40 修复 Opus 检测失败问题
+# 原因：PKG_CONFIG_SYSROOT_DIR 会重定向 opus.pc 的路径到 /opt/rk3588-sysroot/opt/opus/lib
+# 但实际上 libopus.a 在 /opt/opus/lib（不在 sysroot 中）
+# 解决：明确指定 Opus 的 CFLAGS 和 LIBS，绕过 pkg-config 的路径重定向
+export OPUS_CFLAGS="-I/opt/opus/include/opus"
+export OPUS_LIBS="-L/opt/opus/lib -lopus -lm"
+
+# ✅ 2026-01-19 01:55 Opus 路径已添加到 CFLAGS/LDFLAGS/LIBS（Line 544, 550, 560）
+# 这里的 OPUS_CFLAGS 和 OPUS_LIBS 仅作为文档说明，configure 会使用标准环境变量
 
 ./configure \
     --host=aarch64-linux-gnu \
@@ -548,6 +634,9 @@ export PKG_CONFIG_SYSROOT_DIR=/opt/rk3588-sysroot
     --with-ssl=/usr \
     --with-sdl=/usr \
     --with-ffmpeg=/opt/rk3588-sysroot 2>&1 | tee /tmp/configure.log
+    # ✅ 2026-01-19 03:15 移除 --with-opus 参数，改为完全依赖环境变量
+    # 原因：--with-opus 可能被 configure 错误处理，导致链接测试失败
+    # 环境变量 CFLAGS/LDFLAGS/LIBS 已包含完整的 Opus 配置
     # ✅ 2026-01-10 02:15 [恢复] 恢复 FFmpeg 启用（配合原始符号链接和 LIBS 配置）
     # 原因：临时禁用 FFmpeg 不是解决方案，视频通话必须依赖 FFmpeg
     # 说明：配合 Fix 100 原始符号链接 + Fix 100.4 原始 LIBS 配置，应该可以编译成功
@@ -563,6 +652,14 @@ if [ ${PIPESTATUS[0]} -ne 0 ]; then
     echo "✗ configure 失败"
     exit 1
 fi
+
+# ✅ 2026-01-19 02:10 configure 成功后，恢复完整的 LIBS 用于 make 编译
+# 说明：configure 时使用 LIBS="-lm" 避免干扰 AC_CHECK_LIB 测试
+#       make 时需要完整的 FFmpeg 编解码器依赖库
+echo ""
+echo "恢复完整的 LIBS 环境变量..."
+export LIBS="-lopus -lx264 -lx265 -lvpx -lcairo -lva -lva-drm -lva-x11 -ltwolame -lwebp -lcodec2 -ldav1d -laom -lwavpack -ltheora -ltheoraenc -ltheoradec -lxvidcore -lopenjp2 -lshine -lsnappy -lzvbi -lrsvg-2 -lvdpau -lrga -lrockchip_mpp -lpthread -lm -lrt"
+echo "  LIBS=$LIBS"
 
 echo ""
 echo "生成依赖文件（make dep）..."
@@ -1336,6 +1433,12 @@ Write-Host "Step 3: Using Dockerfile with base image..." -ForegroundColor Cyan
 # Copy the Dockerfile.ubuntu24-apt to build context
 Copy-Item "$ProjectRoot\Dockerfile.ubuntu24-apt" "$DockerContextDir\Dockerfile" -Force
 Write-Host "  [OK] Dockerfile prepared (using cached base image)" -ForegroundColor Green
+
+# ✅ 2026-01-21 15:30 [FIX 100.278] 复制 ALSA 配置文件到构建上下文
+# 原因：设置 ES8388 为默认 ALSA 设备，使 GStreamer 自动路由音频到正确硬件
+Write-Host "  Copying ALSA configuration..." -ForegroundColor Yellow
+Copy-Item "$ProjectRoot\docker\rk3588\asound.conf" "$DockerContextDir\asound.conf" -Force
+Write-Host "  [OK] ALSA configuration copied" -ForegroundColor Green
 Write-Host ""
 
 # ============================================================
@@ -1643,6 +1746,13 @@ echo "Qt Platform: $QT_PLATFORM"
 mkdir -p /tmp/belt-control-cores
 sudo sysctl -w kernel.core_pattern=/tmp/belt-control-cores/core.%e.%p.%t 2>/dev/null || true
 
+# ✅ 2026-01-21 18:00 [FIX 100.281] GStreamer 缓冲区参数说明
+# 问题：播放开头 2-3 秒内音频断续（卡 2-3 次）
+# 根因：GStreamer 默认队列太小（200 块/1s），BufferedMedia 报告过快（0ms）
+# 解决：增大队列参数到 1000 块/5 秒，确保充足缓冲后才开始播放
+# 参考：docs/2026-01-21/10-FIX100.281-增加GStreamer缓冲区解决播放断续.md
+# 环境变量：GST_QUEUE_SIZE_BUFFERS=1000, GST_QUEUE_MAX_SIZE_TIME=5000000000
+
 sudo docker run \
     --name belt-control-app \
     --privileged \
@@ -1655,6 +1765,8 @@ sudo docker run \
     $HW_LIBS_ENV \
     $FFMPEG_HW_OPTS \
     -e XDG_RUNTIME_DIR=/tmp \
+    -e GST_QUEUE_SIZE_BUFFERS=1000 \
+    -e GST_QUEUE_MAX_SIZE_TIME=5000000000 \
     $X11_VOLUME \
     $MALI_VOLUME \
     $HW_LIBS_VOLUME \
