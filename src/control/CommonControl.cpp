@@ -243,21 +243,24 @@ void CommonControl::playAudio(const QString &audioPath)
     qDebug() << "   [输出模式]" << modeName;
 
     switch (m_audioOutputMode) {
-        case LocalOnly:
+        case LocalOnly: {
+            // ❌ 2026-01-21 20:55 [编译修复] 添加大括号隔离作用域（避免"跨越变量初始化"错误）
             // 仅播放到本地 ES8388
             qDebug() << "   [本地播放] 开始播放到 ES8388...";
             qint64 playTime = timer.elapsed();
             m_mediaPlayer->play();
             qDebug() << "   [播放] play() 调用耗时:" << (timer.elapsed() - playTime) << "ms";
             break;
+        }
 
-        case NetworkOnly:
+        case NetworkOnly: {
             // 仅发送到网络音频模块
             qDebug() << "   [网络发送] 开始发送到音频模块（224.1.1.1:8800）...";
             m_audioNetworkSender->playAudioToNetwork(audioPath);
             break;
+        }
 
-        case DualOutput:
+        case DualOutput: {
             // 本地 + 网络同时
             qDebug() << "   [双输出] 本地播放 + 网络发送...";
             qint64 playTime2 = timer.elapsed();
@@ -268,6 +271,7 @@ void CommonControl::playAudio(const QString &audioPath)
             m_audioNetworkSender->playAudioToNetwork(audioPath);
             qDebug() << "      网络发送启动耗时:" << (timer.elapsed() - networkTime) << "ms";
             break;
+        }
     }
 
     qDebug() << "   [总计] playAudio() 总耗时:" << timer.elapsed() << "ms";
