@@ -204,8 +204,8 @@ echo "  ✅ 音频文件部署完成"
 echo ""
 echo "  音频目录内容（前10个）:"
 find /home/${DeviceUser}/belt-control-data/audio -type f | head -10 | sed 's/^/    /'
-TOTAL_FILES=\`$(find /home/${DeviceUser}/belt-control-data/audio -type f | wc -l)
-echo "    ... 共 \`$TOTAL_FILES 个文件"
+TOTAL_FILES=$(find /home/${DeviceUser}/belt-control-data/audio -type f | wc -l)
+echo "    ... 共 $TOTAL_FILES 个文件"
 "@
 
 # 使用 UTF-8 编码写入脚本
