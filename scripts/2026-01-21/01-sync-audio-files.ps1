@@ -176,20 +176,29 @@ $deployScript = @"
 #!/bin/bash
 set -e
 
-echo "  创建目标目录..."
-mkdir -p /home/${DeviceUser}/belt-control-data/audio
+echo "  创建临时解压目录..."
+rm -rf /tmp/audio-extract
+mkdir -p /tmp/audio-extract
 
 echo "  解压音频文件（zip 格式）..."
 # ✅ 2026-01-21: Windows 使用 Compress-Archive 创建 zip，Linux 用 unzip 解压
-unzip -q ${remoteZipPath} -d /home/${DeviceUser}/belt-control-data/
+unzip -q ${remoteZipPath} -d /tmp/audio-extract/
 
-# 移动 AUDIO 目录内容到 audio 目录
-echo "  整理目录结构..."
-if [ -d "/home/${DeviceUser}/belt-control-data/AUDIO" ]; then
-    # 移动 AUDIO/* 到 audio/
-    mv /home/${DeviceUser}/belt-control-data/AUDIO/* /home/${DeviceUser}/belt-control-data/audio/ 2>/dev/null || true
-    rmdir /home/${DeviceUser}/belt-control-data/AUDIO 2>/dev/null || true
+# ✅ 2026-01-21 修复：直接移动 AUDIO 目录，避免 mv * 对特殊字符的问题
+echo "  移动到目标位置..."
+if [ -d "/tmp/audio-extract/AUDIO" ]; then
+    # 删除旧的 audio 目录（如果存在）
+    rm -rf /home/${DeviceUser}/belt-control-data/audio
+    # 直接移动整个 AUDIO 目录并重命名为 audio
+    mv /tmp/audio-extract/AUDIO /home/${DeviceUser}/belt-control-data/audio
+    echo "  ✅ 移动成功"
+else
+    echo "  ❌ 错误：解压后未找到 AUDIO 目录"
+    exit 1
 fi
+
+# 清理临时目录
+rm -rf /tmp/audio-extract
 
 echo "  设置权限..."
 sudo chown -R ${DeviceUser}:${DeviceUser} /home/${DeviceUser}/belt-control-data/audio
