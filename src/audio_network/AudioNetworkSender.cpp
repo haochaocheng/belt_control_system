@@ -12,6 +12,7 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QUrl>
+#include <QNetworkInterface>  // ✅ 2026-01-22 11:00 [动态计算] 获取本地 IP 地址
 
 #include <stdexcept>
 #include <numeric>
@@ -34,7 +35,10 @@ extern "C" {
 AudioNetworkSender::AudioNetworkSender(QObject *parent)
     : QObject(parent)
     , m_udpSocket(nullptr)
-    , m_multicastAddress("224.1.1.1")  // 默认组播地址（音频模块预定义）
+    // ❌ 2026-01-22 11:00 [旧代码] 硬编码组播地址（错误）
+    // , m_multicastAddress("224.1.1.1")
+    // ✅ 2026-01-22 11:00 [动态计算] 根据本地 IP 计算组播地址
+    , m_multicastAddress()  // 稍后在构造函数体中计算
     , m_multicastPort(8800)            // 默认组播端口（音频模块预定义）
     , m_opusEncoder(nullptr)
     , m_opusBitrate(16000)             // 默认 16kbps（清晰）
@@ -43,8 +47,26 @@ AudioNetworkSender::AudioNetworkSender(QObject *parent)
     , m_isPlaying(false)
     , m_totalFrames(0)
 {
+    // ========== 动态计算组播地址 ==========
+    // ✅ 2026-01-22 11:00 [动态计算] 根据本地 IP 的第3字节计算组播地址
+    // 音频模块计算规则：DIP[2] = tnet->ConfigMsg.lip[2]
+    // 组播地址格式：224.1.{IP[2]}.1
+
+    // 1. 获取本地 IP 地址
+    QHostAddress localIP = getLocalIPAddress();
+
+    // 2. 提取第3字节（IP[2]）
+    quint32 ipv4 = localIP.toIPv4Address();
+    quint8 thirdByte = (ipv4 >> 8) & 0xFF;  // 右移8位，掩码0xFF得到第3字节
+
+    // 3. 计算组播地址：224.1.{IP[2]}.1
+    QString multicastAddr = QString("224.1.%1.1").arg(thirdByte);
+    m_multicastAddress = QHostAddress(multicastAddr);
+
     qDebug() << "[AudioNetworkSender] 初始化音频网络发送器";
-    qDebug() << "   组播地址:" << m_multicastAddress.toString() << ":" << m_multicastPort;
+    qDebug() << "   本地 IP:" << localIP.toString();
+    qDebug() << "   第3字节（IP[2]）:" << thirdByte;
+    qDebug() << "   组播地址（动态计算）:" << m_multicastAddress.toString() << ":" << m_multicastPort;
     qDebug() << "   Opus 比特率:" << m_opusBitrate << "bps";
 
     // ========== 初始化 UDP Socket ==========
@@ -732,4 +754,42 @@ void AudioNetworkSender::sendNextFrame()
     // 更新索引和进度
     m_currentFrameIndex++;
     emit playbackProgress(m_currentFrameIndex, m_totalFrames);
+}
+
+// ========================================
+// 辅助方法实现
+// ========================================
+// ✅ 2026-01-22 11:00 [动态计算] 获取本地 IP 地址
+
+QHostAddress AudioNetworkSender::getLocalIPAddress()
+{
+    // 获取所有网络接口的地址
+    const QList<QHostAddress> addresses = QNetworkInterface::allAddresses();
+
+    // ========== 策略 1: 优先选择 192.168.x.x 网段 ==========
+    // 这是最常见的局域网地址段，音频模块通常部署在此网段
+    for (const QHostAddress& address : addresses) {
+        if (address.protocol() == QAbstractSocket::IPv4Protocol &&
+            !address.isLoopback() &&
+            address.toString().startsWith("192.168.")) {
+            qDebug() << "   ✅ 找到 192.168.x.x 网段地址:" << address.toString();
+            return address;
+        }
+    }
+
+    // ========== 策略 2: 选择第一个非回环 IPv4 地址 ==========
+    // 如果没有 192.168.x.x，选择任意非回环地址（如 10.x.x.x、172.16-31.x.x）
+    for (const QHostAddress& address : addresses) {
+        if (address.protocol() == QAbstractSocket::IPv4Protocol &&
+            !address.isLoopback()) {
+            qDebug() << "   ⚠️ 未找到 192.168.x.x，使用备选地址:" << address.toString();
+            return address;
+        }
+    }
+
+    // ========== 策略 3: 兜底 - 返回 localhost ==========
+    // 这种情况通常不会发生，除非网络完全不可用
+    qWarning() << "   ❌ 无法获取本地 IP，使用 127.0.0.1（localhost）";
+    qWarning() << "   ⚠️ 组播地址将计算为 224.1.0.1（可能不正确）";
+    return QHostAddress::LocalHost;
 }
