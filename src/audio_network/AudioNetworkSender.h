@@ -242,13 +242,15 @@ private:
     // --- 播放状态 ---
     QList<QByteArray> m_currentFrames; ///< 当前播放的 Opus 帧列表
     int m_currentFrameIndex;           ///< 当前发送到第几帧（0-based）
-    QTimer* m_frameTimer;              ///< 20ms 定时器（50 帧/秒）
+    QTimer* m_frameTimer;              ///< ❌ 2026-01-22 14:30 [已废弃] 周期性定时器（精度不够）
     bool m_isPlaying;                  ///< 是否正在播放
 
     // --- 统计信息 ---
     QString m_currentFileName;         ///< 当前播放文件名
     int m_totalFrames;                 ///< 总帧数
     QElapsedTimer m_playbackTimer;     ///< 播放计时器（用于日志）
+    // ✅ 2026-01-22 14:30 [绝对时间戳控制] 发送开始的绝对时间
+    qint64 m_sendStartTime;            ///< 发送开始时间戳（ms）
 };
 
 #endif // AUDIONETWORKSENDER_H

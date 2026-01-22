@@ -46,6 +46,7 @@ AudioNetworkSender::AudioNetworkSender(QObject *parent)
     , m_frameTimer(nullptr)
     , m_isPlaying(false)
     , m_totalFrames(0)
+    , m_sendStartTime(0)               // ✅ 2026-01-22 14:30 [绝对时间戳控制] 初始化发送开始时间
 {
     // ========== 动态计算组播地址 ==========
     // ✅ 2026-01-22 11:00 [动态计算] 根据本地 IP 的第3字节计算组播地址
@@ -185,11 +186,14 @@ void AudioNetworkSender::playAudioToNetwork(const QString& filePath)
 
         emit playbackStarted(m_currentFileName);
 
-        // 启动定时器（20ms 间隔）
+        // ✅ 2026-01-22 14:30 [绝对时间戳控制] 记录发送开始时间，改用 singleShot
         m_isPlaying = true;
-        m_frameTimer->start(20);
+        m_sendStartTime = m_playbackTimer.elapsed();  // 记录发送开始的绝对时间
 
-        qDebug() << "   ✅ 发送已启动";
+        // 立即发送第一帧（不等待定时器）
+        sendNextFrame();
+
+        qDebug() << "   ✅ 发送已启动（绝对时间戳控制模式）";
 
     } catch (const std::exception& e) {
         qWarning() << "❌ 播放失败:" << e.what();
@@ -200,7 +204,9 @@ void AudioNetworkSender::playAudioToNetwork(const QString& filePath)
 void AudioNetworkSender::stopPlayback()
 {
     if (m_isPlaying) {
-        m_frameTimer->stop();
+        // ❌ 2026-01-22 14:30 [已废弃] 不再使用周期性定时器，无需 stop()
+        // m_frameTimer->stop();
+        // ✅ 2026-01-22 14:30 [绝对时间戳控制] 只需设置状态，singleShot 会自动停止
         m_isPlaying = false;
         m_currentFrames.clear();
         m_currentFrameIndex = 0;
@@ -220,6 +226,10 @@ bool AudioNetworkSender::isPlaying() const
 
 void AudioNetworkSender::onFrameTimerTimeout()
 {
+    // ❌ 2026-01-22 14:30 [已废弃] 不再使用此函数，改用 sendNextFrame() 递归调用
+    // 保留此函数仅为兼容性，实际不会被调用
+    qWarning() << "⚠️ onFrameTimerTimeout() 被调用（此函数已废弃，不应被调用）";
+
     // 检查是否已播放完成
     if (!m_isPlaying || m_currentFrameIndex >= m_currentFrames.size()) {
         qDebug() << "   ✅ 所有帧发送完成，总耗时:" << m_playbackTimer.elapsed() << "ms";
@@ -662,6 +672,10 @@ QList<QByteArray> AudioNetworkSender::encodeToOpus(const AudioData& audio)
     qDebug() << "         预计帧数:" << frameCount << "帧（每帧 20ms）";
 
     // ========== 4. 逐帧编码 ==========
+    // ✅ 2026-01-22 14:00 [调试日志] 统计编码失败的帧
+    int encodedSuccessCount = 0;
+    int encodedFailCount = 0;
+
     for (int i = 0; i < frameCount; i++) {
         // 获取当前帧的 PCM 数据（opus_int16 = int16_t）
         const opus_int16* pcmFrame = reinterpret_cast<const opus_int16*>(pcmPtr + i * bytesPerFrame);
@@ -680,18 +694,27 @@ QList<QByteArray> AudioNetworkSender::encodeToOpus(const AudioData& audio)
         );
 
         if (encodedBytes < 0) {
+            // ✅ 2026-01-22 14:00 [调试日志] 记录失败帧号
             qWarning() << "      ❌ Opus 编码失败，帧" << i << ":" << opus_strerror(encodedBytes);
+            encodedFailCount++;
             continue;
         }
 
         // 保存 Opus 帧
         QByteArray opusFrame(reinterpret_cast<const char*>(opusBuffer), encodedBytes);
         opusFrames.append(opusFrame);
+        encodedSuccessCount++;
 
         // 日志（每 50 帧打印一次，即每秒）
         if (i % 50 == 0 && i > 0) {
             qDebug() << "         已编码:" << i << "/" << frameCount << "帧";
         }
+    }
+
+    // ✅ 2026-01-22 14:00 [调试日志] 报告编码失败统计
+    if (encodedFailCount > 0) {
+        qWarning() << "      ⚠️ Opus 编码统计：成功" << encodedSuccessCount << "帧，失败" << encodedFailCount << "帧";
+        qWarning() << "      ⚠️ 失败率：" << QString::number(encodedFailCount * 100.0 / frameCount, 'f', 2) << "%";
     }
 
     // ========== 5. 统计信息 ==========
@@ -713,6 +736,15 @@ QList<QByteArray> AudioNetworkSender::encodeToOpus(const AudioData& audio)
     qDebug() << "         平均帧大小:" << avgFrameSize << "字节/帧";
     qDebug() << "         预计比特率:" << (avgFrameSize * 8 * 50) << "bps（每秒 50 帧）";
 
+    // ✅ 2026-01-22 14:00 [调试日志] 检查帧数是否匹配
+    if (opusFrames.size() != frameCount) {
+        qWarning() << "      ⚠️ 预期帧数不匹配！";
+        qWarning() << "      预期帧数:" << frameCount << "帧";
+        qWarning() << "      实际帧数:" << opusFrames.size() << "帧";
+        qWarning() << "      丢失帧数:" << (frameCount - opusFrames.size()) << "帧";
+        qWarning() << "      丢失率:" << QString::number((frameCount - opusFrames.size()) * 100.0 / frameCount, 'f', 2) << "%";
+    }
+
     return opusFrames;
 }
 
@@ -730,6 +762,19 @@ void AudioNetworkSender::sendOpusFrames(const QList<QByteArray>& frames)
 
 void AudioNetworkSender::sendNextFrame()
 {
+    // ✅ 2026-01-22 14:30 [绝对时间戳控制] 完全重构发送逻辑
+    // 使用绝对时间戳计算每帧发送时机，解决定时器精度问题
+
+    // 检查是否已播放完成
+    if (!m_isPlaying || m_currentFrameIndex >= m_currentFrames.size()) {
+        qDebug() << "   ✅ 所有帧发送完成，总耗时:" << m_playbackTimer.elapsed() << "ms";
+        stopPlayback();
+        emit playbackFinished();
+        return;
+    }
+
+    // ========== 发送当前帧 ==========
+    qint64 currentTime = m_playbackTimer.elapsed();
     const QByteArray& opusFrame = m_currentFrames[m_currentFrameIndex];
 
     // 发送 UDP 组播
@@ -743,17 +788,43 @@ void AudioNetworkSender::sendNextFrame()
     if (bytesSent < 0) {
         qWarning() << "❌ UDP 发送失败（帧" << m_currentFrameIndex << "）:" << m_udpSocket->errorString();
         emit networkError(m_udpSocket->errorString());
-    } else {
-        // 日志（每 50 帧打印一次，即每秒）
-        if (m_currentFrameIndex % 50 == 0) {
-            qDebug() << "   📡 已发送:" << m_currentFrameIndex << "/" << m_totalFrames
-                     << "帧（" << m_playbackTimer.elapsed() << "ms）";
-        }
+    } else if (bytesSent != opusFrame.size()) {
+        // ✅ 2026-01-22 14:00 [调试日志] 检查发送字节数是否匹配
+        qWarning() << "⚠️ UDP 发送字节数不匹配（帧" << m_currentFrameIndex << "）:";
+        qWarning() << "   期望:" << opusFrame.size() << "字节";
+        qWarning() << "   实际:" << bytesSent << "字节";
     }
 
-    // 更新索引和进度
-    m_currentFrameIndex++;
+    // ========== 计算下一帧的绝对发送时间 ==========
+    m_currentFrameIndex++;  // 先递增索引
+
+    // 计算下一帧应该发送的绝对时间戳
+    // 公式：startTime + frameIndex * 20ms
+    qint64 nextFrameAbsoluteTime = m_sendStartTime + m_currentFrameIndex * 20;
+    qint64 delay = nextFrameAbsoluteTime - currentTime;
+
+    // ========== 调试日志（每 50 帧打印一次）==========
+    if ((m_currentFrameIndex - 1) % 50 == 0) {
+        qDebug() << "   📡 已发送:" << (m_currentFrameIndex - 1) << "/" << m_totalFrames
+                 << "帧（" << currentTime << "ms）";
+        qDebug() << "      当前帧大小:" << opusFrame.size() << "字节";
+        qDebug() << "      下一帧延迟:" << delay << "ms（绝对时间:" << nextFrameAbsoluteTime << "ms）";
+    }
+
+    // 触发进度信号
     emit playbackProgress(m_currentFrameIndex, m_totalFrames);
+
+    // ========== 调度下一帧发送 ==========
+    if (delay > 0) {
+        // 延迟发送（正常情况）
+        QTimer::singleShot(delay, this, &AudioNetworkSender::sendNextFrame);
+    } else {
+        // 已经延迟了，立即发送
+        if (delay < -10) {
+            qWarning() << "⚠️ 严重延迟（帧" << m_currentFrameIndex << "）: 已延迟" << (-delay) << "ms";
+        }
+        QTimer::singleShot(0, this, &AudioNetworkSender::sendNextFrame);
+    }
 }
 
 // ========================================
