@@ -216,6 +216,17 @@ void AudioNetworkSender::onFrameTimerTimeout()
 
 AudioNetworkSender::AudioData AudioNetworkSender::decodeAudioFile(const QString& filePath)
 {
+    // ❌ 2026-01-22 08:00 [诊断代码] 函数入口版本标记（改用 fprintf 确保输出）
+    // 原因：av_log(nullptr, ...) 可能被过滤，改用 fprintf(stderr, ...)
+    fprintf(stderr, "\n");
+    fprintf(stderr, "╔═════════════════════════════════════════════════════════════════════╗\n");
+    fprintf(stderr, "║ [APP-VERSION-CHECK] decodeAudioFile() 函数入口                     ║\n");
+    fprintf(stderr, "║ 代码版本: 2026-01-22-08:00-ENTRY-v2                                ║\n");
+    fprintf(stderr, "║ 文件: %-60s║\n", qPrintable(filePath));
+    fprintf(stderr, "╚═════════════════════════════════════════════════════════════════════╝\n");
+    fprintf(stderr, "\n");
+    fflush(stderr);
+
     // ✅ 2026-01-21 20:00 [阶段 1.2] 实现 FFmpeg 音频解码
     // 功能：解码 MP3/WAV 文件到 PCM (16kHz, 16bit, mono)
     // 参考：docs/2026-01-21/12-音频网络传输实施计划-最终版.md Line 188-294
@@ -226,51 +237,187 @@ AudioNetworkSender::AudioData AudioNetworkSender::decodeAudioFile(const QString&
     SwrContext* swrCtx = nullptr;
     AVPacket* packet = nullptr;
     AVFrame* frame = nullptr;
+    // ❌ 2026-01-22 10:30 [FFmpeg 6.0 清理] 移除 using_legacy_api 标志（不再需要）
+    // bool using_legacy_api = false;
 
     try {
+        // ❌ 2026-01-22 08:30 [密集诊断] 定位 Line 230-279 崩溃点
+        fprintf(stderr, "[TRACE] Step 1: 准备打开音频文件...\n");
+        fflush(stderr);
+
         // ========== 1. 打开音频文件 ==========
         QByteArray filePathUtf8 = filePath.toUtf8();
+
+        fprintf(stderr, "[TRACE] Step 2: 调用 avformat_open_input...\n");
+        fflush(stderr);
+
         if (avformat_open_input(&formatCtx, filePathUtf8.constData(), nullptr, nullptr) < 0) {
             throw std::runtime_error("Failed to open audio file: " + filePath.toStdString());
         }
+
+        fprintf(stderr, "[TRACE] Step 3: 音频文件打开成功，查找流信息...\n");
+        fflush(stderr);
 
         // ========== 2. 查找音频流 ==========
         if (avformat_find_stream_info(formatCtx, nullptr) < 0) {
             throw std::runtime_error("Failed to find stream info");
         }
 
+        fprintf(stderr, "[TRACE] Step 4: 流信息查找成功，查找音频流索引...\n");
+        fflush(stderr);
+
+        // ❌ 2026-01-22 08:50 [详细诊断 v2] 定位音频流搜索循环崩溃点
+        fprintf(stderr, "\n╔════════════════════════════════════════════════╗\n");
+        fprintf(stderr, "║ [CRASH-DEBUG] 检查 formatCtx 结构           ║\n");
+        fprintf(stderr, "╠════════════════════════════════════════════════╣\n");
+        fprintf(stderr, "║  formatCtx 指针: %p                    ║\n", (void*)formatCtx);
+        fprintf(stderr, "║  nb_streams: %u                                ║\n", formatCtx->nb_streams);
+        fprintf(stderr, "║  streams 数组指针: %p                  ║\n", (void*)formatCtx->streams);
+        fprintf(stderr, "╚════════════════════════════════════════════════╝\n");
+        fflush(stderr);
+
         int audioStreamIndex = -1;
         for (unsigned i = 0; i < formatCtx->nb_streams; i++) {
-            if (formatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+            // ❌ 2026-01-22 08:50 [详细诊断 v2] 每次循环检查指针
+            fprintf(stderr, "[TRACE] Step 4.%u: 检查流 %u/%u...\n", i+1, i, formatCtx->nb_streams);
+            fprintf(stderr, "   streams[%u] 指针: %p\n", i, (void*)formatCtx->streams[i]);
+            fflush(stderr);
+
+            if (!formatCtx->streams[i]) {
+                fprintf(stderr, "   ❌ streams[%u] is NULL! 跳过\n", i);
+                fflush(stderr);
+                continue;
+            }
+
+            fprintf(stderr, "   codecpar 指针: %p\n", (void*)formatCtx->streams[i]->codecpar);
+            fflush(stderr);
+
+            // ✅ 2026-01-22 10:10 [FFmpeg 6.0 修复完成] 头文件已正确更新到 v60
+            // rk3588-libs/include 的 FFmpeg 头文件已从 v58 更新到 v60
+            // codecpar 指针现在有效，不再需要 legacy API 回退
+
+            AVCodecParameters* codecpar = formatCtx->streams[i]->codecpar;
+
+            if (!codecpar) {
+                fprintf(stderr, "   ❌ codecpar is NULL! 跳过此流\n");
+                fflush(stderr);
+                continue;
+            }
+
+            fprintf(stderr, "   codec_type: %d (AUDIO=%d)\n",
+                    codecpar->codec_type, AVMEDIA_TYPE_AUDIO);
+            fflush(stderr);
+
+            if (codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
                 audioStreamIndex = i;
+                fprintf(stderr, "   ✅ 找到音频流: index=%d\n", i);
+                fflush(stderr);
                 break;
             }
         }
+
+        fprintf(stderr, "\n[TRACE] Step 4 循环完成，audioStreamIndex = %d\n", audioStreamIndex);
+        fflush(stderr);
 
         if (audioStreamIndex == -1) {
             throw std::runtime_error("No audio stream found");
         }
 
+        fprintf(stderr, "[TRACE] Step 5: 找到音频流 %d，初始化解码器...\n", audioStreamIndex);
+        fflush(stderr);
+
         // ========== 3. 初始化解码器 ==========
+        // ✅ 2026-01-22 10:30 [FFmpeg 6.0 清理] 移除旧版 API 回退，只使用 codecpar
+        // rk3588-libs/include 头文件已更新为 v60，codecpar 现在有效
         AVCodecParameters* codecParams = formatCtx->streams[audioStreamIndex]->codecpar;
+        if (!codecParams) {
+            throw std::runtime_error("codecParams is NULL");
+        }
+
+        fprintf(stderr, "[TRACE] Step 6: 查找解码器...\n");
+        fprintf(stderr, "   使用 API: 新版 (codecpar)\n");
+        fflush(stderr);
+
         const AVCodec* codec = avcodec_find_decoder(codecParams->codec_id);
         if (!codec) {
             throw std::runtime_error("Codec not found");
         }
+
+        fprintf(stderr, "[TRACE] Step 7: 找到解码器 %s，分配上下文...\n", codec->name);
+        fflush(stderr);
 
         codecCtx = avcodec_alloc_context3(codec);
         if (!codecCtx) {
             throw std::runtime_error("Failed to allocate codec context");
         }
 
+        fprintf(stderr, "[TRACE] Step 8: 上下文分配成功，复制参数...\n");
+        fflush(stderr);
+
         if (avcodec_parameters_to_context(codecCtx, codecParams) < 0) {
             throw std::runtime_error("Failed to copy codec parameters");
         }
 
-        if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
-            throw std::runtime_error("Failed to open codec");
+        fprintf(stderr, "[TRACE] Step 9: 参数复制成功，准备调用 avcodec_open2...\n");
+        fflush(stderr);
+
+        // ❌ 2026-01-22 08:10 [紧急修复 v5] 完全改用 fprintf(stderr, ...)
+        // 原因：av_log(codecCtx, ...) 仍然不显示（voip.md 实测证明）
+        // 结论：只有 fprintf(stderr, ...) + fflush() 可靠输出应用层日志
+        fprintf(stderr, "\n╔═══════════════════════════════════════════════════════════════╗\n");
+        fprintf(stderr, "║ [APP-TRACE] avcodec_open2() 调用前 - VERSION 2026-01-22-08:10 ║\n");
+        fprintf(stderr, "╠═══════════════════════════════════════════════════════════════╣\n");
+        fprintf(stderr, "║   codecCtx 指针: %p                                          ║\n", (void*)codecCtx);
+        fprintf(stderr, "║   codec 指针: %p                                             ║\n", (void*)codec);
+        fprintf(stderr, "║   codec->name: %s                                              ║\n", codec->name);
+        fprintf(stderr, "╚═══════════════════════════════════════════════════════════════╝\n");
+        fflush(stderr);
+
+        int openResult = avcodec_open2(codecCtx, codec, nullptr);
+
+        fprintf(stderr, "\n╔═══════════════════════════════════════════════════════════════╗\n");
+        fprintf(stderr, "║ [APP-TRACE] avcodec_open2() 调用后                            ║\n");
+        fprintf(stderr, "╠═══════════════════════════════════════════════════════════════╣\n");
+        fprintf(stderr, "║   返回值: %d                                                  ║\n", openResult);
+        fprintf(stderr, "╚═══════════════════════════════════════════════════════════════╝\n");
+        fflush(stderr);
+
+        if (openResult < 0) {
+            char errBuf[AV_ERROR_MAX_STRING_SIZE];
+            av_strerror(openResult, errBuf, sizeof(errBuf));
+            fprintf(stderr, "❌ avcodec_open2() 失败: %s\n", errBuf);
+            fflush(stderr);
+            throw std::runtime_error(std::string("Failed to open codec: ") + errBuf);
         }
 
+        fprintf(stderr, "\n╔═══════════════════════════════════════════════════════════════╗\n");
+        fprintf(stderr, "║ [APP-TRACE] 准备读取 codecCtx 成员                            ║\n");
+        fprintf(stderr, "╠═══════════════════════════════════════════════════════════════╣\n");
+        fprintf(stderr, "║   sizeof(AVCodecContext): %zu bytes                           ║\n", sizeof(AVCodecContext));
+        fprintf(stderr, "║   codecCtx 指针: %p                                          ║\n", (void*)codecCtx);
+
+        // ❌ 2026-01-21 21:45 [安全检查] 先检查指针有效性
+        if (!codecCtx) {
+            fprintf(stderr, "║   ❌ codecCtx is NULL!                                       ║\n");
+            fprintf(stderr, "╚═══════════════════════════════════════════════════════════════╝\n");
+            fflush(stderr);
+            throw std::runtime_error("codecCtx is null after avcodec_open2");
+        }
+
+        fprintf(stderr, "║   ✅ codecCtx 指针有效                                        ║\n");
+        fprintf(stderr, "╠═══════════════════════════════════════════════════════════════╣\n");
+        fprintf(stderr, "║   尝试读取 sample_rate（offset 可能因版本而异）...           ║\n");
+        fprintf(stderr, "╚═══════════════════════════════════════════════════════════════╝\n");
+        fflush(stderr);
+
+        // ❌ 2026-01-22 08:10 [诊断日志] 使用 fprintf 确保输出
+        fprintf(stderr, "\n[APP] 原始音频格式:\n");
+        fprintf(stderr, "   采样率: %d Hz\n", codecCtx->sample_rate);
+        fprintf(stderr, "   声道数: %d\n", codecCtx->channels);
+        fprintf(stderr, "   格式: %s\n", av_get_sample_fmt_name(codecCtx->sample_fmt));
+        fflush(stderr);
+
+        // ❌ 2026-01-21 21:45 [兼容性保留] qDebug 输出（如果能执行到这里）
         qDebug() << "      原始音频格式:";
         qDebug() << "         采样率:" << codecCtx->sample_rate << "Hz";
         // ❌ 2026-01-21 20:50 [FFmpeg 兼容性] 旧版 API 不支持 ch_layout.nb_channels，改用 channels
@@ -405,7 +552,12 @@ AudioNetworkSender::AudioData AudioNetworkSender::decodeAudioFile(const QString&
         av_frame_free(&frame);
         av_packet_free(&packet);
         swr_free(&swrCtx);
-        avcodec_free_context(&codecCtx);
+
+        // ✅ 2026-01-22 10:30 [FFmpeg 6.0 清理] 始终释放 codecCtx（新版 API 分配）
+        if (codecCtx) {
+            avcodec_free_context(&codecCtx);
+        }
+
         avformat_close_input(&formatCtx);
 
         // ========== 7. 返回结果 ==========
@@ -426,7 +578,12 @@ AudioNetworkSender::AudioData AudioNetworkSender::decodeAudioFile(const QString&
         if (frame) av_frame_free(&frame);
         if (packet) av_packet_free(&packet);
         if (swrCtx) swr_free(&swrCtx);
-        if (codecCtx) avcodec_free_context(&codecCtx);
+
+        // ✅ 2026-01-22 10:30 [FFmpeg 6.0 清理] 始终释放 codecCtx（新版 API 分配）
+        if (codecCtx) {
+            avcodec_free_context(&codecCtx);
+        }
+
         if (formatCtx) avformat_close_input(&formatCtx);
         throw;  // 重新抛出异常
     }
