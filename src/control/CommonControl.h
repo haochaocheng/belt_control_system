@@ -9,6 +9,10 @@
 
 // ✅ 2026-01-21 20:15 [音频网络传输] 添加音频网络发送器
 #include "../audio_network/AudioNetworkSender.h"
+// ✅ 2026-01-22 20:00 [TCP音频传输] 添加 TCP 模式音频发送器
+#include "../audio_network/AudioNetworkTcpSender.h"
+// ✅ 2026-01-23 00:00 [TTS网络传输] 添加 TTS 语音网络传输
+#include "SherpaOnnxTTS.h"
 
 // 前向声明
 class SystemConfig;
@@ -36,7 +40,8 @@ public:
     enum AudioOutputMode {
         LocalOnly,      ///< 仅本地音频设备（ES8388）
         NetworkOnly,    ///< 仅网络音频模块（UDP 组播）
-        DualOutput      ///< 本地 + 网络同时输出
+        DualOutput,     ///< 本地 + 网络同时输出
+        NetworkTcp      ///< 仅网络音频模块（TCP 模式）✅ 2026-01-22 20:00 [TCP音频传输] 新增
     };
     Q_ENUM(AudioOutputMode)
 
@@ -74,6 +79,26 @@ public:
     Q_INVOKABLE void configureNetworkAudio(const QString &multicastAddress = "224.1.1.1",
                                            quint16 port = 8800,
                                            int bitrate = 16000);
+
+    // ✅ 2026-01-22 20:00 [TCP音频传输] 添加 TCP 模式配置方法
+    /**
+     * @brief 配置 TCP 音频传输参数
+     * @param udpDiscoveryPort UDP 服务发现端口（默认：8600）
+     * @param deviceInfo 设备信息（名称、UUID 等）
+     */
+    Q_INVOKABLE void configureTcpAudio(quint16 udpDiscoveryPort = 8600,
+                                       const AudioNetworkTcpSender::DeviceInfo &deviceInfo = AudioNetworkTcpSender::DeviceInfo());
+
+    /**
+     * @brief 启动 TCP 模式服务发现
+     *
+     * 说明：
+     * - 绑定 UDP 端口 8600（或自定义端口）
+     * - 等待上位机广播配置 JSON
+     * - 解析 TCP 服务器 IP 和端口
+     * - 自动连接并发送设备信息
+     */
+    Q_INVOKABLE void startTcpDiscovery();
 
     /**
      * @brief 获取当前音频输出模式
@@ -124,11 +149,18 @@ private:
     AudioNetworkSender *m_audioNetworkSender;  // 音频网络发送器（UDP 组播 Opus）
     AudioOutputMode m_audioOutputMode;         // 音频输出模式（本地/网络/双输出）
 
+    // ✅ 2026-01-22 20:00 [TCP音频传输] 添加 TCP 模式音频发送器
+    AudioNetworkTcpSender *m_audioNetworkTcpSender;  // TCP 模式音频发送器（UDP 发现 + TCP 连接 + WebSocket）
+
+    // ✅ 2026-01-23 00:00 [TTS网络传输] 添加 TTS 语音网络传输
+    SherpaOnnxTTS *m_tts;  // TTS 语音合成器（用于起车预警语音）
+
     // 预警播放相关
     QTimer *m_warningTimer;        // 按时间模式的定时器
     int m_currentPlayCount;        // 当前已播放次数
     bool m_isWarningPlaying;       // 是否正在播放预警
     QString m_currentAudioPath;    // 当前播放的音频路径
+    int m_currentBeltNumber;       // ✅ 2026-01-23 00:00 [TTS网络传输] 当前起车预警皮带编号
     bool m_isStopAudioPlaying;     // 是否正在播放停车音频
     bool m_isFaultStop;            // 是否因故障而停止（跳过停车音频）
 
@@ -184,6 +216,11 @@ private:
     void onFeedbackTimeout(const QString &deviceName);
     bool checkFeedbackBit(quint16 registerValue, int channel);
     QString getDeviceFailureAudioPath(const QString &deviceName);
+
+    // ✅ 2026-01-23 01:45 [TTS发音优化] 添加数字转中文辅助函数
+    // 原因：TTS模型对阿拉伯数字"1"发音不清晰，改用中文数字"一"
+    // 用途：将皮带编号（1-10）转换为中文数字（一-十）用于TTS文本生成
+    QString numberToChinese(int number) const;
 };
 
 #endif // COMMONCONTROL_H
