@@ -1395,23 +1395,15 @@ if (Test-Path $SysrootLibPath) {
     exit 1
 }
 
-# Copy TTS models (vits-zh-aishell3)
-Write-Host "  Copying TTS models..." -ForegroundColor Yellow
-$TtsModelsSource = "$ProjectRoot\libs\tts_models"
-if (Test-Path $TtsModelsSource) {
-    $ttsModels = Get-ChildItem -Path $TtsModelsSource -Directory
-    Write-Host "    Found $($ttsModels.Count) TTS models" -ForegroundColor Gray
-
-    foreach ($model in $ttsModels) {
-        $modelSize = [math]::Round((Get-ChildItem -Path $model.FullName -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
-        Write-Host "    Copying $($model.Name) (${modelSize}MB)..." -ForegroundColor Gray
-        Fast-Copy $model.FullName "$DockerContextDir\tts_models\$($model.Name)" "TTS model: $($model.Name)"
-    }
-    Write-Host "    OK: TTS models copied" -ForegroundColor Green
-} else {
-    Write-Host "    WARNING: TTS models directory not found" -ForegroundColor Red
-    Write-Host "    TTS will be disabled. Please ensure $TtsModelsSource exists" -ForegroundColor Yellow
-}
+# ✅ 2026-01-23 16:15 [FIX 100.299] TTS/ASR 模型改用 Volume 挂载
+# 原因：模型文件大（~1.4GB），不再打包进 Docker 镜像
+# 方案：使用统一资源同步脚本部署到设备
+# 脚本：.\scripts\2026-01-21\01-sync-audio-files.ps1 <IP>
+# 挂载：见下方 docker run 命令中的 -v 参数
+# 注释掉：Copy TTS models
+Write-Host "  ℹ️  TTS/ASR 模型使用 Volume 挂载（不打包进镜像）" -ForegroundColor Cyan
+Write-Host "    如需同步模型，请运行：" -ForegroundColor Gray
+Write-Host "    .\\scripts\\2026-01-21\\01-sync-audio-files.ps1 $DeviceIP" -ForegroundColor Gray
 
 Write-Host ""
 Write-Host "  [OK] All application files prepared" -ForegroundColor Green
@@ -1434,11 +1426,19 @@ Write-Host "Step 3: Using Dockerfile with base image..." -ForegroundColor Cyan
 Copy-Item "$ProjectRoot\Dockerfile.ubuntu24-apt" "$DockerContextDir\Dockerfile" -Force
 Write-Host "  [OK] Dockerfile prepared (using cached base image)" -ForegroundColor Green
 
-# ✅ 2026-01-21 15:30 [FIX 100.278] 复制 ALSA 配置文件到构建上下文
-# 原因：设置 ES8388 为默认 ALSA 设备，使 GStreamer 自动路由音频到正确硬件
-Write-Host "  Copying ALSA configuration..." -ForegroundColor Yellow
-Copy-Item "$ProjectRoot\docker\rk3588\asound.conf" "$DockerContextDir\asound.conf" -Force
-Write-Host "  [OK] ALSA configuration copied" -ForegroundColor Green
+# ❌ 2026-01-23 19:50 [FIX 100.300.14] 注释掉静态 ALSA 配置
+# 原因：改用容器启动时动态检测硬件并生成配置
+# Write-Host "  Copying ALSA configuration..." -ForegroundColor Yellow
+# Copy-Item "$ProjectRoot\docker\rk3588\asound.conf" "$DockerContextDir\asound.conf" -Force
+# Write-Host "  [OK] ALSA configuration copied" -ForegroundColor Green
+
+# ✅ 2026-01-23 19:50 [FIX 100.300.14] 复制音频设备检测脚本和启动脚本
+# 原因：容器启动时自动检测硬件（ES8388 vs HDMI）并生成 ALSA 配置
+# 效果：linaro 设备使用 ES8388，pi 设备使用 HDMI，同一镜像适配所有硬件
+Write-Host "  Copying audio device detection scripts..." -ForegroundColor Yellow
+Copy-Item "$ProjectRoot\docker\rk3588\detect-audio-device.sh" "$DockerContextDir\detect-audio-device.sh" -Force
+Copy-Item "$ProjectRoot\docker\rk3588\app-entrypoint.sh" "$DockerContextDir\app-entrypoint.sh" -Force
+Write-Host "  [OK] Audio detection scripts copied" -ForegroundColor Green
 Write-Host ""
 
 # ============================================================
@@ -1776,6 +1776,8 @@ sudo docker run \
     -v /run/udev:/run/udev:ro \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/appdata:/app/appdata:rw \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/audio:/app/AUDIO:rw \
+    -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/models/tts_models:/app/tts_models:ro \
+    -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/models/asr_models:/app/asr_models:ro \
     -v /tmp/belt-control-cores:/tmp/belt-control-cores:rw \
     IMAGE_NAME_PLACEHOLDER:IMAGE_TAG_PLACEHOLDER
 
