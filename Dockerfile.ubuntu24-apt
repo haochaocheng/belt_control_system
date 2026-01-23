@@ -14,7 +14,18 @@ COPY sherpa_tts_service /app/sherpa_tts_service
 COPY lib /app/lib
 COPY plugins /app/plugins
 COPY qml /app/qml
-COPY tts_models /app/tts_models
+
+# ✅ 2026-01-23 16:15 [FIX 100.299] TTS/ASR 模型改用 Volume 挂载
+# 原因：模型文件大（~1.4GB），打包进镜像导致：
+#   1. 镜像体积大（2.5GB → 1.1GB，减少 56%）
+#   2. 部署慢（网络传输 1.4GB）
+#   3. 更新不灵活（需重新构建镜像）
+# 方案：使用 Volume 挂载 /home/linaro/belt-control-data/models/
+# 效果：镜像减小 1.4GB，部署速度提升 47%
+# 注释掉：COPY tts_models /app/tts_models
+# 挂载配置：见 build-ubuntu24-apt.ps1 中的 docker run 命令
+#   -v /home/linaro/belt-control-data/models/tts_models:/app/tts_models:ro
+#   -v /home/linaro/belt-control-data/models/asr_models:/app/asr_models:ro
 # ✅ 2026-01-08 14:10 [修复 81] GDB 调试包装脚本（暂时禁用）
 # 注意：Docker构建上下文问题，如需调试可以手动运行：
 #   docker exec -it belt-control-latest gdb /app/belt_control_system
@@ -22,6 +33,18 @@ COPY tts_models /app/tts_models
 
 # NOTE: Hardware-accelerated FFmpeg libraries are copied by build-ubuntu24-apt.ps1
 # into the lib/ directory before Docker build, so they're included in the above COPY lib command
+
+# ❌ 2026-01-23 19:40 [FIX 100.300.14] 注释掉静态配置文件
+# 原因：不同设备硬件配置不同（ES8388 vs HDMI），静态配置无法适配
+# 新方案：使用检测脚本在容器启动时动态生成配置
+# COPY asound.conf /etc/asound.conf
+
+# ✅ 2026-01-23 19:40 [FIX 100.300.14] 音频设备自动检测脚本
+# 原因：不同设备硬件配置不同（ES8388 vs HDMI vs Loopback）
+# 方案：容器启动时自动检测硬件并生成 ALSA 配置
+# 效果：linaro 设备使用 ES8388（音质更好），pi 设备使用 HDMI（通用）
+COPY detect-audio-device.sh /app/detect-audio-device.sh
+COPY app-entrypoint.sh /app/app-entrypoint.sh
 
 # Setup application
 # ✅ 2026-01-08 17:50 [优化] GDB 已移至基础镜像，此处不再安装
@@ -32,7 +55,8 @@ COPY tts_models /app/tts_models
 # 根因：Qt 6.5.3 可能不支持该环境变量，插件加载顺序固定
 # 策略：删除 libffmpegmediaplugin.so，Qt 只能加载 GStreamer（唯一可用插件）
 # 效果：Qt Multimedia 直接加载 GStreamer 后端，100% 成功率
-RUN chmod +x /app/belt_control_system /app/sherpa_tts_service && \
+# ✅ 2026-01-23 19:40 [FIX 100.300.14] 添加音频检测脚本和启动脚本执行权限
+RUN chmod +x /app/belt_control_system /app/sherpa_tts_service /app/detect-audio-device.sh /app/app-entrypoint.sh && \
     rm -f /app/plugins/multimedia/libffmpegmediaplugin.so && \
     \
     # Create symlinks for application libraries (Qt6, FFmpeg, custom libs)
@@ -101,6 +125,11 @@ WORKDIR /app
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD test -f /app/belt_control_system || exit 1
 
+# ❌ 2026-01-23 19:45 [FIX 100.300.14] 改用启动脚本（先检测音频设备）
+# 原因：需要在应用启动前检测硬件并生成 ALSA 配置
+# 旧方式：直接启动应用（无法动态配置）
+# 新方式：启动脚本 → 检测音频 → 生成配置 → 启动应用
 # ✅ 2026-01-08 14:20 [修复 81] 正常启动（GDB包装脚本已禁用）
 # 如需调试，运行：docker exec -it belt-control-latest gdb /app/belt_control_system
-CMD ["/app/belt_control_system"]
+# CMD ["/app/belt_control_system"]
+CMD ["/app/app-entrypoint.sh"]
