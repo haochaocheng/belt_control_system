@@ -39,6 +39,8 @@ Rectangle {
             Layout.fillHeight: true
             Layout.preferredWidth: 240
             color: "#1a1f2e"  // 与电机控制一致的深蓝灰背景
+            // ✅ 2026-01-26 [FIX 100.300.25.18]: 添加 clip 防止背景色超出弹窗底部
+            clip: true
 
             ColumnLayout {
                 anchors.fill: parent

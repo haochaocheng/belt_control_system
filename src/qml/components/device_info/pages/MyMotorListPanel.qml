@@ -3,7 +3,9 @@ import QtQuick 2.15
 Rectangle {
     id: root
     color: "#1a1f2e"  // 深蓝灰背景
-    
+    // ✅ 2026-01-26 [FIX 100.300.25.18]: 添加 clip 防止背景色超出弹窗底部
+    clip: true
+
     // ========== 公开属性 ==========
     property int currentMotorIndex: 0  // 当前选中的电机索引 (0-7)
     
