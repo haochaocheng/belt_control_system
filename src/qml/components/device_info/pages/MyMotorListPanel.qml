@@ -2,33 +2,42 @@ import QtQuick 2.15
 
 Rectangle {
     id: root
-    color: "#1a1f2e"  // 深蓝灰背景
+    // ✅ 2026-01-26 [FIX 100.300.25.28]: 改为透明，使用 33.png 作为整体背景
+    color: "transparent"
     // ✅ 2026-01-26 [FIX 100.300.25.18]: 添加 clip 防止背景色超出弹窗底部
     clip: true
 
+    // ✅ 2026-01-26 [FIX 100.300.25.28]: 添加整体背景图片 33.png
+    Image {
+        anchors.fill: parent
+        source: "../images/33.png"
+        fillMode: Image.Stretch
+        z: -1  // 放在最底层
+    }
+
     // ========== 公开属性 ==========
     property int currentMotorIndex: 0  // 当前选中的电机索引 (0-7)
-    
+
     // ========== 信号 ==========
     signal motorSelected(int motorIndex)  // 电机被选中时发出信号
-    
+
     // ========== 键盘导航支持 ==========
     focus: true
-    
+
     Keys.onUpPressed: {
         if (root.currentMotorIndex > 0) {
             root.currentMotorIndex--
             motorSelected(root.currentMotorIndex)
         }
     }
-    
+
     Keys.onDownPressed: {
         if (root.currentMotorIndex < 7) {
             root.currentMotorIndex++
             motorSelected(root.currentMotorIndex)
         }
     }
-    
+
     // ========== 标题 ==========
     Rectangle {
         id: header
@@ -36,10 +45,11 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         height: 50
-        color: "#252b3d"
-        border.color: "#3d4556"
-        border.width: 1
-        
+        // ✅ 2026-01-26 [FIX 100.300.25.28]: 改为透明，显示背景图片
+        color: "transparent"
+        border.color: "transparent"
+        border.width: 0
+
         Text {
             anchors.centerIn: parent
             text: "电机列表"
@@ -48,7 +58,7 @@ Rectangle {
             color: "#E0E0E0"
         }
     }
-    
+
     // ========== 电机列表（使用ListView，QDS支持）==========
     ListView {
         id: listView
@@ -66,9 +76,10 @@ Rectangle {
             width: listView.width
             // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
             height: 45  // 从 60 改为 45（一级标题是 40）
-            color: "transparent"  // ✅ 2026-01-26 [FIX 100.300.25.5]: 改为透明，使用背景图片
-            border.color: root.currentMotorIndex === index ? "#2196F3" : "#3d4556"
-            border.width: 1
+            color: "transparent"
+            // ✅ 2026-01-26 [FIX 100.300.25.28]: 移除边框
+            border.color: "transparent"
+            border.width: 0
 
             // ✅ 2026-01-26 [FIX 100.300.25.5]: 添加背景图片
             Image {

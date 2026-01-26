@@ -39,9 +39,18 @@ Rectangle {
         Rectangle {
             Layout.fillHeight: true
             Layout.preferredWidth: 240
-            color: "#1a1f2e"  // 与电机控制一致的深蓝灰背景
+            // ✅ 2026-01-26 [FIX 100.300.25.28]: 改为透明，使用 33.png 作为整体背景
+            color: "transparent"
             // ✅ 2026-01-26 [FIX 100.300.25.18]: 添加 clip 防止背景色超出弹窗底部
             clip: true
+
+            // ✅ 2026-01-26 [FIX 100.300.25.28]: 添加整体背景图片 33.png
+            Image {
+                anchors.fill: parent
+                source: "../images/33.png"
+                fillMode: Image.Stretch
+                z: -1  // 放在最底层
+            }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -52,9 +61,10 @@ Rectangle {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 50
-                    color: "#252b3d"
-                    border.color: "#3d4556"
-                    border.width: 1
+                    // ✅ 2026-01-26 [FIX 100.300.25.28]: 改为透明，显示背景图片
+                    color: "transparent"
+                    border.color: "transparent"
+                    border.width: 0
 
                     Text {
                         anchors.centerIn: parent
@@ -79,9 +89,10 @@ Rectangle {
                         width: protectionListView.width
                         // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
                         height: 45  // 从 60 改为 45（一级标题是 40）
-                        color: "transparent"  // ✅ 2026-01-26 [FIX 100.300.25]: 改为透明，使用背景图片
-                        border.color: root.currentProtectionIndex === index ? "#2196F3" : "#3d4556"
-                        border.width: 1
+                        color: "transparent"
+                        // ✅ 2026-01-26 [FIX 100.300.25.28]: 移除边框
+                        border.color: "transparent"
+                        border.width: 0
 
                         // ✅ 2026-01-26 [FIX 100.300.25]: 添加背景图片
                         // ✅ 2026-01-26 [FIX 100.300.25.2]: 改用states方式，使用相对路径便于QDS预览
