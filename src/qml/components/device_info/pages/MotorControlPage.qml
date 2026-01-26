@@ -47,7 +47,8 @@ Rectangle {
         // ========== 左侧：电机列表（使用Loader加载）==========
         Loader {
             id: motorListPanel
-            width: 200
+            // ✅ 2026-01-26 [FIX 100.300.25.16]: 统一列表宽度为 240，与开关量/模拟量一致
+            width: 240  // 从 200 改为 240
             height: parent.height
             source: "MyMotorListPanel.qml"
 
