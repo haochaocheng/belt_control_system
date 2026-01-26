@@ -336,6 +336,15 @@ Rectangle {
             anchors.margins: 20
             color: "transparent"  // 透明，显示背景图片
 
+            // ✅ 2026-01-26 [FIX 100.300.25.7]: 添加背景图片154.png
+            Image {
+                id: contentAreaBackground
+                anchors.fill: parent
+                source: "../../images/154.png"
+                fillMode: Image.Stretch
+                z: -1  // 放在最底层，作为所有页面的统一背景
+            }
+
             // ✅ 2026-01-24 [FIX]: 使用 StackLayout 切换页面
             StackLayout {
                 id: contentStack
@@ -528,22 +537,22 @@ Rectangle {
     // ✅ 2026-01-24 [FIX]: 根据类别返回底部按钮列表
     function getBottomButtons(categoryIndex) {
         switch(categoryIndex) {
-            case 0: // 基本配置
-                return ["保存配置", "恢复默认", "导入配置", "导出配置"]
-            case 1: // 开关量输入
-                return ["添加输入", "删除输入", "测试输入"]
-            case 2: // 模拟量输入
-                return ["添加输入", "删除输入", "校准"]
-            case 3: // 电机控制
-                return ["启动测试", "停止测试", "参数校验"]
-            case 4: // 制动器控制
-                return ["制动测试", "释放测试", "参数校验"]
-            case 5: // 张紧控制
-                return ["张紧测试", "释放测试", "参数校验"]
-            case 6: // 逻辑控制
-                return ["添加逻辑", "删除逻辑", "测试逻辑"]
-            default:
-                return []
+        case 0: // 基本配置
+            return ["保存配置", "恢复默认", "导入配置", "导出配置"]
+        case 1: // 开关量输入
+            return ["添加输入", "删除输入", "测试输入"]
+        case 2: // 模拟量输入
+            return ["添加输入", "删除输入", "校准"]
+        case 3: // 电机控制
+            return ["启动测试", "停止测试", "参数校验"]
+        case 4: // 制动器控制
+            return ["制动测试", "释放测试", "参数校验"]
+        case 5: // 张紧控制
+            return ["张紧测试", "释放测试", "参数校验"]
+        case 6: // 逻辑控制
+            return ["添加逻辑", "删除逻辑", "测试逻辑"]
+        default:
+            return []
         }
     }
 }
