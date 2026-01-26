@@ -103,11 +103,42 @@ Rectangle {
                     Rectangle {
                         width: 120
                         height: 50
-                        color: root.currentTabIndex === index ? "#1a1f2e" : "transparent"
-                        border.color: root.currentTabIndex === index ? "#2196F3" : "transparent"
-                        border.width: root.currentTabIndex === index ? 2 : 0
+                        // ✅ 2026-01-26 [FIX 100.300.25.20]: 改为透明，使用背景图片
+                        color: "transparent"
+                        border.color: "transparent"
+                        border.width: 0
 
-                        // ✅ 底部激活指示条
+                        // ✅ 2026-01-26 [FIX 100.300.25.20]: 添加背景图片
+                        Image {
+                            id: buttonBackgroundImage
+                            anchors.fill: parent
+                            fillMode: Image.Stretch
+                            z: -1  // 放在最底层
+
+                            // 使用相对路径，便于QDS预览（向上三级到qml目录）
+                            source: "../../../images/DJHeadbutton1.png"
+
+                            states: [
+                                State {
+                                    name: "selected"
+                                    when: root.currentTabIndex === index
+                                    PropertyChanges {
+                                        target: buttonBackgroundImage
+                                        source: "../../../images/DJHeadbutton2.png"
+                                    }
+                                },
+                                State {
+                                    name: "normal"
+                                    when: root.currentTabIndex !== index
+                                    PropertyChanges {
+                                        target: buttonBackgroundImage
+                                        source: "../../../images/DJHeadbutton1.png"
+                                    }
+                                }
+                            ]
+                        }
+
+                        // ✅ 底部激活指示条（保留，增强视觉效果）
                         Rectangle {
                             visible: root.currentTabIndex === index
                             width: parent.width
