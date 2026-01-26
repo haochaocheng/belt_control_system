@@ -107,7 +107,7 @@ Rectangle {
                                 Rectangle {
                                     width: 8
                                     height: 8
-                                    radius: 4
+                                    radius: 2
                                     color: model.active ? "#F44336" : "#4CAF50"  // 红色激活，绿色正常
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
@@ -134,13 +134,13 @@ Rectangle {
         }
 
         // ========== 右侧：参数编辑区域 ==========
+        // ✅ 2026-01-26 [FIX 100.300.24]: 统一为电机控制的主题风格
         Rectangle {
             Layout.fillHeight: true
             Layout.fillWidth: true
-            color: "#1a2332"
-            radius: 8
-            border.color: "#00d4ff"
-            border.width: 1
+            color: "transparent"  // 与电机控制一致：透明背景
+            // 移除 radius
+            // 移除 border
 
             ColumnLayout {
                 anchors.fill: parent
@@ -150,17 +150,17 @@ Rectangle {
                 // 标题
                 Text {
                     text: "保护参数设置"
-                    font.pixelSize: 15
-                    font.bold: true
-                    color: "#00d4ff"
+                    font.pixelSize: 16
+                    font.weight: Font.Bold
+                    color: "#E0E0E0"  // 与电机控制一致：浅灰色
                     Layout.alignment: Qt.AlignHCenter
                 }
 
                 Rectangle {
                     Layout.fillWidth: true
                     height: 1
-                    color: "#00d4ff"
-                    opacity: 0.3
+                    color: "#3d4556"  // 与电机控制一致：中灰色
+                    opacity: 0.5
                 }
 
                 // 滚动区域：参数字段
@@ -183,8 +183,8 @@ Rectangle {
 
                             Text {
                                 text: "保护名称:"
-                                font.pixelSize: 13
-                                color: "#95a5a6"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
@@ -194,8 +194,8 @@ Rectangle {
                                 font.pixelSize: 12
 
                                 background: Rectangle {
-                                    color: "#34495e"
-                                    radius: 4
+                                    color: "#2d3548"
+                                    radius: 2
                                     border.color: nameField.activeFocus ? "#3498db" : "#7f8c8d"
                                     border.width: 1
                                 }
@@ -211,8 +211,8 @@ Rectangle {
 
                             Text {
                                 text: "模块类型:"
-                                font.pixelSize: 13
-                                color: "#95a5a6"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
@@ -223,15 +223,15 @@ Rectangle {
                                 model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
 
                                 background: Rectangle {
-                                    color: "#34495e"
-                                    radius: 4
+                                    color: "#2d3548"
+                                    radius: 2
                                     border.color: moduleTypeCombo.pressed ? "#3498db" : "#7f8c8d"
                                     border.width: 1
                                 }
 
                                 contentItem: Text {
                                     text: moduleTypeCombo.displayText
-                                    color: "#ecf0f1"
+                                    color: "#E0E0E0"
                                     font.pixelSize: 12
                                     verticalAlignment: Text.AlignVCenter
                                     leftPadding: 10
@@ -262,8 +262,8 @@ Rectangle {
 
                             Text {
                                 text: "寄存器地址:"
-                                font.pixelSize: 13
-                                color: "#95a5a6"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
@@ -275,8 +275,8 @@ Rectangle {
                                 Layout.fillWidth: true
 
                                 background: Rectangle {
-                                    color: "#34495e"
-                                    radius: 4
+                                    color: "#2d3548"
+                                    radius: 2
                                     border.color: registerAddressSpin.activeFocus ? "#3498db" : "#7f8c8d"
                                     border.width: 1
                                 }
@@ -284,7 +284,7 @@ Rectangle {
                                 contentItem: TextInput {
                                     text: registerAddressSpin.textFromValue(registerAddressSpin.value, registerAddressSpin.locale)
                                     font.pixelSize: 12
-                                    color: "#ecf0f1"
+                                    color: "#E0E0E0"
                                     horizontalAlignment: Qt.AlignHCenter
                                     verticalAlignment: Qt.AlignVCenter
                                     readOnly: !registerAddressSpin.editable
@@ -301,8 +301,8 @@ Rectangle {
 
                             Text {
                                 text: "通道编号:"
-                                font.pixelSize: 13
-                                color: "#95a5a6"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
@@ -314,8 +314,8 @@ Rectangle {
                                 Layout.fillWidth: true
 
                                 background: Rectangle {
-                                    color: "#34495e"
-                                    radius: 4
+                                    color: "#2d3548"
+                                    radius: 2
                                     border.color: channelSpin.activeFocus ? "#3498db" : "#7f8c8d"
                                     border.width: 1
                                 }
@@ -323,7 +323,7 @@ Rectangle {
                                 contentItem: TextInput {
                                     text: channelSpin.textFromValue(channelSpin.value, channelSpin.locale)
                                     font.pixelSize: 12
-                                    color: "#ecf0f1"
+                                    color: "#E0E0E0"
                                     horizontalAlignment: Qt.AlignHCenter
                                     verticalAlignment: Qt.AlignVCenter
                                     readOnly: !channelSpin.editable
@@ -336,7 +336,7 @@ Rectangle {
                         Rectangle {
                             Layout.fillWidth: true
                             height: 1
-                            color: "#00d4ff"
+                            color: "#3d4556"
                             opacity: 0.2
                         }
 
@@ -347,8 +347,8 @@ Rectangle {
 
                             Text {
                                 text: "保护延时(秒):"
-                                font.pixelSize: 13
-                                color: "#95a5a6"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
@@ -373,8 +373,8 @@ Rectangle {
                                 }
 
                                 background: Rectangle {
-                                    color: "#34495e"
-                                    radius: 4
+                                    color: "#2d3548"
+                                    radius: 2
                                     border.color: delaySpin.activeFocus ? "#3498db" : "#7f8c8d"
                                     border.width: 1
                                 }
@@ -382,7 +382,7 @@ Rectangle {
                                 contentItem: TextInput {
                                     text: delaySpin.textFromValue(delaySpin.value, delaySpin.locale)
                                     font.pixelSize: 12
-                                    color: "#ecf0f1"
+                                    color: "#E0E0E0"
                                     horizontalAlignment: Qt.AlignHCenter
                                     verticalAlignment: Qt.AlignVCenter
                                     readOnly: !delaySpin.editable
@@ -399,8 +399,8 @@ Rectangle {
 
                             Text {
                                 text: "播放次数:"
-                                font.pixelSize: 13
-                                color: "#95a5a6"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
@@ -413,8 +413,8 @@ Rectangle {
                                 Layout.fillWidth: true
 
                                 background: Rectangle {
-                                    color: "#34495e"
-                                    radius: 4
+                                    color: "#2d3548"
+                                    radius: 2
                                     border.color: playCountSpin.activeFocus ? "#3498db" : "#7f8c8d"
                                     border.width: 1
                                 }
@@ -422,7 +422,7 @@ Rectangle {
                                 contentItem: TextInput {
                                     text: playCountSpin.textFromValue(playCountSpin.value, playCountSpin.locale)
                                     font.pixelSize: 12
-                                    color: "#ecf0f1"
+                                    color: "#E0E0E0"
                                     horizontalAlignment: Qt.AlignHCenter
                                     verticalAlignment: Qt.AlignVCenter
                                     readOnly: !playCountSpin.editable
@@ -439,8 +439,8 @@ Rectangle {
 
                             Text {
                                 text: "播放时长(秒):"
-                                font.pixelSize: 13
-                                color: "#95a5a6"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
@@ -465,8 +465,8 @@ Rectangle {
                                 }
 
                                 background: Rectangle {
-                                    color: "#34495e"
-                                    radius: 4
+                                    color: "#2d3548"
+                                    radius: 2
                                     border.color: durationSpin.activeFocus ? "#3498db" : "#7f8c8d"
                                     border.width: 1
                                 }
@@ -474,7 +474,7 @@ Rectangle {
                                 contentItem: TextInput {
                                     text: durationSpin.textFromValue(durationSpin.value, durationSpin.locale)
                                     font.pixelSize: 12
-                                    color: "#ecf0f1"
+                                    color: "#E0E0E0"
                                     horizontalAlignment: Qt.AlignHCenter
                                     verticalAlignment: Qt.AlignVCenter
                                     readOnly: !durationSpin.editable
@@ -487,7 +487,7 @@ Rectangle {
                         Rectangle {
                             Layout.fillWidth: true
                             height: 1
-                            color: "#00d4ff"
+                            color: "#3d4556"
                             opacity: 0.2
                         }
 
@@ -498,8 +498,8 @@ Rectangle {
 
                             Text {
                                 text: "语音报警:"
-                                font.pixelSize: 13
-                                color: "#95a5a6"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
@@ -525,7 +525,7 @@ Rectangle {
                                         x: 4
                                         y: 4
                                         radius: 5
-                                        color: "#00d4ff"
+                                        color: "#3d4556"
                                         visible: ttsRadio.checked
                                     }
                                 }
@@ -533,7 +533,7 @@ Rectangle {
                                 contentItem: Text {
                                     text: ttsRadio.text
                                     font: ttsRadio.font
-                                    color: "#ecf0f1"
+                                    color: "#E0E0E0"
                                     leftPadding: ttsRadio.indicator.width + 8
                                     verticalAlignment: Text.AlignVCenter
                                 }
@@ -561,7 +561,7 @@ Rectangle {
                                         x: 4
                                         y: 4
                                         radius: 5
-                                        color: "#00d4ff"
+                                        color: "#3d4556"
                                         visible: fileRadio.checked
                                     }
                                 }
@@ -569,7 +569,7 @@ Rectangle {
                                 contentItem: Text {
                                     text: fileRadio.text
                                     font: fileRadio.font
-                                    color: "#ecf0f1"
+                                    color: "#E0E0E0"
                                     leftPadding: fileRadio.indicator.width + 8
                                     verticalAlignment: Text.AlignVCenter
                                 }
@@ -584,8 +584,8 @@ Rectangle {
 
                             Text {
                                 text: "报警文字:"
-                                font.pixelSize: 13
-                                color: "#95a5a6"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
@@ -596,8 +596,8 @@ Rectangle {
                                 font.pixelSize: 12
 
                                 background: Rectangle {
-                                    color: "#34495e"
-                                    radius: 4
+                                    color: "#2d3548"
+                                    radius: 2
                                     border.color: ttsTextField.activeFocus ? "#3498db" : "#7f8c8d"
                                     border.width: 1
                                 }
@@ -614,8 +614,8 @@ Rectangle {
 
                             Text {
                                 text: "音频文件:"
-                                font.pixelSize: 13
-                                color: "#95a5a6"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
@@ -627,9 +627,9 @@ Rectangle {
                                 font.pixelSize: 12
 
                                 background: Rectangle {
-                                    color: "#34495e"
-                                    radius: 4
-                                    border.color: "#7f8c8d"
+                                    color: "#2d3548"
+                                    radius: 2
+                                    border.color: "#3d4556"
                                     border.width: 1
                                 }
 
@@ -643,15 +643,15 @@ Rectangle {
 
                                 background: Rectangle {
                                     color: parent.pressed ? "#2980b9" : (parent.hovered ? "#3498db" : "#34495e")
-                                    radius: 4
-                                    border.color: "#3498db"
+                                    radius: 2
+                                    border.color: "#2196F3"
                                     border.width: 1
                                 }
 
                                 contentItem: Text {
                                     text: parent.text
                                     font.pixelSize: 11
-                                    color: "#ecf0f1"
+                                    color: "#E0E0E0"
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
                                 }
@@ -684,7 +684,7 @@ Rectangle {
 
                         background: Rectangle {
                             color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
-                            radius: 4
+                            radius: 2
                         }
 
                         contentItem: Text {
@@ -708,7 +708,7 @@ Rectangle {
 
                         background: Rectangle {
                             color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
-                            radius: 4
+                            radius: 2
                         }
 
                         contentItem: Text {
@@ -733,7 +733,7 @@ Rectangle {
 
                         background: Rectangle {
                             color: parent.pressed ? "#7f8c8d" : (parent.hovered ? "#95a5a6" : "#7f8c8d")
-                            radius: 4
+                            radius: 2
                         }
 
                         contentItem: Text {
