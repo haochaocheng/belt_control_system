@@ -7,7 +7,8 @@ Rectangle {
     id: root
     width: 800  // 默认宽度（用于QDS预览）
     height: 600  // 默认高度（用于QDS预览）
-    color: "#1a1f2e"
+    // ✅ 2026-01-26 [FIX 100.300.25.15]: 改为透明背景，与开关量/模拟量页面统一
+    color: "transparent"  // 从 "#1a1f2e" 改为 "transparent"
 
     // ========== 公开属性 ==========
     property int motorIndex: 0  // 当前电机索引 (0-7)
