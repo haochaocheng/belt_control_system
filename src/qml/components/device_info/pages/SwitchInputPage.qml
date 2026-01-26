@@ -79,7 +79,7 @@ Rectangle {
                         // ✅ 2026-01-26 [FIX 100.300.25]: 添加背景图片
                         Image {
                             anchors.fill: parent
-                            source: root.currentProtectionIndex === index ? "qrc:/qt/qml/BeltControlQml/pages/Input1Content/images/bhNameBK1.png" : "qrc:/qt/qml/BeltControlQml/pages/Input1Content/images/bhNameBK.png"
+                            source: root.currentProtectionIndex === index ? "qrc:/qt/qml/BeltControlQml/images/bhNameBK1.png" : "qrc:/qt/qml/BeltControlQml/images/bhNameBK.png"
                             fillMode: Image.Stretch
                             z: -1  // 放在最底层
                         }
