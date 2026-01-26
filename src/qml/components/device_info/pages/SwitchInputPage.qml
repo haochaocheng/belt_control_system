@@ -116,38 +116,34 @@ Rectangle {
                             anchors.left: parent.left
                         }
 
-                        // ✅ 开关量信息
-                        Column {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 20
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 4
+                        // ✅ 2026-01-26 [FIX 100.300.25.4]: 开关量名称居中显示
+                        Text {
+                            text: model.name
+                            font.pixelSize: 16
+                            font.weight: root.currentProtectionIndex === index ? Font.Bold : Font.Normal
+                            color: root.currentProtectionIndex === index ? "#E0E0E0" : "#9E9E9E"
+                            anchors.centerIn: parent
+                        }
 
-                            // 开关量名称
-                            Text {
-                                text: model.name
-                                font.pixelSize: 16
-                                font.weight: root.currentProtectionIndex === index ? Font.Bold : Font.Normal
-                                color: root.currentProtectionIndex === index ? "#E0E0E0" : "#9E9E9E"
+                        // ✅ 2026-01-26 [FIX 100.300.25.4]: 状态指示放在最右侧
+                        Row {
+                            spacing: 8
+                            anchors.right: parent.right
+                            anchors.rightMargin: 20
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Rectangle {
+                                width: 8
+                                height: 8
+                                radius: 2
+                                color: model.active ? "#F44336" : "#4CAF50"  // 红色激活，绿色正常
+                                anchors.verticalCenter: parent.verticalCenter
                             }
 
-                            // 状态指示
-                            Row {
-                                spacing: 8
-
-                                Rectangle {
-                                    width: 8
-                                    height: 8
-                                    radius: 2
-                                    color: model.active ? "#F44336" : "#4CAF50"  // 红色激活，绿色正常
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-
-                                Text {
-                                    text: model.active ? "已激活" : "正常"
-                                    font.pixelSize: 12
-                                    color: "#9E9E9E"
-                                }
+                            Text {
+                                text: model.active ? "已激活" : "正常"
+                                font.pixelSize: 12
+                                color: "#9E9E9E"
                             }
                         }
 
