@@ -74,7 +74,8 @@ Rectangle {
 
                     delegate: Rectangle {
                         width: protectionListView.width
-                        height: 60
+                        // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
+                        height: 45  // 从 60 改为 45（一级标题是 40）
                         color: "transparent"  // ✅ 2026-01-26 [FIX 100.300.25]: 改为透明，使用背景图片
                         border.color: root.currentProtectionIndex === index ? "#2196F3" : "#3d4556"
                         border.width: 1
@@ -122,7 +123,8 @@ Rectangle {
                         // ✅ 2026-01-26 [FIX 100.300.25.4]: 开关量名称居中显示
                         Text {
                             text: model.name
-                            font.pixelSize: 16
+                            // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整字体，使二级标题比一级标题小
+                            font.pixelSize: 14  // 从 16 改为 14（与一级标题相同）
                             font.weight: root.currentProtectionIndex === index ? Font.Bold : Font.Normal
                             color: root.currentProtectionIndex === index ? "#E0E0E0" : "#9E9E9E"
                             anchors.centerIn: parent
