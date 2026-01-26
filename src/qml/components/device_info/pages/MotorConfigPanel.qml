@@ -36,9 +36,19 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         height: 50
-        color: "#252b3d"
-        border.color: "#3d4556"
-        border.width: 1
+        // ✅ 2026-01-26 [FIX 100.300.25.21]: 改为透明，使用背景图片
+        color: "transparent"
+        border.color: "transparent"
+        border.width: 0
+
+        // ✅ 2026-01-26 [FIX 100.300.25.21]: 添加背景图片，填充整个 header
+        Image {
+            id: headerBackground
+            anchors.fill: parent
+            source: "../images/059.png"
+            fillMode: Image.Stretch  // 拉伸填充整个 header
+            z: -1  // 放在最底层
+        }
 
         Text {
             anchors.centerIn: parent
@@ -101,6 +111,7 @@ Rectangle {
                     model: ["基本配置", "电流保护", "前轴承温度", "后轴承温度", "A相绕组", "B相绕组", "C相绕组", "电机温度", "X轴振动", "Y轴振动"]
 
                     Rectangle {
+                        id: rectangle
                         width: 120
                         height: 50
                         // ✅ 2026-01-26 [FIX 100.300.25.20]: 改为透明，使用背景图片
@@ -148,8 +159,11 @@ Rectangle {
                         }
 
                         Text {
-                            anchors.centerIn: parent
+
                             text: modelData
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.leftMargin: 45
                             font.pixelSize: 14
                             font.weight: root.currentTabIndex === index ? Font.Bold : Font.Normal
                             color: root.currentTabIndex === index ? "#E0E0E0" : "#9E9E9E"
