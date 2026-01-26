@@ -332,8 +332,11 @@ Rectangle {
             anchors.left: leftButtonsContainer.right  // ✅ 2026-01-24 [FIX]: 更新锚点引用
             anchors.right: parent.right
             anchors.top: topButtonsContainer.bottom
-            anchors.bottom: bottomButtonsContainer.top  // ✅ 2026-01-24 [FIX]: 为底部按钮留出空间
-            anchors.margins: 20
+            anchors.bottom: parent.bottom  // ✅ 2026-01-26 [FIX 100.300.25.8]: 延伸到底部，覆盖底部按钮区域
+            anchors.leftMargin: 2
+            anchors.rightMargin: 2
+            anchors.topMargin: 2
+            anchors.bottomMargin: 8
             color: "transparent"  // 透明，显示背景图片
 
             // ✅ 2026-01-26 [FIX 100.300.25.7]: 添加背景图片154.png
@@ -348,8 +351,19 @@ Rectangle {
             // ✅ 2026-01-24 [FIX]: 使用 StackLayout 切换页面
             StackLayout {
                 id: contentStack
-                anchors.fill: parent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: bottomButtonsContainer.top  // ✅ 2026-01-26 [FIX 100.300.25.8]: 为底部按钮留出空间
+                anchors.bottomMargin: 20
                 currentIndex: root.currentCategory  // 自动切换页面
+
+                // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
+                Component.onCompleted: {
+                    console.log("✅ [DEBUG] StackLayout 宽度:", width)
+                    console.log("✅ [DEBUG] StackLayout 高度:", height)
+                    console.log("✅ [DEBUG] StackLayout 子元素数量:", count)
+                }
 
                 // 0: 基本配置
                 // ✅ 2026-01-24 [FIX 100.302]: 使用 BasicConfigPage 组件
@@ -380,9 +394,17 @@ Rectangle {
                     active: root.currentCategory === 1  // 仅在选中时加载
                     source: "pages/SwitchInputPage.qml"
 
+                    // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
+                    Component.onCompleted: {
+                        console.log("✅ [DEBUG] SwitchInputPage Loader 宽度:", width)
+                        console.log("✅ [DEBUG] SwitchInputPage Loader 高度:", height)
+                    }
+
                     onLoaded: {
                         if (item) {
                             console.log("✅ [DeviceSettingsDialog] SwitchInputPage 加载成功")
+                            console.log("✅ [DEBUG] SwitchInputPage item 宽度:", item.width)
+                            console.log("✅ [DEBUG] SwitchInputPage item 高度:", item.height)
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
                         }
