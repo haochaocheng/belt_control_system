@@ -187,20 +187,28 @@ Rectangle {
                 anchors.margins: 15
                 spacing: 12
 
-                // 标题
-                Text {
-                    text: "保护参数设置"
-                    font.pixelSize: 16
-                    font.weight: Font.Bold
-                    color: "#E0E0E0"  // 与电机控制一致：浅灰色
-                    Layout.alignment: Qt.AlignHCenter
-                }
-
+                // ✅ 2026-01-26 [FIX 100.300.25.22]: 标题区域使用背景图片
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 1
-                    color: "#3d4556"  // 与电机控制一致：中灰色
-                    opacity: 0.5
+                    height: 50
+                    color: "transparent"
+
+                    // 背景图片
+                    Image {
+                        anchors.fill: parent
+                        source: "../images/059.png"
+                        fillMode: Image.Stretch
+                        z: -1
+                    }
+
+                    // 标题文字
+                    Text {
+                        anchors.centerIn: parent
+                        text: "保护参数设置"
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        color: "#E0E0E0"
+                    }
                 }
 
                 // 滚动区域：参数字段
