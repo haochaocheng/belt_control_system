@@ -77,11 +77,34 @@ Rectangle {
                         border.width: 1
 
                         // ✅ 2026-01-26 [FIX 100.300.25]: 添加背景图片
+                        // ✅ 2026-01-26 [FIX 100.300.25.2]: 改用states方式，使用相对路径便于QDS预览
                         Image {
+                            id: backgroundImage
                             anchors.fill: parent
-                            source: root.currentProtectionIndex === index ? "qrc:/qt/qml/BeltControlQml/images/bhNameBK1.png" : "qrc:/qt/qml/BeltControlQml/images/bhNameBK.png"
                             fillMode: Image.Stretch
                             z: -1  // 放在最底层
+
+                            // 使用相对路径，便于QDS预览
+                            source: "../../images/bhNameBK.png"
+
+                            states: [
+                                State {
+                                    name: "selected"
+                                    when: root.currentProtectionIndex === index
+                                    PropertyChanges {
+                                        target: backgroundImage
+                                        source: "../../images/bhNameBK1.png"
+                                    }
+                                },
+                                State {
+                                    name: "normal"
+                                    when: root.currentProtectionIndex !== index
+                                    PropertyChanges {
+                                        target: backgroundImage
+                                        source: "../../images/bhNameBK.png"
+                                    }
+                                }
+                            ]
                         }
 
                         // ✅ 左侧激活指示条
