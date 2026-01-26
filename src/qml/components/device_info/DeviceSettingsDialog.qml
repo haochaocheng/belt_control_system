@@ -355,6 +355,10 @@ Rectangle {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.bottom: bottomButtonsContainer.top  // ✅ 2026-01-26 [FIX 100.300.25.8]: 为底部按钮留出空间
+                // ✅ 2026-01-26 [FIX 100.300.25.13]: 添加 margins，让内容在背景图片边框内部显示
+                anchors.leftMargin: 15
+                anchors.rightMargin: 15
+                anchors.topMargin: 15
                 anchors.bottomMargin: 20
                 currentIndex: root.currentCategory  // 自动切换页面
 
