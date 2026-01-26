@@ -5,6 +5,9 @@ import QtQuick.Layouts 1.15
 // ✅ 2026-01-25 [开关量输入页面] 左右分栏布局：左侧列表 + 右侧参数编辑
 Rectangle {
     id: root
+    // ✅ 2026-01-26 [FIX 100.300.25.12]: 明确设置尺寸，确保运行时正确显示
+    implicitWidth: 800
+    implicitHeight: 600
     color: "transparent"
 
     // ========== 公开属性 ==========
