@@ -382,16 +382,17 @@ Rectangle {
             // ✅ 2026-01-24 [FIX]: 使用 StackLayout 切换页面
             StackLayout {
                 id: contentStack
-                height: 657
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.bottom: bottomButtonsContainer.top  // ✅ 2026-01-26 [FIX 100.300.25.8]: 为底部按钮留出空间
+                // ✅ 2026-01-26 [FIX 100.300.25.19]: 移除硬编码高度和无效 anchor
+                // 原因：bottomButtonsContainer 不是 StackLayout 的兄弟元素，anchor 无效
+                // 解决：使用 anchors.fill + bottomMargin 为底部按钮留出空间
+                anchors.fill: parent
                 // ✅ 2026-01-26 [FIX 100.300.25.13]: 添加 margins，让内容在背景图片边框内部显示
                 anchors.leftMargin: 2
                 anchors.rightMargin: 19
                 anchors.topMargin: 19
-                anchors.bottomMargin: 10
+                // ✅ 2026-01-26 [FIX 100.300.25.19]: 为底部按钮留出空间
+                // bottomButtonsContainer 高度 60 + bottomMargin 20 - contentArea bottomMargin 8 = 72
+                anchors.bottomMargin: 72
                 currentIndex: root.currentCategory  // 自动切换页面
 
                 // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
