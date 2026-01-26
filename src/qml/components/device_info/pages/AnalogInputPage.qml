@@ -168,6 +168,12 @@ Rectangle {
             // 移除 radius
             // 移除 border
 
+            // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
+            Component.onCompleted: {
+                console.log("✅ [DEBUG] AnalogInputPage 右侧区域宽度:", width)
+                console.log("✅ [DEBUG] AnalogInputPage 右侧区域高度:", height)
+            }
+
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 15
@@ -198,9 +204,24 @@ Rectangle {
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
+                    // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
+                    Component.onCompleted: {
+                        console.log("✅ [DEBUG] AnalogInputPage ScrollView 宽度:", width)
+                        console.log("✅ [DEBUG] AnalogInputPage ScrollView 高度:", height)
+                    }
+
                     ColumnLayout {
                         width: parent.width - 20
                         spacing: 12
+
+                        // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加隐式高度，让 ScrollView 知道内容大小
+                        implicitHeight: childrenRect.height
+
+                        // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
+                        Component.onCompleted: {
+                            console.log("✅ [DEBUG] AnalogInputPage ColumnLayout 宽度:", width)
+                            console.log("✅ [DEBUG] AnalogInputPage ColumnLayout 隐式高度:", implicitHeight)
+                        }
 
                         // 保护名称
                         RowLayout {
