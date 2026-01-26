@@ -172,8 +172,6 @@ Rectangle {
             Layout.fillHeight: true
             Layout.fillWidth: true
             color: "transparent"  // 与电机控制一致：透明背景
-            // 移除 radius
-            // 移除 border
 
             // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
             Component.onCompleted: {
@@ -181,38 +179,41 @@ Rectangle {
                 console.log("✅ [DEBUG] AnalogInputPage 右侧区域高度:", height)
             }
 
-            ColumnLayout {
-                anchors.fill: parent
-                // ✅ 2026-01-26 [FIX 100.300.25.23]: 移除 margins，让标题贴近左侧
-                anchors.leftMargin: 0
-                anchors.rightMargin: 15
-                anchors.topMargin: 15
-                anchors.bottomMargin: 15
-                spacing: 12
+            // ✅ 2026-01-26 [FIX 100.300.25.24]: 标题区域直接 anchor，与电机控制保持一致
+            Rectangle {
+                id: titleBar
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 50
+                color: "transparent"
 
-                // ✅ 2026-01-26 [FIX 100.300.25.22]: 标题区域使用背景图片
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 50
-                    color: "transparent"
-
-                    // 背景图片
-                    Image {
-                        anchors.fill: parent
-                        source: "../images/059.png"
-                        fillMode: Image.Stretch
-                        z: -1
-                    }
-
-                    // 标题文字
-                    Text {
-                        anchors.centerIn: parent
-                        text: "保护参数设置"
-                        font.pixelSize: 16
-                        font.weight: Font.Bold
-                        color: "#E0E0E0"
-                    }
+                // 背景图片
+                Image {
+                    anchors.fill: parent
+                    source: "../images/059.png"
+                    fillMode: Image.Stretch
+                    z: -1
                 }
+
+                // 标题文字
+                Text {
+                    anchors.centerIn: parent
+                    text: "保护参数设置"
+                    font.pixelSize: 16
+                    font.weight: Font.Bold
+                    color: "#E0E0E0"
+                }
+            }
+
+            // ✅ 内容区域
+            ColumnLayout {
+                anchors.top: titleBar.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: 15
+                spacing: 12
 
                 // 滚动区域：参数字段
                 ScrollView {
