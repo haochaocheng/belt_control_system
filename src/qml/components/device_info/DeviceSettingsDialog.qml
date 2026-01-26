@@ -93,6 +93,15 @@ Rectangle {
             height: 45
             color: "transparent"
 
+            // ✅ 2026-01-26 [FIX 100.300.25.17]: 添加 MouseArea 阻止点击事件穿透到背景
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    // 阻止点击事件穿透，不做任何操作
+                    mouse.accepted = true
+                }
+            }
+
             // ✅ 背景图片 351.png（填充整个宽度）
             Image {
                 id: topButtonsBackground
@@ -225,6 +234,15 @@ Rectangle {
             width: 142
             color: "transparent"
 
+            // ✅ 2026-01-26 [FIX 100.300.25.17]: 添加 MouseArea 阻止点击事件穿透到背景
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    // 阻止点击事件穿透，不做任何操作
+                    mouse.accepted = true
+                }
+            }
+
             // ✅ 背景图片 042.png（使用 Image 作为背景）
             Image {
                 id: leftButtonsBackground
@@ -339,11 +357,24 @@ Rectangle {
             anchors.bottomMargin: 8
             color: "transparent"  // 透明，显示背景图片
 
+            // ✅ 2026-01-26 [FIX 100.300.25.17]: 添加 MouseArea 阻止点击事件穿透到背景
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    // 阻止点击事件穿透，不做任何操作
+                    mouse.accepted = true
+                }
+            }
+
             // ✅ 2026-01-26 [FIX 100.300.25.7]: 添加背景图片154.png
             Image {
                 id: contentAreaBackground
                 anchors.fill: parent
-                source: "../../images/154.png"
+                anchors.leftMargin: -14
+                anchors.rightMargin: 8
+                anchors.topMargin: 8
+                anchors.bottomMargin: 8
+                source: "../../images/036.png"
                 fillMode: Image.Stretch
                 z: -1  // 放在最底层，作为所有页面的统一背景
             }
@@ -351,15 +382,16 @@ Rectangle {
             // ✅ 2026-01-24 [FIX]: 使用 StackLayout 切换页面
             StackLayout {
                 id: contentStack
+                height: 657
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.bottom: bottomButtonsContainer.top  // ✅ 2026-01-26 [FIX 100.300.25.8]: 为底部按钮留出空间
                 // ✅ 2026-01-26 [FIX 100.300.25.13]: 添加 margins，让内容在背景图片边框内部显示
-                anchors.leftMargin: 15
-                anchors.rightMargin: 15
-                anchors.topMargin: 15
-                anchors.bottomMargin: 20
+                anchors.leftMargin: 2
+                anchors.rightMargin: 19
+                anchors.topMargin: 19
+                anchors.bottomMargin: 10
                 currentIndex: root.currentCategory  // 自动切换页面
 
                 // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
