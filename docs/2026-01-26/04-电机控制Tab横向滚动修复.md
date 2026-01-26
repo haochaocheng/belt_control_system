@@ -2,7 +2,7 @@
 
 **日期**：2026-01-26
 **任务**：修复电机控制页面 Tab 栏无法横向滚动的问题
-**FIX**：100.300.21
+**FIX**：100.300.21.1
 
 ---
 
@@ -11,76 +11,217 @@
 **用户反馈**：
 > "基本配置，电流保护这一行无法滑动，无法选择X轴振动，Y轴振动"
 
+**第二次反馈**：
+> "测试完成，还是无法滑动，只能拖到基本配置下面的滑动快，才能滑动到X轴振动"
+
 **问题分析**：
 - 电机控制页面有 10 个 Tab：基本配置、电流保护、前轴承温度、后轴承温度、A相绕组、B相绕组、C相绕组、电机温度、X轴振动、Y轴振动
 - 每个 Tab 宽度 120px，总宽度 1200px
 - 弹窗宽度通常小于 1200px，导致后面的 Tab（X轴振动、Y轴振动）看不到
-- 虽然使用了 ScrollView，但没有正确配置，导致无法横向滚动
+- **第一次尝试**：使用 ScrollView，但用户需要拖动底部的横向滚动条才能滚动，不够直观
+- **用户期望**：直接在 Tab 区域用鼠标滚轮或拖动即可滚动
 
 ---
 
-## ✅ 解决方案
+## ✅ 解决方案（最终版本）
+
+### 核心改进
+
+**从 ScrollView 改为 Flickable**：
+- ScrollView 需要用户拖动滚动条，不够直观
+- Flickable 支持鼠标拖动和滚轮滚动，更符合用户习惯
 
 ### 修改文件
 
 **位置**：`src/qml/components/device_info/pages/MotorConfigPanel.qml`
 
-**修改内容**（第 62-78 行）：
+**修改内容**（第 62-149 行）：
 
 ```qml
-// 修改前
-ScrollView {
+// ✅ 2026-01-26 [FIX 100.300.21.1]: 改用 Flickable 支持鼠标拖动和滚轮滑动
+Flickable {
+    id: tabFlickable
     anchors.fill: parent
     clip: true
-    ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+    contentWidth: tabRow.width  // 内容宽度
+    contentHeight: height  // 内容高度等于自身高度（不需要纵向滚动）
+    flickableDirection: Flickable.HorizontalFlick  // 只允许横向滑动
+    boundsBehavior: Flickable.StopAtBounds  // 到达边界时停止
 
-    Row {
-        spacing: 0
+    // ✅ 2026-01-26 [FIX]: 支持鼠标滚轮横向滚动
+    MouseArea {
+        anchors.fill: parent
+        propagateComposedEvents: true  // 传递事件给子元素
 
-        Repeater {
-            model: ["基本配置", "电流保护", ...]
+        onWheel: {
+            // 将纵向滚轮转换为横向滚动
+            var delta = wheel.angleDelta.y
+            tabFlickable.contentX = Math.max(0, Math.min(
+                tabFlickable.contentX - delta,
+                tabFlickable.contentWidth - tabFlickable.width
+            ))
+            wheel.accepted = true
         }
-    }
-}
 
-// 修改后
-// ✅ 2026-01-26 [FIX 100.300.21]: 启用横向滚动，禁用纵向滚动
-ScrollView {
-    anchors.fill: parent
-    clip: true
-    ScrollBar.vertical.policy: ScrollBar.AlwaysOff  // 禁用纵向滚动条
-    ScrollBar.horizontal.policy: ScrollBar.AsNeeded  // 需要时显示横向滚动条
-    contentWidth: tabRow.width  // ✅ 明确指定内容宽度
+        // 不拦截点击事件，让子元素的 MouseArea 处理
+        onPressed: mouse.accepted = false
+    }
 
     Row {
         id: tabRow
         spacing: 0
-        // ✅ 2026-01-26 [FIX]: 明确设置宽度，确保 ScrollView 知道需要滚动
+        height: parent.height
         width: childrenRect.width
 
         Repeater {
             model: ["基本配置", "电流保护", ...]
         }
     }
+
+    // ✅ 2026-01-26 [FIX]: 添加横向滚动条指示器
+    Rectangle {
+        id: scrollIndicator
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        height: 3
+        width: parent.width * (parent.width / tabRow.width)
+        color: "#2196F3"
+        opacity: 0.5
+        x: tabFlickable.contentX * (parent.width / tabRow.width)
+        visible: tabRow.width > parent.width  // 只在需要滚动时显示
+    }
 }
 ```
 
-### 关键修改点
+### 关键改进点
 
-1. **添加 Row 的 id**：`id: tabRow`
-   - 便于引用 Row 的宽度
+1. **使用 Flickable 替代 ScrollView**
+   - 支持鼠标拖动滑动
+   - 支持触摸屏滑动
+   - 更符合移动端和触摸屏的交互习惯
 
-2. **设置 Row 的宽度**：`width: childrenRect.width`
-   - 根据子元素自动计算宽度
-   - 10 个 Tab × 120px = 1200px
+2. **添加鼠标滚轮支持**
+   - 在 Tab 区域滚动鼠标滚轮即可横向滚动
+   - 将纵向滚轮事件转换为横向滚动
+   - `propagateComposedEvents: true` 确保点击事件传递给子元素
 
-3. **明确指定 contentWidth**：`contentWidth: tabRow.width`
-   - 告诉 ScrollView 内容的实际宽度
-   - ScrollView 会自动判断是否需要滚动
+3. **添加滚动指示器**
+   - 底部显示蓝色滚动指示条
+   - 宽度和位置根据滚动位置动态计算
+   - 只在需要滚动时显示（内容宽度 > 可见宽度）
 
-4. **启用横向滚动条**：`ScrollBar.horizontal.policy: ScrollBar.AsNeeded`
-   - 当内容宽度超过 ScrollView 宽度时，显示横向滚动条
-   - 用户可以通过鼠标滚轮或拖动滚动条来查看所有 Tab
+4. **设置滚动方向和边界**
+   - `flickableDirection: Flickable.HorizontalFlick`：只允许横向滑动
+   - `boundsBehavior: Flickable.StopAtBounds`：到达边界时停止，不会过度滚动
+
+---
+
+## 🎯 技术要点
+
+### 1. Flickable vs ScrollView
+
+**Flickable 的优势**：
+- 更轻量级，性能更好
+- 支持鼠标拖动和触摸滑动
+- 更灵活，可以自定义滚动行为
+
+**ScrollView 的优势**：
+- 自动提供滚动条
+- 更符合桌面应用习惯
+- 适合需要精确滚动的场景
+
+**本例选择 Flickable 的原因**：
+- 用户期望直接在 Tab 区域滑动
+- 工控机可能使用触摸屏
+- 鼠标滚轮滚动更直观
+
+### 2. 鼠标滚轮事件处理
+
+**关键代码**：
+```qml
+MouseArea {
+    propagateComposedEvents: true  // ✅ 关键：传递事件给子元素
+
+    onWheel: {
+        var delta = wheel.angleDelta.y
+        tabFlickable.contentX = Math.max(0, Math.min(
+            tabFlickable.contentX - delta,
+            tabFlickable.contentWidth - tabFlickable.width
+        ))
+        wheel.accepted = true
+    }
+
+    onPressed: mouse.accepted = false  // ✅ 关键：不拦截点击事件
+}
+```
+
+**工作原理**：
+- `onWheel`：捕获鼠标滚轮事件
+- `wheel.angleDelta.y`：获取滚轮滚动量（正值向上，负值向下）
+- `contentX`：设置 Flickable 的横向滚动位置
+- `Math.max/min`：限制滚动范围，防止超出边界
+- `propagateComposedEvents: true`：确保点击事件传递给 Tab 的 MouseArea
+- `onPressed: mouse.accepted = false`：不拦截按下事件，让子元素处理
+
+### 3. 滚动指示器计算
+
+**宽度计算**：
+```qml
+width: parent.width * (parent.width / tabRow.width)
+```
+- `parent.width`：可见区域宽度
+- `tabRow.width`：总内容宽度
+- 比例：可见宽度 / 总宽度 = 指示器宽度 / 可见宽度
+
+**位置计算**：
+```qml
+x: tabFlickable.contentX * (parent.width / tabRow.width)
+```
+- `tabFlickable.contentX`：当前滚动位置
+- 比例：滚动位置 / 总宽度 = 指示器位置 / 可见宽度
+
+---
+
+## 📋 验证清单
+
+### ✅ 功能验证
+
+1. **打开设备参数设置弹窗**
+   - 在 Input1 页面双击任意设备
+   - 或选中设备后按回车键
+
+2. **切换到"电机控制"类别**
+   - 点击左侧"电机控制"按钮
+
+3. **验证鼠标滚轮滚动**
+   - 将鼠标放在 Tab 区域
+   - 滚动鼠标滚轮：Tab 栏横向滚动
+   - 可以滚动到最后的 Tab（X轴振动、Y轴振动）
+
+4. **验证鼠标拖动滑动**
+   - 在 Tab 区域按住鼠标左键
+   - 左右拖动：Tab 栏跟随滑动
+   - 松开鼠标：Tab 栏停止滑动
+
+5. **验证滚动指示器**
+   - 底部显示蓝色滚动指示条
+   - 滚动时指示条位置同步更新
+   - 指示器宽度反映可见区域比例
+
+6. **验证 Tab 点击**
+   - 点击任意 Tab：正常切换到对应内容
+   - 滚动后点击：点击事件正常响应
+   - 键盘左右键：可以切换到相邻 Tab
+
+### ✅ 预期结果
+
+- ✅ 鼠标滚轮可以横向滚动 Tab
+- ✅ 鼠标拖动可以滑动 Tab
+- ✅ 触摸屏可以滑动 Tab（如果有触摸屏）
+- ✅ 所有 10 个 Tab 都可以访问
+- ✅ 滚动指示器正确显示
+- ✅ Tab 点击事件正常工作
+- ✅ 键盘导航正常工作
 
 ---
 

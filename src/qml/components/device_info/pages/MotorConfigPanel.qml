@@ -59,19 +59,41 @@ Rectangle {
         border.color: "#3d4556"
         border.width: 1
 
-        // ✅ 使用 ScrollView 支持横向滚动（Tab较多时）
-        // ✅ 2026-01-26 [FIX 100.300.21]: 启用横向滚动，禁用纵向滚动
-        ScrollView {
+        // ✅ 使用 Flickable 支持横向滑动（Tab较多时）
+        // ✅ 2026-01-26 [FIX 100.300.21.1]: 改用 Flickable 支持鼠标拖动和滚轮滑动
+        Flickable {
+            id: tabFlickable
             anchors.fill: parent
             clip: true
-            ScrollBar.vertical.policy: ScrollBar.AlwaysOff  // 禁用纵向滚动条
-            ScrollBar.horizontal.policy: ScrollBar.AsNeeded  // 需要时显示横向滚动条
-            contentWidth: tabRow.width  // ✅ 明确指定内容宽度
+            contentWidth: tabRow.width  // 内容宽度
+            contentHeight: height  // 内容高度等于自身高度（不需要纵向滚动）
+            flickableDirection: Flickable.HorizontalFlick  // 只允许横向滑动
+            boundsBehavior: Flickable.StopAtBounds  // 到达边界时停止
+
+            // ✅ 2026-01-26 [FIX]: 支持鼠标滚轮横向滚动
+            MouseArea {
+                anchors.fill: parent
+                propagateComposedEvents: true  // 传递事件给子元素
+
+                onWheel: {
+                    // 将纵向滚轮转换为横向滚动
+                    var delta = wheel.angleDelta.y
+                    tabFlickable.contentX = Math.max(0, Math.min(
+                        tabFlickable.contentX - delta,
+                        tabFlickable.contentWidth - tabFlickable.width
+                    ))
+                    wheel.accepted = true
+                }
+
+                // 不拦截点击事件，让子元素的 MouseArea 处理
+                onPressed: mouse.accepted = false
+            }
 
             Row {
                 id: tabRow
                 spacing: 0
-                // ✅ 2026-01-26 [FIX]: 明确设置宽度，确保 ScrollView 知道需要滚动
+                height: parent.height
+                // ✅ 2026-01-26 [FIX]: 明确设置宽度，确保 Flickable 知道需要滚动
                 width: childrenRect.width
 
                 Repeater {
@@ -110,6 +132,19 @@ Rectangle {
                         }
                     }
                 }
+            }
+
+            // ✅ 2026-01-26 [FIX]: 添加横向滚动条指示器
+            Rectangle {
+                id: scrollIndicator
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                height: 3
+                width: parent.width * (parent.width / tabRow.width)
+                color: "#2196F3"
+                opacity: 0.5
+                x: tabFlickable.contentX * (parent.width / tabRow.width)
+                visible: tabRow.width > parent.width  // 只在需要滚动时显示
             }
         }
     }
