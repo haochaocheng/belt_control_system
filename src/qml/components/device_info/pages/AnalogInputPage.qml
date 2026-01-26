@@ -89,10 +89,39 @@ Rectangle {
                         width: protectionListView.width
                         // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
                         height: 45  // 从 60 改为 45（一级标题是 40）
-                        // ✅ 2026-01-26 [FIX 100.300.25.26]: 改为透明，显示背景图片
                         color: "transparent"
                         border.color: "transparent"
                         border.width: 0
+
+                        // ✅ 2026-01-26 [FIX 100.300.25.5]: 添加背景图片
+                        Image {
+                            id: backgroundImage
+                            anchors.fill: parent
+                            fillMode: Image.Stretch
+                            z: -1  // 放在最底层
+
+                            // 使用相对路径，便于QDS预览
+                            source: "../images/bhNameBK.png"
+
+                            states: [
+                                State {
+                                    name: "selected"
+                                    when: root.currentProtectionIndex === index
+                                    PropertyChanges {
+                                        target: backgroundImage
+                                        source: "../images/bhNameBK1.png"
+                                    }
+                                },
+                                State {
+                                    name: "normal"
+                                    when: root.currentProtectionIndex !== index
+                                    PropertyChanges {
+                                        target: backgroundImage
+                                        source: "../images/bhNameBK.png"
+                                    }
+                                }
+                            ]
+                        }
 
                         // ✅ 左侧激活指示条
                         Rectangle {
