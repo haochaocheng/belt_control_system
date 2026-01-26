@@ -84,8 +84,8 @@ Rectangle {
                             fillMode: Image.Stretch
                             z: -1  // 放在最底层
 
-                            // 使用相对路径，便于QDS预览
-                            source: "../../images/bhNameBK.png"
+                            // 使用相对路径，便于QDS预览（向上三级到qml目录）
+                            source: "../../../images/bhNameBK.png"
 
                             states: [
                                 State {
@@ -93,7 +93,7 @@ Rectangle {
                                     when: root.currentProtectionIndex === index
                                     PropertyChanges {
                                         target: backgroundImage
-                                        source: "../../images/bhNameBK1.png"
+                                        source: "../../../images/bhNameBK1.png"
                                     }
                                 },
                                 State {
@@ -101,7 +101,7 @@ Rectangle {
                                     when: root.currentProtectionIndex !== index
                                     PropertyChanges {
                                         target: backgroundImage
-                                        source: "../../images/bhNameBK.png"
+                                        source: "../../../images/bhNameBK.png"
                                     }
                                 }
                             ]
