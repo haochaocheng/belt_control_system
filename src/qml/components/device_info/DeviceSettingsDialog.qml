@@ -369,6 +369,9 @@ Rectangle {
                 // ✅ 2026-01-24 [FIX 100.302]: 使用 BasicConfigPage 组件
                 Loader {
                     id: basicConfigPageLoader
+                    // ✅ 2026-01-26 [FIX 100.300.25.11]: 为 Loader 设置明确尺寸，便于 QDS 预览
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                     active: root.currentCategory === 0  // 仅在选中时加载
                     source: "pages/BasicConfigPage.qml"
 
@@ -391,6 +394,9 @@ Rectangle {
                 // ✅ 2026-01-25 [FIX 100.306]: 使用 SwitchInputPage 组件
                 Loader {
                     id: switchInputPageLoader
+                    // ✅ 2026-01-26 [FIX 100.300.25.11]: 为 Loader 设置明确尺寸，便于 QDS 预览
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                     active: root.currentCategory === 1  // 仅在选中时加载
                     source: "pages/SwitchInputPage.qml"
 
@@ -421,6 +427,9 @@ Rectangle {
                 // ✅ 2026-01-25 [FIX 100.308]: 使用 AnalogInputPage 组件
                 Loader {
                     id: analogInputPageLoader
+                    // ✅ 2026-01-26 [FIX 100.300.25.11]: 为 Loader 设置明确尺寸，便于 QDS 预览
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                     active: root.currentCategory === 2  // 仅在选中时加载
                     source: "pages/AnalogInputPage.qml"
 
@@ -443,6 +452,9 @@ Rectangle {
                 // ✅ 2026-01-25 [FIX 100.310]: 使用 MotorControlPage 组件
                 Loader {
                     id: motorControlPageLoader
+                    // ✅ 2026-01-26 [FIX 100.300.25.11]: 为 Loader 设置明确尺寸，便于 QDS 预览
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                     active: root.currentCategory === 3  // 仅在选中时加载
                     source: "pages/MotorControlPage.qml"
 
