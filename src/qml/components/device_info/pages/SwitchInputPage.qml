@@ -184,7 +184,11 @@ Rectangle {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 15
+                // ✅ 2026-01-26 [FIX 100.300.25.23]: 移除左侧 margin，让标题贴近左侧
+                anchors.leftMargin: 0
+                anchors.rightMargin: 15
+                anchors.topMargin: 15
+                anchors.bottomMargin: 15
                 spacing: 12
 
                 // ✅ 2026-01-26 [FIX 100.300.25.22]: 标题区域使用背景图片
