@@ -72,9 +72,17 @@ Rectangle {
                     delegate: Rectangle {
                         width: protectionListView.width
                         height: 60
-                        color: root.currentProtectionIndex === index ? "#252b3d" : "transparent"
+                        color: "transparent"  // ✅ 2026-01-26 [FIX 100.300.25]: 改为透明，使用背景图片
                         border.color: root.currentProtectionIndex === index ? "#2196F3" : "#3d4556"
                         border.width: 1
+
+                        // ✅ 2026-01-26 [FIX 100.300.25]: 添加背景图片
+                        Image {
+                            anchors.fill: parent
+                            source: root.currentProtectionIndex === index ? "qrc:/qt/qml/BeltControlQml/pages/Input1Content/images/bhNameBK1.png" : "qrc:/qt/qml/BeltControlQml/pages/Input1Content/images/bhNameBK.png"
+                            fillMode: Image.Stretch
+                            z: -1  // 放在最底层
+                        }
 
                         // ✅ 左侧激活指示条
                         Rectangle {
