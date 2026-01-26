@@ -115,8 +115,8 @@ Rectangle {
                             fillMode: Image.Stretch
                             z: -1  // 放在最底层
 
-                            // 使用相对路径，便于QDS预览（向上三级到qml目录）
-                            source: "../../../images/DJHeadbutton1.png"
+                            // ✅ 2026-01-26 [FIX 100.300.25.20.1]: 修正路径（向上一级到 device_info，然后进入 images）
+                            source: "../images/DJHeadbutton1.png"
 
                             states: [
                                 State {
@@ -124,7 +124,7 @@ Rectangle {
                                     when: root.currentTabIndex === index
                                     PropertyChanges {
                                         target: buttonBackgroundImage
-                                        source: "../../../images/DJHeadbutton2.png"
+                                        source: "../images/DJHeadbutton2.png"
                                     }
                                 },
                                 State {
@@ -132,7 +132,7 @@ Rectangle {
                                     when: root.currentTabIndex !== index
                                     PropertyChanges {
                                         target: buttonBackgroundImage
-                                        source: "../../../images/DJHeadbutton1.png"
+                                        source: "../images/DJHeadbutton1.png"
                                     }
                                 }
                             ]
