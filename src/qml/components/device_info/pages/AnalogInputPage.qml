@@ -72,9 +72,39 @@ Rectangle {
                     delegate: Rectangle {
                         width: protectionListView.width
                         height: 60
-                        color: root.currentProtectionIndex === index ? "#252b3d" : "transparent"
+                        color: "transparent"  // ✅ 2026-01-26 [FIX 100.300.25.5]: 改为透明，使用背景图片
                         border.color: root.currentProtectionIndex === index ? "#2196F3" : "#3d4556"
                         border.width: 1
+
+                        // ✅ 2026-01-26 [FIX 100.300.25.5]: 添加背景图片
+                        Image {
+                            id: backgroundImage
+                            anchors.fill: parent
+                            fillMode: Image.Stretch
+                            z: -1  // 放在最底层
+
+                            // 使用相对路径，便于QDS预览（向上三级到qml目录）
+                            source: "../../../images/bhNameBK.png"
+
+                            states: [
+                                State {
+                                    name: "selected"
+                                    when: root.currentProtectionIndex === index
+                                    PropertyChanges {
+                                        target: backgroundImage
+                                        source: "../../../images/bhNameBK1.png"
+                                    }
+                                },
+                                State {
+                                    name: "normal"
+                                    when: root.currentProtectionIndex !== index
+                                    PropertyChanges {
+                                        target: backgroundImage
+                                        source: "../../../images/bhNameBK.png"
+                                    }
+                                }
+                            ]
+                        }
 
                         // ✅ 左侧激活指示条
                         Rectangle {
@@ -85,38 +115,34 @@ Rectangle {
                             anchors.left: parent.left
                         }
 
-                        // ✅ 模拟量信息
-                        Column {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 20
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 4
+                        // ✅ 2026-01-26 [FIX 100.300.25.5]: 模拟量名称居中显示
+                        Text {
+                            text: model.name
+                            font.pixelSize: 16
+                            font.weight: root.currentProtectionIndex === index ? Font.Bold : Font.Normal
+                            color: root.currentProtectionIndex === index ? "#E0E0E0" : "#9E9E9E"
+                            anchors.centerIn: parent
+                        }
 
-                            // 模拟量名称
-                            Text {
-                                text: model.name
-                                font.pixelSize: 16
-                                font.weight: root.currentProtectionIndex === index ? Font.Bold : Font.Normal
-                                color: root.currentProtectionIndex === index ? "#E0E0E0" : "#9E9E9E"
+                        // ✅ 2026-01-26 [FIX 100.300.25.5]: 状态指示放在最右侧
+                        Row {
+                            spacing: 8
+                            anchors.right: parent.right
+                            anchors.rightMargin: 20
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Rectangle {
+                                width: 8
+                                height: 8
+                                radius: 2
+                                color: model.active ? "#F44336" : "#4CAF50"  // 红色激活，绿色正常
+                                anchors.verticalCenter: parent.verticalCenter
                             }
 
-                            // 状态指示
-                            Row {
-                                spacing: 8
-
-                                Rectangle {
-                                    width: 8
-                                    height: 8
-                                    radius: 2
-                                    color: model.active ? "#F44336" : "#4CAF50"  // 红色激活，绿色正常
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-
-                                Text {
-                                    text: model.active ? "已激活" : "正常"
-                                    font.pixelSize: 12
-                                    color: "#9E9E9E"
-                                }
+                            Text {
+                                text: model.active ? "已激活" : "正常"
+                                font.pixelSize: 12
+                                color: "#9E9E9E"
                             }
                         }
 
