@@ -246,14 +246,13 @@ Rectangle {
                         // ✅ 2026-01-27 [FIX 100.300.38]: 参数区域分为左右2列
                         RowLayout {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: implicitHeight
                             spacing: 20
-                            // ❌ 2026-01-27 [FIX 100.300.39]: 移除 alignment 属性（RowLayout 不支持）
+                            // ❌ 2026-01-27 [FIX 100.300.40]: 修复列宽度分配问题
 
                             // ========== 左列：保护名称到单位 ==========
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: parent.width / 2
+                                Layout.preferredWidth: 0  // 让 RowLayout 自动分配
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
                                 // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
@@ -494,10 +493,10 @@ Rectangle {
                             // ========== 右列：保护延时到音频文件 ==========
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: parent.width / 2
+                                Layout.preferredWidth: 0  // 让 RowLayout 自动分配
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
-                                // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
+                                // ❌ 2026-01-27 [FIX 100.300.40]: 修复列宽度分配问题
 
                                 // 保护延时
                                 RowLayout {
