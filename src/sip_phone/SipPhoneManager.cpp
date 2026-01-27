@@ -3312,7 +3312,8 @@ QStringList SipPhoneManager::getAudioCodecs()
     pjsua_codec_info codec_info[32];
     unsigned count = 32;
 
-    pj_status_t status = pjsua_codec_enum_info(codec_info, &count);
+    // ✅ 2026-01-27 [FIX 100.300.47] 修复 API 名称：pjsua_enum_codecs (不是 pjsua_codec_enum_info)
+    pj_status_t status = pjsua_enum_codecs(codec_info, &count);
     if (status != PJ_SUCCESS) {
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_strerror(status, errmsg, sizeof(errmsg));
@@ -3378,21 +3379,32 @@ bool SipPhoneManager::isAudioCodecEnabled(const QString& codecName)
         return false;
     }
 
-    pj_str_t codec_id = pj_str(const_cast<char*>(codecName.toUtf8().constData()));
-    unsigned char priority = 0;
+    // ✅ 2026-01-27 [FIX 100.300.47] PJSIP 没有 get_priority 函数，使用 enum_codecs 获取优先级
+    pjsua_codec_info codec_info[32];
+    unsigned count = 32;
+    pj_status_t status = pjsua_enum_codecs(codec_info, &count);
 
-    pj_status_t status = pjsua_codec_get_priority(&codec_id, &priority);
-
-    if (status == PJ_SUCCESS) {
-        bool enabled = (priority > 0);
-        qDebug() << "📊 [FIX 100.252] Codec" << codecName
-                 << "priority:" << priority
-                 << (enabled ? "(enabled)" : "(disabled)");
-        return enabled;
-    } else {
-        qWarning() << "❌ [FIX 100.252] Failed to get codec priority:" << codecName;
+    if (status != PJ_SUCCESS) {
+        qWarning() << "❌ [FIX 100.300.47] Failed to enumerate audio codecs";
         return false;
     }
+
+    // 查找匹配的编解码器
+    for (unsigned i = 0; i < count; ++i) {
+        QString codecId = QString::fromUtf8(codec_info[i].codec_id.ptr,
+                                           codec_info[i].codec_id.slen);
+        if (codecId.contains(codecName, Qt::CaseInsensitive)) {
+            // priority > 0 表示启用，priority == 0 表示禁用
+            bool enabled = codec_info[i].priority > 0;
+            qDebug() << "📊 [FIX 100.252] Codec" << codecId
+                     << "priority:" << codec_info[i].priority
+                     << (enabled ? "(enabled)" : "(disabled)");
+            return enabled;
+        }
+    }
+
+    qWarning() << "❌ [FIX 100.300.47] Codec not found:" << codecName;
+    return false;
 }
 
 bool SipPhoneManager::setAudioCodecEnabled(const QString& codecName, bool enabled)
@@ -3456,7 +3468,8 @@ QStringList SipPhoneManager::getVideoCodecs()
     pjsua_codec_info codec_info[32];
     unsigned count = 32;
 
-    pj_status_t status = pjsua_vid_codec_enum_info(codec_info, &count);
+    // ✅ 2026-01-27 [FIX 100.300.47] 修复 API 名称：pjsua_vid_enum_codecs (不是 pjsua_vid_codec_enum_info)
+    pj_status_t status = pjsua_vid_enum_codecs(codec_info, &count);
     if (status != PJ_SUCCESS) {
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_strerror(status, errmsg, sizeof(errmsg));
@@ -3502,21 +3515,32 @@ bool SipPhoneManager::isVideoCodecEnabled(const QString& codecName)
         return false;
     }
 
-    pj_str_t codec_id = pj_str(const_cast<char*>(codecName.toUtf8().constData()));
-    unsigned char priority = 0;
+    // ✅ 2026-01-27 [FIX 100.300.47] PJSIP 没有 get_priority 函数，使用 vid_enum_codecs 获取优先级
+    pjsua_codec_info codec_info[32];
+    unsigned count = 32;
+    pj_status_t status = pjsua_vid_enum_codecs(codec_info, &count);
 
-    pj_status_t status = pjsua_vid_codec_get_priority(&codec_id, &priority);
-
-    if (status == PJ_SUCCESS) {
-        bool enabled = (priority > 0);
-        qDebug() << "📊 [FIX 100.252] Video codec" << codecName
-                 << "priority:" << priority
-                 << (enabled ? "(enabled)" : "(disabled)");
-        return enabled;
-    } else {
-        qWarning() << "❌ [FIX 100.252] Failed to get video codec priority:" << codecName;
+    if (status != PJ_SUCCESS) {
+        qWarning() << "❌ [FIX 100.300.47] Failed to enumerate video codecs";
         return false;
     }
+
+    // 查找匹配的编解码器
+    for (unsigned i = 0; i < count; ++i) {
+        QString codecId = QString::fromUtf8(codec_info[i].codec_id.ptr,
+                                           codec_info[i].codec_id.slen);
+        if (codecId.contains(codecName, Qt::CaseInsensitive)) {
+            // priority > 0 表示启用，priority == 0 表示禁用
+            bool enabled = codec_info[i].priority > 0;
+            qDebug() << "📊 [FIX 100.252] Video codec" << codecId
+                     << "priority:" << codec_info[i].priority
+                     << (enabled ? "(enabled)" : "(disabled)");
+            return enabled;
+        }
+    }
+
+    qWarning() << "❌ [FIX 100.300.47] Video codec not found:" << codecName;
+    return false;
 }
 
 bool SipPhoneManager::setVideoCodecEnabled(const QString& codecName, bool enabled)
