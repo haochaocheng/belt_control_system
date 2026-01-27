@@ -12,11 +12,13 @@ qt_add_qml_module(qml_module
         pages/AlarmPage.qml
         pages/DeviceOperationLog.qml
         pages/Input1Page.qml
-        pages/VoiceManagement.qml  # ✅ 2026-01-23 11:30 [FIX 100.300.3] 语音管理界面
         # 2026-01-19: Input1 模块 QML 组件（6 个，自动检测）
+        # ✅ 2026-01-27 [FIX 100.300.52] 添加缺失的 Head 组件
         Input1/Input1Content/Back.ui.qml
         Input1/Input1Content/BHState.ui.qml
         Input1/Input1Content/DataShow.ui.qml
+        Input1/Input1Content/Head.ui.qml
+        Input1/Input1Content/Head_MiddleMenu.ui.qml
         Input1/Input1Content/MyIN_Data.ui.qml
         Input1/Input1Content/MyIN_State.ui.qml
         Input1/Input1Content/Screen01.ui.qml
@@ -56,44 +58,6 @@ qt_add_qml_module(qml_module
         components/virtual_keyboard/NumericKeyboard.qml
         components/virtual_keyboard/EnglishKeyboard.qml
         components/virtual_keyboard/ChineseKeyboard.qml
-        # ✅ 2026-01-24 [设备信息界面重构]: 设备信息组件
-        components/device_info/DeviceInfoItem.qml
-        components/device_info/DeviceInfoGrid.qml
-        components/device_info/DeviceSettingsDialog.qml
-        # ✅ 2026-01-24 [FIX 100.302]: 设备参数页面组件
-        components/device_info/pages/BasicConfigPage.qml
-        # ✅ 2026-01-25 [FIX 100.306]: 开关量输入页面
-        components/device_info/pages/SwitchInputPage.qml
-        # ✅ 2026-01-25 [FIX 100.308]: 模拟量输入页面
-        components/device_info/pages/AnalogInputPage.qml
-        # ✅ 2026-01-25 [FIX 100.311]: 电机控制页面（模块化设计）
-        components/device_info/pages/MotorControlPage.qml
-        components/device_info/pages/MotorListPanel.qml
-        components/device_info/pages/MyMotorListPanel.qml  # QDS兼容版本（不使用ListView）
-        components/device_info/pages/BasicConfigTab.qml
-        components/device_info/pages/CurrentProtectionTab.qml
-        components/device_info/pages/MotorConfigPanel.qml
-        components/device_info/pages/FrontBearingTempTab.qml
-        components/device_info/pages/RearBearingTempTab.qml
-        components/device_info/pages/PhaseAWindingTab.qml
-        components/device_info/pages/PhaseBWindingTab.qml
-        components/device_info/pages/PhaseCWindingTab.qml
-        components/device_info/pages/MotorTempTab.qml
-        components/device_info/pages/XAxisVibrationTab.qml
-        components/device_info/pages/YAxisVibrationTab.qml
-        # ✅ 2026-01-25 [工业科技感设计]: 主题配置和 qmldir
-        components/device_info/IndustrialTheme.qml
-        components/device_info/qmldir
-        # ✅ 2026-01-27 [FIX 100.300.32/33]: 自定义输入组件
-        components/device_info/CustomTextField.qml
-        components/device_info/CustomSpinBox.qml
-        # ✅ 2026-01-27 [FIX 100.300.37]: 制动器和张紧控制页面
-        components/device_info/pages/BrakeControlPage.qml
-        components/device_info/pages/BrakeListPanel.qml
-        components/device_info/pages/BrakeConfigPanel.qml
-        components/device_info/pages/TensionControlPage.qml
-        components/device_info/pages/TensionControlListPanel.qml
-        components/device_info/pages/TensionControlConfigPanel.qml
         components/sip_phone/SipDialerPopup.qml
         components/sip_phone/SipMainPage.qml
         components/sip_phone/SipPhoneWindow.qml
@@ -249,8 +213,16 @@ target_link_libraries(input1_qml_module PRIVATE
     Qt6::Quick
 )
 
-# ❌ 2026-01-27 [FIX 100.300.43]: 删除孤立的 Input1 文件列表（已在 input1_qml_module 中定义）
-# 这些文件已经在上面的 qt_add_qml_module(input1_qml_module) 中定义过了
+# ❌ 2026-01-27 18:55 [FIX 100.300.49] 注释掉孤立的文件列表
+# 原因：这些文件列表没有包含在任何 CMake 命令中，导致解析错误
+# 这些文件已经在上面的 qt_add_qml_module 中通过 RESOURCE_PREFIX 自动包含
+#        # 2026-01-19: Input1 模块 QML 组件（6 个，自动检测）
+#        Input1/Input1Content/Back.ui.qml
+#        Input1/Input1Content/BHState.ui.qml
+#        Input1/Input1Content/DataShow.ui.qml
+#        Input1/Input1Content/MyIN_Data.ui.qml
+#        Input1/Input1Content/MyIN_State.ui.qml
+#        Input1/Input1Content/Screen01.ui.qml
 target_link_libraries(qml_module PRIVATE input1_qml_module)
 
 message(STATUS "Input1 QML 模块已创建为独立模块")
