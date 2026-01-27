@@ -12,16 +12,16 @@ qt_add_qml_module(qml_module
         pages/AlarmPage.qml
         pages/DeviceOperationLog.qml
         pages/Input1Page.qml
-        # 2026-01-12: Input1 模块 QML 文件已移到独立的 Input1 模块中（见文件末尾）
-        # Input1/Input1Content/Screen01.ui.qml 是实际的 UI 文件
-        # Input1/Input1Content/App.qml 仅用于 QDS 预览，不包含在应用中
-        Input1/Input1Content/Screen01.ui.qml
-        # 2026-01-19: Screen01 引用的子组件（必须添加，否则 Screen01 加载失败）
+        pages/VoiceManagement.qml  # ✅ 2026-01-23 11:30 [FIX 100.300.3] 语音管理界面
+        # 2026-01-19: Input1 模块 QML 组件（8 个，自动检测）
         Input1/Input1Content/Back.ui.qml
-        Input1/Input1Content/Head.ui.qml
-        Input1/Input1Content/Head_MiddleMenu.ui.qml
         Input1/Input1Content/BHState.ui.qml
         Input1/Input1Content/DataShow.ui.qml
+        Input1/Input1Content/Head_MiddleMenu.ui.qml
+        Input1/Input1Content/Head.ui.qml
+        Input1/Input1Content/MyIN_Data.ui.qml
+        Input1/Input1Content/MyIN_State.ui.qml
+        Input1/Input1Content/Screen01.ui.qml
         components/SpeedGauge.qml
         components/StatusIndicator.qml
         components/MotorControlBtn.qml
@@ -33,6 +33,7 @@ qt_add_qml_module(qml_module
         components/common/Header.qml
         components/common/Footer.qml
         components/common/TabBar.qml
+        components/common/IndustrialContainer.qml  # ✅ 2026-01-20 [FIX 100.253] 工业风格装饰容器
         components/control_panel/BeltScene3D.qml
         components/control_panel/DeviceStatusPanel.qml
         components/control_panel/ProtectionPanel.qml
@@ -57,6 +58,44 @@ qt_add_qml_module(qml_module
         components/virtual_keyboard/NumericKeyboard.qml
         components/virtual_keyboard/EnglishKeyboard.qml
         components/virtual_keyboard/ChineseKeyboard.qml
+        # ✅ 2026-01-24 [设备信息界面重构]: 设备信息组件
+        components/device_info/DeviceInfoItem.qml
+        components/device_info/DeviceInfoGrid.qml
+        components/device_info/DeviceSettingsDialog.qml
+        # ✅ 2026-01-24 [FIX 100.302]: 设备参数页面组件
+        components/device_info/pages/BasicConfigPage.qml
+        # ✅ 2026-01-25 [FIX 100.306]: 开关量输入页面
+        components/device_info/pages/SwitchInputPage.qml
+        # ✅ 2026-01-25 [FIX 100.308]: 模拟量输入页面
+        components/device_info/pages/AnalogInputPage.qml
+        # ✅ 2026-01-25 [FIX 100.311]: 电机控制页面（模块化设计）
+        components/device_info/pages/MotorControlPage.qml
+        components/device_info/pages/MotorListPanel.qml
+        components/device_info/pages/MyMotorListPanel.qml  # QDS兼容版本（不使用ListView）
+        components/device_info/pages/BasicConfigTab.qml
+        components/device_info/pages/CurrentProtectionTab.qml
+        components/device_info/pages/MotorConfigPanel.qml
+        components/device_info/pages/FrontBearingTempTab.qml
+        components/device_info/pages/RearBearingTempTab.qml
+        components/device_info/pages/PhaseAWindingTab.qml
+        components/device_info/pages/PhaseBWindingTab.qml
+        components/device_info/pages/PhaseCWindingTab.qml
+        components/device_info/pages/MotorTempTab.qml
+        components/device_info/pages/XAxisVibrationTab.qml
+        components/device_info/pages/YAxisVibrationTab.qml
+        # ✅ 2026-01-25 [工业科技感设计]: 主题配置和 qmldir
+        components/device_info/IndustrialTheme.qml
+        components/device_info/qmldir
+        # ✅ 2026-01-27 [FIX 100.300.32/33]: 自定义输入组件
+        components/device_info/CustomTextField.qml
+        components/device_info/CustomSpinBox.qml
+        # ✅ 2026-01-27 [FIX 100.300.37]: 制动器和张紧控制页面
+        components/device_info/pages/BrakeControlPage.qml
+        components/device_info/pages/BrakeListPanel.qml
+        components/device_info/pages/BrakeConfigPanel.qml
+        components/device_info/pages/TensionControlPage.qml
+        components/device_info/pages/TensionControlListPanel.qml
+        components/device_info/pages/TensionControlConfigPanel.qml
         components/sip_phone/SipDialerPopup.qml
         components/sip_phone/SipMainPage.qml
         components/sip_phone/SipPhoneWindow.qml
@@ -69,7 +108,16 @@ qt_add_qml_module(qml_module
     RESOURCES
         images/header.png
         sounds/ringtone.wav
-        # 2026-01-12: Input1 模块资源文件（43 个图片，全英文文件名）
+        # ✅ 2026-01-20 [FIX 100.274]: 参数设置页面背景图片
+        components/parameter_settings/images/039.png
+        components/parameter_settings/images/48.png
+        # ✅ 2026-01-20 [FIX 100.276]: 报警页面背景图片
+        pages/images/086.png
+        pages/images/349.png
+        pages/images/Audio196.png
+        pages/images/Audio349.png
+        # 2026-01-12: Input1 模块资源文件（48 个图片，全英文文件名）
+        Input1/Input1Content/images/082.png
         Input1/Input1Content/images/back_Lift.svg
         Input1/Input1Content/images/back_Rrigt.png
         Input1/Input1Content/images/back1.svg
@@ -92,6 +140,7 @@ qt_add_qml_module(qml_module
         Input1/Input1Content/images/head_Bottom-left_straight_line8.png
         Input1/Input1Content/images/head_Bottom-left_straight_line9.png
         Input1/Input1Content/images/head_Left_gradient.svg
+        Input1/Input1Content/images/head_menuOK.png
         Input1/Input1Content/images/head_MiddleMenu1.png
         Input1/Input1Content/images/head_MiddleMenu2.png
         Input1/Input1Content/images/head_Right_gradient.svg
@@ -102,6 +151,9 @@ qt_add_qml_module(qml_module
         Input1/Input1Content/images/head_Top-left_straight_line2.png
         Input1/Input1Content/images/head_Top-right_straight_line.png
         Input1/Input1Content/images/head_Top-right_straight_line2.png
+        Input1/Input1Content/images/IN_Data_OK.png
+        Input1/Input1Content/images/IN_Data.png
+        Input1/Input1Content/images/IN_State.png
         Input1/Input1Content/images/state_bk_1.png
         Input1/Input1Content/images/state_bk_2.png
         Input1/Input1Content/images/state_bk_3.png
@@ -113,6 +165,81 @@ qt_add_qml_module(qml_module
         Input1/Input1Content/images/state_bk2.png
         Input1/Input1Content/images/state_bk3.png
         Input1/Input1Content/images/state_bk4.png
+        # 其他资源：components/device_info/images（12 个文件）
+        components/device_info/images/024-1.png
+        components/device_info/images/024.png
+        components/device_info/images/042.png
+        components/device_info/images/059.png
+        components/device_info/images/118.png
+        components/device_info/images/290.png
+        components/device_info/images/33.png
+        components/device_info/images/351.png
+        components/device_info/images/deviceInfo125.png
+        components/device_info/images/deviceInfo40.png
+        components/device_info/images/DJHeadbutton1.png
+        components/device_info/images/DJHeadbutton2.png
+        # 其他资源：images（9 个文件）
+        images/036.png
+        images/154.png
+        images/156.png
+        images/bhNameBK.png
+        images/bhNameBK1.png
+        images/dvList.png
+        images/dvList2.png
+        images/header.png
+        # 其他资源：pages/Input1Content/images（52 个文件）
+        pages/Input1Content/images/15823432333.svg
+        pages/Input1Content/images/591f887661e569e40a0f280feaf942c33ddd121328c7b-iqvDOE_fw1200_1.svg
+        pages/Input1Content/images/background_bottom_transparent.png
+        pages/Input1Content/images/background_full_transparent.png
+        pages/Input1Content/images/background_top_transparent.png
+        pages/Input1Content/images/current_value.svg
+        pages/Input1Content/images/fault.svg
+        pages/Input1Content/images/group2_frame1_bottom_center.png
+        pages/Input1Content/images/group2_frame1_bottom_left.png
+        pages/Input1Content/images/group2_frame1_bottom_right.png
+        pages/Input1Content/images/group2_frame1_middle_left.png
+        pages/Input1Content/images/group2_frame1_middle_right.png
+        pages/Input1Content/images/group2_frame1_top_center.png
+        pages/Input1Content/images/group2_frame1_top_left.png
+        pages/Input1Content/images/group2_frame1_top_right.png
+        pages/Input1Content/images/group2_frame1.png
+        pages/Input1Content/images/group2_frame2_base.svg
+        pages/Input1Content/images/group2_frame2_bottom_center.png
+        pages/Input1Content/images/group2_frame2_bottom_left.png
+        pages/Input1Content/images/group2_frame2_bottom_right.png
+        pages/Input1Content/images/group2_frame2_middle_left.png
+        pages/Input1Content/images/group2_frame2_middle_right.png
+        pages/Input1Content/images/group2_frame2_top_center.png
+        pages/Input1Content/images/group2_frame2_top_left.png
+        pages/Input1Content/images/group2_frame2_top_right.png
+        pages/Input1Content/images/group2_frame2.svg
+        pages/Input1Content/images/group2_frame3_bottom_center.png
+        pages/Input1Content/images/group2_frame3_bottom_left.png
+        pages/Input1Content/images/group2_frame3_bottom_right.png
+        pages/Input1Content/images/group2_frame3_middle_left.png
+        pages/Input1Content/images/group2_frame3_middle_right.png
+        pages/Input1Content/images/group2_frame3_top_center.png
+        pages/Input1Content/images/group2_frame3_top_left.png
+        pages/Input1Content/images/group2_frame3_top_right.png
+        pages/Input1Content/images/group2_frame3.png
+        pages/Input1Content/images/GSC10.svg
+        pages/Input1Content/images/input_type.svg
+        pages/Input1Content/images/middle_top_status_bg_sides.png
+        pages/Input1Content/images/middle_top_status_bg.png
+        pages/Input1Content/images/path_1.svg
+        pages/Input1Content/images/path_2.svg
+        pages/Input1Content/images/path_background.png
+        pages/Input1Content/images/path.svg
+        pages/Input1Content/images/protection_name.svg
+        pages/Input1Content/images/Rectangle_34624263.svg
+        pages/Input1Content/images/Rectangle_34624264.svg
+        pages/Input1Content/images/Rectangle_34624265.svg
+        pages/Input1Content/images/Rectangle_34624270.svg
+        pages/Input1Content/images/Rectangle_34624271.svg
+        pages/Input1Content/images/running_active.svg
+        pages/Input1Content/images/speed.svg
+        pages/Input1Content/images/switch_value.svg
     RESOURCE_PREFIX /qt/qml
     NO_PLUGIN_OPTIONAL
 )
@@ -149,7 +276,6 @@ qt_add_qml_module(input1_qml_module
     OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Input1
 )
 
-# Input1 模块依赖
 target_link_libraries(input1_qml_module PRIVATE
     Qt6::Qml
     Qt6::Quick
