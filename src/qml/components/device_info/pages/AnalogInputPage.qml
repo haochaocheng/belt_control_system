@@ -39,7 +39,8 @@ Rectangle {
         // ✅ 2026-01-26 [FIX 100.300.23]: 统一为电机控制的主题风格
         Rectangle {
             Layout.fillHeight: true
-            Layout.preferredWidth: 240
+            // ✅ 2026-01-27 [FIX 100.300.35]: 宽度减少到80%（240px → 192px）
+            Layout.preferredWidth: 192
             // ✅ 2026-01-26 [FIX 100.300.25.26]: 改为透明，使用 33.png 作为整体背景
             color: "transparent"
             // ✅ 2026-01-26 [FIX 100.300.25.18]: 添加 clip 防止背景色超出弹窗底部
@@ -257,6 +258,18 @@ Rectangle {
                             console.log("✅ [DEBUG] AnalogInputPage ColumnLayout 隐式高度:", implicitHeight)
                         }
 
+                        // ✅ 2026-01-27 [FIX 100.300.38]: 参数区域分为左右2列
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 20
+                            alignment: Qt.AlignTop
+
+                            // ========== 左列：保护名称到单位 ==========
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: parent.width / 2
+                                spacing: 12
+
                         // 保护名称
                         RowLayout {
                             Layout.fillWidth: true
@@ -264,7 +277,7 @@ Rectangle {
 
                             Text {
                                 text: "保护名称:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -283,7 +296,7 @@ Rectangle {
 
                             Text {
                                 text: "模块类型:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -334,7 +347,7 @@ Rectangle {
 
                             Text {
                                 text: "寄存器地址:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -356,7 +369,7 @@ Rectangle {
 
                             Text {
                                 text: "通道编号:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -386,7 +399,7 @@ Rectangle {
 
                             Text {
                                 text: "上限值:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -410,7 +423,7 @@ Rectangle {
 
                             Text {
                                 text: "下限值:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -434,7 +447,7 @@ Rectangle {
 
                             Text {
                                 text: "量程:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -458,7 +471,7 @@ Rectangle {
 
                             Text {
                                 text: "单位:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -488,48 +501,47 @@ Rectangle {
                                 }
                             }
                         }
+                            }  // 左列结束
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 1
-                            color: "#3d4556"
-                            opacity: 0.2
-                        }
+                            // ========== 右列：保护延时到音频文件 ==========
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: parent.width / 2
+                                spacing: 12
 
                         // 保护延时
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Text {
-                                text: "保护延时(秒):"
-                                font.pixelSize: 14
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
-
-                            // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
-                            DeviceInfo.CustomSpinBox {
-                                id: delaySpin
-                                from: 0
-                                to: 600
-                                value: 10
-                                stepSize: 1
-                                editable: true
+                            RowLayout {
                                 Layout.fillWidth: true
+                                spacing: 10
 
-                                property int decimals: 1
-                                property real realValue: value / 10
-
-                                textFromValue: function(value, locale) {
-                                    return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                Text {
+                                    text: "保护延时(秒):"
+                                    font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                    color: "#9E9E9E"
+                                    Layout.preferredWidth: 100
                                 }
 
-                                valueFromText: function(text, locale) {
-                                    return Number.fromLocaleString(locale, text) * 10
+                                DeviceInfo.CustomSpinBox {
+                                    id: delaySpin
+                                    from: 0
+                                    to: 600
+                                    value: 10
+                                    stepSize: 1
+                                    editable: true
+                                    Layout.fillWidth: true
+
+                                    property int decimals: 1
+                                    property real realValue: value / 10
+
+                                    textFromValue: function(value, locale) {
+                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                    }
+
+                                    valueFromText: function(text, locale) {
+                                        return Number.fromLocaleString(locale, text) * 10
+                                    }
                                 }
                             }
-                        }
 
                         // 播放次数
                         RowLayout {
@@ -538,12 +550,11 @@ Rectangle {
 
                             Text {
                                 text: "播放次数:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
-                            // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
                             DeviceInfo.CustomSpinBox {
                                 id: playCountSpin
                                 from: 1
@@ -561,12 +572,11 @@ Rectangle {
 
                             Text {
                                 text: "播放时长(秒):"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
 
-                            // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
                             DeviceInfo.CustomSpinBox {
                                 id: durationSpin
                                 from: 1
@@ -603,7 +613,7 @@ Rectangle {
 
                             Text {
                                 text: "语音报警:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -689,7 +699,7 @@ Rectangle {
 
                             Text {
                                 text: "报警文字:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -710,7 +720,7 @@ Rectangle {
 
                             Text {
                                 text: "音频文件:"
-                                font.pixelSize: 14
+                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
                                 color: "#9E9E9E"
                                 Layout.preferredWidth: 100
                             }
@@ -749,6 +759,8 @@ Rectangle {
                                 }
                             }
                         }
+                            }  // 右列结束
+                        }  // 2列布局结束
                     }
                 }
 
