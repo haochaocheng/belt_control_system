@@ -2468,6 +2468,43 @@ void SipPhoneManager::muteMicrophone(bool mute)
     }
 }
 
+// ✅ 2026-01-27 [FIX 100.300.48] 添加缺失的 restoreMicrophoneVolume 函数实现
+// 从 QSettings 读取保存的音量，应用到会议桥 TX 增益
+// 调用时机：onCallStateChanged() 回调在 PJSIP_INV_STATE_CONFIRMED 状态
+// 参考：docs/2026-01-19/22-FIX100.249v3完成-会议桥麦克风音量控制.md
+void SipPhoneManager::restoreMicrophoneVolume()
+{
+    qDebug() << "════════════════════════════════════════════════";
+    qDebug() << "🎤 [FIX 100.249 v3] Restoring microphone volume from settings...";
+    qDebug() << "════════════════════════════════════════════════";
+
+    // 从 QSettings 读取保存的音量（默认 50%）
+    QSettings settings;
+    int savedVolume = settings.value("SIP/MicrophoneVolume", 50).toInt();
+    qDebug() << "   Saved volume:" << savedVolume << "%";
+
+    // 转换百分比 (0-100) 到 PJSIP 增益倍数 (0.0-2.0)
+    float level = (savedVolume / 50.0f);
+    qDebug() << "   Converted to PJSIP level:" << level;
+
+    // 应用到会议桥 TX 增益
+    pj_status_t status = pjsua_conf_adjust_tx_level(0, level);
+
+    if (status == PJ_SUCCESS) {
+        qDebug() << "   ✅ [SUCCESS] Microphone volume restored!";
+        qDebug() << "      PJSIP level:" << level << "(" << savedVolume << "%)";
+        qDebug() << "      对方将听到此音量级别";
+    } else {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(status, errmsg, sizeof(errmsg));
+        qWarning() << "   ⚠️ [PJSIP] Failed to restore microphone volume:" << errmsg;
+        qWarning() << "      Volume will remain at default level (1.0)";
+    }
+
+    qDebug() << "════════════════════════════════════════════════";
+}
+
+
 // ✅ 2026-01-17 22:30 [FIX 100.246] 设备枚举和选择实现
 // ⚠️ 2026-01-18 12:00 [DEPRECATED] 此函数已废弃，仅保留用于内部枚举
 // QML 应使用 audioInputDevices property 而不是调用此函数
@@ -3508,6 +3545,23 @@ QStringList SipPhoneManager::getVideoCodecs()
 
     return codecs;
 }
+
+// ✅ 2026-01-27 [FIX 100.300.48] 添加缺失的 property getter 函数
+// ✅ 2026-01-19 20:00 [FIX 100.252.3] 编解码器列表 property getters（严格前后端分离）
+// 原因：QML 直接绑定 property，而非手动调用函数
+// 好处：与 FIX 100.246 设备列表保持一致，统一的前后端分离架构
+QStringList SipPhoneManager::audioCodecs() const
+{
+    // 调用现有实现（去掉 const 限制）
+    return const_cast<SipPhoneManager*>(this)->getAudioCodecs();
+}
+
+QStringList SipPhoneManager::videoCodecs() const
+{
+    // 调用现有实现（去掉 const 限制）
+    return const_cast<SipPhoneManager*>(this)->getVideoCodecs();
+}
+
 
 bool SipPhoneManager::isVideoCodecEnabled(const QString& codecName)
 {

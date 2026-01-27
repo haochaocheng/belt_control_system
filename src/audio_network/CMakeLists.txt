@@ -22,8 +22,13 @@ pkg_check_modules(FFMPEG REQUIRED
 pkg_check_modules(OPUS REQUIRED opus)
 
 # 创建静态库
+# ✅ 2026-01-27 [FIX 100.300.48] 添加所有缺失的源文件
 add_library(audio_network STATIC
     AudioNetworkSender.cpp
+    AudioNetworkTcpSender.cpp
+    AudioSenderWorker.cpp
+    AudioSenderWorkerUdp.cpp
+    WebSocketClient.cpp
 )
 
 # 包含目录
