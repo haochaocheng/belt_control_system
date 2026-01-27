@@ -187,12 +187,7 @@ Rectangle {
             Layout.fillHeight: true
             Layout.fillWidth: true
             color: "transparent"  // 与电机控制一致：透明背景
-
-            // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
-            Component.onCompleted: {
-                console.log("✅ [DEBUG] AnalogInputPage 右侧区域宽度:", width)
-                console.log("✅ [DEBUG] AnalogInputPage 右侧区域高度:", height)
-            }
+            // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
 
             // ✅ 2026-01-26 [FIX 100.300.25.24]: 标题区域直接 anchor，与电机控制保持一致
             Rectangle {
@@ -238,12 +233,7 @@ Rectangle {
 
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     ScrollBar.vertical.policy: ScrollBar.AsNeeded
-
-                    // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
-                    Component.onCompleted: {
-                        console.log("✅ [DEBUG] AnalogInputPage ScrollView 宽度:", width)
-                        console.log("✅ [DEBUG] AnalogInputPage ScrollView 高度:", height)
-                    }
+                    // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
 
                     ColumnLayout {
                         width: parent.width - 20
@@ -251,24 +241,14 @@ Rectangle {
 
                         // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加隐式高度，让 ScrollView 知道内容大小
                         implicitHeight: childrenRect.height
-
-                        // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
-                        Component.onCompleted: {
-                            console.log("✅ [DEBUG] AnalogInputPage ColumnLayout 宽度:", width)
-                            console.log("✅ [DEBUG] AnalogInputPage ColumnLayout 隐式高度:", implicitHeight)
-                        }
+                        // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
 
                         // ✅ 2026-01-27 [FIX 100.300.38]: 参数区域分为左右2列
                         RowLayout {
                             Layout.fillWidth: true
                             Layout.preferredHeight: implicitHeight
                             spacing: 20
-                            alignment: Qt.AlignTop
-
-                            Component.onCompleted: {
-                                console.log("✅ [DEBUG] 2列布局 RowLayout 宽度:", width)
-                                console.log("✅ [DEBUG] 2列布局 RowLayout 高度:", height)
-                            }
+                            // ❌ 2026-01-27 [FIX 100.300.39]: 移除 alignment 属性（RowLayout 不支持）
 
                             // ========== 左列：保护名称到单位 ==========
                             ColumnLayout {
@@ -276,11 +256,7 @@ Rectangle {
                                 Layout.preferredWidth: parent.width / 2
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
-
-                                Component.onCompleted: {
-                                    console.log("✅ [DEBUG] 左列 ColumnLayout 宽度:", width)
-                                    console.log("✅ [DEBUG] 左列 ColumnLayout 高度:", height)
-                                }
+                                // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
 
                                 // 保护名称
                                 RowLayout {
@@ -521,11 +497,7 @@ Rectangle {
                                 Layout.preferredWidth: parent.width / 2
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
-
-                                Component.onCompleted: {
-                                    console.log("✅ [DEBUG] 右列 ColumnLayout 宽度:", width)
-                                    console.log("✅ [DEBUG] 右列 ColumnLayout 高度:", height)
-                                }
+                                // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
 
                                 // 保护延时
                                 RowLayout {
