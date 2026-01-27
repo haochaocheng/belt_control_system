@@ -7,6 +7,10 @@
 #include <QEventLoop>
 #include <QTimer>
 
+// ✅ 2026-01-27 [FIX 100.300.45]: 包含网络传输类的完整定义
+#include "audio_network/AudioNetworkTcpSender.h"
+#include "audio_network/AudioNetworkSender.h"
+
 SherpaOnnxTTS::SherpaOnnxTTS(QObject *parent)
     : QObject(parent)
     , m_ttsProcess(new QProcess(this))

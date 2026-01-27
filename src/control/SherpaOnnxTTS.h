@@ -15,6 +15,10 @@
 #include <vector>
 #include <cstdint>
 
+// ✅ 2026-01-27 [FIX 100.300.45]: 添加前向声明
+class AudioNetworkTcpSender;
+class AudioNetworkSender;
+
 /**
  * @brief Sherpa-ONNX TTS 封装类（进程通信版本）
  *
@@ -52,6 +56,14 @@ public:
     void setSceneName(const QString &sceneName);
     void testTTS(const QString &text);
 
+    // ✅ 2026-01-27 [FIX 100.300.45]: 添加网络传输相关函数声明
+    void sayToNetwork(const QString &text, bool useTcp);
+    void stopNetworkTransmission();
+    void setTcpSender(AudioNetworkTcpSender* sender);
+    void setUdpSender(AudioNetworkSender* sender);
+    QString getCacheFilePath(const QString &text) const;
+    void setSpeakerId(int speakerId);
+
     // TTS操作
     void say(const QString &text);
     void stop();
@@ -71,10 +83,19 @@ public:
 signals:
     void stateChanged(SherpaOnnxTTS::State state);
 
+    // ✅ 2026-01-27 [FIX 100.300.45]: 添加缺失的信号
+    void modelLoadingProgress(const QString &message);
+    void modelSwitched(bool success, const QString &modelDir);
+    void networkTransmissionFinished();
+    void localPlaybackFinished();
+
 private slots:
     void onMediaPlayerStateChanged(QMediaPlayer::PlaybackState state);
     void onProcessReadyRead();
     void onProcessError(QProcess::ProcessError error);
+
+    // ✅ 2026-01-27 [FIX 100.300.45]: 添加网络传输完成槽函数
+    void onNetworkTransmissionFinished();
 
 private:
     // 发送命令到TTS服务
@@ -105,6 +126,14 @@ private:
 
     // 模型路径
     QString m_modelDir;
+
+    // ✅ 2026-01-27 [FIX 100.300.45]: 添加缺失的成员变量
+    QString m_sceneName;           // 场景名称
+    int m_speakerId;               // 说话人ID
+    int m_maxSpeakerId;            // 最大说话人ID
+    AudioNetworkTcpSender* m_tcpSender;      // TCP发送器
+    AudioNetworkSender* m_udpSender;         // UDP发送器
+    QTemporaryFile* m_networkTempFile;       // 网络传输临时文件
 
     // 线程安全
     QMutex m_mutex;
