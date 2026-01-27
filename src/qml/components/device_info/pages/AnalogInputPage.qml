@@ -236,16 +236,17 @@ Rectangle {
                     // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
 
                     ColumnLayout {
-                        width: parent.width - 20
+                        width: parent.width  // ✅ 2026-01-27 [FIX 100.300.42]: 改为完整宽度，让内部2列布局正确填充
                         spacing: 12
 
                         // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加隐式高度，让 ScrollView 知道内容大小
                         implicitHeight: childrenRect.height
-                        // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
 
                         // ✅ 2026-01-27 [FIX 100.300.38]: 参数区域分为左右2列
                         RowLayout {
                             Layout.fillWidth: true
+                            Layout.leftMargin: 10  // ✅ 2026-01-27 [FIX 100.300.42]: 添加左右边距
+                            Layout.rightMargin: 10
                             spacing: 0  // ✅ 2026-01-27 [FIX 100.300.41]: 改为0，用装饰条控制间距
 
                             // ========== 左列：保护名称到单位 ==========
