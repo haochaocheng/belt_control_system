@@ -270,237 +270,237 @@ Rectangle {
                                 Layout.preferredWidth: parent.width / 2
                                 spacing: 12
 
-                        // 保护名称
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
+                                // 保护名称
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
 
-                            Text {
-                                text: "保护名称:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
+                                    Text {
+                                        text: "保护名称:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
 
-                            // ✅ 2026-01-27 [FIX 100.300.32]: 使用自定义 TextField（034.png 背景）
-                            DeviceInfo.CustomTextField {
-                                id: nameField
-                                Layout.fillWidth: true
-                            }
-                        }
-
-                        // 模块类型
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Text {
-                                text: "模块类型:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
-
-                            ComboBox {
-                                id: moduleTypeCombo
-                                Layout.fillWidth: true
-
-                                model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
-
-                                background: Rectangle {
-                                    color: "#2d3548"
-                                    radius: 2
-                                    border.color: moduleTypeCombo.pressed ? "#3498db" : "#7f8c8d"
-                                    border.width: 1
-                                }
-
-                                contentItem: Text {
-                                    text: moduleTypeCombo.displayText
-                                    color: "#E0E0E0"
-                                    font.pixelSize: 12
-                                    verticalAlignment: Text.AlignVCenter
-                                    leftPadding: 10
-                                }
-
-                                onCurrentTextChanged: {
-                                    // 根据模块类型自动设置寄存器地址
-                                    if (currentText === "输入模块1") {
-                                        registerAddressSpin.value = 2
-                                    } else if (currentText === "输入模块2") {
-                                        registerAddressSpin.value = 3
-                                    } else if (currentText === "输入模块3") {
-                                        registerAddressSpin.value = 4
-                                    } else if (currentText === "输入模块4") {
-                                        registerAddressSpin.value = 5
-                                    } else if (currentText === "输出模块") {
-                                        registerAddressSpin.value = 50
+                                    // ✅ 2026-01-27 [FIX 100.300.32]: 使用自定义 TextField（034.png 背景）
+                                    DeviceInfo.CustomTextField {
+                                        id: nameField
+                                        Layout.fillWidth: true
                                     }
                                 }
-                            }
-                        }
 
-                        // 寄存器地址
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-                            visible: moduleTypeCombo.currentText !== "主模块"
+                                // 模块类型
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
 
-                            Text {
-                                text: "寄存器地址:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
+                                    Text {
+                                        text: "模块类型:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
 
-                            // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
-                            DeviceInfo.CustomSpinBox {
-                                id: registerAddressSpin
-                                from: 0
-                                to: 255
-                                editable: true
-                                Layout.fillWidth: true
-                            }
-                        }
+                                    ComboBox {
+                                        id: moduleTypeCombo
+                                        Layout.fillWidth: true
 
-                        // 通道编号
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
+                                        model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
 
-                            Text {
-                                text: "通道编号:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
+                                        background: Rectangle {
+                                            color: "#2d3548"
+                                            radius: 2
+                                            border.color: moduleTypeCombo.pressed ? "#3498db" : "#7f8c8d"
+                                            border.width: 1
+                                        }
 
-                            // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
-                            DeviceInfo.CustomSpinBox {
-                                id: channelSpin
-                                from: 0
-                                to: 7
-                                editable: true
-                                Layout.fillWidth: true
-                            }
-                        }
+                                        contentItem: Text {
+                                            text: moduleTypeCombo.displayText
+                                            color: "#E0E0E0"
+                                            font.pixelSize: 12
+                                            verticalAlignment: Text.AlignVCenter
+                                            leftPadding: 10
+                                        }
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 1
-                            color: "#3d4556"
-                            opacity: 0.2
-                        }
-
-                        // ✅ 2026-01-27 [FIX 100.300.31]: 添加上限值、下限值、量程、单位参数（与张力传感器一致）
-                        // 上限值
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Text {
-                                text: "上限值:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
-
-                            // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
-                            DeviceInfo.CustomSpinBox {
-                                id: upperLimitSpin
-                                from: 0
-                                to: 10000
-                                value: 100
-                                stepSize: 10
-                                editable: true
-                                Layout.fillWidth: true
-                            }
-                        }
-
-                        // 下限值
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Text {
-                                text: "下限值:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
-
-                            // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
-                            DeviceInfo.CustomSpinBox {
-                                id: lowerLimitSpin
-                                from: 0
-                                to: 10000
-                                value: 0
-                                stepSize: 10
-                                editable: true
-                                Layout.fillWidth: true
-                            }
-                        }
-
-                        // 量程
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Text {
-                                text: "量程:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
-
-                            // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
-                            DeviceInfo.CustomSpinBox {
-                                id: rangeSpin
-                                from: 1
-                                to: 10000
-                                value: 100
-                                stepSize: 10
-                                editable: true
-                                Layout.fillWidth: true
-                            }
-                        }
-
-                        // 单位
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Text {
-                                text: "单位:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
-
-                            ComboBox {
-                                id: unitCombo
-                                Layout.fillWidth: true
-                                model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
-                                editable: true
-                                currentIndex: 0  // 默认选择 "m/s"
-
-                                background: Rectangle {
-                                    color: "#2d3548"
-                                    radius: 2
-                                    border.color: unitCombo.activeFocus ? "#3498db" : "#7f8c8d"
-                                    border.width: 1
+                                        onCurrentTextChanged: {
+                                            // 根据模块类型自动设置寄存器地址
+                                            if (currentText === "输入模块1") {
+                                                registerAddressSpin.value = 2
+                                            } else if (currentText === "输入模块2") {
+                                                registerAddressSpin.value = 3
+                                            } else if (currentText === "输入模块3") {
+                                                registerAddressSpin.value = 4
+                                            } else if (currentText === "输入模块4") {
+                                                registerAddressSpin.value = 5
+                                            } else if (currentText === "输出模块") {
+                                                registerAddressSpin.value = 50
+                                            }
+                                        }
+                                    }
                                 }
 
-                                contentItem: TextInput {
-                                    text: unitCombo.editable ? unitCombo.editText : unitCombo.displayText
-                                    font.pixelSize: 12
-                                    color: "#E0E0E0"
-                                    verticalAlignment: Text.AlignVCenter
-                                    leftPadding: 10
-                                    readOnly: !unitCombo.editable
-                                    selectByMouse: true
+                                // 寄存器地址
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
+                                    visible: moduleTypeCombo.currentText !== "主模块"
+
+                                    Text {
+                                        text: "寄存器地址:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
+
+                                    // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
+                                    DeviceInfo.CustomSpinBox {
+                                        id: registerAddressSpin
+                                        from: 0
+                                        to: 255
+                                        editable: true
+                                        Layout.fillWidth: true
+                                    }
                                 }
-                            }
-                        }
+
+                                // 通道编号
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
+
+                                    Text {
+                                        text: "通道编号:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
+
+                                    // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
+                                    DeviceInfo.CustomSpinBox {
+                                        id: channelSpin
+                                        from: 0
+                                        to: 7
+                                        editable: true
+                                        Layout.fillWidth: true
+                                    }
+                                }
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    height: 1
+                                    color: "#3d4556"
+                                    opacity: 0.2
+                                }
+
+                                // ✅ 2026-01-27 [FIX 100.300.31]: 添加上限值、下限值、量程、单位参数（与张力传感器一致）
+                                // 上限值
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
+
+                                    Text {
+                                        text: "上限值:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
+
+                                    // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
+                                    DeviceInfo.CustomSpinBox {
+                                        id: upperLimitSpin
+                                        from: 0
+                                        to: 10000
+                                        value: 100
+                                        stepSize: 10
+                                        editable: true
+                                        Layout.fillWidth: true
+                                    }
+                                }
+
+                                // 下限值
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
+
+                                    Text {
+                                        text: "下限值:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
+
+                                    // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
+                                    DeviceInfo.CustomSpinBox {
+                                        id: lowerLimitSpin
+                                        from: 0
+                                        to: 10000
+                                        value: 0
+                                        stepSize: 10
+                                        editable: true
+                                        Layout.fillWidth: true
+                                    }
+                                }
+
+                                // 量程
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
+
+                                    Text {
+                                        text: "量程:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
+
+                                    // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
+                                    DeviceInfo.CustomSpinBox {
+                                        id: rangeSpin
+                                        from: 1
+                                        to: 10000
+                                        value: 100
+                                        stepSize: 10
+                                        editable: true
+                                        Layout.fillWidth: true
+                                    }
+                                }
+
+                                // 单位
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
+
+                                    Text {
+                                        text: "单位:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
+
+                                    ComboBox {
+                                        id: unitCombo
+                                        Layout.fillWidth: true
+                                        model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
+                                        editable: true
+                                        currentIndex: 0  // 默认选择 "m/s"
+
+                                        background: Rectangle {
+                                            color: "#2d3548"
+                                            radius: 2
+                                            border.color: unitCombo.activeFocus ? "#3498db" : "#7f8c8d"
+                                            border.width: 1
+                                        }
+
+                                        contentItem: TextInput {
+                                            text: unitCombo.editable ? unitCombo.editText : unitCombo.displayText
+                                            font.pixelSize: 12
+                                            color: "#E0E0E0"
+                                            verticalAlignment: Text.AlignVCenter
+                                            leftPadding: 10
+                                            readOnly: !unitCombo.editable
+                                            selectByMouse: true
+                                        }
+                                    }
+                                }
                             }  // 左列结束
 
                             // ========== 右列：保护延时到音频文件 ==========
@@ -509,256 +509,256 @@ Rectangle {
                                 Layout.preferredWidth: parent.width / 2
                                 spacing: 12
 
-                        // 保护延时
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 10
-
-                                Text {
-                                    text: "保护延时(秒):"
-                                    font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                    color: "#9E9E9E"
-                                    Layout.preferredWidth: 100
-                                }
-
-                                DeviceInfo.CustomSpinBox {
-                                    id: delaySpin
-                                    from: 0
-                                    to: 600
-                                    value: 10
-                                    stepSize: 1
-                                    editable: true
+                                // 保护延时
+                                RowLayout {
                                     Layout.fillWidth: true
+                                    spacing: 10
 
-                                    property int decimals: 1
-                                    property real realValue: value / 10
-
-                                    textFromValue: function(value, locale) {
-                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                    Text {
+                                        text: "保护延时(秒):"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
                                     }
 
-                                    valueFromText: function(text, locale) {
-                                        return Number.fromLocaleString(locale, text) * 10
-                                    }
-                                }
-                            }
+                                    DeviceInfo.CustomSpinBox {
+                                        id: delaySpin
+                                        from: 0
+                                        to: 600
+                                        value: 10
+                                        stepSize: 1
+                                        editable: true
+                                        Layout.fillWidth: true
 
-                        // 播放次数
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
+                                        property int decimals: 1
+                                        property real realValue: value / 10
 
-                            Text {
-                                text: "播放次数:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
+                                        textFromValue: function(value, locale) {
+                                            return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                        }
 
-                            DeviceInfo.CustomSpinBox {
-                                id: playCountSpin
-                                from: 1
-                                to: 99
-                                value: 3
-                                editable: true
-                                Layout.fillWidth: true
-                            }
-                        }
-
-                        // 播放时长
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Text {
-                                text: "播放时长(秒):"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
-
-                            DeviceInfo.CustomSpinBox {
-                                id: durationSpin
-                                from: 1
-                                to: 600
-                                value: 50
-                                stepSize: 5
-                                editable: true
-                                Layout.fillWidth: true
-
-                                property int decimals: 1
-                                property real realValue: value / 10
-
-                                textFromValue: function(value, locale) {
-                                    return Number(value / 10).toLocaleString(locale, 'f', 1)
-                                }
-
-                                valueFromText: function(text, locale) {
-                                    return Number.fromLocaleString(locale, text) * 10
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 1
-                            color: "#3d4556"
-                            opacity: 0.2
-                        }
-
-                        // 语音报警类型
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Text {
-                                text: "语音报警:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
-
-                            RadioButton {
-                                id: ttsRadio
-                                text: "文字转语音"
-                                checked: true
-                                font.pixelSize: 12
-
-                                indicator: Rectangle {
-                                    implicitWidth: 18
-                                    implicitHeight: 18
-                                    x: ttsRadio.leftPadding
-                                    y: parent.height / 2 - height / 2
-                                    radius: 9
-                                    border.color: ttsRadio.checked ? "#00d4ff" : "#7f8c8d"
-                                    border.width: 2
-                                    color: "transparent"
-
-                                    Rectangle {
-                                        width: 10
-                                        height: 10
-                                        x: 4
-                                        y: 4
-                                        radius: 5
-                                        color: "#3d4556"
-                                        visible: ttsRadio.checked
+                                        valueFromText: function(text, locale) {
+                                            return Number.fromLocaleString(locale, text) * 10
+                                        }
                                     }
                                 }
 
-                                contentItem: Text {
-                                    text: ttsRadio.text
-                                    font: ttsRadio.font
-                                    color: "#E0E0E0"
-                                    leftPadding: ttsRadio.indicator.width + 8
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                            }
+                                // 播放次数
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
 
-                            RadioButton {
-                                id: fileRadio
-                                text: "音频文件"
-                                checked: false
-                                font.pixelSize: 12
+                                    Text {
+                                        text: "播放次数:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
 
-                                indicator: Rectangle {
-                                    implicitWidth: 18
-                                    implicitHeight: 18
-                                    x: fileRadio.leftPadding
-                                    y: parent.height / 2 - height / 2
-                                    radius: 9
-                                    border.color: fileRadio.checked ? "#00d4ff" : "#7f8c8d"
-                                    border.width: 2
-                                    color: "transparent"
-
-                                    Rectangle {
-                                        width: 10
-                                        height: 10
-                                        x: 4
-                                        y: 4
-                                        radius: 5
-                                        color: "#3d4556"
-                                        visible: fileRadio.checked
+                                    DeviceInfo.CustomSpinBox {
+                                        id: playCountSpin
+                                        from: 1
+                                        to: 99
+                                        value: 3
+                                        editable: true
+                                        Layout.fillWidth: true
                                     }
                                 }
 
-                                contentItem: Text {
-                                    text: fileRadio.text
-                                    font: fileRadio.font
-                                    color: "#E0E0E0"
-                                    leftPadding: fileRadio.indicator.width + 8
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                            }
-                        }
+                                // 播放时长
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
 
-                        // TTS文字输入
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-                            visible: ttsRadio.checked
+                                    Text {
+                                        text: "播放时长(秒):"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
 
-                            Text {
-                                text: "报警文字:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
+                                    DeviceInfo.CustomSpinBox {
+                                        id: durationSpin
+                                        from: 1
+                                        to: 600
+                                        value: 50
+                                        stepSize: 5
+                                        editable: true
+                                        Layout.fillWidth: true
 
-                            // ✅ 2026-01-27 [FIX 100.300.32]: 使用自定义 TextField（034.png 背景）
-                            DeviceInfo.CustomTextField {
-                                id: ttsTextField
-                                placeholderText: "输入报警文字内容..."
-                                Layout.fillWidth: true
-                            }
-                        }
+                                        property int decimals: 1
+                                        property real realValue: value / 10
 
-                        // 音频文件选择
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-                            visible: fileRadio.checked
+                                        textFromValue: function(value, locale) {
+                                            return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                        }
 
-                            Text {
-                                text: "音频文件:"
-                                font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
-                                color: "#9E9E9E"
-                                Layout.preferredWidth: 100
-                            }
-
-                            // ✅ 2026-01-27 [FIX 100.300.32]: 使用自定义 TextField（034.png 背景）
-                            DeviceInfo.CustomTextField {
-                                id: audioField
-                                placeholderText: "选择音频文件..."
-                                Layout.fillWidth: true
-                                readOnly: true
-                            }
-
-                            Button {
-                                text: "浏览"
-                                Layout.preferredWidth: 60
-                                Layout.preferredHeight: 30
-
-                                background: Rectangle {
-                                    color: parent.pressed ? "#2980b9" : (parent.hovered ? "#3498db" : "#34495e")
-                                    radius: 2
-                                    border.color: "#2196F3"
-                                    border.width: 1
+                                        valueFromText: function(text, locale) {
+                                            return Number.fromLocaleString(locale, text) * 10
+                                        }
+                                    }
                                 }
 
-                                contentItem: Text {
-                                    text: parent.text
-                                    font.pixelSize: 11
-                                    color: "#E0E0E0"
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    height: 1
+                                    color: "#3d4556"
+                                    opacity: 0.2
                                 }
 
-                                onClicked: {
-                                    console.log("打开文件选择对话框")
-                                    // TODO: 实现文件选择
+                                // 语音报警类型
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
+
+                                    Text {
+                                        text: "语音报警:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
+
+                                    RadioButton {
+                                        id: ttsRadio
+                                        text: "文字转语音"
+                                        checked: true
+                                        font.pixelSize: 12
+
+                                        indicator: Rectangle {
+                                            implicitWidth: 18
+                                            implicitHeight: 18
+                                            x: ttsRadio.leftPadding
+                                            y: parent.height / 2 - height / 2
+                                            radius: 9
+                                            border.color: ttsRadio.checked ? "#00d4ff" : "#7f8c8d"
+                                            border.width: 2
+                                            color: "transparent"
+
+                                            Rectangle {
+                                                width: 10
+                                                height: 10
+                                                x: 4
+                                                y: 4
+                                                radius: 5
+                                                color: "#3d4556"
+                                                visible: ttsRadio.checked
+                                            }
+                                        }
+
+                                        contentItem: Text {
+                                            text: ttsRadio.text
+                                            font: ttsRadio.font
+                                            color: "#E0E0E0"
+                                            leftPadding: ttsRadio.indicator.width + 8
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                    }
+
+                                    RadioButton {
+                                        id: fileRadio
+                                        text: "音频文件"
+                                        checked: false
+                                        font.pixelSize: 12
+
+                                        indicator: Rectangle {
+                                            implicitWidth: 18
+                                            implicitHeight: 18
+                                            x: fileRadio.leftPadding
+                                            y: parent.height / 2 - height / 2
+                                            radius: 9
+                                            border.color: fileRadio.checked ? "#00d4ff" : "#7f8c8d"
+                                            border.width: 2
+                                            color: "transparent"
+
+                                            Rectangle {
+                                                width: 10
+                                                height: 10
+                                                x: 4
+                                                y: 4
+                                                radius: 5
+                                                color: "#3d4556"
+                                                visible: fileRadio.checked
+                                            }
+                                        }
+
+                                        contentItem: Text {
+                                            text: fileRadio.text
+                                            font: fileRadio.font
+                                            color: "#E0E0E0"
+                                            leftPadding: fileRadio.indicator.width + 8
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                    }
                                 }
-                            }
-                        }
+
+                                // TTS文字输入
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
+                                    visible: ttsRadio.checked
+
+                                    Text {
+                                        text: "报警文字:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
+
+                                    // ✅ 2026-01-27 [FIX 100.300.32]: 使用自定义 TextField（034.png 背景）
+                                    DeviceInfo.CustomTextField {
+                                        id: ttsTextField
+                                        placeholderText: "输入报警文字内容..."
+                                        Layout.fillWidth: true
+                                    }
+                                }
+
+                                // 音频文件选择
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
+                                    visible: fileRadio.checked
+
+                                    Text {
+                                        text: "音频文件:"
+                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        color: "#9E9E9E"
+                                        Layout.preferredWidth: 100
+                                    }
+
+                                    // ✅ 2026-01-27 [FIX 100.300.32]: 使用自定义 TextField（034.png 背景）
+                                    DeviceInfo.CustomTextField {
+                                        id: audioField
+                                        placeholderText: "选择音频文件..."
+                                        Layout.fillWidth: true
+                                        readOnly: true
+                                    }
+
+                                    Button {
+                                        text: "浏览"
+                                        Layout.preferredWidth: 60
+                                        Layout.preferredHeight: 30
+
+                                        background: Rectangle {
+                                            color: parent.pressed ? "#2980b9" : (parent.hovered ? "#3498db" : "#34495e")
+                                            radius: 2
+                                            border.color: "#2196F3"
+                                            border.width: 1
+                                        }
+
+                                        contentItem: Text {
+                                            text: parent.text
+                                            font.pixelSize: 11
+                                            color: "#E0E0E0"
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+
+                                        onClicked: {
+                                            console.log("打开文件选择对话框")
+                                            // TODO: 实现文件选择
+                                        }
+                                    }
+                                }
                             }  // 右列结束
                         }  // 2列布局结束
                     }
