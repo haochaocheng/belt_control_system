@@ -47,6 +47,11 @@ public:
     // 初始化TTS引擎（加载模型）
     bool initialize(const QString &modelDir);
 
+    // ✅ 2026-01-27 [FIX 100.300.44]: 添加缺失的函数声明
+    bool switchModel(const QString &modelDir);
+    void setSceneName(const QString &sceneName);
+    void testTTS(const QString &text);
+
     // TTS操作
     void say(const QString &text);
     void stop();
