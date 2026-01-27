@@ -13,12 +13,10 @@ qt_add_qml_module(qml_module
         pages/DeviceOperationLog.qml
         pages/Input1Page.qml
         pages/VoiceManagement.qml  # ✅ 2026-01-23 11:30 [FIX 100.300.3] 语音管理界面
-        # 2026-01-19: Input1 模块 QML 组件（8 个，自动检测）
+        # 2026-01-19: Input1 模块 QML 组件（6 个，自动检测）
         Input1/Input1Content/Back.ui.qml
         Input1/Input1Content/BHState.ui.qml
         Input1/Input1Content/DataShow.ui.qml
-        Input1/Input1Content/Head_MiddleMenu.ui.qml
-        Input1/Input1Content/Head.ui.qml
         Input1/Input1Content/MyIN_Data.ui.qml
         Input1/Input1Content/MyIN_State.ui.qml
         Input1/Input1Content/Screen01.ui.qml
@@ -108,21 +106,50 @@ qt_add_qml_module(qml_module
     RESOURCES
         images/header.png
         sounds/ringtone.wav
-        # ✅ 2026-01-20 [FIX 100.274]: 参数设置页面背景图片
-        components/parameter_settings/images/039.png
-        components/parameter_settings/images/48.png
-        # ✅ 2026-01-20 [FIX 100.276]: 报警页面背景图片
-        pages/images/086.png
-        pages/images/349.png
-        pages/images/Audio196.png
-        pages/images/Audio349.png
-        # 2026-01-12: Input1 模块资源文件（48 个图片，全英文文件名）
+        # 2026-01-12: Input1 模块资源文件（101 个图片，全英文文件名）
         Input1/Input1Content/images/082.png
+        Input1/Input1Content/images/15823432333.svg
         Input1/Input1Content/images/back_Lift.svg
         Input1/Input1Content/images/back_Rrigt.png
         Input1/Input1Content/images/back1.svg
         Input1/Input1Content/images/back2.svg
         Input1/Input1Content/images/back3.png
+        Input1/Input1Content/images/background_bottom_transparent.png
+        Input1/Input1Content/images/background_full_transparent.png
+        Input1/Input1Content/images/background_top_transparent.png
+        Input1/Input1Content/images/current_value.svg
+        Input1/Input1Content/images/dd.png
+        Input1/Input1Content/images/fault.svg
+        Input1/Input1Content/images/figma_export_1.svg
+        Input1/Input1Content/images/group2_frame1_bottom_center.png
+        Input1/Input1Content/images/group2_frame1_bottom_left.png
+        Input1/Input1Content/images/group2_frame1_bottom_right.png
+        Input1/Input1Content/images/group2_frame1_middle_left.png
+        Input1/Input1Content/images/group2_frame1_middle_right.png
+        Input1/Input1Content/images/group2_frame1_top_center.png
+        Input1/Input1Content/images/group2_frame1_top_left.png
+        Input1/Input1Content/images/group2_frame1_top_right.png
+        Input1/Input1Content/images/group2_frame1.png
+        Input1/Input1Content/images/group2_frame2_base.svg
+        Input1/Input1Content/images/group2_frame2_bottom_center.png
+        Input1/Input1Content/images/group2_frame2_bottom_left.png
+        Input1/Input1Content/images/group2_frame2_bottom_right.png
+        Input1/Input1Content/images/group2_frame2_middle_left.png
+        Input1/Input1Content/images/group2_frame2_middle_right.png
+        Input1/Input1Content/images/group2_frame2_top_center.png
+        Input1/Input1Content/images/group2_frame2_top_left.png
+        Input1/Input1Content/images/group2_frame2_top_right.png
+        Input1/Input1Content/images/group2_frame2.svg
+        Input1/Input1Content/images/group2_frame3_bottom_center.png
+        Input1/Input1Content/images/group2_frame3_bottom_left.png
+        Input1/Input1Content/images/group2_frame3_bottom_right.png
+        Input1/Input1Content/images/group2_frame3_middle_left.png
+        Input1/Input1Content/images/group2_frame3_middle_right.png
+        Input1/Input1Content/images/group2_frame3_top_center.png
+        Input1/Input1Content/images/group2_frame3_top_left.png
+        Input1/Input1Content/images/group2_frame3_top_right.png
+        Input1/Input1Content/images/group2_frame3.png
+        Input1/Input1Content/images/GSC10.svg
         Input1/Input1Content/images/head_Bottom-left_straight_line1.png
         Input1/Input1Content/images/head_Bottom-left_straight_line10.png
         Input1/Input1Content/images/head_Bottom-left_straight_line11.png
@@ -154,6 +181,21 @@ qt_add_qml_module(qml_module
         Input1/Input1Content/images/IN_Data_OK.png
         Input1/Input1Content/images/IN_Data.png
         Input1/Input1Content/images/IN_State.png
+        Input1/Input1Content/images/input_type.svg
+        Input1/Input1Content/images/middle_top_status_bg_sides.png
+        Input1/Input1Content/images/middle_top_status_bg.png
+        Input1/Input1Content/images/path_1.svg
+        Input1/Input1Content/images/path_2.svg
+        Input1/Input1Content/images/path_background.png
+        Input1/Input1Content/images/path.svg
+        Input1/Input1Content/images/protection_name.svg
+        Input1/Input1Content/images/rectangle_34624263.svg
+        Input1/Input1Content/images/rectangle_34624264.svg
+        Input1/Input1Content/images/rectangle_34624265.svg
+        Input1/Input1Content/images/rectangle_34624270.svg
+        Input1/Input1Content/images/rectangle_34624271.svg
+        Input1/Input1Content/images/running_active.svg
+        Input1/Input1Content/images/speed.svg
         Input1/Input1Content/images/state_bk_1.png
         Input1/Input1Content/images/state_bk_2.png
         Input1/Input1Content/images/state_bk_3.png
@@ -165,81 +207,7 @@ qt_add_qml_module(qml_module
         Input1/Input1Content/images/state_bk2.png
         Input1/Input1Content/images/state_bk3.png
         Input1/Input1Content/images/state_bk4.png
-        # 其他资源：components/device_info/images（12 个文件）
-        components/device_info/images/024-1.png
-        components/device_info/images/024.png
-        components/device_info/images/042.png
-        components/device_info/images/059.png
-        components/device_info/images/118.png
-        components/device_info/images/290.png
-        components/device_info/images/33.png
-        components/device_info/images/351.png
-        components/device_info/images/deviceInfo125.png
-        components/device_info/images/deviceInfo40.png
-        components/device_info/images/DJHeadbutton1.png
-        components/device_info/images/DJHeadbutton2.png
-        # 其他资源：images（9 个文件）
-        images/036.png
-        images/154.png
-        images/156.png
-        images/bhNameBK.png
-        images/bhNameBK1.png
-        images/dvList.png
-        images/dvList2.png
-        images/header.png
-        # 其他资源：pages/Input1Content/images（52 个文件）
-        pages/Input1Content/images/15823432333.svg
-        pages/Input1Content/images/591f887661e569e40a0f280feaf942c33ddd121328c7b-iqvDOE_fw1200_1.svg
-        pages/Input1Content/images/background_bottom_transparent.png
-        pages/Input1Content/images/background_full_transparent.png
-        pages/Input1Content/images/background_top_transparent.png
-        pages/Input1Content/images/current_value.svg
-        pages/Input1Content/images/fault.svg
-        pages/Input1Content/images/group2_frame1_bottom_center.png
-        pages/Input1Content/images/group2_frame1_bottom_left.png
-        pages/Input1Content/images/group2_frame1_bottom_right.png
-        pages/Input1Content/images/group2_frame1_middle_left.png
-        pages/Input1Content/images/group2_frame1_middle_right.png
-        pages/Input1Content/images/group2_frame1_top_center.png
-        pages/Input1Content/images/group2_frame1_top_left.png
-        pages/Input1Content/images/group2_frame1_top_right.png
-        pages/Input1Content/images/group2_frame1.png
-        pages/Input1Content/images/group2_frame2_base.svg
-        pages/Input1Content/images/group2_frame2_bottom_center.png
-        pages/Input1Content/images/group2_frame2_bottom_left.png
-        pages/Input1Content/images/group2_frame2_bottom_right.png
-        pages/Input1Content/images/group2_frame2_middle_left.png
-        pages/Input1Content/images/group2_frame2_middle_right.png
-        pages/Input1Content/images/group2_frame2_top_center.png
-        pages/Input1Content/images/group2_frame2_top_left.png
-        pages/Input1Content/images/group2_frame2_top_right.png
-        pages/Input1Content/images/group2_frame2.svg
-        pages/Input1Content/images/group2_frame3_bottom_center.png
-        pages/Input1Content/images/group2_frame3_bottom_left.png
-        pages/Input1Content/images/group2_frame3_bottom_right.png
-        pages/Input1Content/images/group2_frame3_middle_left.png
-        pages/Input1Content/images/group2_frame3_middle_right.png
-        pages/Input1Content/images/group2_frame3_top_center.png
-        pages/Input1Content/images/group2_frame3_top_left.png
-        pages/Input1Content/images/group2_frame3_top_right.png
-        pages/Input1Content/images/group2_frame3.png
-        pages/Input1Content/images/GSC10.svg
-        pages/Input1Content/images/input_type.svg
-        pages/Input1Content/images/middle_top_status_bg_sides.png
-        pages/Input1Content/images/middle_top_status_bg.png
-        pages/Input1Content/images/path_1.svg
-        pages/Input1Content/images/path_2.svg
-        pages/Input1Content/images/path_background.png
-        pages/Input1Content/images/path.svg
-        pages/Input1Content/images/protection_name.svg
-        pages/Input1Content/images/Rectangle_34624263.svg
-        pages/Input1Content/images/Rectangle_34624264.svg
-        pages/Input1Content/images/Rectangle_34624265.svg
-        pages/Input1Content/images/Rectangle_34624270.svg
-        pages/Input1Content/images/Rectangle_34624271.svg
-        pages/Input1Content/images/running_active.svg
-        pages/Input1Content/images/speed.svg
-        pages/Input1Content/images/switch_value.svg
+        Input1/Input1Content/images/switch_value.svg
     RESOURCE_PREFIX /qt/qml
     NO_PLUGIN_OPTIONAL
 )
@@ -281,7 +249,8 @@ target_link_libraries(input1_qml_module PRIVATE
     Qt6::Quick
 )
 
-# 将 Input1 模块链接到主 qml_module
+# ❌ 2026-01-27 [FIX 100.300.43]: 删除孤立的 Input1 文件列表（已在 input1_qml_module 中定义）
+# 这些文件已经在上面的 qt_add_qml_module(input1_qml_module) 中定义过了
 target_link_libraries(qml_module PRIVATE input1_qml_module)
 
 message(STATUS "Input1 QML 模块已创建为独立模块")
