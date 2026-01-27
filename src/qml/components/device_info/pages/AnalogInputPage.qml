@@ -246,8 +246,7 @@ Rectangle {
                         // ✅ 2026-01-27 [FIX 100.300.38]: 参数区域分为左右2列
                         RowLayout {
                             Layout.fillWidth: true
-                            spacing: 20
-                            // ❌ 2026-01-27 [FIX 100.300.40.1]: 使用 implicitWidth 让两列等宽
+                            spacing: 0  // ✅ 2026-01-27 [FIX 100.300.41]: 改为0，用装饰条控制间距
 
                             // ========== 左列：保护名称到单位 ==========
                             ColumnLayout {
@@ -255,7 +254,6 @@ Rectangle {
                                 Layout.minimumWidth: 200
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
-                                // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
 
                                 // 保护名称
                                 RowLayout {
@@ -490,13 +488,22 @@ Rectangle {
                                 }
                             }  // 左列结束
 
+                            // ========== 装饰分隔条 ==========
+                            Rectangle {
+                                Layout.fillHeight: true
+                                Layout.preferredWidth: 2
+                                Layout.leftMargin: 20
+                                Layout.rightMargin: 20
+                                color: "#3A3A3A"  // 深灰色分隔线
+                                radius: 1
+                            }
+
                             // ========== 右列：保护延时到音频文件 ==========
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.minimumWidth: 200
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
-                                // ❌ 2026-01-27 [FIX 100.300.40.1]: 使用 implicitWidth 让两列等宽
 
                                 // 保护延时
                                 RowLayout {
