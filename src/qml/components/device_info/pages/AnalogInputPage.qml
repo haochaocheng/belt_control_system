@@ -265,12 +265,22 @@ Rectangle {
                             spacing: 20
                             alignment: Qt.AlignTop
 
+                            Component.onCompleted: {
+                                console.log("✅ [DEBUG] 2列布局 RowLayout 宽度:", width)
+                                console.log("✅ [DEBUG] 2列布局 RowLayout 高度:", height)
+                            }
+
                             // ========== 左列：保护名称到单位 ==========
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: parent.width / 2
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
+
+                                Component.onCompleted: {
+                                    console.log("✅ [DEBUG] 左列 ColumnLayout 宽度:", width)
+                                    console.log("✅ [DEBUG] 左列 ColumnLayout 高度:", height)
+                                }
 
                                 // 保护名称
                                 RowLayout {
@@ -511,6 +521,11 @@ Rectangle {
                                 Layout.preferredWidth: parent.width / 2
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
+
+                                Component.onCompleted: {
+                                    console.log("✅ [DEBUG] 右列 ColumnLayout 宽度:", width)
+                                    console.log("✅ [DEBUG] 右列 ColumnLayout 高度:", height)
+                                }
 
                                 // 保护延时
                                 RowLayout {
