@@ -261,6 +261,7 @@ Rectangle {
                         // ✅ 2026-01-27 [FIX 100.300.38]: 参数区域分为左右2列
                         RowLayout {
                             Layout.fillWidth: true
+                            Layout.preferredHeight: implicitHeight
                             spacing: 20
                             alignment: Qt.AlignTop
 
@@ -268,6 +269,7 @@ Rectangle {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: parent.width / 2
+                                Layout.alignment: Qt.AlignTop
                                 spacing: 12
 
                                 // 保护名称
@@ -507,6 +509,7 @@ Rectangle {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: parent.width / 2
+                                Layout.alignment: Qt.AlignTop
                                 spacing: 12
 
                                 // 保护延时
