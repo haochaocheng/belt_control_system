@@ -45,6 +45,12 @@ class SipPhoneManager : public QObject
     Q_PROPERTY(QStringList audioOutputDevices READ audioOutputDevices NOTIFY audioOutputDevicesChanged)
     Q_PROPERTY(QStringList videoDevices READ videoDevices NOTIFY videoDevicesChanged)
 
+    // ✅ 2026-01-19 20:00 [FIX 100.252.3] 编解码器列表 Q_PROPERTY（严格前后端分离）
+    // 原因：与 FIX 100.246 设备列表保持一致，QML 直接绑定 property 自动更新
+    // 解决：使用 Q_PROPERTY + Signal 通知机制，避免 QML 手动调用函数更新 model
+    Q_PROPERTY(QStringList audioCodecs READ audioCodecs NOTIFY audioCodecsChanged)
+    Q_PROPERTY(QStringList videoCodecs READ videoCodecs NOTIFY videoCodecsChanged)
+
 public:
     explicit SipPhoneManager(QObject *parent = nullptr);
     ~SipPhoneManager();
@@ -75,6 +81,10 @@ public:
     QStringList audioOutputDevices() const;
     QStringList videoDevices() const;
 
+    // ✅ 2026-01-19 20:00 [FIX 100.252.3] 编解码器列表 property getters（严格前后端分离）
+    QStringList audioCodecs() const;  // 替代 getAudioCodecs()，QML 直接绑定
+    QStringList videoCodecs() const;  // 替代 getVideoCodecs()，QML 直接绑定
+
     // Property setters
     void setCurrentNumber(const QString &number);
     void setCallerDisplayName(const QString &name);
@@ -83,6 +93,10 @@ public slots:
     // SIP endpoint control
     bool initializeEndpoint();
     void shutdownEndpoint();
+
+    // ✅ 2026-01-01 22:40 [调试] 添加PJSIP日志级别控制方法
+    // 参数：level - 日志级别（0=禁用, 1=错误, 2=警告, 3=信息, 4=调试, 5=最详细）
+    void setPjsipLogLevel(int level);
 
     // Account management
     bool registerAccount(const QString &sipServer,
@@ -134,6 +148,9 @@ public slots:
     void setMicrophoneVolume(int volume);  // 0-100
     void setSpeakerVolume(int volume);     // 0-100
     void muteMicrophone(bool mute);
+
+    // ✅ 2026-01-19 23:45 [FIX 100.249 v3] 通话建立时恢复麦克风音量
+    void restoreMicrophoneVolume();
 
     // ✅ 2026-01-17 22:30 [FIX 100.246] 设备枚举和选择
     // ⚠️ 2026-01-18 12:00 [DEPRECATED] 这些函数将废弃，请使用 Q_PROPERTY 访问

@@ -135,6 +135,9 @@ private:
     static pj_status_t port_put_frame(pjmedia_port *port, pjmedia_frame *frame);
     static pj_status_t port_get_frame(pjmedia_port *port, pjmedia_frame *frame);
     static pj_status_t port_on_destroy(pjmedia_port *port);
+
+    // ✅ 硬件解码验证
+    void verifyHardwareDecoder();
 };
 
 #endif // REMOTEVIDEOMANAGER_H
