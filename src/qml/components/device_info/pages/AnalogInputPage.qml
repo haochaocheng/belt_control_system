@@ -247,12 +247,12 @@ Rectangle {
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 20
-                            // ❌ 2026-01-27 [FIX 100.300.40]: 修复列宽度分配问题
+                            // ❌ 2026-01-27 [FIX 100.300.40.1]: 使用 implicitWidth 让两列等宽
 
                             // ========== 左列：保护名称到单位 ==========
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: 0  // 让 RowLayout 自动分配
+                                Layout.minimumWidth: 200
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
                                 // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
@@ -493,10 +493,10 @@ Rectangle {
                             // ========== 右列：保护延时到音频文件 ==========
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: 0  // 让 RowLayout 自动分配
+                                Layout.minimumWidth: 200
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
-                                // ❌ 2026-01-27 [FIX 100.300.40]: 修复列宽度分配问题
+                                // ❌ 2026-01-27 [FIX 100.300.40.1]: 使用 implicitWidth 让两列等宽
 
                                 // 保护延时
                                 RowLayout {
