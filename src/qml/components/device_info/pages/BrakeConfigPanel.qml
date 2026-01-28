@@ -7,6 +7,7 @@ import ".." as DeviceInfo
 // 设计风格与电机控制完全一样，但不需要Tab栏
 // ✅ 2026-01-28 [统一样式] 替换 TextField 为 CustomTextField
 // ✅ 2026-01-28 [两列布局] 改为两列布局，参考 AnalogInputPage - FIX 100.300.83
+// ✅ 2026-01-28 [虚拟键盘集成]: 接收并传递键盘管理器
 Rectangle {
     id: root
     implicitWidth: 1400  // ✅ 2026-01-28 修改宽度以支持两列布局
@@ -16,6 +17,8 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property int brakeIndex: 0  // 当前制动器索引 (0-7)
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
+    property var keyboardManager: null
 
     // ========== 键盘导航支持 ==========
     focus: true
@@ -156,6 +159,7 @@ Rectangle {
                                 id: holdTimeField
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -183,6 +187,7 @@ Rectangle {
                                 id: releaseTimeField
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -210,6 +215,7 @@ Rectangle {
                                 id: maxTimeField
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -237,6 +243,7 @@ Rectangle {
                                 id: brakeDelayField
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -264,6 +271,7 @@ Rectangle {
                                 id: emergencyBrakeField
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -298,6 +306,7 @@ Rectangle {
                                 id: brakeOutputField
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -319,6 +328,7 @@ Rectangle {
                                 id: reducerOutputField
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -340,6 +350,7 @@ Rectangle {
                                 id: releaseInPlaceField
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -361,6 +372,7 @@ Rectangle {
                                 id: brakeInPlaceField
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                 placeholderText: "0"
                                 text: "0"
                             }
