@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 // ✅ 2026-01-25 [电机控制-右侧面板] 电机配置面板（Tab切换）
+// ✅ 2026-01-28 [虚拟键盘集成]: 接收并传递键盘管理器
 Rectangle {
     id: root
     width: 800  // 默认宽度（用于QDS预览）
@@ -13,6 +14,8 @@ Rectangle {
     // ========== 公开属性 ==========
     property int motorIndex: 0  // 当前电机索引 (0-7)
     property int currentTabIndex: 0  // 当前Tab索引
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
+    property var keyboardManager: null
 
     // ========== 键盘导航支持 ==========
     focus: true
@@ -217,6 +220,7 @@ Rectangle {
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
+                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                     }
                 }
             }
@@ -230,6 +234,7 @@ Rectangle {
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
+                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                     }
                 }
             }
@@ -238,56 +243,96 @@ Rectangle {
             Loader {
                 active: root.currentTabIndex === 2
                 source: "FrontBearingTempTab.qml"
-                onLoaded: { if (item) item.motorIndex = root.motorIndex }
+                onLoaded: {
+                    if (item) {
+                        item.motorIndex = root.motorIndex
+                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
+                }
             }
 
             // 3: 后轴承温度
             Loader {
                 active: root.currentTabIndex === 3
                 source: "RearBearingTempTab.qml"
-                onLoaded: { if (item) item.motorIndex = root.motorIndex }
+                onLoaded: {
+                    if (item) {
+                        item.motorIndex = root.motorIndex
+                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
+                }
             }
 
             // 4: A相绕组
             Loader {
                 active: root.currentTabIndex === 4
                 source: "PhaseAWindingTab.qml"
-                onLoaded: { if (item) item.motorIndex = root.motorIndex }
+                onLoaded: {
+                    if (item) {
+                        item.motorIndex = root.motorIndex
+                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
+                }
             }
 
             // 5: B相绕组
             Loader {
                 active: root.currentTabIndex === 5
                 source: "PhaseBWindingTab.qml"
-                onLoaded: { if (item) item.motorIndex = root.motorIndex }
+                onLoaded: {
+                    if (item) {
+                        item.motorIndex = root.motorIndex
+                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
+                }
             }
 
             // 6: C相绕组
             Loader {
                 active: root.currentTabIndex === 6
                 source: "PhaseCWindingTab.qml"
-                onLoaded: { if (item) item.motorIndex = root.motorIndex }
+                onLoaded: {
+                    if (item) {
+                        item.motorIndex = root.motorIndex
+                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
+                }
             }
 
             // 7: 电机温度
             Loader {
                 active: root.currentTabIndex === 7
                 source: "MotorTempTab.qml"
-                onLoaded: { if (item) item.motorIndex = root.motorIndex }
+                onLoaded: {
+                    if (item) {
+                        item.motorIndex = root.motorIndex
+                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
+                }
             }
 
             // 8: X轴振动
             Loader {
                 active: root.currentTabIndex === 8
                 source: "XAxisVibrationTab.qml"
-                onLoaded: { if (item) item.motorIndex = root.motorIndex }
+                onLoaded: {
+                    if (item) {
+                        item.motorIndex = root.motorIndex
+                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
+                }
             }
 
             // 9: Y轴振动
             Loader {
                 active: root.currentTabIndex === 9
                 source: "YAxisVibrationTab.qml"
-                onLoaded: { if (item) item.motorIndex = root.motorIndex }
+                onLoaded: {
+                    if (item) {
+                        item.motorIndex = root.motorIndex
+                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
+                }
             }
         }
     }
