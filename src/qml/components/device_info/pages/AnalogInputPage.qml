@@ -242,19 +242,26 @@ Rectangle {
                         // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加隐式高度，让 ScrollView 知道内容大小
                         implicitHeight: childrenRect.height
 
-                        // ✅ 2026-01-27 [FIX 100.300.38]: 参数区域分为左右2列
                         // ✅ 2026-01-28 [FIX 100.300.69]: 修复两列布局问题 - 统一标签宽度，确保输入框对齐
                         // ✅ 2026-01-28 [FIX 100.300.70]: 修复布局递归问题 - 使用固定宽度而不是动态计算
+                        // ✅ 2026-01-28 [FIX 100.300.71]: 重新设计布局 - 移除分隔条，两列自动平分宽度
+                        // ✅ 2026-01-28 [FIX 100.300.72]: 统一标签宽度为 120px，缩短右列标签文字
                         RowLayout {
                             Layout.fillWidth: true
                             Layout.leftMargin: 10
                             Layout.rightMargin: 10
-                            spacing: 0  // 用装饰条控制间距
+                            spacing: 20  // 两列之间的间距
+
+                            // ✅ 2026-01-28 [FIX 100.300.72]: 添加调试日志
+                            Component.onCompleted: {
+                                console.log("✅ [AnalogInputPage] RowLayout 宽度:", width)
+                                console.log("✅ [AnalogInputPage] 左列宽度:", children[0].width)
+                                console.log("✅ [AnalogInputPage] 右列宽度:", children[1].width)
+                            }
 
                             // ========== 左列：保护名称到单位 ==========
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: 250  // ✅ 使用固定宽度，避免布局递归
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
 
@@ -492,22 +499,23 @@ Rectangle {
                                 }
                             }  // 左列结束
 
-                            // ========== 装饰分隔条 ==========
-                            Rectangle {
-                                Layout.fillHeight: true
-                                Layout.preferredWidth: 2
-                                Layout.leftMargin: 20
-                                Layout.rightMargin: 20
-                                color: "#3A3A3A"  // 深灰色分隔线
-                                radius: 1
-                            }
+                            // ✅ 2026-01-28 [FIX 100.300.71]: 移除装饰分隔条，使用 spacing 控制间距
+                            // ❌ 2026-01-28 [注释]: 分隔条会占用宽度，导致两列挤在一起
+                            // Rectangle {
+                            //     Layout.fillHeight: true
+                            //     Layout.preferredWidth: 2
+                            //     Layout.leftMargin: 20
+                            //     Layout.rightMargin: 20
+                            //     color: "#3A3A3A"
+                            //     radius: 1
+                            // }
 
                             // ========== 右列：保护延时到音频文件 ==========
                             // ✅ 2026-01-28 [FIX 100.300.69]: 修复右列布局 - 统一标签宽度，确保输入框对齐
                             // ✅ 2026-01-28 [FIX 100.300.70]: 修复布局递归问题 - 使用固定宽度
+                            // ✅ 2026-01-28 [FIX 100.300.71]: 移除 preferredWidth，让布局引擎自动分配
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: 250  // ✅ 使用固定宽度，避免布局递归
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
 
@@ -517,10 +525,10 @@ Rectangle {
                                     spacing: 10
 
                                     Text {
-                                        text: "保护延时(秒):"
+                                        text: "延时(秒):"  // ✅ 2026-01-28 [FIX 100.300.72]: 缩短标签文字
                                         font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度（右列标签较长，使用 140px）
+                                        Layout.preferredWidth: 120  // ✅ 2026-01-28 [FIX 100.300.72]: 统一标签宽度为 120px
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
@@ -555,7 +563,7 @@ Rectangle {
                                         text: "播放次数:"
                                         font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度
+                                        Layout.preferredWidth: 120  // ✅ 2026-01-28 [FIX 100.300.72]: 统一标签宽度为 120px
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
@@ -575,10 +583,10 @@ Rectangle {
                                     spacing: 10
 
                                     Text {
-                                        text: "播放时长(秒):"
+                                        text: "时长(秒):"  // ✅ 2026-01-28 [FIX 100.300.72]: 缩短标签文字
                                         font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度
+                                        Layout.preferredWidth: 120  // ✅ 2026-01-28 [FIX 100.300.72]: 统一标签宽度为 120px
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
@@ -620,7 +628,7 @@ Rectangle {
                                         text: "语音报警:"
                                         font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度
+                                        Layout.preferredWidth: 120  // ✅ 2026-01-28 [FIX 100.300.72]: 统一标签宽度为 120px
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
@@ -707,7 +715,7 @@ Rectangle {
                                         text: "报警文字:"
                                         font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度
+                                        Layout.preferredWidth: 120  // ✅ 2026-01-28 [FIX 100.300.72]: 统一标签宽度为 120px
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
@@ -728,7 +736,7 @@ Rectangle {
                                         text: "音频文件:"
                                         font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度
+                                        Layout.preferredWidth: 120  // ✅ 2026-01-28 [FIX 100.300.72]: 统一标签宽度为 120px
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
