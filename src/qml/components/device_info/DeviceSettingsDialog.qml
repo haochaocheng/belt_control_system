@@ -49,7 +49,18 @@ Rectangle {
     }
 
     // ✅ 2026-01-24 [FIX]: 键盘导航支持
+    // ✅ 2026-01-28 [FIX 100.300.98]: 强制获取焦点，阻止主界面接收键盘事件
     focus: true
+
+    // ✅ 2026-01-28 [FIX 100.300.98]: 对话框显示时强制获取焦点
+    onVisibleChanged: {
+        if (visible) {
+            root.forceActiveFocus()
+            console.log("✅ [DeviceSettingsDialog] 焦点已转移到对话框")
+        } else {
+            console.log("✅ [DeviceSettingsDialog] 对话框已关闭，焦点返回主界面")
+        }
+    }
 
     Keys.onUpPressed: {
         // 上键：选择上一个类别
