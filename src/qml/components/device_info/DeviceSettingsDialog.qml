@@ -522,14 +522,26 @@ Rectangle {
                 }
 
                 // 4: 制动器控制
-                Rectangle {
-                    color: "transparent"
-                    Text {
-                        anchors.centerIn: parent
-                        text: "制动器控制\n（待实现）"
-                        font.pixelSize: 18
-                        color: "#CCCCCC"
-                        horizontalAlignment: Text.AlignHCenter
+                // ✅ 2026-01-28 [FIX 100.300.84]: 使用 BrakeControlPage 组件
+                Loader {
+                    id: brakeControlPageLoader
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    active: root.currentCategory === 4  // 仅在选中时加载
+                    source: "pages/BrakeControlPage.qml"
+
+                    onLoaded: {
+                        if (item) {
+                            console.log("✅ [DeviceSettingsDialog] BrakeControlPage 加载成功")
+                            item.deviceId = root.deviceId
+                            item.deviceName = root.deviceName
+                        }
+                    }
+
+                    onStatusChanged: {
+                        if (brakeControlPageLoader.status === Loader.Error) {
+                            console.error("❌ [DeviceSettingsDialog] BrakeControlPage 加载失败")
+                        }
                     }
                 }
 
