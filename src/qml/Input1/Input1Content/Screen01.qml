@@ -6,6 +6,7 @@ import Input1Content
 // ✅ 2026-01-27 [FIX 100.300.54]: Screen01 包装器 - 添加键盘导航功能
 // ✅ 2026-01-27 [FIX 100.300.56]: 添加 Input1Content 导入以加载 Screen01Form
 // ✅ 2026-01-27 [FIX 100.300.58]: 增强焦点管理和调试信息
+// ✅ 2026-01-28 [FIX 100.300.60]: 添加 dataItems 空值检查，修复 QDS 中 undefined 错误
 Item {
     id: root
     width: 1920
@@ -47,15 +48,28 @@ Item {
 
         Component.onCompleted: {
             console.log("[Screen01] ✅ 组件加载完成")
-            console.log("[Screen01] 📊 dataItems 数量:", dataItems.length)
-            console.log("[Screen01] 🔄 初始化选中状态...")
-            updateSelection()
+
+            // ✅ 2026-01-28 [FIX 100.300.60]: 添加 dataItems 空值检查
+            if (dataItems && dataItems.length > 0) {
+                console.log("[Screen01] 📊 dataItems 数量:", dataItems.length)
+                console.log("[Screen01] 🔄 初始化选中状态...")
+                updateSelection()
+            } else {
+                console.warn("[Screen01] ⚠️ dataItems 未定义或为空，跳过初始化")
+            }
+
             console.log("[Screen01] 🎯 强制获取焦点...")
             root.forceActiveFocus()
         }
     }
 
     function updateSelection() {
+        // ✅ 2026-01-28 [FIX 100.300.60]: 添加 dataItems 空值检查
+        if (!screen01Form.dataItems || screen01Form.dataItems.length === 0) {
+            console.warn("[Screen01] ⚠️ dataItems 未定义或为空，跳过更新")
+            return
+        }
+
         console.log("[Screen01] 🔄 updateSelection 开始，selectedIndex:", selectedIndex)
         var successCount = 0
         for (var i = 0; i < screen01Form.dataItems.length; i++) {
