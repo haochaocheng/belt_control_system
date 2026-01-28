@@ -161,6 +161,7 @@ QtObject {
 
     // ✅ 2026-01-28 [FIX 100.300.61]: 添加缺失的对象
     // ✅ 2026-01-28 [FIX 100.300.64]: 添加 workMode 和 warningMode 属性
+    // ✅ 2026-01-28 [FIX 100.300.68]: 添加 machineNumber 和网络配置属性
     property QtObject systemConfig: QtObject {
         property string deviceName: "模拟设备"
         property int baudRate: 9600
@@ -173,6 +174,19 @@ QtObject {
         property int warningTimeSeconds: 10  // 起车预警时间（秒）
         property int warningPlayCount: 3  // 起车预警次数
         property string localDeviceName: "1号皮带"  // 本机名称
+
+        // ✅ 2026-01-28 [FIX 100.300.68]: 添加本机编号和网络配置
+        property int machineNumber: 1  // 本机编号
+        property string localIp: "192.168.1.100"  // 本机IP
+        property string subnetMask: "255.255.255.0"  // 子网掩码
+        property string gateway: "192.168.1.1"  // 网关
+        property string serverIp: "192.168.1.200"  // 服务器IP
+
+        // ✅ 2026-01-28 [FIX 100.300.68]: 添加 Modbus 网络配置属性
+        property string modbusServerIp: "192.168.1.200"  // Modbus 服务器IP
+        property string modbusGateway: "192.168.1.1"  // Modbus 网关
+        property string modbusSubnetMask: "255.255.255.0"  // Modbus 子网掩码
+        property int modbusPollInterval: 100  // Modbus 轮询间隔（毫秒）
     }
 
     property QtObject operationLogDB: QtObject {
@@ -189,6 +203,7 @@ QtObject {
     }
 
     // ✅ 2026-01-28 [FIX 100.300.66]: 添加 runtimeTracker 对象
+    // ✅ 2026-01-28 [FIX 100.300.68]: 添加 faultDevices 数组
     property QtObject runtimeTracker: QtObject {
         property string currentStatus: "运行中"
         property string detailedStatus: "正常运行"
@@ -204,9 +219,13 @@ QtObject {
         property real dailyUptime: 85.5
         property real weeklyUptime: 78.2
         property real monthlyUptime: 82.7
+
+        // ✅ 2026-01-28 [FIX 100.300.68]: 添加故障设备列表
+        property var faultDevices: []  // 故障设备列表
     }
 
     // ✅ 2026-01-28 [FIX 100.300.66]: 添加 deviceConfigMgr 对象
+    // ✅ 2026-01-28 [FIX 100.300.68]: 添加 loadAllDigitalProtections 和 loadAllAnalogProtections 方法
     property QtObject deviceConfigMgr: QtObject {
         function loadDeviceConfig(deviceId) {
             console.log("模拟：加载设备配置", deviceId)
@@ -215,6 +234,16 @@ QtObject {
 
         function saveDeviceConfig(deviceId, config) {
             console.log("模拟：保存设备配置", deviceId, config)
+        }
+
+        function loadAllDigitalProtections(deviceId) {
+            console.log("模拟：加载设备", deviceId, "的开关量保护配置")
+            return []
+        }
+
+        function loadAllAnalogProtections(deviceId) {
+            console.log("模拟：加载设备", deviceId, "的模拟量保护配置")
+            return []
         }
     }
 

@@ -496,7 +496,8 @@ Rectangle {
         Button {
             Layout.fillWidth: true
             Layout.preferredHeight: 40
-            enabled: column.sequenceList.length < 10
+            // ✅ 2026-01-28 [FIX 100.300.68]: 添加空值检查，防止 sequenceList 未定义
+            enabled: column.sequenceList ? column.sequenceList.length < 10 : false
 
             background: Rectangle {
                 color: parent.pressed ? column.buttonPressedColor : (parent.hovered ? column.buttonHoverColor : column.buttonColor)
@@ -513,8 +514,9 @@ Rectangle {
                     color: "white"
                     Layout.alignment: Qt.AlignHCenter
                 }
+                // ✅ 2026-01-28 [FIX 100.300.68]: 添加空值检查
                 Text {
-                    text: "添加设备 (" + column.sequenceList.length + "/10)"
+                    text: "添加设备 (" + (column.sequenceList ? column.sequenceList.length : 0) + "/10)"
                     font.pixelSize: 15
                     color: "white"
                     Layout.alignment: Qt.AlignHCenter
