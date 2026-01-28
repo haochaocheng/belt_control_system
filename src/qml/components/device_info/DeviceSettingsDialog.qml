@@ -9,24 +9,52 @@ import "../virtual_keyboard" as VirtualKeyboard  // ✅ 2026-01-28 [虚拟键盘
 // ✅ 2026-01-28 [FIX 100.300.66]: 自适应屏幕尺寸（1920×1080 和 1280×800），居中显示
 // ✅ 2026-01-28 [FIX 100.300.67]: 修改尺寸为屏幕的 80%
 // ✅ 2026-01-28 [虚拟键盘集成]: 集成虚拟键盘管理器
-// ✅ 2026-01-28 [FIX 100.300.99]: 强化焦点管理，使用延迟获取焦点和 z-index
+// ✅ 2026-01-28 [FIX 100.300.99]: 强化焦点管理，使用延迟获取焦点和 z-index（失败）
+// ✅ 2026-01-28 [FIX 100.300.100]: 使用 MouseArea 模态遮罩 + FocusScope 强制获取焦点
 // QDS 预览版本：使用 Rectangle 替代 Dialog
-Rectangle {
-    id: root
+Item {
+    id: modalContainer
+    anchors.fill: parent
+    z: 1000  // 确保在最顶层
 
-    // ✅ 2026-01-28 [FIX 100.300.67]: 占整个屏幕的 80%
-    // 1920×1080: 1536×864 (80%)
-    // 1280×800: 1024×640 (80%)
-    width: parent ? parent.width * 0.8 : 1536
-    height: parent ? parent.height * 0.8 : 864
+    // ✅ 2026-01-28 [FIX 100.300.100]: 全屏模态遮罩，阻止所有事件传播到主界面
+    MouseArea {
+        id: modalOverlay
+        anchors.fill: parent
+        z: 999  // 在对话框下方
 
-    // ✅ 2026-01-28 [FIX 100.300.66]: 居中显示
-    anchors.centerIn: parent
+        // 阻止所有鼠标事件传播
+        onClicked: {
+            console.log("✅ [DeviceSettingsDialog] 点击遮罩，强制对话框获取焦点")
+            dialogFocusScope.forceActiveFocus()
+            mouse.accepted = true
+        }
+        onPressed: mouse.accepted = true
+        onReleased: mouse.accepted = true
+        onWheel: wheel.accepted = true
+        propagateComposedEvents: false
+        hoverEnabled: true
 
-    // ✅ 2026-01-28 [FIX 100.300.99]: 设置 z-index 确保在最顶层
-    z: 1000
+        // 半透明黑色背景
+        Rectangle {
+            anchors.fill: parent
+            color: "#80000000"
+        }
+    }
 
-    color: "#ec1e1e1e"
+    // ✅ 2026-01-28 [FIX 100.300.100]: 使用 FocusScope 创建独立焦点作用域
+    FocusScope {
+        id: dialogFocusScope
+        anchors.centerIn: parent
+        width: parent.width * 0.8
+        height: parent.height * 0.8
+        focus: true  // FocusScope 获取焦点
+        z: 1000  // 在遮罩上方
+
+        Rectangle {
+            id: root
+            anchors.fill: parent
+            color: "#ec1e1e1e"
     // ✅ 2026-01-25: 使用主题背景色
 
     // ========== 公开属性 ==========
@@ -47,54 +75,20 @@ Rectangle {
     }
 
     // ✅ 2026-01-28 [虚拟键盘初始化]: 初始化键盘管理器
+    // ✅ 2026-01-28 [FIX 100.300.100]: 强制获取焦点
     Component.onCompleted: {
         keyboardManager.initialize(virtualKeyboard)
         console.log("✅ [DeviceSettingsDialog] 虚拟键盘管理器已初始化")
+
+        // 强制 FocusScope 和对话框获取焦点
+        dialogFocusScope.forceActiveFocus()
+        root.forceActiveFocus()
+        console.log("✅ [DeviceSettingsDialog] 对话框已获取焦点")
     }
 
     // ✅ 2026-01-24 [FIX]: 键盘导航支持
-    // ✅ 2026-01-28 [FIX 100.300.98]: 强制获取焦点，阻止主界面接收键盘事件
-    // ✅ 2026-01-28 [FIX 100.300.99]: 使用延迟获取焦点，确保覆盖主界面
+    // ✅ 2026-01-28 [FIX 100.300.100]: FocusScope 内的 Rectangle 需要 focus
     focus: true
-
-    // ✅ 2026-01-28 [FIX 100.300.99]: 延迟焦点获取定时器
-    Timer {
-        id: focusTimer
-        interval: 100  // 延迟 100ms
-        running: false
-        repeat: true  // 重复执行
-        triggeredOnStart: false
-        property int retryCount: 0
-        property int maxRetries: 5  // 最多重试 5 次
-
-        onTriggered: {
-            retryCount++
-            root.forceActiveFocus()
-            console.log("✅ [DeviceSettingsDialog] 延迟焦点获取 (尝试 " + retryCount + "/" + maxRetries + ")")
-
-            if (retryCount >= maxRetries) {
-                stop()
-                retryCount = 0
-                console.log("✅ [DeviceSettingsDialog] 焦点获取完成")
-            }
-        }
-    }
-
-    // ✅ 2026-01-28 [FIX 100.300.98/99]: 对话框显示时强制获取焦点
-    onVisibleChanged: {
-        if (visible) {
-            // 立即获取焦点
-            root.forceActiveFocus()
-            // 启动延迟定时器，重复获取焦点
-            focusTimer.retryCount = 0
-            focusTimer.restart()
-            console.log("✅ [DeviceSettingsDialog] 对话框显示，开始获取焦点...")
-        } else {
-            // 停止定时器
-            focusTimer.stop()
-            console.log("✅ [DeviceSettingsDialog] 对话框已关闭，焦点返回主界面")
-        }
-    }
 
     Keys.onUpPressed: {
         // 上键：选择上一个类别
@@ -737,4 +731,6 @@ Rectangle {
             return []
         }
     }
-}
+        }  // Rectangle (root)
+    }  // FocusScope (dialogFocusScope)
+}  // Item (modalContainer)
