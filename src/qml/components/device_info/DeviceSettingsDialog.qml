@@ -5,11 +5,20 @@ import "../" as DeviceInfo  // ✅ 2026-01-25 [工业科技感设计]: 导入主
 
 // ✅ 2026-01-24 [设备信息界面重构] 设备参数设置弹窗
 // ✅ 2026-01-25 [工业科技感设计]: 应用 IndustrialTheme
+// ✅ 2026-01-28 [FIX 100.300.66]: 自适应屏幕尺寸（1920×1080 和 1280×800），居中显示
 // QDS 预览版本：使用 Rectangle 替代 Dialog
 Rectangle {
     id: root
-    width: 800
-    height: 550
+
+    // ✅ 2026-01-28 [FIX 100.300.66]: 自适应屏幕尺寸
+    // 1920×1080: 800×550 (原始尺寸)
+    // 1280×800: 约 533×367 (缩放 0.667)
+    width: Math.min(800, parent ? parent.width * 0.8 : 800)
+    height: Math.min(550, parent ? parent.height * 0.7 : 550)
+
+    // ✅ 2026-01-28 [FIX 100.300.66]: 居中显示
+    anchors.centerIn: parent
+
     color: "#ec1e1e1e"
     // ✅ 2026-01-25: 使用主题背景色
 

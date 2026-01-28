@@ -23,6 +23,9 @@ ApplicationWindow {
     // ✅ 2026-01-28 [FIX 100.300.62]: 添加缺失的全局属性
     property alias systemConfig: mockBackend.systemConfig
     property alias operationLogDB: mockBackend.operationLogDB
+    // ✅ 2026-01-28 [FIX 100.300.66]: 添加 runtimeTracker 和 deviceConfigMgr
+    property alias runtimeTracker: mockBackend.runtimeTracker
+    property alias deviceConfigMgr: mockBackend.deviceConfigMgr
 
     // ========== 主界面 ==========
     Rectangle {

@@ -188,6 +188,36 @@ QtObject {
         }
     }
 
+    // ✅ 2026-01-28 [FIX 100.300.66]: 添加 runtimeTracker 对象
+    property QtObject runtimeTracker: QtObject {
+        property string currentStatus: "运行中"
+        property string detailedStatus: "正常运行"
+        property bool isRunning: true
+        property bool isFault: false
+
+        // 运行时间统计
+        property string dailyRuntime: "08:30:45"
+        property string weeklyRuntime: "42:15:30"
+        property string monthlyRuntime: "180:45:20"
+
+        // 开机率统计
+        property real dailyUptime: 85.5
+        property real weeklyUptime: 78.2
+        property real monthlyUptime: 82.7
+    }
+
+    // ✅ 2026-01-28 [FIX 100.300.66]: 添加 deviceConfigMgr 对象
+    property QtObject deviceConfigMgr: QtObject {
+        function loadDeviceConfig(deviceId) {
+            console.log("模拟：加载设备配置", deviceId)
+            return {}
+        }
+
+        function saveDeviceConfig(deviceId, config) {
+            console.log("模拟：保存设备配置", deviceId, config)
+        }
+    }
+
     // ========== 初始化日志 ==========
     Component.onCompleted: {
         console.log("✅ QDS 后端模拟已加载")
