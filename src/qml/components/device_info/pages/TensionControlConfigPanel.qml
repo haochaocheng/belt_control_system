@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import ".." as DeviceInfo
 
 // ✅ 2026-01-27 [张紧控制-右侧面板] 控制配置面板
 // 张力传感器：包含模拟量弹窗的所有参数（完整版）
@@ -89,18 +90,12 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            TextField {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomTextField {
                                 id: nameField
                                 text: "张力"
                                 enabled: false  // 固定为"张力"
                                 Layout.fillWidth: true
-                                color: "#E0E0E0"
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    border.color: "#3d4556"
-                                    border.width: 1
-                                    radius: 4
-                                }
                             }
                         }
 
@@ -116,27 +111,13 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            ComboBox {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomComboBox {
                                 id: typeCombo
                                 enabled: false  // 固定为"模拟量"
                                 Layout.fillWidth: true
                                 model: ["模拟量", "开关量"]
                                 currentIndex: 0
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: "#3d4556"
-                                    border.width: 1
-                                }
-
-                                contentItem: Text {
-                                    text: typeCombo.displayText
-                                    color: "#E0E0E0"
-                                    font.pixelSize: 14
-                                    verticalAlignment: Text.AlignVCenter
-                                    leftPadding: 10
-                                }
                             }
                         }
 
@@ -152,26 +133,12 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            ComboBox {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomComboBox {
                                 id: moduleTypeCombo
                                 Layout.fillWidth: true
                                 model: ["模拟量模块1", "模拟量模块2", "模拟量模块3", "模拟量模块4"]
                                 currentIndex: 0
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: moduleTypeCombo.activeFocus ? "#2196F3" : "#3d4556"
-                                    border.width: 1
-                                }
-
-                                contentItem: Text {
-                                    text: moduleTypeCombo.displayText
-                                    color: "#E0E0E0"
-                                    font.pixelSize: 14
-                                    verticalAlignment: Text.AlignVCenter
-                                    leftPadding: 10
-                                }
                             }
                         }
 
@@ -187,31 +154,14 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            SpinBox {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomSpinBox {
                                 id: registerAddressSpin
                                 from: 0
                                 to: 255
                                 value: 6  // 张力默认寄存器地址
                                 editable: true
                                 Layout.fillWidth: true
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: registerAddressSpin.activeFocus ? "#2196F3" : "#3d4556"
-                                    border.width: 1
-                                }
-
-                                contentItem: TextInput {
-                                    text: registerAddressSpin.textFromValue(registerAddressSpin.value, registerAddressSpin.locale)
-                                    font.pixelSize: 14
-                                    color: "#E0E0E0"
-                                    horizontalAlignment: Qt.AlignHCenter
-                                    verticalAlignment: Qt.AlignVCenter
-                                    readOnly: !registerAddressSpin.editable
-                                    validator: registerAddressSpin.validator
-                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                }
                             }
                         }
 
@@ -227,7 +177,8 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            SpinBox {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomSpinBox {
                                 id: upperLimitSpin
                                 from: 0
                                 to: 10000
@@ -235,24 +186,6 @@ Rectangle {
                                 stepSize: 10
                                 editable: true
                                 Layout.fillWidth: true
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: upperLimitSpin.activeFocus ? "#2196F3" : "#3d4556"
-                                    border.width: 1
-                                }
-
-                                contentItem: TextInput {
-                                    text: upperLimitSpin.textFromValue(upperLimitSpin.value, upperLimitSpin.locale)
-                                    font.pixelSize: 14
-                                    color: "#E0E0E0"
-                                    horizontalAlignment: Qt.AlignHCenter
-                                    verticalAlignment: Qt.AlignVCenter
-                                    readOnly: !upperLimitSpin.editable
-                                    validator: upperLimitSpin.validator
-                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                }
                             }
                         }
 
@@ -268,7 +201,8 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            SpinBox {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomSpinBox {
                                 id: lowerLimitSpin
                                 from: 0
                                 to: 10000
@@ -276,24 +210,6 @@ Rectangle {
                                 stepSize: 10
                                 editable: true
                                 Layout.fillWidth: true
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: lowerLimitSpin.activeFocus ? "#2196F3" : "#3d4556"
-                                    border.width: 1
-                                }
-
-                                contentItem: TextInput {
-                                    text: lowerLimitSpin.textFromValue(lowerLimitSpin.value, lowerLimitSpin.locale)
-                                    font.pixelSize: 14
-                                    color: "#E0E0E0"
-                                    horizontalAlignment: Qt.AlignHCenter
-                                    verticalAlignment: Qt.AlignVCenter
-                                    readOnly: !lowerLimitSpin.editable
-                                    validator: lowerLimitSpin.validator
-                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                }
                             }
                         }
 
@@ -309,7 +225,8 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            SpinBox {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomSpinBox {
                                 id: rangeSpin
                                 from: 1
                                 to: 10000
@@ -317,24 +234,6 @@ Rectangle {
                                 stepSize: 10
                                 editable: true
                                 Layout.fillWidth: true
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: rangeSpin.activeFocus ? "#2196F3" : "#3d4556"
-                                    border.width: 1
-                                }
-
-                                contentItem: TextInput {
-                                    text: rangeSpin.textFromValue(rangeSpin.value, rangeSpin.locale)
-                                    font.pixelSize: 14
-                                    color: "#E0E0E0"
-                                    horizontalAlignment: Qt.AlignHCenter
-                                    verticalAlignment: Qt.AlignVCenter
-                                    readOnly: !rangeSpin.editable
-                                    validator: rangeSpin.validator
-                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                }
                             }
                         }
 
@@ -350,29 +249,13 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            ComboBox {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomComboBox {
                                 id: unitCombo
                                 Layout.fillWidth: true
                                 model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
                                 editable: true
                                 currentIndex: 1  // 默认选择 "T"（张力单位）
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: unitCombo.activeFocus ? "#2196F3" : "#3d4556"
-                                    border.width: 1
-                                }
-
-                                contentItem: TextInput {
-                                    text: unitCombo.editable ? unitCombo.editText : unitCombo.displayText
-                                    font.pixelSize: 14
-                                    color: "#E0E0E0"
-                                    verticalAlignment: Text.AlignVCenter
-                                    leftPadding: 10
-                                    readOnly: !unitCombo.editable
-                                    selectByMouse: true
-                                }
                             }
                         }
 
@@ -388,7 +271,8 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            SpinBox {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomSpinBox {
                                 id: delaySpin
                                 from: 0
                                 to: 600
@@ -407,24 +291,6 @@ Rectangle {
                                 valueFromText: function(text, locale) {
                                     return Number.fromLocaleString(locale, text) * 10
                                 }
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: delaySpin.activeFocus ? "#2196F3" : "#3d4556"
-                                    border.width: 1
-                                }
-
-                                contentItem: TextInput {
-                                    text: delaySpin.textFromValue(delaySpin.value, delaySpin.locale)
-                                    font.pixelSize: 14
-                                    color: "#E0E0E0"
-                                    horizontalAlignment: Qt.AlignHCenter
-                                    verticalAlignment: Qt.AlignVCenter
-                                    readOnly: !delaySpin.editable
-                                    validator: delaySpin.validator
-                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                }
                             }
                         }
 
@@ -440,31 +306,14 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            SpinBox {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomSpinBox {
                                 id: playCountSpin
                                 from: 1
                                 to: 99
                                 value: 3
                                 editable: true
                                 Layout.fillWidth: true
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: playCountSpin.activeFocus ? "#2196F3" : "#3d4556"
-                                    border.width: 1
-                                }
-
-                                contentItem: TextInput {
-                                    text: playCountSpin.textFromValue(playCountSpin.value, playCountSpin.locale)
-                                    font.pixelSize: 14
-                                    color: "#E0E0E0"
-                                    horizontalAlignment: Qt.AlignHCenter
-                                    verticalAlignment: Qt.AlignVCenter
-                                    readOnly: !playCountSpin.editable
-                                    validator: playCountSpin.validator
-                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                }
                             }
                         }
 
@@ -480,7 +329,8 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            SpinBox {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomSpinBox {
                                 id: durationSpin
                                 from: 1
                                 to: 600
@@ -498,24 +348,6 @@ Rectangle {
 
                                 valueFromText: function(text, locale) {
                                     return Number.fromLocaleString(locale, text) * 10
-                                }
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: durationSpin.activeFocus ? "#2196F3" : "#3d4556"
-                                    border.width: 1
-                                }
-
-                                contentItem: TextInput {
-                                    text: durationSpin.textFromValue(durationSpin.value, durationSpin.locale)
-                                    font.pixelSize: 14
-                                    color: "#E0E0E0"
-                                    horizontalAlignment: Qt.AlignHCenter
-                                    verticalAlignment: Qt.AlignVCenter
-                                    readOnly: !durationSpin.editable
-                                    validator: durationSpin.validator
-                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
                                 }
                             }
                         }
@@ -618,19 +450,12 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            TextField {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomTextField {
                                 id: ttsTextField
                                 text: "张力保护报警"
                                 placeholderText: "输入报警文字内容..."
                                 Layout.fillWidth: true
-                                color: "#E0E0E0"
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: ttsTextField.activeFocus ? "#2196F3" : "#3d4556"
-                                    border.width: 1
-                                }
                             }
                         }
 
@@ -647,20 +472,13 @@ Rectangle {
                                 Layout.preferredWidth: 120
                             }
 
-                            TextField {
+                            // ✅ 2026-01-28 [FIX 100.300.53]: 替换为自定义组件
+                            DeviceInfo.CustomTextField {
                                 id: audioField
                                 text: ""
                                 placeholderText: "选择音频文件..."
                                 Layout.fillWidth: true
                                 readOnly: true
-                                color: "#E0E0E0"
-
-                                background: Rectangle {
-                                    color: "#1a1f2e"
-                                    radius: 4
-                                    border.color: "#3d4556"
-                                    border.width: 1
-                                }
                             }
 
                             Button {
