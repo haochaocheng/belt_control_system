@@ -225,6 +225,11 @@ Rectangle {
                 anchors.margins: 15
                 spacing: 12
 
+                // ✅ 2026-01-28 [FIX 100.300.72.3]: 添加调试日志
+                Component.onCompleted: {
+                    console.log("✅ [AnalogInputPage] 外层 ColumnLayout 宽度:", width)
+                }
+
                 // 滚动区域：参数字段
                 ScrollView {
                     Layout.fillWidth: true
@@ -233,7 +238,12 @@ Rectangle {
 
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     ScrollBar.vertical.policy: ScrollBar.AsNeeded
-                    // ❌ 2026-01-27 [FIX 100.300.39]: 移除调试日志
+
+                    // ✅ 2026-01-28 [FIX 100.300.72.3]: 添加调试日志
+                    Component.onCompleted: {
+                        console.log("✅ [AnalogInputPage] ScrollView 宽度:", width)
+                        console.log("✅ [AnalogInputPage] ScrollView contentWidth:", contentWidth)
+                    }
 
                     ColumnLayout {
                         width: parent.width  // ✅ 2026-01-27 [FIX 100.300.42]: 改为完整宽度，让内部2列布局正确填充
@@ -241,6 +251,12 @@ Rectangle {
 
                         // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加隐式高度，让 ScrollView 知道内容大小
                         implicitHeight: childrenRect.height
+
+                        // ✅ 2026-01-28 [FIX 100.300.72.3]: 添加调试日志
+                        Component.onCompleted: {
+                            console.log("✅ [AnalogInputPage] ScrollView 内部 ColumnLayout 宽度:", width)
+                            console.log("✅ [AnalogInputPage] ScrollView 内部 ColumnLayout parent.width:", parent.width)
+                        }
 
                         // ✅ 2026-01-28 [FIX 100.300.69]: 修复两列布局问题 - 统一标签宽度，确保输入框对齐
                         // ✅ 2026-01-28 [FIX 100.300.70]: 修复布局递归问题 - 使用固定宽度而不是动态计算
