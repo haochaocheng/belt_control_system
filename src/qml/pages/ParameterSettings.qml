@@ -4,6 +4,7 @@ import QtQuick.Layouts 6.5
 import "../components/common"
 import "../components/parameter_settings"
 import "../components/control_panel"
+import "../Input1/Input1Content"  // ✅ 2026-01-20 [FIX 100.255]
 
 Item {
     id: root
@@ -11,6 +12,9 @@ Item {
     // 实际运行时，SwipeView 会自动覆盖这些值，不影响运行
     width: 1920   // 默认宽度（设计尺寸 1920x1080）
     height: 1080  // 默认高度（设计尺寸 1920x1080）
+
+    // ✅ 2026-01-20 [FIX 100.255]
+    property int currentPageIndex: 0
 
     // 监听设备状态改变信号
     Connections {
@@ -46,18 +50,46 @@ Item {
         console.log("✅ ParameterSettings: 已同步", devices.length, "个设备的反馈配置")
     }
 
-    // Background
-    Rectangle {
+    // ✅ 2026-01-20 [FIX 100.271]: 使用 Back 组件作为背景（与模块状态页面一致）
+    // ✅ 2026-01-20 [FIX 100.272]: 禁用鼠标交互，避免拦截 MouseArea 事件
+    Back {
         anchors.fill: parent
-        color: "#0a1628"
+        z: 0  // 确保在最底层
+        enabled: false  // ✅ 不接收鼠标事件，只作为视觉背景
     }
 
-    // Header
-    Header {
-        id: header
-        anchors.left: parent.left
-        anchors.right: parent.right
+    // 2026-01-20: 注释掉 Rectangle 纯色背景，改用 Back 组件
+    // Rectangle {
+    //     anchors.fill: parent
+    //     color: "#000a1628"
+    // }
+
+    // ✅ 2026-01-20 [FIX 100.268] 修复高度缩放问题
+    // 问题：anchors.right 覆盖了 Scale transform 的 yScale 效果
+    // 解决：移除 anchors，使用固定尺寸，让 Scale 完全控制缩放
+    Item {
+        id: headerContainer
         anchors.top: parent.top
+        anchors.left: parent.left
+        width: 1920
+        height: 80
+        clip: true
+
+        transform: Scale {
+            property real scaleFactor: root.width / 1920  // 0.667（1280屏）
+            xScale: scaleFactor
+            yScale: scaleFactor  // ✅ 等比缩放（高度也使用相同比例）
+            origin.x: 0
+            origin.y: 0
+        }
+
+        Head {
+            id: header
+            // ✅ 2026-01-20 [FIX 100.268]: 移除 anchors，使用固定尺寸
+            width: 1920  // ✅ 固定宽度（不使用 anchors.right）
+            height: 80
+            currentPageIndex: root.currentPageIndex
+        }
     }
 
     // Main content area - Flickable to support keyboard auto-scroll
@@ -65,10 +97,13 @@ Item {
         id: mainFlickable
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: header.bottom
+        anchors.top: headerContainer.bottom
         anchors.bottom: parent.bottom
-        anchors.margins: 10
-
+        anchors.margins: 0
+        anchors.leftMargin: 0
+        anchors.rightMargin: 0
+        anchors.topMargin: 8  // ✅ 2026-01-20 [FIX 100.271]: 从 -50 改为 10，避免遮住 Head 底部
+        anchors.bottomMargin: 0
         contentWidth: width
         contentHeight: Math.max(height, mainContentColumn.implicitHeight + 20)
         clip: true
@@ -124,24 +159,13 @@ Item {
 
         ColumnLayout {
             id: mainContentColumn
+            x: 0
             width: parent.width
+            anchors.top: headerContainer.bottom
+            anchors.topMargin: 5
             spacing: 8
 
                 // Title
-                Text {
-                    text: "参数设置"
-                    font.pixelSize: 32
-                    font.bold: true
-                    color: "#00d4ff"
-                    Layout.alignment: Qt.AlignHCenter
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 2
-                    color: "#00d4ff"
-                    opacity: 0.5
-                }
 
             // Main content layout - 3x2 grid using Item containers
             Item {
@@ -350,7 +374,7 @@ Item {
         id: keyboardCloseArea
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: header.bottom
+        anchors.top: headerContainer.bottom  // FIX 100.300.61: 修复 anchor 目标
         anchors.bottom: parent.bottom
         anchors.margins: 10
         z: 10  // ✅ VERY HIGH Z - above Flickable (z: 0)
@@ -385,3 +409,5 @@ Item {
         }
     }
 }
+
+
