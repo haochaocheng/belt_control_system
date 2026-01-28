@@ -5,6 +5,7 @@ import ".." as DeviceInfo
 // ✅ 2026-01-25 [电机控制-基本配置] 基本配置Tab内容
 // ✅ 2026-01-25 [FIX 100.313]: 调整为标签和输入框同一行布局
 // ✅ 2026-01-28 [FIX 100.300.60]: 替换所有 SpinBox 为 DeviceInfo.CustomSpinBox
+// ✅ 2026-01-28 [虚拟键盘集成]: 接收并传递键盘管理器
 Rectangle {
     id: root
     width: 800  // 默认宽度（用于QDS预览）
@@ -13,6 +14,8 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property int motorIndex: 0  // 当前电机索引 (0-7)
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
+    property var keyboardManager: null
 
     // ========== 滚动区域 ==========
     ScrollView {
@@ -166,12 +169,14 @@ Rectangle {
 
                 // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
                 DeviceInfo.CustomSpinBox {
+                    id: moduleAddressSpin
                     width: 120
                     height: 36
                     from: 1
                     to: 8
                     value: 1
                     editable: true
+                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                 }
             }
 
@@ -190,12 +195,14 @@ Rectangle {
 
                 // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
                 DeviceInfo.CustomSpinBox {
+                    id: outputChannelSpin
                     width: 120
                     height: 36
                     from: 0
                     to: 7
                     value: root.motorIndex
                     editable: true
+                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                 }
             }
 
@@ -214,12 +221,14 @@ Rectangle {
 
                 // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
                 DeviceInfo.CustomSpinBox {
+                    id: feedbackChannelSpin
                     width: 120
                     height: 36
                     from: 0
                     to: 7
                     value: root.motorIndex
                     editable: true
+                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                 }
             }
         }
