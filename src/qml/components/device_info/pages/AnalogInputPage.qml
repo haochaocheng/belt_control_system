@@ -243,16 +243,17 @@ Rectangle {
                         implicitHeight: childrenRect.height
 
                         // ✅ 2026-01-27 [FIX 100.300.38]: 参数区域分为左右2列
+                        // ✅ 2026-01-28 [FIX 100.300.69]: 修复两列布局问题 - 统一标签宽度，确保输入框对齐
                         RowLayout {
                             Layout.fillWidth: true
-                            Layout.leftMargin: 10  // ✅ 2026-01-27 [FIX 100.300.42]: 添加左右边距
+                            Layout.leftMargin: 10
                             Layout.rightMargin: 10
-                            spacing: 0  // ✅ 2026-01-27 [FIX 100.300.41]: 改为0，用装饰条控制间距
+                            spacing: 0  // 用装饰条控制间距
 
                             // ========== 左列：保护名称到单位 ==========
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.minimumWidth: 200
+                                Layout.preferredWidth: parent.width / 2 - 22  // ✅ 明确设置宽度为一半（减去分隔条和边距）
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
 
@@ -263,12 +264,12 @@ Rectangle {
 
                                     Text {
                                         text: "保护名称:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 120  // ✅ 统一标签宽度为 120px
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    // ✅ 2026-01-27 [FIX 100.300.32]: 使用自定义 TextField（034.png 背景）
                                     DeviceInfo.CustomTextField {
                                         id: nameField
                                         Layout.fillWidth: true
@@ -282,9 +283,10 @@ Rectangle {
 
                                     Text {
                                         text: "模块类型:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 120  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
                                     ComboBox {
@@ -333,12 +335,12 @@ Rectangle {
 
                                     Text {
                                         text: "寄存器地址:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 120  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
                                     DeviceInfo.CustomSpinBox {
                                         id: registerAddressSpin
                                         from: 0
@@ -355,12 +357,12 @@ Rectangle {
 
                                     Text {
                                         text: "通道编号:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 120  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
                                     DeviceInfo.CustomSpinBox {
                                         id: channelSpin
                                         from: 0
@@ -377,7 +379,6 @@ Rectangle {
                                     opacity: 0.2
                                 }
 
-                                // ✅ 2026-01-27 [FIX 100.300.31]: 添加上限值、下限值、量程、单位参数（与张力传感器一致）
                                 // 上限值
                                 RowLayout {
                                     Layout.fillWidth: true
@@ -385,12 +386,12 @@ Rectangle {
 
                                     Text {
                                         text: "上限值:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 120  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
                                     DeviceInfo.CustomSpinBox {
                                         id: upperLimitSpin
                                         from: 0
@@ -409,12 +410,12 @@ Rectangle {
 
                                     Text {
                                         text: "下限值:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 120  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
                                     DeviceInfo.CustomSpinBox {
                                         id: lowerLimitSpin
                                         from: 0
@@ -433,12 +434,12 @@ Rectangle {
 
                                     Text {
                                         text: "量程:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 120  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    // ✅ 2026-01-27 [FIX 100.300.33]: 使用自定义 SpinBox（034.png 背景）
                                     DeviceInfo.CustomSpinBox {
                                         id: rangeSpin
                                         from: 1
@@ -457,9 +458,10 @@ Rectangle {
 
                                     Text {
                                         text: "单位:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 120  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
                                     ComboBox {
@@ -467,7 +469,7 @@ Rectangle {
                                         Layout.fillWidth: true
                                         model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
                                         editable: true
-                                        currentIndex: 0  // 默认选择 "m/s"
+                                        currentIndex: 0
 
                                         background: Rectangle {
                                             color: "#2d3548"
@@ -500,9 +502,10 @@ Rectangle {
                             }
 
                             // ========== 右列：保护延时到音频文件 ==========
+                            // ✅ 2026-01-28 [FIX 100.300.69]: 修复右列布局 - 统一标签宽度，确保输入框对齐
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.minimumWidth: 200
+                                Layout.preferredWidth: parent.width / 2 - 22  // ✅ 明确设置宽度为一半
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
 
@@ -513,9 +516,10 @@ Rectangle {
 
                                     Text {
                                         text: "保护延时(秒):"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度（右列标签较长，使用 140px）
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
                                     DeviceInfo.CustomSpinBox {
@@ -547,9 +551,10 @@ Rectangle {
 
                                     Text {
                                         text: "播放次数:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
                                     DeviceInfo.CustomSpinBox {
@@ -569,9 +574,10 @@ Rectangle {
 
                                     Text {
                                         text: "播放时长(秒):"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
                                     DeviceInfo.CustomSpinBox {
@@ -610,9 +616,10 @@ Rectangle {
 
                                     Text {
                                         text: "语音报警:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
                                     RadioButton {
@@ -696,12 +703,12 @@ Rectangle {
 
                                     Text {
                                         text: "报警文字:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    // ✅ 2026-01-27 [FIX 100.300.32]: 使用自定义 TextField（034.png 背景）
                                     DeviceInfo.CustomTextField {
                                         id: ttsTextField
                                         placeholderText: "输入报警文字内容..."
@@ -717,12 +724,12 @@ Rectangle {
 
                                     Text {
                                         text: "音频文件:"
-                                        font.pixelSize: 21  // ✅ 2026-01-27 [FIX 100.300.36]: 字体大小增加到1.5倍（14px → 21px）
+                                        font.pixelSize: 21
                                         color: "#9E9E9E"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 140  // ✅ 统一标签宽度
+                                        horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    // ✅ 2026-01-27 [FIX 100.300.32]: 使用自定义 TextField（034.png 背景）
                                     DeviceInfo.CustomTextField {
                                         id: audioField
                                         placeholderText: "选择音频文件..."
