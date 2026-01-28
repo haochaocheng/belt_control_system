@@ -14,7 +14,7 @@ Rectangle {
     width: 1920
     height: 1080
 
-    // ✅ 2026-01-27 [FIX 100.300.53]: 重新设计布局 - 4行3列 MyIN_Data 网格
+    // ✅ 2026-01-27 [FIX 100.300.53]: 重新设计布局 - 3行4列 MyIN_Data 网格
     // 移除 MyIN_State 组件，使用 12 个 MyIN_Data 组件
     color: Constants.backgroundColor
 
@@ -38,10 +38,10 @@ Rectangle {
         currentPageIndex: currentPageIndex
     }
 
-    // ✅ 2026-01-27 [FIX 100.300.53]: 4行3列网格布局
+    // ✅ 2026-01-27 [FIX 100.300.53]: 3行4列网格布局
     // 布局参数：
     // - 可用区域：1920 x (1080-80) = 1920 x 1000
-    // - 每个单元格：640 x 250
+    // - 每个单元格：480 x 333.33
     // - 间距：0（紧密排列）
 
     // 第 1 行
@@ -49,98 +49,97 @@ Rectangle {
         id: data_row1_col1
         x: 0
         y: 80
-        width: 640
-        height: 250
+        width: 480
+        height: 333
     }
 
     MyIN_Data {
         id: data_row1_col2
-        x: 640
+        x: 480
         y: 80
-        width: 640
-        height: 250
+        width: 480
+        height: 333
     }
 
     MyIN_Data {
         id: data_row1_col3
-        x: 1280
+        x: 960
         y: 80
-        width: 640
-        height: 250
+        width: 480
+        height: 333
+    }
+
+    MyIN_Data {
+        id: data_row1_col4
+        x: 1440
+        y: 80
+        width: 480
+        height: 333
     }
 
     // 第 2 行
     MyIN_Data {
         id: data_row2_col1
         x: 0
-        y: 330
-        width: 640
-        height: 250
+        y: 413
+        width: 480
+        height: 333
     }
 
     MyIN_Data {
         id: data_row2_col2
-        x: 640
-        y: 330
-        width: 640
-        height: 250
+        x: 480
+        y: 413
+        width: 480
+        height: 333
     }
 
     MyIN_Data {
         id: data_row2_col3
-        x: 1280
-        y: 330
-        width: 640
-        height: 250
+        x: 960
+        y: 413
+        width: 480
+        height: 333
+    }
+
+    MyIN_Data {
+        id: data_row2_col4
+        x: 1440
+        y: 413
+        width: 480
+        height: 333
     }
 
     // 第 3 行
     MyIN_Data {
         id: data_row3_col1
         x: 0
-        y: 580
-        width: 640
-        height: 250
+        y: 746
+        width: 480
+        height: 334
     }
 
     MyIN_Data {
         id: data_row3_col2
-        x: 640
-        y: 580
-        width: 640
-        height: 250
+        x: 480
+        y: 746
+        width: 480
+        height: 334
     }
 
     MyIN_Data {
         id: data_row3_col3
-        x: 1280
-        y: 580
-        width: 640
-        height: 250
-    }
-
-    // 第 4 行
-    MyIN_Data {
-        id: data_row4_col1
-        x: 0
-        y: 830
-        width: 640
-        height: 250
+        x: 960
+        y: 746
+        width: 480
+        height: 334
     }
 
     MyIN_Data {
-        id: data_row4_col2
-        x: 640
-        y: 830
-        width: 640
-        height: 250
-    }
-
-    MyIN_Data {
-        id: data_row4_col3
-        x: 1280
-        y: 830
-        width: 640
-        height: 250
+        id: data_row3_col4
+        x: 1440
+        y: 746
+        width: 480
+        height: 334
     }
 }
