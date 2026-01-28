@@ -6,9 +6,10 @@ import ".." as DeviceInfo
 // ✅ 2026-01-27 [制动器控制-右侧面板] 制动器配置面板（简化版，无Tab切换）
 // 设计风格与电机控制完全一样，但不需要Tab栏
 // ✅ 2026-01-28 [统一样式] 替换 TextField 为 CustomTextField
+// ✅ 2026-01-28 [两列布局] 改为两列布局，参考 AnalogInputPage - FIX 100.300.83
 Rectangle {
     id: root
-    width: 800  // 默认宽度（用于QDS预览）
+    implicitWidth: 1400  // ✅ 2026-01-28 修改宽度以支持两列布局
     height: 600  // 默认高度（用于QDS预览）
     // ✅ 改为透明背景，与开关量/模拟量/电机控制页面统一
     color: "transparent"
@@ -64,12 +65,15 @@ Rectangle {
             anchors.margins: 15
             clip: true
 
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            // ✅ 2026-01-28 支持水平滚动
+            contentWidth: Math.max(width, 1200)
             ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
             ColumnLayout {
                 width: parent.width
                 spacing: 20
+                implicitWidth: 1200  // ✅ 2026-01-28 固定内容宽度
+                implicitHeight: childrenRect.height  // ✅ 2026-01-28 自适应高度
 
                 // ========== 使用状态 ==========
                 ColumnLayout {
@@ -122,265 +126,235 @@ Rectangle {
                     color: "#3d4556"
                 }
 
-                // ========== 点刹功能 ==========
-                ColumnLayout {
+                // ========== 两列参数区域 ==========
+                // ✅ 2026-01-28 改为两列布局，删除原有分组标题
+                RowLayout {
                     Layout.fillWidth: true
-                    spacing: 10
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
+                    spacing: 20
 
-                    Text {
-                        text: "点刹功能"
-                        font.pixelSize: 14
-                        font.weight: Font.Bold
-                        color: "#E0E0E0"
-                    }
-
-                    // 抱闸保持时间
-                    RowLayout {
+                    // ========== 左列（5个参数）==========
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 10
+                        Layout.preferredWidth: parent.width / 2 - 10
+                        spacing: 15
 
-                        Text {
-                            text: "抱闸保持时间:"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
+                        // 抱闸保持时间
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "抱闸保持时间:"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                                Layout.preferredWidth: 120
+                            }
+
+                            DeviceInfo.CustomTextField {
+                                id: holdTimeField
+                                Layout.fillWidth: true
+                                placeholderText: "0"
+                                text: "0"
+                            }
+
+                            Text {
+                                text: "秒"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                            }
                         }
 
-                        DeviceInfo.CustomTextField {
-                            id: holdTimeField
-                            Layout.preferredWidth: 150
-                            placeholderText: "0"
-                            text: "0"
+                        // 松闸保持时间
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "松闸保持时间:"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                                Layout.preferredWidth: 120
+                            }
+
+                            DeviceInfo.CustomTextField {
+                                id: releaseTimeField
+                                Layout.fillWidth: true
+                                placeholderText: "0"
+                                text: "0"
+                            }
+
+                            Text {
+                                text: "秒"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                            }
                         }
 
-                        Text {
-                            text: "秒"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
+                        // 最长允许时间
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "最长允许时间:"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                                Layout.preferredWidth: 120
+                            }
+
+                            DeviceInfo.CustomTextField {
+                                id: maxTimeField
+                                Layout.fillWidth: true
+                                placeholderText: "0"
+                                text: "0"
+                            }
+
+                            Text {
+                                text: "秒"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                            }
+                        }
+
+                        // 抱闸延时时间
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "抱闸延时时间:"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                                Layout.preferredWidth: 120
+                            }
+
+                            DeviceInfo.CustomTextField {
+                                id: brakeDelayField
+                                Layout.fillWidth: true
+                                placeholderText: "0"
+                                text: "0"
+                            }
+
+                            Text {
+                                text: "秒"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                            }
+                        }
+
+                        // 急停抱闸时间
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "急停抱闸时间:"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                                Layout.preferredWidth: 120
+                            }
+
+                            DeviceInfo.CustomTextField {
+                                id: emergencyBrakeField
+                                Layout.fillWidth: true
+                                placeholderText: "0"
+                                text: "0"
+                            }
+
+                            Text {
+                                text: "秒"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                            }
                         }
                     }
 
-                    // 松闸保持时间
-                    RowLayout {
+                    // ========== 右列（4个参数）==========
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 10
+                        Layout.preferredWidth: parent.width / 2 - 10
+                        spacing: 15
 
-                        Text {
-                            text: "松闸保持时间:"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
+                        // 抱闸输出点
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "抱闸输出点:"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                                Layout.preferredWidth: 120
+                            }
+
+                            DeviceInfo.CustomTextField {
+                                id: brakeOutputField
+                                Layout.fillWidth: true
+                                placeholderText: "0"
+                                text: "0"
+                            }
                         }
 
-                        DeviceInfo.CustomTextField {
-                            id: releaseTimeField
-                            Layout.preferredWidth: 150
-                            placeholderText: "0"
-                            text: "0"
+                        // 减速机输出点
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "减速机输出点:"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                                Layout.preferredWidth: 120
+                            }
+
+                            DeviceInfo.CustomTextField {
+                                id: reducerOutputField
+                                Layout.fillWidth: true
+                                placeholderText: "0"
+                                text: "0"
+                            }
                         }
 
-                        Text {
-                            text: "秒"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                        }
-                    }
+                        // 松闸到位
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
 
-                    // 最长允许时间
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
+                            Text {
+                                text: "松闸到位:"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                                Layout.preferredWidth: 120
+                            }
 
-                        Text {
-                            text: "最长允许时间:"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                        }
-
-                        DeviceInfo.CustomTextField {
-                            id: maxTimeField
-                            Layout.preferredWidth: 150
-                            placeholderText: "0"
-                            text: "0"
+                            DeviceInfo.CustomTextField {
+                                id: releaseInPlaceField
+                                Layout.fillWidth: true
+                                placeholderText: "0"
+                                text: "0"
+                            }
                         }
 
-                        Text {
-                            text: "秒"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                        }
-                    }
-                }
+                        // 抱闸到位
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
 
-                // ========== 分割线 ==========
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 1
-                    color: "#3d4556"
-                }
+                            Text {
+                                text: "抱闸到位:"
+                                font.pixelSize: 14
+                                color: "#9E9E9E"
+                                Layout.preferredWidth: 120
+                            }
 
-                // ========== 抱闸延时 ==========
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
-
-                    Text {
-                        text: "抱闸延时"
-                        font.pixelSize: 14
-                        font.weight: Font.Bold
-                        color: "#E0E0E0"
-                    }
-
-                    // 抱闸延时时间
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-
-                        Text {
-                            text: "抱闸延时时间:"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                        }
-
-                        DeviceInfo.CustomTextField {
-                            id: brakeDelayField
-                            Layout.preferredWidth: 150
-                            placeholderText: "0"
-                            text: "0"
-                        }
-
-                        Text {
-                            text: "秒"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                        }
-                    }
-
-                    // 急停抱闸时间
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-
-                        Text {
-                            text: "急停抱闸时间:"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                        }
-
-                        DeviceInfo.CustomTextField {
-                            id: emergencyBrakeField
-                            Layout.preferredWidth: 150
-                            placeholderText: "0"
-                            text: "0"
-                        }
-
-                        Text {
-                            text: "秒"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                        }
-                    }
-                }
-
-                // ========== 分割线 ==========
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 1
-                    color: "#3d4556"
-                }
-
-                // ========== 输出点 ==========
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
-
-                    Text {
-                        text: "输出点"
-                        font.pixelSize: 14
-                        font.weight: Font.Bold
-                        color: "#E0E0E0"
-                    }
-
-                    // 抱闸输出点
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-
-                        Text {
-                            text: "抱闸输出点:"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                        }
-
-                        DeviceInfo.CustomTextField {
-                            id: brakeOutputField
-                            Layout.preferredWidth: 150
-                            placeholderText: "0"
-                            text: "0"
-                        }
-                    }
-
-                    // 减速机输出点
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-
-                        Text {
-                            text: "减速机输出点:"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                        }
-
-                        DeviceInfo.CustomTextField {
-                            id: reducerOutputField
-                            Layout.preferredWidth: 150
-                            placeholderText: "0"
-                            text: "0"
-                        }
-                    }
-
-                    // 松闸到位
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-
-                        Text {
-                            text: "松闸到位:"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                        }
-
-                        DeviceInfo.CustomTextField {
-                            id: releaseInPlaceField
-                            Layout.preferredWidth: 150
-                            placeholderText: "0"
-                            text: "0"
-                        }
-                    }
-
-                    // 抱闸到位
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-
-                        Text {
-                            text: "抱闸到位:"
-                            font.pixelSize: 14
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                        }
-
-                        DeviceInfo.CustomTextField {
-                            id: brakeInPlaceField
-                            Layout.preferredWidth: 150
-                            placeholderText: "0"
-                            text: "0"
+                            DeviceInfo.CustomTextField {
+                                id: brakeInPlaceField
+                                Layout.fillWidth: true
+                                placeholderText: "0"
+                                text: "0"
+                            }
                         }
                     }
                 }
