@@ -5,30 +5,40 @@ import Input1Content
 
 // ✅ 2026-01-27 [FIX 100.300.54]: Screen01 包装器 - 添加键盘导航功能
 // ✅ 2026-01-27 [FIX 100.300.56]: 添加 Input1Content 导入以加载 Screen01Form
-// 这个文件包装 Screen01Form.ui.qml，添加键盘导航逻辑
+// ✅ 2026-01-27 [FIX 100.300.58]: 增强焦点管理和调试信息
 Item {
     id: root
     width: 1920
     height: 1080
 
-    // ✅ 接收外部传入的当前页面索引
     property int currentPageIndex: 0
-
-    // ✅ 当前选中的组件索引（0-11）
     property int selectedIndex: 0
 
-    // ✅ 网格参数
     readonly property int rows: 3
     readonly property int cols: 4
     readonly property int totalItems: 12
 
-    // ✅ 加载 UI 文件
+    focus: true
+    activeFocusOnTab: true
+
+    onActiveFocusChanged: {
+        console.log("[Screen01] 🎯 焦点状态:", activeFocus ? "✅ 获得" : "❌ 失去")
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        onClicked: {
+            console.log("[Screen01] 🖱️ 点击屏幕，强制获取焦点")
+            root.forceActiveFocus()
+        }
+        propagateComposedEvents: true
+    }
+
     Screen01Form {
         id: screen01Form
         anchors.fill: parent
         currentPageIndex: root.currentPageIndex
 
-        // ✅ 组件数组（按行列顺序）
         property var dataItems: [
             data_row1_col1, data_row1_col2, data_row1_col3, data_row1_col4,
             data_row2_col1, data_row2_col2, data_row2_col3, data_row2_col4,
@@ -36,55 +46,139 @@ Item {
         ]
 
         Component.onCompleted: {
-            // 初始化：选中第一个组件
+            console.log("[Screen01] ✅ 组件加载完成")
+            console.log("[Screen01] 📊 dataItems 数量:", dataItems.length)
+            console.log("[Screen01] 🔄 初始化选中状态...")
             updateSelection()
+            console.log("[Screen01] 🎯 强制获取焦点...")
+            root.forceActiveFocus()
         }
     }
 
-    // ✅ 更新选中状态
     function updateSelection() {
+        console.log("[Screen01] 🔄 updateSelection 开始，selectedIndex:", selectedIndex)
+        var successCount = 0
         for (var i = 0; i < screen01Form.dataItems.length; i++) {
-            screen01Form.dataItems[i].selected = (i === selectedIndex)
+            var item = screen01Form.dataItems[i]
+            if (item) {
+                item.selected = (i === selectedIndex)
+                if (item.selected) {
+                    console.log("[Screen01] ✅ 组件", i, "已选中")
+                }
+                successCount++
+            } else {
+                console.warn("[Screen01] ⚠️ 组件", i, "为 null")
+            }
         }
+        console.log("[Screen01] 🔄 updateSelection 完成，成功更新", successCount, "个组件")
     }
 
-    // ✅ 键盘导航
-    focus: true
+    onSelectedIndexChanged: {
+        var row = Math.floor(selectedIndex / cols)
+        var col = selectedIndex % cols
+        console.log("[Screen01] 📍 selectedIndex 变化:", selectedIndex, "→ 行", row, "列", col)
+    }
+
     Keys.onPressed: function(event) {
+        console.log("[Screen01] ⌨️ 按键事件 - Key:", event.key, "焦点:", activeFocus ? "✅" : "❌")
+
+        if (!activeFocus) {
+            console.warn("[Screen01] ⚠️ 无焦点，按键被忽略！请点击屏幕获取焦点")
+            return
+        }
+
         var oldIndex = selectedIndex
         var row = Math.floor(selectedIndex / cols)
         var col = selectedIndex % cols
 
+        var keyName = ""
         if (event.key === Qt.Key_Up) {
-            // 上键：移动到上一行
+            keyName = "↑ 上"
             if (row > 0) {
                 selectedIndex = (row - 1) * cols + col
+                event.accepted = true
+            } else {
+                console.log("[Screen01] 🚫 已在第一行，无法向上")
             }
-            event.accepted = true
         } else if (event.key === Qt.Key_Down) {
-            // 下键：移动到下一行
+            keyName = "↓ 下"
             if (row < rows - 1) {
                 selectedIndex = (row + 1) * cols + col
+                event.accepted = true
+            } else {
+                console.log("[Screen01] 🚫 已在最后一行，无法向下")
             }
-            event.accepted = true
         } else if (event.key === Qt.Key_Left) {
-            // 左键：移动到前一列
+            keyName = "← 左"
             if (col > 0) {
                 selectedIndex = row * cols + (col - 1)
+                event.accepted = true
+            } else {
+                console.log("[Screen01] 🚫 已在第一列，无法向左")
             }
-            event.accepted = true
         } else if (event.key === Qt.Key_Right) {
-            // 右键：移动到后一列
+            keyName = "→ 右"
             if (col < cols - 1) {
                 selectedIndex = row * cols + (col + 1)
+                event.accepted = true
+            } else {
+                console.log("[Screen01] 🚫 已在最后一列，无法向右")
             }
-            event.accepted = true
+        } else {
+            console.log("[Screen01] ℹ️ 未处理的按键:", event.key)
         }
 
-        // 如果索引改变，更新选中状态
         if (oldIndex !== selectedIndex) {
-            console.log("[Screen01] 选中索引:", selectedIndex, "行:", Math.floor(selectedIndex / cols), "列:", selectedIndex % cols)
+            console.log("[Screen01] 🎯 导航成功:", keyName, "- 索引", oldIndex, "→", selectedIndex)
             updateSelection()
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        color: "transparent"
+        border.color: root.activeFocus ? "yellow" : "red"
+        border.width: 3
+        z: 1000
+    }
+
+    Rectangle {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        width: 300
+        height: 120
+        color: "#80000000"
+        z: 999
+
+        Column {
+            anchors.fill: parent
+            anchors.margins: 10
+            spacing: 5
+
+            Text {
+                text: "焦点: " + (root.activeFocus ? "✅ 有" : "❌ 无")
+                color: root.activeFocus ? "#00FF00" : "#FF0000"
+                font.pixelSize: 18
+                font.bold: true
+            }
+
+            Text {
+                text: "选中: " + selectedIndex
+                color: "white"
+                font.pixelSize: 16
+            }
+
+            Text {
+                text: "行" + Math.floor(selectedIndex / cols) + " 列" + (selectedIndex % cols)
+                color: "white"
+                font.pixelSize: 16
+            }
+
+            Text {
+                text: "点击屏幕获取焦点"
+                color: "#FFFF00"
+                font.pixelSize: 12
+            }
         }
     }
 }
