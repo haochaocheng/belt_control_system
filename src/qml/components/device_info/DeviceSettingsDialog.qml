@@ -546,14 +546,26 @@ Rectangle {
                 }
 
                 // 5: 张紧控制
-                Rectangle {
-                    color: "transparent"
-                    Text {
-                        anchors.centerIn: parent
-                        text: "张紧控制\n（待实现）"
-                        font.pixelSize: 18
-                        color: "#CCCCCC"
-                        horizontalAlignment: Text.AlignHCenter
+                // ✅ 2026-01-28 [FIX 100.300.88]: 使用 TensionControlPage 组件
+                Loader {
+                    id: tensionControlPageLoader
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    active: root.currentCategory === 5  // 仅在选中时加载
+                    source: "pages/TensionControlPage.qml"
+
+                    onLoaded: {
+                        if (item) {
+                            console.log("✅ [DeviceSettingsDialog] TensionControlPage 加载成功")
+                            item.deviceId = root.deviceId
+                            item.deviceName = root.deviceName
+                        }
+                    }
+
+                    onStatusChanged: {
+                        if (tensionControlPageLoader.status === Loader.Error) {
+                            console.error("❌ [DeviceSettingsDialog] TensionControlPage 加载失败")
+                        }
                     }
                 }
 
