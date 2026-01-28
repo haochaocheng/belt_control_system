@@ -244,6 +244,7 @@ Rectangle {
 
                         // ✅ 2026-01-27 [FIX 100.300.38]: 参数区域分为左右2列
                         // ✅ 2026-01-28 [FIX 100.300.69]: 修复两列布局问题 - 统一标签宽度，确保输入框对齐
+                        // ✅ 2026-01-28 [FIX 100.300.70]: 修复布局递归问题 - 使用固定宽度而不是动态计算
                         RowLayout {
                             Layout.fillWidth: true
                             Layout.leftMargin: 10
@@ -253,7 +254,7 @@ Rectangle {
                             // ========== 左列：保护名称到单位 ==========
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: parent.width / 2 - 22  // ✅ 明确设置宽度为一半（减去分隔条和边距）
+                                Layout.preferredWidth: 250  // ✅ 使用固定宽度，避免布局递归
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
 
@@ -503,9 +504,10 @@ Rectangle {
 
                             // ========== 右列：保护延时到音频文件 ==========
                             // ✅ 2026-01-28 [FIX 100.300.69]: 修复右列布局 - 统一标签宽度，确保输入框对齐
+                            // ✅ 2026-01-28 [FIX 100.300.70]: 修复布局递归问题 - 使用固定宽度
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: parent.width / 2 - 22  // ✅ 明确设置宽度为一半
+                                Layout.preferredWidth: 250  // ✅ 使用固定宽度，避免布局递归
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
 
