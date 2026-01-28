@@ -5,6 +5,7 @@ import ".." as DeviceInfo
 
 // ✅ 2026-01-25 [开关量输入页面] 左右分栏布局：左侧列表 + 右侧参数编辑
 // ✅ 2026-01-28 [FIX 100.300.79]: 替换所有原生输入组件为自定义组件
+// ✅ 2026-01-28 [虚拟键盘集成]: 接收并传递键盘管理器
 Rectangle {
     id: root
     // ✅ 2026-01-26 [FIX 100.300.25.12]: 明确设置尺寸，确保运行时正确显示
@@ -16,6 +17,8 @@ Rectangle {
     property int deviceId: 1
     property string deviceName: "1号皮带"
     property int currentProtectionIndex: 0  // 当前选中的保护项索引
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
+    property var keyboardManager: null
 
     // ========== 开关量保护模型 ==========
     ListModel {
@@ -274,6 +277,7 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: nameField
                                 Layout.fillWidth: true
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                             }
                         }
 
@@ -293,6 +297,7 @@ Rectangle {
                             DeviceInfo.CustomComboBox {
                                 id: moduleTypeCombo
                                 Layout.fillWidth: true
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
 
                                 model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
 
@@ -333,6 +338,7 @@ Rectangle {
                                 to: 255
                                 editable: true
                                 Layout.fillWidth: true
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                             }
                         }
 
@@ -355,6 +361,7 @@ Rectangle {
                                 to: 7
                                 editable: true
                                 Layout.fillWidth: true
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                             }
                         }
 
@@ -386,6 +393,7 @@ Rectangle {
                                 stepSize: 1
                                 editable: true
                                 Layout.fillWidth: true
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
 
                                 property int decimals: 1
                                 property real realValue: value / 10
@@ -420,6 +428,7 @@ Rectangle {
                                 value: 3
                                 editable: true
                                 Layout.fillWidth: true
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                             }
                         }
 
@@ -444,6 +453,7 @@ Rectangle {
                                 stepSize: 5
                                 editable: true
                                 Layout.fillWidth: true
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
 
                                 property int decimals: 1
                                 property real realValue: value / 10
@@ -568,6 +578,7 @@ Rectangle {
                                 id: ttsTextField
                                 placeholderText: "输入报警文字内容..."
                                 Layout.fillWidth: true
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                             }
                         }
 
@@ -589,6 +600,7 @@ Rectangle {
                                 id: audioField
                                 placeholderText: "选择音频文件..."
                                 Layout.fillWidth: true
+                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                 readOnly: true
                             }
 
