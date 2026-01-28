@@ -6,10 +6,10 @@ import ".." as DeviceInfo  // ✅ 2026-01-27 [FIX 100.300.32]: 导入自定义�
 // ✅ 2026-01-25 [模拟量输入页面] 左右分栏布局：左侧列表 + 右侧参数编辑
 Rectangle {
     id: root
-    // ✅ 2026-01-28 [FIX 100.300.73]: 移除 anchors.fill，宽度由 Loader 的 Qt.binding 设置
-    // ❌ 2026-01-28 [FIX 100.300.72.5]: anchors.fill 在 Loader 中不起作用
-    // ❌ 2026-01-28 [FIX 100.300.72.4]: 移除 implicitWidth 导致宽度计算错误（-30px）
-    // ❌ 2026-01-26 [FIX 100.300.25.12]: implicitWidth: 800 导致宽度被限制为 800px
+    // ✅ 2026-01-28 [FIX 100.300.75]: 增加 implicitWidth 到 1400，充分利用右侧空间
+    // 两列布局需要更大的宽度：左侧列表192px + 右侧参数区域两列（每列约600px）
+    implicitWidth: 1400
+    implicitHeight: 600
     color: "transparent"
 
     // ========== 公开属性 ==========
@@ -237,8 +237,12 @@ Rectangle {
                     Layout.fillHeight: true
                     clip: true
 
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    // ✅ 2026-01-28 [FIX 100.300.77]: 移除水平滚动条禁用，让内容可以扩展
+                    // ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                    // ✅ 2026-01-28 [FIX 100.300.77]: 明确设置 contentWidth，确保内容可以充分展开
+                    contentWidth: Math.max(width, 1200)  // 至少 1200px，或者使用 ScrollView 的实际宽度
 
                     // ✅ 2026-01-28 [FIX 100.300.72.3]: 添加调试日志
                     Component.onCompleted: {
@@ -250,6 +254,8 @@ Rectangle {
                         width: parent.width  // ✅ 2026-01-27 [FIX 100.300.42]: 改为完整宽度，让内部2列布局正确填充
                         spacing: 12
 
+                        // ✅ 2026-01-28 [FIX 100.300.76]: 添加 implicitWidth，告诉 ScrollView 内容需要的宽度
+                        implicitWidth: 1200  // 两列布局需要的最小宽度
                         // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加隐式高度，让 ScrollView 知道内容大小
                         implicitHeight: childrenRect.height
 
@@ -315,26 +321,11 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    ComboBox {
+                                    DeviceInfo.CustomComboBox {
                                         id: moduleTypeCombo
                                         Layout.fillWidth: true
 
                                         model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
-
-                                        background: Rectangle {
-                                            color: "#2d3548"
-                                            radius: 2
-                                            border.color: moduleTypeCombo.pressed ? "#3498db" : "#7f8c8d"
-                                            border.width: 1
-                                        }
-
-                                        contentItem: Text {
-                                            text: moduleTypeCombo.displayText
-                                            color: "#E0E0E0"
-                                            font.pixelSize: 12
-                                            verticalAlignment: Text.AlignVCenter
-                                            leftPadding: 10
-                                        }
 
                                         onCurrentTextChanged: {
                                             // 根据模块类型自动设置寄存器地址
@@ -490,29 +481,12 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    ComboBox {
+                                    DeviceInfo.CustomComboBox {
                                         id: unitCombo
                                         Layout.fillWidth: true
                                         model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
                                         editable: true
                                         currentIndex: 0
-
-                                        background: Rectangle {
-                                            color: "#2d3548"
-                                            radius: 2
-                                            border.color: unitCombo.activeFocus ? "#3498db" : "#7f8c8d"
-                                            border.width: 1
-                                        }
-
-                                        contentItem: TextInput {
-                                            text: unitCombo.editable ? unitCombo.editText : unitCombo.displayText
-                                            font.pixelSize: 12
-                                            color: "#E0E0E0"
-                                            verticalAlignment: Text.AlignVCenter
-                                            leftPadding: 10
-                                            readOnly: !unitCombo.editable
-                                            selectByMouse: true
-                                        }
                                     }
                                 }
                             }  // 左列结束
