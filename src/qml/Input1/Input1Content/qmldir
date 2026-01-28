@@ -1,0 +1,17 @@
+module Input1Content
+
+# ✅ 2026-01-27 [FIX 100.300.55]: Input1Content 模块定义
+# 用于 Qt Design Studio 识别组件
+
+# UI 组件
+Back 1.0 Back.ui.qml
+BHState 1.0 BHState.ui.qml
+DataShow 1.0 DataShow.ui.qml
+Head 1.0 Head.ui.qml
+Head_MiddleMenu 1.0 Head_MiddleMenu.ui.qml
+MyIN_Data 1.0 MyIN_Data.ui.qml
+MyIN_State 1.0 MyIN_State.ui.qml
+
+# 主屏幕
+Screen01 1.0 Screen01.qml
+Screen01Form 1.0 Screen01Form.ui.qml
