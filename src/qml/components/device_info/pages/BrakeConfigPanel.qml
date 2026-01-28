@@ -1,9 +1,11 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import ".." as DeviceInfo
 
 // ✅ 2026-01-27 [制动器控制-右侧面板] 制动器配置面板（简化版，无Tab切换）
 // 设计风格与电机控制完全一样，但不需要Tab栏
+// ✅ 2026-01-28 [统一样式] 替换 TextField 为 CustomTextField
 Rectangle {
     id: root
     width: 800  // 默认宽度（用于QDS预览）
@@ -144,18 +146,11 @@ Rectangle {
                             Layout.preferredWidth: 120
                         }
 
-                        TextField {
+                        DeviceInfo.CustomTextField {
                             id: holdTimeField
                             Layout.preferredWidth: 150
                             placeholderText: "0"
                             text: "0"
-                            color: "#E0E0E0"
-                            background: Rectangle {
-                                color: "#1a1f2e"
-                                border.color: holdTimeField.activeFocus ? "#2196F3" : "#3d4556"
-                                border.width: 1
-                                radius: 4
-                            }
                         }
 
                         Text {
@@ -177,18 +172,11 @@ Rectangle {
                             Layout.preferredWidth: 120
                         }
 
-                        TextField {
+                        DeviceInfo.CustomTextField {
                             id: releaseTimeField
                             Layout.preferredWidth: 150
                             placeholderText: "0"
                             text: "0"
-                            color: "#E0E0E0"
-                            background: Rectangle {
-                                color: "#1a1f2e"
-                                border.color: releaseTimeField.activeFocus ? "#2196F3" : "#3d4556"
-                                border.width: 1
-                                radius: 4
-                            }
                         }
 
                         Text {
@@ -210,18 +198,11 @@ Rectangle {
                             Layout.preferredWidth: 120
                         }
 
-                        TextField {
+                        DeviceInfo.CustomTextField {
                             id: maxTimeField
                             Layout.preferredWidth: 150
                             placeholderText: "0"
                             text: "0"
-                            color: "#E0E0E0"
-                            background: Rectangle {
-                                color: "#1a1f2e"
-                                border.color: maxTimeField.activeFocus ? "#2196F3" : "#3d4556"
-                                border.width: 1
-                                radius: 4
-                            }
                         }
 
                         Text {
@@ -263,18 +244,11 @@ Rectangle {
                             Layout.preferredWidth: 120
                         }
 
-                        TextField {
+                        DeviceInfo.CustomTextField {
                             id: brakeDelayField
                             Layout.preferredWidth: 150
                             placeholderText: "0"
                             text: "0"
-                            color: "#E0E0E0"
-                            background: Rectangle {
-                                color: "#1a1f2e"
-                                border.color: brakeDelayField.activeFocus ? "#2196F3" : "#3d4556"
-                                border.width: 1
-                                radius: 4
-                            }
                         }
 
                         Text {
@@ -296,18 +270,11 @@ Rectangle {
                             Layout.preferredWidth: 120
                         }
 
-                        TextField {
+                        DeviceInfo.CustomTextField {
                             id: emergencyBrakeField
                             Layout.preferredWidth: 150
                             placeholderText: "0"
                             text: "0"
-                            color: "#E0E0E0"
-                            background: Rectangle {
-                                color: "#1a1f2e"
-                                border.color: emergencyBrakeField.activeFocus ? "#2196F3" : "#3d4556"
-                                border.width: 1
-                                radius: 4
-                            }
                         }
 
                         Text {
@@ -349,18 +316,11 @@ Rectangle {
                             Layout.preferredWidth: 120
                         }
 
-                        TextField {
+                        DeviceInfo.CustomTextField {
                             id: brakeOutputField
                             Layout.preferredWidth: 150
                             placeholderText: "0"
                             text: "0"
-                            color: "#E0E0E0"
-                            background: Rectangle {
-                                color: "#1a1f2e"
-                                border.color: brakeOutputField.activeFocus ? "#2196F3" : "#3d4556"
-                                border.width: 1
-                                radius: 4
-                            }
                         }
                     }
 
@@ -376,18 +336,11 @@ Rectangle {
                             Layout.preferredWidth: 120
                         }
 
-                        TextField {
+                        DeviceInfo.CustomTextField {
                             id: reducerOutputField
                             Layout.preferredWidth: 150
                             placeholderText: "0"
                             text: "0"
-                            color: "#E0E0E0"
-                            background: Rectangle {
-                                color: "#1a1f2e"
-                                border.color: reducerOutputField.activeFocus ? "#2196F3" : "#3d4556"
-                                border.width: 1
-                                radius: 4
-                            }
                         }
                     }
 
@@ -403,18 +356,11 @@ Rectangle {
                             Layout.preferredWidth: 120
                         }
 
-                        TextField {
+                        DeviceInfo.CustomTextField {
                             id: releaseInPlaceField
                             Layout.preferredWidth: 150
                             placeholderText: "0"
                             text: "0"
-                            color: "#E0E0E0"
-                            background: Rectangle {
-                                color: "#1a1f2e"
-                                border.color: releaseInPlaceField.activeFocus ? "#2196F3" : "#3d4556"
-                                border.width: 1
-                                radius: 4
-                            }
                         }
                     }
 
@@ -430,18 +376,11 @@ Rectangle {
                             Layout.preferredWidth: 120
                         }
 
-                        TextField {
+                        DeviceInfo.CustomTextField {
                             id: brakeInPlaceField
                             Layout.preferredWidth: 150
                             placeholderText: "0"
                             text: "0"
-                            color: "#E0E0E0"
-                            background: Rectangle {
-                                color: "#1a1f2e"
-                                border.color: brakeInPlaceField.activeFocus ? "#2196F3" : "#3d4556"
-                                border.width: 1
-                                radius: 4
-                            }
                         }
                     }
                 }
