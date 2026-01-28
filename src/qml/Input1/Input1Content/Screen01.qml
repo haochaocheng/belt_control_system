@@ -8,6 +8,7 @@ import Input1Content
 // ✅ 2026-01-27 [FIX 100.300.58]: 增强焦点管理和调试信息
 // ✅ 2026-01-28 [FIX 100.300.60]: 添加 dataItems 空值检查，修复 QDS 中 undefined 错误
 // ✅ 2026-01-28 [FIX 100.300.62]: 改用直接访问组件方式，修复 QDS 中 dataItems 未定义问题
+// ✅ 2026-01-28 [FIX 100.300.67]: 添加鼠标单击选中和双击打开弹窗功能
 Item {
     id: root
     width: 1920
@@ -28,17 +29,14 @@ Item {
     }
 
     // ✅ 2026-01-28 [FIX 100.300.65]: 添加双击事件打开设备设置对话框
+    // ✅ 2026-01-28 [FIX 100.300.67]: 修改为仅处理空白区域点击，不阻止子组件鼠标事件
     MouseArea {
         anchors.fill: parent
+        z: -1  // 放在最底层，只处理空白区域
         onClicked: {
-            console.log("[Screen01] 🖱️ 点击屏幕，强制获取焦点")
+            console.log("[Screen01] 🖱️ 点击空白区域，强制获取焦点")
             root.forceActiveFocus()
         }
-        onDoubleClicked: {
-            console.log("[Screen01] 🖱️🖱️ 双击屏幕 - 打开设备设置对话框")
-            openDeviceSettings()
-        }
-        propagateComposedEvents: true
     }
 
     Screen01Form {
@@ -67,6 +65,62 @@ Item {
             screen01Form.data_row3_col3,
             screen01Form.data_row3_col4
         ]
+    }
+
+    // ✅ 2026-01-28 [FIX 100.300.67]: 为每个数据组件添加鼠标交互
+    // 功能：单击选中，双击打开设备设置对话框
+    function setupMouseInteraction() {
+        var dataItems = getDataItems()
+        console.log("[Screen01] 🖱️ 开始设置鼠标交互...")
+
+        for (var i = 0; i < dataItems.length; i++) {
+            var item = dataItems[i]
+            if (!item) {
+                console.warn("[Screen01] ⚠️ 组件", i, "为 null，跳过鼠标交互设置")
+                continue
+            }
+
+            // 为每个组件创建 MouseArea
+            var mouseAreaComponent = Qt.createQmlObject(
+                'import QtQuick 2.15; MouseArea { anchors.fill: parent; hoverEnabled: true; property int itemIndex: -1 }',
+                item,
+                "dynamicMouseArea_" + i
+            )
+
+            if (mouseAreaComponent) {
+                mouseAreaComponent.itemIndex = i
+
+                // 单击选中
+                mouseAreaComponent.clicked.connect(function() {
+                    var index = this.itemIndex
+                    console.log("[Screen01] 🖱️ 单击组件", index)
+                    root.selectedIndex = index
+                    root.updateSelection()
+                    root.forceActiveFocus()
+                })
+
+                // 双击打开设备设置
+                mouseAreaComponent.doubleClicked.connect(function() {
+                    var index = this.itemIndex
+                    console.log("[Screen01] 🖱️🖱️ 双击组件", index, "- 打开设备设置对话框")
+                    root.selectedIndex = index
+                    root.updateSelection()
+                    root.openDeviceSettings()
+                })
+
+                // 鼠标悬停效果（可选）
+                mouseAreaComponent.onEntered.connect(function() {
+                    var index = this.itemIndex
+                    console.log("[Screen01] 🖱️ 鼠标悬停在组件", index)
+                })
+
+                console.log("[Screen01] ✅ 组件", i, "鼠标交互已设置")
+            } else {
+                console.error("[Screen01] ❌ 无法为组件", i, "创建 MouseArea")
+            }
+        }
+
+        console.log("[Screen01] 🖱️ 鼠标交互设置完成")
     }
 
     function updateSelection() {
@@ -142,6 +196,10 @@ Item {
             if (validCount > 0) {
                 console.log("[Screen01] 🔄 初始化选中状态...")
                 updateSelection()
+
+                // ✅ 2026-01-28 [FIX 100.300.67]: 设置鼠标交互
+                console.log("[Screen01] 🖱️ 设置鼠标交互...")
+                setupMouseInteraction()
             } else {
                 console.warn("[Screen01] ⚠️ dataItems 仍未定义，跳过初始化")
             }
