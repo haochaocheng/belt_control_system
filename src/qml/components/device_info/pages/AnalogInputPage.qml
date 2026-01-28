@@ -305,6 +305,7 @@ Rectangle {
                                     DeviceInfo.CustomTextField {
                                         id: nameField
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
                                     }
                                 }
 
@@ -324,6 +325,7 @@ Rectangle {
                                     DeviceInfo.CustomComboBox {
                                         id: moduleTypeCombo
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
 
                                         model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
 
@@ -364,6 +366,7 @@ Rectangle {
                                         to: 255
                                         editable: true
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
                                     }
                                 }
 
@@ -386,6 +389,7 @@ Rectangle {
                                         to: 7
                                         editable: true
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
                                     }
                                 }
 
@@ -417,6 +421,7 @@ Rectangle {
                                         stepSize: 10
                                         editable: true
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
                                     }
                                 }
 
@@ -441,6 +446,7 @@ Rectangle {
                                         stepSize: 10
                                         editable: true
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
                                     }
                                 }
 
@@ -465,6 +471,7 @@ Rectangle {
                                         stepSize: 10
                                         editable: true
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
                                     }
                                 }
 
@@ -484,6 +491,7 @@ Rectangle {
                                     DeviceInfo.CustomComboBox {
                                         id: unitCombo
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
                                         model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
                                         editable: true
                                         currentIndex: 0
@@ -534,6 +542,7 @@ Rectangle {
                                         stepSize: 1
                                         editable: true
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
 
                                         property int decimals: 1
                                         property real realValue: value / 10
@@ -568,6 +577,7 @@ Rectangle {
                                         value: 3
                                         editable: true
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
                                     }
                                 }
 
@@ -592,6 +602,7 @@ Rectangle {
                                         stepSize: 5
                                         editable: true
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
 
                                         property int decimals: 1
                                         property real realValue: value / 10
@@ -717,6 +728,7 @@ Rectangle {
                                         id: ttsTextField
                                         placeholderText: "输入报警文字内容..."
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
                                     }
                                 }
 
@@ -738,6 +750,7 @@ Rectangle {
                                         id: audioField
                                         placeholderText: "选择音频文件..."
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
                                         readOnly: true
                                     }
 
