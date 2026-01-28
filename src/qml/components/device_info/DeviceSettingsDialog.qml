@@ -9,6 +9,7 @@ import "../virtual_keyboard" as VirtualKeyboard  // ✅ 2026-01-28 [虚拟键盘
 // ✅ 2026-01-28 [FIX 100.300.66]: 自适应屏幕尺寸（1920×1080 和 1280×800），居中显示
 // ✅ 2026-01-28 [FIX 100.300.67]: 修改尺寸为屏幕的 80%
 // ✅ 2026-01-28 [虚拟键盘集成]: 集成虚拟键盘管理器
+// ✅ 2026-01-28 [FIX 100.300.99]: 强化焦点管理，使用延迟获取焦点和 z-index
 // QDS 预览版本：使用 Rectangle 替代 Dialog
 Rectangle {
     id: root
@@ -21,6 +22,9 @@ Rectangle {
 
     // ✅ 2026-01-28 [FIX 100.300.66]: 居中显示
     anchors.centerIn: parent
+
+    // ✅ 2026-01-28 [FIX 100.300.99]: 设置 z-index 确保在最顶层
+    z: 1000
 
     color: "#ec1e1e1e"
     // ✅ 2026-01-25: 使用主题背景色
@@ -50,14 +54,44 @@ Rectangle {
 
     // ✅ 2026-01-24 [FIX]: 键盘导航支持
     // ✅ 2026-01-28 [FIX 100.300.98]: 强制获取焦点，阻止主界面接收键盘事件
+    // ✅ 2026-01-28 [FIX 100.300.99]: 使用延迟获取焦点，确保覆盖主界面
     focus: true
 
-    // ✅ 2026-01-28 [FIX 100.300.98]: 对话框显示时强制获取焦点
+    // ✅ 2026-01-28 [FIX 100.300.99]: 延迟焦点获取定时器
+    Timer {
+        id: focusTimer
+        interval: 100  // 延迟 100ms
+        running: false
+        repeat: true  // 重复执行
+        triggeredOnStart: false
+        property int retryCount: 0
+        property int maxRetries: 5  // 最多重试 5 次
+
+        onTriggered: {
+            retryCount++
+            root.forceActiveFocus()
+            console.log("✅ [DeviceSettingsDialog] 延迟焦点获取 (尝试 " + retryCount + "/" + maxRetries + ")")
+
+            if (retryCount >= maxRetries) {
+                stop()
+                retryCount = 0
+                console.log("✅ [DeviceSettingsDialog] 焦点获取完成")
+            }
+        }
+    }
+
+    // ✅ 2026-01-28 [FIX 100.300.98/99]: 对话框显示时强制获取焦点
     onVisibleChanged: {
         if (visible) {
+            // 立即获取焦点
             root.forceActiveFocus()
-            console.log("✅ [DeviceSettingsDialog] 焦点已转移到对话框")
+            // 启动延迟定时器，重复获取焦点
+            focusTimer.retryCount = 0
+            focusTimer.restart()
+            console.log("✅ [DeviceSettingsDialog] 对话框显示，开始获取焦点...")
         } else {
+            // 停止定时器
+            focusTimer.stop()
             console.log("✅ [DeviceSettingsDialog] 对话框已关闭，焦点返回主界面")
         }
     }
