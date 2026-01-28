@@ -44,12 +44,12 @@ ApplicationWindow {
                 anchors.centerIn: parent
                 spacing: 20
 
+                // ✅ 2026-01-28 [FIX 100.300.65]: 移除"设备信息"页面，保留 5 个主界面
                 Repeater {
                     model: [
                         "控制面板",
                         "参数设置",
                         "报警页面",
-                        "设备信息",
                         "Input1",
                         "语音管理"
                     ]
@@ -79,13 +79,14 @@ ApplicationWindow {
         }
 
         // ========== 页面切换视图 ==========
+        // ✅ 2026-01-28 [FIX 100.300.65]: 移除第 4 页（设备信息），默认显示第 3 页（Input1）
         SwipeView {
             id: swipeView
             anchors.top: header.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            currentIndex: 3  // 默认显示第 4 页（设备信息）
+            currentIndex: 3  // 默认显示第 4 页（Input1，索引从 0 开始）
 
             // 页面 1: 控制面板
             Loader {
@@ -126,27 +127,10 @@ ApplicationWindow {
                 }
             }
 
-            // 页面 4: 设备信息 - 电机控制
-            Rectangle {
-                color: "#1a1f2e"
+            // ✅ 2026-01-28 [FIX 100.300.65]: 移除第 4 页（设备信息 - 电机控制）
+            // 原因：用户不需要在主界面显示设备信息，改为通过 Input1 页面的回车键或双击打开
 
-                Loader {
-                    anchors.centerIn: parent
-                    width: 1000
-                    height: 600
-                    source: "components/device_info/pages/MotorControlPage.qml"
-                    onLoaded: {
-                        console.log("✅ 电机控制页面加载成功")
-                    }
-                    onStatusChanged: {
-                        if (status === Loader.Error) {
-                            console.log("❌ 电机控制页面加载失败")
-                        }
-                    }
-                }
-            }
-
-            // 页面 5: Input1（✅ 2026-01-26 已移除 Input1 模块依赖，可在 QDS 中运行）
+            // 页面 4: Input1（✅ 2026-01-26 已移除 Input1 模块依赖，可在 QDS 中运行）
             Loader {
                 source: "pages/Input1Page.qml"
                 onLoaded: {
@@ -159,7 +143,7 @@ ApplicationWindow {
                 }
             }
 
-            // 页面 6: 语音管理
+            // 页面 5: 语音管理
             Loader {
                 source: "pages/VoiceManagement.qml"
                 onLoaded: {

@@ -27,11 +27,16 @@ Item {
         console.log("[Screen01] 🎯 焦点状态:", activeFocus ? "✅ 获得" : "❌ 失去")
     }
 
+    // ✅ 2026-01-28 [FIX 100.300.65]: 添加双击事件打开设备设置对话框
     MouseArea {
         anchors.fill: parent
         onClicked: {
             console.log("[Screen01] 🖱️ 点击屏幕，强制获取焦点")
             root.forceActiveFocus()
+        }
+        onDoubleClicked: {
+            console.log("[Screen01] 🖱️🖱️ 双击屏幕 - 打开设备设置对话框")
+            openDeviceSettings()
         }
         propagateComposedEvents: true
     }
@@ -94,6 +99,28 @@ Item {
             }
         }
         console.log("[Screen01] 🔄 updateSelection 完成，成功更新", successCount, "个组件")
+    }
+
+    // ✅ 2026-01-28 [FIX 100.300.65]: 添加打开设备设置对话框函数
+    function openDeviceSettings() {
+        console.log("[Screen01] 🔧 打开设备设置对话框，当前选中索引:", selectedIndex)
+
+        // 创建并显示 DeviceSettingsDialog
+        var component = Qt.createComponent("../../components/device_info/DeviceSettingsDialog.qml")
+        if (component.status === Component.Ready) {
+            var dialog = component.createObject(root, {
+                // 可以传递参数给对话框
+                // deviceIndex: selectedIndex
+            })
+            if (dialog) {
+                dialog.open()
+                console.log("[Screen01] ✅ DeviceSettingsDialog 已打开")
+            } else {
+                console.error("[Screen01] ❌ 无法创建 DeviceSettingsDialog 对象")
+            }
+        } else if (component.status === Component.Error) {
+            console.error("[Screen01] ❌ DeviceSettingsDialog 加载失败:", component.errorString())
+        }
     }
 
     Component.onCompleted: {
@@ -172,6 +199,11 @@ Item {
             } else {
                 console.log("[Screen01] 🚫 已在最后一列，无法向右")
             }
+        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            // ✅ 2026-01-28 [FIX 100.300.65]: 添加回车键打开设备设置对话框
+            console.log("[Screen01] ⏎ 回车键 - 打开设备设置对话框，索引:", selectedIndex)
+            openDeviceSettings()
+            event.accepted = true
         } else {
             console.log("[Screen01] ℹ️ 未处理的按键:", event.key)
         }
