@@ -483,6 +483,9 @@ Rectangle {
                     onLoaded: {
                         if (item) {
                             console.log("✅ [DeviceSettingsDialog] AnalogInputPage 加载成功")
+                            // ✅ 2026-01-28 [FIX 100.300.73]: 明确绑定宽度和高度到 Loader
+                            item.width = Qt.binding(function() { return analogInputPageLoader.width })
+                            item.height = Qt.binding(function() { return analogInputPageLoader.height })
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
                         }

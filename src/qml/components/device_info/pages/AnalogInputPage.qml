@@ -6,8 +6,8 @@ import ".." as DeviceInfo  // ✅ 2026-01-27 [FIX 100.300.32]: 导入自定义�
 // ✅ 2026-01-25 [模拟量输入页面] 左右分栏布局：左侧列表 + 右侧参数编辑
 Rectangle {
     id: root
-    // ✅ 2026-01-28 [FIX 100.300.72.5]: 使用 anchors.fill 让页面填充 Loader
-    anchors.fill: parent
+    // ✅ 2026-01-28 [FIX 100.300.73]: 移除 anchors.fill，宽度由 Loader 的 Qt.binding 设置
+    // ❌ 2026-01-28 [FIX 100.300.72.5]: anchors.fill 在 Loader 中不起作用
     // ❌ 2026-01-28 [FIX 100.300.72.4]: 移除 implicitWidth 导致宽度计算错误（-30px）
     // ❌ 2026-01-26 [FIX 100.300.25.12]: implicitWidth: 800 导致宽度被限制为 800px
     color: "transparent"
