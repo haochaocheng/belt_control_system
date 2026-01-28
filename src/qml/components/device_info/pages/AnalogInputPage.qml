@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.15
 import ".." as DeviceInfo  // ✅ 2026-01-27 [FIX 100.300.32]: 导入自定义组件
 
 // ✅ 2026-01-25 [模拟量输入页面] 左右分栏布局：左侧列表 + 右侧参数编辑
+// ✅ 2026-01-28 [虚拟键盘集成]: 接收并传递键盘管理器
 Rectangle {
     id: root
     // ✅ 2026-01-28 [FIX 100.300.75]: 增加 implicitWidth 到 1400，充分利用右侧空间
@@ -16,6 +17,8 @@ Rectangle {
     property int deviceId: 1
     property string deviceName: "1号皮带"
     property int currentProtectionIndex: 0  // 当前选中的保护项索引
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
+    property var keyboardManager: null
 
     // ========== 模拟量保护模型 ==========
     ListModel {
@@ -306,6 +309,7 @@ Rectangle {
                                         id: nameField
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                     }
                                 }
 
