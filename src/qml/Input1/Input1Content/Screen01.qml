@@ -1,9 +1,11 @@
 import QtQuick
 import QtQuick.Controls
 import Input1
+import Input1Content
 
 // ✅ 2026-01-27 [FIX 100.300.54]: Screen01 包装器 - 添加键盘导航功能
-// 这个文件包装 Screen01.ui.qml，添加键盘导航逻辑
+// ✅ 2026-01-27 [FIX 100.300.56]: 添加 Input1Content 导入以加载 Screen01Form
+// 这个文件包装 Screen01Form.ui.qml，添加键盘导航逻辑
 Item {
     id: root
     width: 1920
