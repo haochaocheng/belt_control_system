@@ -1,8 +1,10 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import ".." as DeviceInfo
 
 // ✅ 2026-01-25 [电机控制-基本配置] 基本配置Tab内容
 // ✅ 2026-01-25 [FIX 100.313]: 调整为标签和输入框同一行布局
+// ✅ 2026-01-28 [FIX 100.300.60]: 替换所有 SpinBox 为 DeviceInfo.CustomSpinBox
 Rectangle {
     id: root
     width: 800  // 默认宽度（用于QDS预览）
@@ -162,64 +164,14 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                SpinBox {
+                // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
+                DeviceInfo.CustomSpinBox {
                     width: 120
                     height: 36
                     from: 1
                     to: 8
                     value: 1
                     editable: true
-
-                    background: Rectangle {
-                        color: "#2d3548"
-                        border.color: "#3d4556"
-                        border.width: 1
-                        radius: 2
-                    }
-
-                    contentItem: TextInput {
-                        text: parent.value
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
-                        horizontalAlignment: Qt.AlignHCenter
-                        verticalAlignment: Qt.AlignVCenter
-                        readOnly: !parent.editable
-                        validator: parent.validator
-                        inputMethodHints: Qt.ImhFormattedNumbersOnly
-                    }
-
-                    up.indicator: Rectangle {
-                        x: parent.width - width
-                        height: parent.height / 2
-                        width: 30
-                        color: "#3d4556"
-                        border.color: "#2196F3"
-                        border.width: 1
-
-                        Text {
-                            text: "+"
-                            font.pixelSize: 14
-                            color: "#E0E0E0"
-                            anchors.centerIn: parent
-                        }
-                    }
-
-                    down.indicator: Rectangle {
-                        x: parent.width - width
-                        y: parent.height / 2
-                        height: parent.height / 2
-                        width: 30
-                        color: "#3d4556"
-                        border.color: "#2196F3"
-                        border.width: 1
-
-                        Text {
-                            text: "-"
-                            font.pixelSize: 14
-                            color: "#E0E0E0"
-                            anchors.centerIn: parent
-                        }
-                    }
                 }
             }
 
@@ -236,64 +188,14 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                SpinBox {
+                // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
+                DeviceInfo.CustomSpinBox {
                     width: 120
                     height: 36
                     from: 0
                     to: 7
                     value: root.motorIndex
                     editable: true
-
-                    background: Rectangle {
-                        color: "#2d3548"
-                        border.color: "#3d4556"
-                        border.width: 1
-                        radius: 2
-                    }
-
-                    contentItem: TextInput {
-                        text: parent.value
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
-                        horizontalAlignment: Qt.AlignHCenter
-                        verticalAlignment: Qt.AlignVCenter
-                        readOnly: !parent.editable
-                        validator: parent.validator
-                        inputMethodHints: Qt.ImhFormattedNumbersOnly
-                    }
-
-                    up.indicator: Rectangle {
-                        x: parent.width - width
-                        height: parent.height / 2
-                        width: 30
-                        color: "#3d4556"
-                        border.color: "#2196F3"
-                        border.width: 1
-
-                        Text {
-                            text: "+"
-                            font.pixelSize: 14
-                            color: "#E0E0E0"
-                            anchors.centerIn: parent
-                        }
-                    }
-
-                    down.indicator: Rectangle {
-                        x: parent.width - width
-                        y: parent.height / 2
-                        height: parent.height / 2
-                        width: 30
-                        color: "#3d4556"
-                        border.color: "#2196F3"
-                        border.width: 1
-
-                        Text {
-                            text: "-"
-                            font.pixelSize: 14
-                            color: "#E0E0E0"
-                            anchors.centerIn: parent
-                        }
-                    }
                 }
             }
 
@@ -310,64 +212,14 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                SpinBox {
+                // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
+                DeviceInfo.CustomSpinBox {
                     width: 120
                     height: 36
                     from: 0
                     to: 7
                     value: root.motorIndex
                     editable: true
-
-                    background: Rectangle {
-                        color: "#2d3548"
-                        border.color: "#3d4556"
-                        border.width: 1
-                        radius: 2
-                    }
-
-                    contentItem: TextInput {
-                        text: parent.value
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
-                        horizontalAlignment: Qt.AlignHCenter
-                        verticalAlignment: Qt.AlignVCenter
-                        readOnly: !parent.editable
-                        validator: parent.validator
-                        inputMethodHints: Qt.ImhFormattedNumbersOnly
-                    }
-
-                    up.indicator: Rectangle {
-                        x: parent.width - width
-                        height: parent.height / 2
-                        width: 30
-                        color: "#3d4556"
-                        border.color: "#2196F3"
-                        border.width: 1
-
-                        Text {
-                            text: "+"
-                            font.pixelSize: 14
-                            color: "#E0E0E0"
-                            anchors.centerIn: parent
-                        }
-                    }
-
-                    down.indicator: Rectangle {
-                        x: parent.width - width
-                        y: parent.height / 2
-                        height: parent.height / 2
-                        width: 30
-                        color: "#3d4556"
-                        border.color: "#2196F3"
-                        border.width: 1
-
-                        Text {
-                            text: "-"
-                            font.pixelSize: 14
-                            color: "#E0E0E0"
-                            anchors.centerIn: parent
-                        }
-                    }
                 }
             }
         }
