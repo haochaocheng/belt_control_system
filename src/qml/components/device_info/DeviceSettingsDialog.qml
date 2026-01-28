@@ -2,11 +2,13 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import "../" as DeviceInfo  // ✅ 2026-01-25 [工业科技感设计]: 导入主题
+import "../virtual_keyboard" as VirtualKeyboard  // ✅ 2026-01-28 [虚拟键盘]: 导入虚拟键盘组件
 
 // ✅ 2026-01-24 [设备信息界面重构] 设备参数设置弹窗
 // ✅ 2026-01-25 [工业科技感设计]: 应用 IndustrialTheme
 // ✅ 2026-01-28 [FIX 100.300.66]: 自适应屏幕尺寸（1920×1080 和 1280×800），居中显示
 // ✅ 2026-01-28 [FIX 100.300.67]: 修改尺寸为屏幕的 80%
+// ✅ 2026-01-28 [虚拟键盘集成]: 集成虚拟键盘管理器
 // QDS 预览版本：使用 Rectangle 替代 Dialog
 Rectangle {
     id: root
@@ -28,6 +30,23 @@ Rectangle {
     property int deviceId: 1                      // 设备ID
     property int currentCategory: 0               // 当前选中的参数类别
     property int currentBottomButtonIndex: 0      // ✅ 2026-01-24 [FIX]: 当前选中的底部按钮索引
+
+    // ✅ 2026-01-28 [虚拟键盘管理器]: 创建键盘管理器实例
+    VirtualKeyboardManager {
+        id: keyboardManager
+    }
+
+    // ✅ 2026-01-28 [虚拟键盘实例]: 共享的虚拟键盘实例
+    VirtualKeyboard.EnhancedVirtualKeyboard {
+        id: virtualKeyboard
+        parent: Overlay.overlay  // 显示在最顶层
+    }
+
+    // ✅ 2026-01-28 [虚拟键盘初始化]: 初始化键盘管理器
+    Component.onCompleted: {
+        keyboardManager.initialize(virtualKeyboard)
+        console.log("✅ [DeviceSettingsDialog] 虚拟键盘管理器已初始化")
+    }
 
     // ✅ 2026-01-24 [FIX]: 键盘导航支持
     focus: true
@@ -427,6 +446,8 @@ Rectangle {
                             console.log("✅ [DeviceSettingsDialog] BasicConfigPage 加载成功")
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
+                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                            item.keyboardManager = keyboardManager
                         }
                     }
 
@@ -460,6 +481,8 @@ Rectangle {
                             console.log("✅ [DEBUG] SwitchInputPage item 高度:", item.height)
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
+                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                            item.keyboardManager = keyboardManager
                         }
                     }
 
@@ -486,6 +509,8 @@ Rectangle {
                             // ✅ 2026-01-28 [FIX 100.300.73.2]: 移除 Qt.binding()，使用 anchors.fill 方案
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
+                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                            item.keyboardManager = keyboardManager
                         }
                     }
 
@@ -511,6 +536,8 @@ Rectangle {
                             console.log("✅ [DeviceSettingsDialog] MotorControlPage 加载成功")
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
+                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                            item.keyboardManager = keyboardManager
                         }
                     }
 
@@ -535,6 +562,8 @@ Rectangle {
                             console.log("✅ [DeviceSettingsDialog] BrakeControlPage 加载成功")
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
+                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                            item.keyboardManager = keyboardManager
                         }
                     }
 
@@ -559,6 +588,8 @@ Rectangle {
                             console.log("✅ [DeviceSettingsDialog] TensionControlPage 加载成功")
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
+                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                            item.keyboardManager = keyboardManager
                         }
                     }
 
