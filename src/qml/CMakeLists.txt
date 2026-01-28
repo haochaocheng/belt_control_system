@@ -14,6 +14,7 @@ qt_add_qml_module(qml_module
         pages/Input1Page.qml
         # 2026-01-19: Input1 模块 QML 组件（6 个，自动检测）
         # ✅ 2026-01-27 [FIX 100.300.52] 添加缺失的 Head 组件
+        # ✅ 2026-01-27 [FIX 100.300.54] 添加键盘导航支持
         Input1/Input1Content/Back.ui.qml
         Input1/Input1Content/BHState.ui.qml
         Input1/Input1Content/DataShow.ui.qml
@@ -21,7 +22,8 @@ qt_add_qml_module(qml_module
         Input1/Input1Content/Head_MiddleMenu.ui.qml
         Input1/Input1Content/MyIN_Data.ui.qml
         Input1/Input1Content/MyIN_State.ui.qml
-        Input1/Input1Content/Screen01.ui.qml
+        Input1/Input1Content/Screen01.qml
+        Input1/Input1Content/Screen01Form.ui.qml
         components/SpeedGauge.qml
         components/StatusIndicator.qml
         components/MotorControlBtn.qml
