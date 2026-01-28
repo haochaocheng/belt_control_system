@@ -155,7 +155,7 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: holdTimeField
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
+                                Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -182,7 +182,7 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: releaseTimeField
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
+                                Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -209,7 +209,7 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: maxTimeField
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
+                                Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -236,7 +236,7 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: brakeDelayField
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
+                                Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -263,7 +263,7 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: emergencyBrakeField
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
+                                Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -297,7 +297,7 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: brakeOutputField
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
+                                Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -318,7 +318,7 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: reducerOutputField
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
+                                Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -339,7 +339,7 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: releaseInPlaceField
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
+                                Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
                                 placeholderText: "0"
                                 text: "0"
                             }
@@ -360,7 +360,7 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: brakeInPlaceField
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: parent.width * 0.8  // ✅ 2026-01-28 [FIX 100.300.86]: 限制宽度为 80%
+                                Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
                                 placeholderText: "0"
                                 text: "0"
                             }
