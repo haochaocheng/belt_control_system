@@ -67,7 +67,7 @@ Item {
         width: 1920
         height: 1080
 
-        source: "qrc:/qt/qml/BeltControlQml/Input1/Input1Content/Screen01.qml"  // ✅ 2026-01-27 [FIX 100.300.56]: 使用 Screen01.qml（包装器）而非 .ui.qml
+        source: "../Input1/Input1Content/Screen01.qml"  // ✅ 2026-01-27 [FIX 100.300.57]: 使用相对路径以支持 QDS
 
         // ✅ 2026-01-20 [FIX 100.262]: 改为非等比缩放（填满整个屏幕）
         transform: Scale {
