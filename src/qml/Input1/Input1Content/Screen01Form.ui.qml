@@ -21,6 +21,22 @@ Rectangle {
     // ✅ 接收外部传入的当前页面索引
     property int currentPageIndex: 0
 
+    // ✅ 2026-01-28 [FIX 100.300.63]: 暴露组件 ID 为属性，使外部可以访问
+    // 原因：.ui.qml 文件的子组件 ID 默认是私有的，外部无法通过 screen01Form.data_row1_col1 访问
+    // 解决方案：使用 property alias 显式暴露这些组件
+    property alias data_row1_col1: data_row1_col1
+    property alias data_row1_col2: data_row1_col2
+    property alias data_row1_col3: data_row1_col3
+    property alias data_row1_col4: data_row1_col4
+    property alias data_row2_col1: data_row2_col1
+    property alias data_row2_col2: data_row2_col2
+    property alias data_row2_col3: data_row2_col3
+    property alias data_row2_col4: data_row2_col4
+    property alias data_row3_col1: data_row3_col1
+    property alias data_row3_col2: data_row3_col2
+    property alias data_row3_col3: data_row3_col3
+    property alias data_row3_col4: data_row3_col4
+
     // ✅ 背景层
     Back {
         id: back

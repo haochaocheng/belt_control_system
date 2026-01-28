@@ -160,11 +160,19 @@ QtObject {
     ]
 
     // ✅ 2026-01-28 [FIX 100.300.61]: 添加缺失的对象
+    // ✅ 2026-01-28 [FIX 100.300.64]: 添加 workMode 和 warningMode 属性
     property QtObject systemConfig: QtObject {
         property string deviceName: "模拟设备"
         property int baudRate: 9600
         property string ipAddress: "192.168.1.100"
         property int port: 8080
+
+        // ✅ 2026-01-28 [FIX 100.300.64]: 添加工作模式和预警模式
+        property int workMode: 0  // 0=检修, 1=就地, 2=点动, 3=集控
+        property int warningMode: 0  // 0=按时间, 1=按次数
+        property int warningTimeSeconds: 10  // 起车预警时间（秒）
+        property int warningPlayCount: 3  // 起车预警次数
+        property string localDeviceName: "1号皮带"  // 本机名称
     }
 
     property QtObject operationLogDB: QtObject {

@@ -157,11 +157,14 @@ Item {
             scrollAnimation.start()
         }
 
+        // ✅ 2026-01-28 [FIX 100.300.64]: 修复 Anchor 错误
+        // 原因：ColumnLayout 在 mainFlickable 内部，不能 anchor 到外部的 headerContainer
+        // 解决：anchor 到 parent.top（mainFlickable.contentItem.top）
         ColumnLayout {
             id: mainContentColumn
             x: 0
             width: parent.width
-            anchors.top: headerContainer.bottom
+            anchors.top: parent.top
             anchors.topMargin: 5
             spacing: 8
 

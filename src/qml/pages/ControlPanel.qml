@@ -3,6 +3,7 @@ import QtQuick.Controls 6.5
 import QtQuick.Layouts 6.5
 import "../components/common"
 import "../components/control_panel"
+import "../Input1/Input1Content"  // ✅ 2026-01-20 [FIX 100.255] 引入 Input1 Head 组件
 
 // Control Panel Page - Belt Control System Main Interface
 // Complete system monitoring and control
@@ -16,6 +17,7 @@ Item {
     // Public properties
     property bool motorRunning: false
     property real currentSpeed: 2.5
+    property int currentPageIndex: 0  // ✅ 2026-01-20 [FIX 100.255] 接收当前页面索引
 
     // Track device running states (deviceName -> isRunning)
     property var deviceRunningStates: ({})
@@ -34,9 +36,11 @@ Item {
         }
     }
 
+    // ✅ 2026-01-28 [FIX 100.300.64]: 修复 Connections 目标
+    // 原因：protectionMonitor 未定义，应该连接到 commonControl
     // 监听保护触发和恢复信号
     Connections {
-        target: protectionMonitor
+        target: commonControl
 
         function onProtectionTriggered(protectionName, type, value) {
             console.log("🚨 ControlPanel: 保护触发 -", protectionName, "类型:", type, "值:", value)
@@ -59,27 +63,64 @@ Item {
         }
     }
 
-    // 3D Scene Background - Full screen
-    BeltScene3D {
+    // ✅ 2026-01-20 [FIX 100.271]: 使用 Back 组件作为背景（与模块状态页面一致）
+    // ✅ 2026-01-20 [FIX 100.272]: 禁用鼠标交互，避免拦截其他组件的鼠标事件
+    Back {
         anchors.fill: parent
-        isRunning: root.motorRunning
-        beltSpeed: root.currentSpeed
+        z: 0  // 确保在最底层
+        enabled: false  // ✅ 不接收鼠标事件，只作为视觉背景
     }
 
-    // Header at top
-    Header {
-        id: header
+    // 2026-01-20: 注释掉 3D Scene Background，改用 Back 组件
+    // BeltScene3D {
+    //     anchors.fill: parent
+    //     isRunning: root.motorRunning
+    //     beltSpeed: root.currentSpeed
+    // }
+
+    // ✅ 2026-01-20 [FIX 100.268] 修复高度缩放问题
+    // 问题：anchors.right 覆盖了 Scale transform 的 yScale 效果
+    // 解决：移除 anchors，使用固定尺寸，让 Scale 完全控制缩放
+    Item {
+        id: headerContainer
         anchors.top: parent.top
         anchors.left: parent.left
-        anchors.right: parent.right
+        width: 1920  // ✅ 固定宽度（Head 原始设计宽度）
         height: 80
+        clip: true   // ✅ 裁剪超出部分
+
+        // ✅ 等比缩放（宽度和高度使用相同比例）
+        transform: Scale {
+            property real scaleFactor: root.width / 1920  // 0.667
+            xScale: scaleFactor
+            yScale: scaleFactor  // ✅ 等比缩放
+            origin.x: 0
+            origin.y: 0
+        }
+
+        Head {
+            id: header
+            // ✅ 2026-01-20 [FIX 100.268]: 移除 anchors，使用固定尺寸
+            // 原因：anchors.right 会在 Scale 应用后重新计算，覆盖 yScale 效果
+            width: 1920  // ✅ 固定宽度（不使用 anchors.right）
+            height: 80
+            currentPageIndex: root.currentPageIndex
+        }
+
+        Component.onCompleted: {
+            console.log("🔍 [ControlPanel Head] 布局调试 v6:")
+            console.log("   root 尺寸:", root.width, "×", root.height)
+            console.log("   容器原始尺寸:", width, "×", height)
+            console.log("   scaleFactor:", (root.width / 1920).toFixed(3))
+            console.log("   缩放后尺寸:", (width * root.width / 1920).toFixed(0), "×", (height * root.width / 1920).toFixed(0))
+        }
     }
 
     // Left side - Device Status Panel
     DeviceStatusPanel {
         id: deviceStatusPanel
         anchors.left: parent.left
-        anchors.top: header.bottom
+        anchors.top: headerContainer.bottom
         anchors.margins: 10
         width: 300
         height: 320
@@ -242,11 +283,14 @@ Item {
         }
     }
 
+    // ✅ 2026-01-28 [FIX 100.300.64]: 修复 Anchor 错误
+    // 原因：header 在 headerContainer 内部，ModuleConnectionPanel 在外部
+    // 解决：anchor 到 headerContainer.bottom
     // Right side - Module Connection Panel
     ModuleConnectionPanel {
         id: moduleConnectionPanel
         anchors.right: parent.right
-        anchors.top: header.bottom
+        anchors.top: headerContainer.bottom
         anchors.margins: 10
         width: 300
         height: 200
