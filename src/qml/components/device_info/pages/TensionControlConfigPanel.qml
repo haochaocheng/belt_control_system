@@ -6,6 +6,7 @@ import ".." as DeviceInfo
 // ✅ 2026-01-27 [张紧控制-右侧面板] 控制配置面板
 // 张力传感器：包含模拟量弹窗的所有参数（完整版）
 // 独立张紧控制：待实现
+// ✅ 2026-01-28 [虚拟键盘集成]: 接收并传递键盘管理器
 Rectangle {
     id: root
     // ✅ 2026-01-28 [FIX 100.300.89]: 改为两列布局，宽度从 800 增加到 1400
@@ -16,6 +17,8 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property int controlIndex: 0  // 当前控制索引 (0=张力传感器, 1=独立张紧控制)
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
+    property var keyboardManager: null
 
     // ========== 键盘导航支持 ==========
     focus: true
@@ -115,6 +118,7 @@ Rectangle {
                                         enabled: false  // 固定为"张力"
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                     }
                                 }
 
@@ -135,6 +139,7 @@ Rectangle {
                                         enabled: false  // 固定为"模拟量"
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                         model: ["模拟量", "开关量"]
                                         currentIndex: 0
                                     }
@@ -156,6 +161,7 @@ Rectangle {
                                         id: moduleTypeCombo
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                         model: ["模拟量模块1", "模拟量模块2", "模拟量模块3", "模拟量模块4"]
                                         currentIndex: 0
                                     }
@@ -181,6 +187,7 @@ Rectangle {
                                         editable: true
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                     }
                                 }
 
@@ -205,6 +212,7 @@ Rectangle {
                                         editable: true
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                     }
                                 }
 
@@ -229,6 +237,7 @@ Rectangle {
                                         editable: true
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                     }
                                 }
 
@@ -253,6 +262,7 @@ Rectangle {
                                         editable: true
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                     }
                                 }
                             }
@@ -279,6 +289,7 @@ Rectangle {
                                         id: unitCombo
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                         model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
                                         editable: true
                                         currentIndex: 1  // 默认选择 "T"（张力单位）
@@ -306,6 +317,7 @@ Rectangle {
                                         editable: true
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
 
                                         property int decimals: 1
                                         property real realValue: value / 10
@@ -340,6 +352,7 @@ Rectangle {
                                         editable: true
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                     }
                                 }
 
@@ -364,6 +377,7 @@ Rectangle {
                                         editable: true
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
 
                                         property int decimals: 1
                                         property real realValue: value / 10
@@ -482,6 +496,7 @@ Rectangle {
                                         placeholderText: "输入报警文字内容..."
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                     }
                                 }
 
@@ -504,6 +519,7 @@ Rectangle {
                                         placeholderText: "选择音频文件..."
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: 200  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度（留空间给浏览按钮）
+                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                                         readOnly: true
                                     }
 
