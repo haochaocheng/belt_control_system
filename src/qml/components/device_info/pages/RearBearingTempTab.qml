@@ -1,7 +1,9 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import ".." as DeviceInfo
 
 // ✅ 2026-01-25 [后轴承温度保护] 后轴承温度保护配置
+// ✅ 2026-01-28 [FIX 100.300.83] 替换所有只读显示框为 CustomReadOnlyField
 Rectangle {
     id: root
     color: "transparent"
@@ -109,17 +111,10 @@ Rectangle {
                     color: "#9E9E9E"
                     anchors.verticalCenter: parent.verticalCenter
                 }
-                Rectangle {
-                    width: 200; height: 36
-                    color: "#2d3548"
-                    border.color: "#3d4556"; border.width: 1
-                    radius: 2
-                    Text {
-                        anchors.centerIn: parent
-                        text: "立即停机"
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
-                    }
+                DeviceInfo.CustomReadOnlyField {
+                    width: 200
+                    height: 60
+                    text: "立即停机"
                 }
             }
 
@@ -134,17 +129,10 @@ Rectangle {
                     color: "#9E9E9E"
                     anchors.verticalCenter: parent.verticalCenter
                 }
-                Rectangle {
-                    width: 200; height: 36
-                    color: "#2d3548"
-                    border.color: "#3d4556"; border.width: 1
-                    radius: 2
-                    Text {
-                        anchors.centerIn: parent
-                        text: "紧急停机"
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
-                    }
+                DeviceInfo.CustomReadOnlyField {
+                    width: 200
+                    height: 60
+                    text: "紧急停机"
                 }
             }
 
@@ -159,17 +147,10 @@ Rectangle {
                     color: "#9E9E9E"
                     anchors.verticalCenter: parent.verticalCenter
                 }
-                Rectangle {
-                    width: 200; height: 36
-                    color: "#2d3548"
-                    border.color: "#3d4556"; border.width: 1
-                    radius: 2
-                    Text {
-                        anchors.centerIn: parent
-                        text: "-20~100℃"
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
-                    }
+                DeviceInfo.CustomReadOnlyField {
+                    width: 200
+                    height: 60
+                    text: "-20~100℃"
                 }
             }
 
@@ -184,17 +165,10 @@ Rectangle {
                     color: "#9E9E9E"
                     anchors.verticalCenter: parent.verticalCenter
                 }
-                Rectangle {
-                    width: 120; height: 36
-                    color: "#2d3548"
-                    border.color: "#3d4556"; border.width: 1
-                    radius: 2
-                    Text {
-                        anchors.centerIn: parent
-                        text: "80"
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
-                    }
+                DeviceInfo.CustomReadOnlyField {
+                    width: 120
+                    height: 60
+                    text: "80"
                 }
                 Text {
                     text: "℃"
@@ -215,17 +189,10 @@ Rectangle {
                     color: "#9E9E9E"
                     anchors.verticalCenter: parent.verticalCenter
                 }
-                Rectangle {
-                    width: 120; height: 36
-                    color: "#2d3548"
-                    border.color: "#3d4556"; border.width: 1
-                    radius: 2
-                    Text {
-                        anchors.centerIn: parent
-                        text: "-10"
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
-                    }
+                DeviceInfo.CustomReadOnlyField {
+                    width: 120
+                    height: 60
+                    text: "-10"
                 }
                 Text {
                     text: "℃"
@@ -246,17 +213,10 @@ Rectangle {
                     color: "#9E9E9E"
                     anchors.verticalCenter: parent.verticalCenter
                 }
-                Rectangle {
-                    width: 120; height: 36
-                    color: "#2d3548"
-                    border.color: "#3d4556"; border.width: 1
-                    radius: 2
-                    Text {
-                        anchors.centerIn: parent
-                        text: "0.5 秒"
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
-                    }
+                DeviceInfo.CustomReadOnlyField {
+                    width: 120
+                    height: 60
+                    text: "0.5 秒"
                 }
             }
 
@@ -271,17 +231,10 @@ Rectangle {
                     color: "#9E9E9E"
                     anchors.verticalCenter: parent.verticalCenter
                 }
-                Rectangle {
-                    width: 200; height: 36
-                    color: "#2d3548"
-                    border.color: "#3d4556"; border.width: 1
-                    radius: 2
-                    Text {
-                        anchors.centerIn: parent
-                        text: "AI-0"
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
-                    }
+                DeviceInfo.CustomReadOnlyField {
+                    width: 200
+                    height: 60
+                    text: "AI-0"
                 }
             }
         }
