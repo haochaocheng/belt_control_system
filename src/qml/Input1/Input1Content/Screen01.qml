@@ -7,6 +7,7 @@ import Input1Content
 // ✅ 2026-01-27 [FIX 100.300.56]: 添加 Input1Content 导入以加载 Screen01Form
 // ✅ 2026-01-27 [FIX 100.300.58]: 增强焦点管理和调试信息
 // ✅ 2026-01-28 [FIX 100.300.60]: 添加 dataItems 空值检查，修复 QDS 中 undefined 错误
+// ✅ 2026-01-28 [FIX 100.300.62]: 改用直接访问组件方式，修复 QDS 中 dataItems 未定义问题
 Item {
     id: root
     width: 1920
@@ -40,40 +41,48 @@ Item {
         anchors.fill: parent
         currentPageIndex: root.currentPageIndex
 
-        property var dataItems: [
-            data_row1_col1, data_row1_col2, data_row1_col3, data_row1_col4,
-            data_row2_col1, data_row2_col2, data_row2_col3, data_row2_col4,
-            data_row3_col1, data_row3_col2, data_row3_col3, data_row3_col4
-        ]
-
         Component.onCompleted: {
-            console.log("[Screen01] ✅ 组件加载完成")
-
-            // ✅ 2026-01-28 [FIX 100.300.60]: 添加 dataItems 空值检查
-            if (dataItems && dataItems.length > 0) {
-                console.log("[Screen01] 📊 dataItems 数量:", dataItems.length)
-                console.log("[Screen01] 🔄 初始化选中状态...")
-                updateSelection()
-            } else {
-                console.warn("[Screen01] ⚠️ dataItems 未定义或为空，跳过初始化")
-            }
-
-            console.log("[Screen01] 🎯 强制获取焦点...")
-            root.forceActiveFocus()
+            console.log("[Screen01Form] ✅ 组件加载完成")
         }
     }
 
+    // ✅ 2026-01-28 [FIX 100.300.62]: 直接访问 Screen01Form 的子组件
+    function getDataItems() {
+        return [
+            screen01Form.data_row1_col1,
+            screen01Form.data_row1_col2,
+            screen01Form.data_row1_col3,
+            screen01Form.data_row1_col4,
+            screen01Form.data_row2_col1,
+            screen01Form.data_row2_col2,
+            screen01Form.data_row2_col3,
+            screen01Form.data_row2_col4,
+            screen01Form.data_row3_col1,
+            screen01Form.data_row3_col2,
+            screen01Form.data_row3_col3,
+            screen01Form.data_row3_col4
+        ]
+    }
+
     function updateSelection() {
-        // ✅ 2026-01-28 [FIX 100.300.60]: 添加 dataItems 空值检查
-        if (!screen01Form.dataItems || screen01Form.dataItems.length === 0) {
-            console.warn("[Screen01] ⚠️ dataItems 未定义或为空，跳过更新")
+        // ✅ 2026-01-28 [FIX 100.300.62]: 使用 getDataItems() 直接访问
+        var dataItems = getDataItems()
+
+        // 检查是否有有效组件
+        var validCount = 0
+        for (var i = 0; i < dataItems.length; i++) {
+            if (dataItems[i]) validCount++
+        }
+
+        if (validCount === 0) {
+            console.warn("[Screen01] ⚠️ 没有有效的 dataItems，跳过更新")
             return
         }
 
-        console.log("[Screen01] 🔄 updateSelection 开始，selectedIndex:", selectedIndex)
+        console.log("[Screen01] 🔄 updateSelection 开始，selectedIndex:", selectedIndex, "有效组件:", validCount)
         var successCount = 0
-        for (var i = 0; i < screen01Form.dataItems.length; i++) {
-            var item = screen01Form.dataItems[i]
+        for (var i = 0; i < dataItems.length; i++) {
+            var item = dataItems[i]
             if (item) {
                 item.selected = (i === selectedIndex)
                 if (item.selected) {
@@ -85,6 +94,31 @@ Item {
             }
         }
         console.log("[Screen01] 🔄 updateSelection 完成，成功更新", successCount, "个组件")
+    }
+
+    Component.onCompleted: {
+        console.log("[Screen01] ✅ 组件加载完成")
+
+        // ✅ 2026-01-28 [FIX 100.300.62]: 延迟初始化，等待 Screen01Form 的子组件加载
+        Qt.callLater(function() {
+            var dataItems = getDataItems()
+            var validCount = 0
+            for (var i = 0; i < dataItems.length; i++) {
+                if (dataItems[i]) validCount++
+            }
+
+            console.log("[Screen01] 📊 dataItems 有效数量:", validCount, "/ 12")
+
+            if (validCount > 0) {
+                console.log("[Screen01] 🔄 初始化选中状态...")
+                updateSelection()
+            } else {
+                console.warn("[Screen01] ⚠️ dataItems 仍未定义，跳过初始化")
+            }
+        })
+
+        console.log("[Screen01] 🎯 强制获取焦点...")
+        root.forceActiveFocus()
     }
 
     onSelectedIndexChanged: {
