@@ -262,7 +262,7 @@ Rectangle {
                             // ========== 左列：保护名称到单位 ==========
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: 1  // ✅ 2026-01-28 [FIX 100.300.72.1]: 设置权重为 1，确保平分宽度
+                                Layout.minimumWidth: 200  // ✅ 2026-01-28 [FIX 100.300.72.2]: 设置最小宽度，确保不被压缩
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
 
@@ -515,10 +515,10 @@ Rectangle {
                             // ✅ 2026-01-28 [FIX 100.300.69]: 修复右列布局 - 统一标签宽度，确保输入框对齐
                             // ✅ 2026-01-28 [FIX 100.300.70]: 修复布局递归问题 - 使用固定宽度
                             // ✅ 2026-01-28 [FIX 100.300.71]: 移除 preferredWidth，让布局引擎自动分配
-                            // ✅ 2026-01-28 [FIX 100.300.72.1]: 设置权重为 1，确保平分宽度
+                            // ✅ 2026-01-28 [FIX 100.300.72.2]: 设置最小宽度，确保不被压缩
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: 1  // ✅ 设置权重为 1，与左列相同
+                                Layout.minimumWidth: 200  // ✅ 设置最小宽度，与左列相同
                                 Layout.alignment: Qt.AlignTop
                                 spacing: 12
 
