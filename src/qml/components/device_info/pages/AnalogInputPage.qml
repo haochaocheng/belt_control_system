@@ -6,8 +6,8 @@ import ".." as DeviceInfo  // ✅ 2026-01-27 [FIX 100.300.32]: 导入自定义�
 // ✅ 2026-01-25 [模拟量输入页面] 左右分栏布局：左侧列表 + 右侧参数编辑
 Rectangle {
     id: root
-    // ✅ 2026-01-26 [FIX 100.300.25.12]: 明确设置尺寸，确保运行时正确显示
-    implicitWidth: 800
+    // ✅ 2026-01-28 [FIX 100.300.72.4]: 移除固定 implicitWidth，让页面自动填充 Loader 宽度
+    // ❌ 2026-01-26 [FIX 100.300.25.12]: implicitWidth: 800 导致宽度被限制为 800px
     implicitHeight: 600
     color: "transparent"
 
