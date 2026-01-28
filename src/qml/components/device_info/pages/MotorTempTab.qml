@@ -4,12 +4,15 @@ import ".." as DeviceInfo
 
 // ✅ 2026-01-25 [电机温度保护] 电机温度保护配置
 // ✅ 2026-01-28 [FIX 100.300.83] 替换所有只读显示框为 CustomReadOnlyField
+// ✅ 2026-01-28 [虚拟键盘集成]: 接收键盘管理器（暂无可编辑组件）
 Rectangle {
     id: root
     color: "transparent"
 
     // ========== 公开属性 ==========
     property int motorIndex: 0
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性（预留，当前页面只有只读字段）
+    property var keyboardManager: null
 
     // ========== 滚动视图 ==========
     ScrollView {
