@@ -212,3 +212,100 @@ cp docker/rk3588/lib/*.a docker/rk3588/rk3588-libs/lib/  # 编译用
 ### 新建脚本规则
 如需新建辅助脚本，**必须被 build-ubuntu24-apt.ps1 引用调用**，不可独立使用。
 
+## 📤 Git 双重备份系统（2026-01-28 新增）
+
+### 双重备份架构
+```
+本地代码 → GitHub（远程备份）
+         → GitLab（本地备份，http://localhost:8080）
+```
+
+### 远程仓库配置
+```powershell
+# 查看当前远程仓库
+git remote -v
+
+# 应该看到：
+# origin    https://github.com/your-repo.git (GitHub)
+# gitlab    http://localhost:8080/root/belt-control-system.git (GitLab)
+```
+
+### 日常推送命令
+
+**推送到当前分支（最常用）**：
+```powershell
+# 推送到 GitHub
+git push origin feature/hardware-video-codec
+
+# 推送到 GitLab
+git push gitlab feature/hardware-video-codec
+```
+
+**推送所有分支**：
+```powershell
+# 推送所有分支到 GitHub
+git push origin --all
+
+# 推送所有分支到 GitLab
+git push gitlab --all
+```
+
+**推送标签**：
+```powershell
+# 推送标签到 GitHub
+git push origin --tags
+
+# 推送标签到 GitLab
+git push gitlab --tags
+```
+
+### 快捷脚本
+
+**推送所有内容到 GitLab**：
+```powershell
+.\scripts\2026-01-28\10-push-all-to-gitlab.ps1
+```
+
+**配置 GitLab 远程仓库**（首次使用）：
+```powershell
+.\scripts\2026-01-28\09-setup-gitlab-remote.ps1
+```
+
+**修复 Git HTTP 连接问题**（如遇到 HTTP 不允许错误）：
+```powershell
+.\scripts\2026-01-28\11-fix-git-http.ps1
+```
+
+### GitLab 管理
+
+**访问 GitLab**：
+- 地址：http://localhost:8080
+- 用户名：root
+- 密码：[您设置的密码]
+
+**GitLab 管理脚本**：
+```powershell
+.\scripts\2026-01-28\06-gitlab-manager.ps1
+```
+
+**修改 GitLab 密码**：
+```powershell
+.\scripts\2026-01-28\08-change-gitlab-password.ps1
+```
+
+### 自动提交规则
+
+**Claude 会自动处理 Git 提交**：
+- ✅ 每次完成修改总结和代码修改后，自动提交
+- ✅ 提交信息清晰描述修改内容
+- ✅ 自动推送到 GitHub 和 GitLab
+- ✅ 您无需记住这些命令
+
+**您只需要**：
+- 正常工作和提问
+- 告诉我"下班"时，我会提交当天所有工作
+
+### 详细文档
+- GitLab 部署流程：[docs/2026-01-28/21-GitLab部署完整流程总结.md](docs/2026-01-28/21-GitLab部署完整流程总结.md)
+- GitLab 日常使用：[docs/2026-01-28/17-GitLab日常使用指南.md](docs/2026-01-28/17-GitLab日常使用指南.md)
+
