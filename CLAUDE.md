@@ -16,8 +16,14 @@
    - **所有脚本必须使用 UTF-8 with BOM 编码**
    - 每个脚本开头必须包含 UTF-8 强制配置
    - 不再使用 GBK 编码
-8. **Git 提交规则（2026-01-08 新增）**：
+8. **Git 提交规则（2026-01-08 新增，2026-01-29 更新）**：
    - 每次完成修改总结和代码修改后，必须进行 Git 提交
+   - **⚠️ 重要：每次提交后必须推送到 GitHub 和 GitLab 两个远程仓库**
+   - 推送命令：
+     ```powershell
+     git push origin feature/hardware-video-codec  # 推送到 GitHub
+     git push gitlab feature/hardware-video-codec  # 推送到 GitLab
+     ```
    - 当用户提示"下班"时，将当天所有工作内容提交到 Git
    - 提交信息要清晰描述修改内容，便于在其他电脑上查看工作进度
 9. **平台和环境规则（2026-01-09 新增）**：
