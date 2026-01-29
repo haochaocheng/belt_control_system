@@ -79,14 +79,14 @@ Write-Host "  ✅ 依赖安装完成" -ForegroundColor Green
 
 # 步骤 6: 添加 Docker GPG 密钥和 APT 源
 Write-Host "`n[6/9] 配置 Docker APT 源..." -ForegroundColor Cyan
-$setupRepo = @"
+# 2026-01-29: 修复 PowerShell here-string 中的命令替换问题
+# 使用单引号 here-string 避免 PowerShell 解释 $() 语法
+$setupRepo = @'
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo \
-  \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  \$(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt update
-"@
+'@
 ssh -i $sshKey "$DeviceUser@$DeviceIp" $setupRepo | Out-Null
 Write-Host "  ✅ Docker APT 源配置完成" -ForegroundColor Green
 
@@ -101,6 +101,7 @@ Write-Host "  ✅ Docker Engine 安装完成" -ForegroundColor Green
 
 # 步骤 8: 启动 Docker 服务
 Write-Host "`n[8/9] 启动 Docker 服务..." -ForegroundColor Cyan
+# 2026-01-29: 使用字符串拼接避免变量替换问题
 $startDocker = @"
 sudo systemctl start docker
 sudo systemctl enable docker
@@ -119,24 +120,25 @@ Write-Host "  Docker Compose: $composeVersion" -ForegroundColor White
 # 可选：配置镜像加速
 if ($ConfigureMirror) {
     Write-Host "`n[额外] 配置 Docker 镜像加速..." -ForegroundColor Cyan
-    $configureMirror = @"
+    # 2026-01-29: 使用单引号 here-string 避免转义问题
+    $configureMirror = @'
 sudo mkdir -p /etc/docker
-sudo tee /etc/docker/daemon.json > /dev/null <<'EOF'
+sudo tee /etc/docker/daemon.json > /dev/null <<'DOCKEREOF'
 {
-  \"registry-mirrors\": [
-    \"https://docker.mirrors.ustc.edu.cn\",
-    \"https://hub-mirror.c.163.com\"
+  "registry-mirrors": [
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://hub-mirror.c.163.com"
   ],
-  \"log-driver\": \"json-file\",
-  \"log-opts\": {
-    \"max-size\": \"10m\",
-    \"max-file\": \"3\"
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
   }
 }
-EOF
+DOCKEREOF
 sudo systemctl daemon-reload
 sudo systemctl restart docker
-"@
+'@
     ssh -i $sshKey "$DeviceUser@$DeviceIp" $configureMirror | Out-Null
     Write-Host "  ✅ 镜像加速配置完成" -ForegroundColor Green
 }
