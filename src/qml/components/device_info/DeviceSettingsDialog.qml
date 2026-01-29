@@ -624,6 +624,10 @@ Item {
                             item.deviceName = root.deviceName
                             // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                             item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-28 [FIX 100.300.101]: 传递焦点索引（动态绑定）
+                            item.focusItemIndex = Qt.binding(function() {
+                                return (currentFocusArea === 2 && currentCategory === 1) ? currentContentItemIndex : -1
+                            })
                         }
                     }
 

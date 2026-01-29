@@ -19,6 +19,8 @@ Rectangle {
     property int currentProtectionIndex: 0  // 当前选中的保护项索引
     // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
     property var keyboardManager: null
+    // ✅ 2026-01-28 [FIX 100.300.101]: 导航焦点索引（从父对话框传递）
+    property int focusItemIndex: -1  // -1 表示无焦点
 
     // ========== 开关量保护模型 ==========
     ListModel {
@@ -95,9 +97,9 @@ Rectangle {
                         // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
                         height: 45  // 从 60 改为 45（一级标题是 40）
                         color: "transparent"
-                        // ✅ 2026-01-26 [FIX 100.300.25.28]: 移除边框
-                        border.color: "transparent"
-                        border.width: 0
+                        // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器边框
+                        border.color: (root.focusItemIndex === index) ? "#2196F3" : "transparent"
+                        border.width: (root.focusItemIndex === index) ? 3 : 0
 
                         // ✅ 2026-01-26 [FIX 100.300.25]: 添加背景图片
                         // ✅ 2026-01-26 [FIX 100.300.25.2]: 改用states方式，使用相对路径便于QDS预览
