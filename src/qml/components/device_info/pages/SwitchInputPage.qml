@@ -289,15 +289,40 @@ Rectangle {
                             console.log("   宽度:", width, "高度:", height)
                         }
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.19]: 临时添加测试文本
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.20]: 添加第一个实际控件 - 保护名称（左列第一行，索引0）
                         Text {
-                            text: "左列测试"
-                            color: "white"
+                            text: "保护名称:"
                             font.pixelSize: 14
+                            color: "#9E9E9E"
                             Layout.column: 0
                             Layout.row: 0
+                            Layout.preferredWidth: 100
                         }
 
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.column: 0
+                            Layout.row: 1
+                            implicitHeight: nameField.implicitHeight
+
+                            DeviceInfo.CustomTextField {
+                                id: nameField
+                                anchors.fill: parent
+                                keyboardManager: root.keyboardManager
+                            }
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.20]: 右列测试文本（播放次数位置，索引1）
                         Text {
                             text: "右列测试"
                             color: "white"
