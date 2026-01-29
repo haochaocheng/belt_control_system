@@ -373,6 +373,7 @@ Rectangle {
                         }
 
                         // 寄存器地址
+                        // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 10
@@ -386,17 +387,33 @@ Rectangle {
                             }
 
                             // ✅ 2026-01-28 [FIX 100.300.79]: 替换为 CustomSpinBox
-                            DeviceInfo.CustomSpinBox {
-                                id: registerAddressSpin
-                                from: 0
-                                to: 255
-                                editable: true
+                            Item {
                                 Layout.fillWidth: true
-                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                implicitHeight: registerAddressSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: registerAddressSpin
+                                    anchors.fill: parent
+                                    from: 0
+                                    to: 255
+                                    editable: true
+                                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                }
+
+                                // 焦点指示器
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
                             }
                         }
 
                         // 通道编号
+                        // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 10
@@ -409,13 +426,28 @@ Rectangle {
                             }
 
                             // ✅ 2026-01-28 [FIX 100.300.79]: 替换为 CustomSpinBox
-                            DeviceInfo.CustomSpinBox {
-                                id: channelSpin
-                                from: 0
-                                to: 7
-                                editable: true
+                            Item {
                                 Layout.fillWidth: true
-                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                implicitHeight: channelSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: channelSpin
+                                    anchors.fill: parent
+                                    from: 0
+                                    to: 7
+                                    editable: true
+                                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                }
+
+                                // 焦点指示器
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
                             }
                         }
 
@@ -427,6 +459,7 @@ Rectangle {
                         }
 
                         // 保护延时
+                        // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 10
@@ -439,25 +472,40 @@ Rectangle {
                             }
 
                             // ✅ 2026-01-28 [FIX 100.300.79]: 替换为 CustomSpinBox
-                            DeviceInfo.CustomSpinBox {
-                                id: delaySpin
-                                from: 0
-                                to: 600
-                                value: 10
-                                stepSize: 1
-                                editable: true
+                            Item {
                                 Layout.fillWidth: true
-                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                implicitHeight: delaySpin.implicitHeight
 
-                                property int decimals: 1
-                                property real realValue: value / 10
+                                DeviceInfo.CustomSpinBox {
+                                    id: delaySpin
+                                    anchors.fill: parent
+                                    from: 0
+                                    to: 600
+                                    value: 10
+                                    stepSize: 1
+                                    editable: true
+                                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
 
-                                textFromValue: function(value, locale) {
-                                    return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                    property int decimals: 1
+                                    property real realValue: value / 10
+
+                                    textFromValue: function(value, locale) {
+                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                    }
+
+                                    valueFromText: function(text, locale) {
+                                        return Number.fromLocaleString(locale, text) * 10
+                                    }
                                 }
 
-                                valueFromText: function(text, locale) {
-                                    return Number.fromLocaleString(locale, text) * 10
+                                // 焦点指示器
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
+                                    radius: 4
+                                    z: 10
                                 }
                             }
                         }
