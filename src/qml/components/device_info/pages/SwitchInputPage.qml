@@ -263,6 +263,7 @@ Rectangle {
 
                 // 滚动区域：参数字段
                 ScrollView {
+                    id: paramScrollView  // ✅ 添加 ID
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
@@ -276,18 +277,22 @@ Rectangle {
                         console.log("✅ [DEBUG] SwitchInputPage ScrollView 高度:", height)
                     }
 
-                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.3]: 修复 GridLayout 宽度问题 - 使用 width: parent.width - 20
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.25]: 修复 GridLayout 宽度 - 使用 ScrollView 的宽度
+                    // 原因：GridLayout 的 parent 是 ScrollView 的 contentItem，宽度只有 270
+                    // 解决：使用 paramScrollView.width * 0.7 获取正确的宽度
                     GridLayout {
-                        width: parent.width - 20  // ✅ 使用固定宽度，而不是 Layout.fillWidth
+                        width: paramScrollView.width * 0.7  // ✅ 占 ScrollView 宽度的 70%
                         columns: 4  // 4列：标签1、输入框1、标签2、输入框2
                         columnSpacing: 10
                         rowSpacing: 12
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.3]: 添加调试日志
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.25]: 添加调试日志
                         Component.onCompleted: {
                             console.log("✅ [DEBUG] GridLayout 加载完成")
                             console.log("   宽度:", width, "高度:", height)
                             console.log("   parent.width:", parent.width)
+                            console.log("   paramScrollView.width:", paramScrollView.width)
+                            console.log("   计算宽度 (70%):", paramScrollView.width * 0.7)
                         }
 
                         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.2]: 保护名称 - 第一行左侧（索引0）
