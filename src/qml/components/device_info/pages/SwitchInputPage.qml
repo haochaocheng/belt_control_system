@@ -21,6 +21,9 @@ Rectangle {
     property var keyboardManager: null
     // ✅ 2026-01-28 [FIX 100.300.101]: 导航焦点索引（从父对话框传递）
     property int focusItemIndex: -1  // -1 表示无焦点
+    // ✅ 2026-01-28 [FIX 100.300.101]: 导航子区域（0:列表 1:参数）
+    property int focusSubArea: 0  // 0:列表区域 1:参数区域
+    property int focusParamIndex: 0  // 参数区域焦点索引
 
     // ========== 开关量保护模型 ==========
     ListModel {
@@ -97,9 +100,9 @@ Rectangle {
                         // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
                         height: 45  // 从 60 改为 45（一级标题是 40）
                         color: "transparent"
-                        // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器边框
-                        border.color: (root.focusItemIndex === index) ? "#2196F3" : "transparent"
-                        border.width: (root.focusItemIndex === index) ? 3 : 0
+                        // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器边框（只在列表区域显示）
+                        border.color: (root.focusSubArea === 0 && root.focusItemIndex === index) ? "#2196F3" : "transparent"
+                        border.width: (root.focusSubArea === 0 && root.focusItemIndex === index) ? 3 : 0
 
                         // ✅ 2026-01-26 [FIX 100.300.25]: 添加背景图片
                         // ✅ 2026-01-26 [FIX 100.300.25.2]: 改用states方式，使用相对路径便于QDS预览
@@ -115,7 +118,7 @@ Rectangle {
                             states: [
                                 State {
                                     name: "focused"
-                                    when: root.focusItemIndex === index
+                                    when: (root.focusSubArea === 0 && root.focusItemIndex === index)
                                     PropertyChanges {
                                         target: backgroundImage
                                         source: "../../../images/bhNameBK1.png"
@@ -123,7 +126,7 @@ Rectangle {
                                 },
                                 State {
                                     name: "normal"
-                                    when: root.focusItemIndex !== index
+                                    when: !(root.focusSubArea === 0 && root.focusItemIndex === index)
                                     PropertyChanges {
                                         target: backgroundImage
                                         source: "../../../images/bhNameBK.png"
@@ -133,9 +136,9 @@ Rectangle {
                         }
 
                         // ✅ 左侧激活指示条
-                        // ✅ 2026-01-28 [FIX 100.300.101]: 响应焦点变化
+                        // ✅ 2026-01-28 [FIX 100.300.101]: 响应焦点变化（只在列表区域显示）
                         Rectangle {
-                            visible: root.focusItemIndex === index
+                            visible: (root.focusSubArea === 0 && root.focusItemIndex === index)
                             width: 4
                             height: parent.height
                             color: "#2196F3"
@@ -143,13 +146,13 @@ Rectangle {
                         }
 
                         // ✅ 2026-01-26 [FIX 100.300.25.4]: 开关量名称居中显示
-                        // ✅ 2026-01-28 [FIX 100.300.101]: 响应焦点变化
+                        // ✅ 2026-01-28 [FIX 100.300.101]: 响应焦点变化（只在列表区域显示）
                         Text {
                             text: model.name
                             // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整字体，使二级标题比一级标题小
                             font.pixelSize: 14  // 从 16 改为 14（与一级标题相同）
-                            font.weight: root.focusItemIndex === index ? Font.Bold : Font.Normal
-                            color: root.focusItemIndex === index ? "#E0E0E0" : "#9E9E9E"
+                            font.weight: (root.focusSubArea === 0 && root.focusItemIndex === index) ? Font.Bold : Font.Normal
+                            color: (root.focusSubArea === 0 && root.focusItemIndex === index) ? "#E0E0E0" : "#9E9E9E"
                             anchors.centerIn: parent
                         }
 
