@@ -223,7 +223,7 @@ cp docker/rk3588/lib/*.a docker/rk3588/rk3588-libs/lib/  # 编译用
 ### 双重备份架构
 ```
 本地代码 → GitHub（远程备份）
-         → GitLab（本地备份，http://localhost:8080）
+         → GitLab（本地备份，http://localhost:8081）
 ```
 
 ### 远程仓库配置
@@ -233,7 +233,7 @@ git remote -v
 
 # 应该看到：
 # origin    https://github.com/your-repo.git (GitHub)
-# gitlab    http://localhost:8080/root/belt-control-system.git (GitLab)
+# gitlab    http://localhost:8081/root/belt-control-system.git (GitLab)
 ```
 
 ### 日常推送命令
@@ -285,9 +285,14 @@ git push gitlab --tags
 ### GitLab 管理
 
 **访问 GitLab**：
-- 地址：http://localhost:8080
+- 地址：http://localhost:8081
 - 用户名：root
 - 密码：[您设置的密码]
+
+**⚠️ 端口说明**（2026-01-29 更新）：
+- GitLab 使用 **8081** 端口（避免与 minisipserver 的 8080 端口冲突）
+- 如果遇到推送失败，检查 GitLab 容器是否运行：`docker ps | grep gitlab`
+- 密码重置脚本：`scripts/2026-01-29/reset_password.rb`
 
 **GitLab 管理脚本**：
 ```powershell
