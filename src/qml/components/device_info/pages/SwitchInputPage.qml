@@ -125,7 +125,7 @@ Rectangle {
                         border.width: isFocused ? 3 : 0
 
                         // ✅ 2026-01-26 [FIX 100.300.25]: 添加背景图片
-                        // ✅ 2026-01-26 [FIX 100.300.25.2]: 改用states方式，使用相对路径便于QDS预览
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.16]: 临时移除 states，使用简单绑定测试
                         Image {
                             id: backgroundImage
                             anchors.fill: parent
@@ -133,26 +133,27 @@ Rectangle {
                             z: -1  // 放在最底层
 
                             // 使用相对路径，便于QDS预览（向上三级到qml目录）
-                            source: "../../../images/bhNameBK.png"
+                            source: isFocused ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
 
-                            states: [
-                                State {
-                                    name: "focused"
-                                    when: isFocused
-                                    PropertyChanges {
-                                        target: backgroundImage
-                                        source: "../../../images/bhNameBK1.png"
-                                    }
-                                },
-                                State {
-                                    name: "normal"
-                                    when: !isFocused
-                                    PropertyChanges {
-                                        target: backgroundImage
-                                        source: "../../../images/bhNameBK.png"
-                                    }
-                                }
-                            ]
+                            // // ✅ 2026-01-26 [FIX 100.300.25.2]: 改用states方式，使用相对路径便于QDS预览
+                            // states: [
+                            //     State {
+                            //         name: "focused"
+                            //         when: isFocused
+                            //         PropertyChanges {
+                            //             target: backgroundImage
+                            //             source: "../../../images/bhNameBK1.png"
+                            //         }
+                            //     },
+                            //     State {
+                            //         name: "normal"
+                            //         when: !isFocused
+                            //         PropertyChanges {
+                            //             target: backgroundImage
+                            //             source: "../../../images/bhNameBK.png"
+                            //         }
+                            //     }
+                            // ]
                         }
 
                         // ✅ 左侧激活指示条
