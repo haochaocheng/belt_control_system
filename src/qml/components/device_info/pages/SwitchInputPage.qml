@@ -270,20 +270,22 @@ Rectangle {
                         console.log("✅ [DEBUG] SwitchInputPage ScrollView 高度:", height)
                     }
 
-                    ColumnLayout {
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 改为两列交叉导航布局
+                    RowLayout {
                         width: parent.width - 20
-                        spacing: 12
+                        spacing: 20
 
                         // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加隐式高度，让 ScrollView 知道内容大小
-                        implicitHeight: childrenRect.height
+                        implicitHeight: Math.max(leftColumn.implicitHeight, rightColumn.implicitHeight)
 
-                        // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
-                        Component.onCompleted: {
-                            console.log("✅ [DEBUG] SwitchInputPage ColumnLayout 宽度:", width)
-                            console.log("✅ [DEBUG] SwitchInputPage ColumnLayout 隐式高度:", implicitHeight)
-                        }
+                        // ✅ 左列：保护名称(0)、模块类型(2)、寄存器地址(4)、通道编号(6)、保护延时(8)
+                        ColumnLayout {
+                            id: leftColumn
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: parent.width / 2 - 10
+                            spacing: 12
 
-                        // 保护名称
+                            // 保护名称
                         // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
                         RowLayout {
                             Layout.fillWidth: true
@@ -361,11 +363,12 @@ Rectangle {
                                 }
 
                                 // 焦点指示器
+                                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 索引从 1 改为 2（交叉导航）
                                 Rectangle {
                                     anchors.fill: parent
                                     color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? 3 : 0
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? 3 : 0
                                     radius: 4
                                     z: 10
                                 }
@@ -401,11 +404,12 @@ Rectangle {
                                 }
 
                                 // 焦点指示器
+                                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 索引从 2 改为 4（交叉导航）
                                 Rectangle {
                                     anchors.fill: parent
                                     color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? 3 : 0
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
                                     radius: 4
                                     z: 10
                                 }
@@ -440,11 +444,12 @@ Rectangle {
                                 }
 
                                 // 焦点指示器
+                                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 索引从 3 改为 6（交叉导航）
                                 Rectangle {
                                     anchors.fill: parent
                                     color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? 3 : 0
                                     radius: 4
                                     z: 10
                                 }
@@ -499,16 +504,25 @@ Rectangle {
                                 }
 
                                 // 焦点指示器
+                                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 索引从 4 改为 8（交叉导航）
                                 Rectangle {
                                     anchors.fill: parent
                                     color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? 3 : 0
                                     radius: 4
                                     z: 10
                                 }
                             }
                         }
+                    }  // 左列结束
+
+                    // ✅ 右列：播放次数(1)、播放时长(3)、TTS文字(5)、音频文件(7)
+                    ColumnLayout {
+                        id: rightColumn
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: parent.width / 2 - 10
+                        spacing: 12
 
                         // 播放次数
                         // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
@@ -539,11 +553,12 @@ Rectangle {
                                 }
 
                                 // 焦点指示器
+                                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 索引从 5 改为 1（交叉导航）
                                 Rectangle {
                                     anchors.fill: parent
                                     color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? 3 : 0
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? 3 : 0
                                     radius: 4
                                     z: 10
                                 }
@@ -591,11 +606,12 @@ Rectangle {
                                 }
 
                                 // 焦点指示器
+                                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 索引从 6 改为 3（交叉导航）
                                 Rectangle {
                                     anchors.fill: parent
                                     color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? 3 : 0
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
                                     radius: 4
                                     z: 10
                                 }
@@ -721,11 +737,12 @@ Rectangle {
                                 }
 
                                 // 焦点指示器
+                                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 索引从 7 改为 5（交叉导航）
                                 Rectangle {
                                     anchors.fill: parent
                                     color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? 3 : 0
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? 3 : 0
                                     radius: 4
                                     z: 10
                                 }
@@ -760,11 +777,12 @@ Rectangle {
                                 }
 
                                 // 焦点指示器
+                                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 索引从 8 改为 7（交叉导航）
                                 Rectangle {
                                     anchors.fill: parent
                                     color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? 3 : 0
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? 3 : 0
                                     radius: 4
                                     z: 10
                                 }
@@ -796,8 +814,9 @@ Rectangle {
                                 }
                             }
                         }
-                    }
-                }
+                    }  // 右列结束
+                }  // RowLayout 结束
+            }  // ScrollView 结束
 
                 Rectangle {
                     Layout.fillWidth: true
