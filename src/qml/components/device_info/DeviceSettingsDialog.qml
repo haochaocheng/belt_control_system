@@ -626,7 +626,7 @@ Item {
                             item.keyboardManager = keyboardManager
                             // ✅ 2026-01-28 [FIX 100.300.101]: 传递焦点索引（动态绑定）
                             item.focusItemIndex = Qt.binding(function() {
-                                return (currentFocusArea === 2 && currentCategory === 1) ? currentContentItemIndex : -1
+                                return (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
                             })
                         }
                     }
