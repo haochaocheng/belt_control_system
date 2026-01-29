@@ -874,6 +874,8 @@ Item {
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
                             item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-29 [Qt 虚拟键盘]: 设置父对话框引用
+                            item.parentDialog = root
 
                             // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.21]: 设置初始焦点状态
                             // 当焦点在内容区域（区域2）且当前类别是开关量输入时

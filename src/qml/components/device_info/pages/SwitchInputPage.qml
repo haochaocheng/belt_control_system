@@ -17,8 +17,10 @@ Rectangle {
     property int deviceId: 1
     property string deviceName: "1号皮带"
     property int currentProtectionIndex: 0  // 当前选中的保护项索引
-    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性（已废弃，保留兼容性）
     property var keyboardManager: null
+    // ✅ 2026-01-29 [Qt 虚拟键盘]: 父对话框引用
+    property var parentDialog: null
     // ✅ 2026-01-28 [FIX 100.300.101]: 导航焦点索引（从父对话框传递）
     property int focusItemIndex: -1  // -1 表示无焦点
     // ✅ 2026-01-28 [FIX 100.300.101]: 导航子区域（0:列表 1:参数 2:底部按钮）
@@ -1492,17 +1494,18 @@ Rectangle {
         if (inputField) {
             console.log("✅ [SwitchInputPage] 打开 Qt 虚拟键盘 - 控件:", inputField, "模式:", inputMode)
 
-            // ✅ 2026-01-29 [修复]: 通过 root.qtVirtualKeyboard 直接访问
-            // root 是 DeviceSettingsDialog 的主 Rectangle
-            if (root.qtVirtualKeyboard) {
+            // ✅ 2026-01-29 [修复]: 通过 parentDialog 访问 qtVirtualKeyboard
+            if (parentDialog && parentDialog.qtVirtualKeyboard) {
                 // 打开 Qt 虚拟键盘
-                root.qtVirtualKeyboard.openForField(inputField, function(newValue) {
+                parentDialog.qtVirtualKeyboard.openForField(inputField, function(newValue) {
                     console.log("✅ [SwitchInputPage] 虚拟键盘输入完成:", newValue)
                 }, inputMode)
             } else {
                 console.warn("⚠️ [SwitchInputPage] 未找到 Qt 虚拟键盘实例")
-                console.warn("   root:", root)
-                console.warn("   root.qtVirtualKeyboard:", root.qtVirtualKeyboard)
+                console.warn("   parentDialog:", parentDialog)
+                if (parentDialog) {
+                    console.warn("   parentDialog.qtVirtualKeyboard:", parentDialog.qtVirtualKeyboard)
+                }
             }
         } else {
             console.warn("⚠️ [SwitchInputPage] 输入控件未找到 - 索引:", paramIndex)
