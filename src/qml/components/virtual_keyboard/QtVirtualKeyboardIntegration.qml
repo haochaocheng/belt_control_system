@@ -3,7 +3,8 @@ import QtQuick.Controls 6.5
 import QtQuick.Layouts 6.5
 import QtQuick.VirtualKeyboard 6.5
 
-// Qt Official Virtual Keyboard Integration
+// ✅ 2026-01-29 [Qt 虚拟键盘]: Qt Official Virtual Keyboard Integration
+// ✅ 2026-01-29 [QDS 兼容]: 移除 KeyboardStyle 以支持 QDS 预览
 Popup {
     id: root
     width: parent.width
@@ -50,10 +51,8 @@ Popup {
         z: 99
         anchors.fill: parent
 
-        // Style customization
-        style: KeyboardStyle {
-
-        }
+        // ✅ 2026-01-29 [QDS 兼容]: 移除 KeyboardStyle，使用默认样式
+        // style: KeyboardStyle { }
     }
 
     // Close button
