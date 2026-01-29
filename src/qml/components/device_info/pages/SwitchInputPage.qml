@@ -276,37 +276,37 @@ Rectangle {
                         console.log("✅ [DEBUG] SwitchInputPage ScrollView 高度:", height)
                     }
 
-                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.1]: 修复输入框被挤压问题 - 设置最小宽度
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.2]: 参考模拟量输入尺寸 - 标签120px右对齐，字体21px，输入框最大300px
                     GridLayout {
-                        width: parent.width * 0.7  // 占70%宽度，右侧留30%给操作按钮
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 10
+                        Layout.rightMargin: 10
                         columns: 4  // 4列：标签1、输入框1、标签2、输入框2
                         columnSpacing: 10
                         rowSpacing: 12
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.1]: 添加调试日志
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.2]: 添加调试日志
                         Component.onCompleted: {
                             console.log("✅ [DEBUG] GridLayout 加载完成")
                             console.log("   宽度:", width, "高度:", height)
-                            console.log("   parent.width:", parent.width)
                         }
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24]: 保护名称 - 第一行左侧（索引0）
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.2]: 保护名称 - 第一行左侧（索引0）
                         Text {
                             text: "保护名称:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 参考模拟量输入字体大小
                             color: "#9E9E9E"
                             Layout.column: 0
                             Layout.row: 0
-                            Layout.preferredWidth: 80
-                            Layout.alignment: Qt.AlignVCenter
+                            Layout.preferredWidth: 120  // ✅ 参考模拟量输入标签宽度
+                            horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                         }
 
                         Item {
                             Layout.column: 1
                             Layout.row: 0
-                            Layout.minimumWidth: 100  // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.1]: 设置最小宽度
-                            Layout.preferredWidth: 150
                             Layout.fillWidth: true
+                            Layout.maximumWidth: 300  // ✅ 参考模拟量输入输入框最大宽度
                             implicitHeight: nameField.implicitHeight
 
                             DeviceInfo.CustomTextField {
@@ -326,23 +326,22 @@ Rectangle {
                             }
                         }
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24]: 播放次数 - 第一行右侧（索引1）
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.2]: 播放次数 - 第一行右侧（索引1）
                         Text {
                             text: "播放次数:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 参考模拟量输入字体大小
                             color: "#9E9E9E"
                             Layout.column: 2
                             Layout.row: 0
-                            Layout.preferredWidth: 80
-                            Layout.alignment: Qt.AlignVCenter
+                            Layout.preferredWidth: 120  // ✅ 参考模拟量输入标签宽度
+                            horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                         }
 
                         Item {
                             Layout.column: 3
                             Layout.row: 0
-                            Layout.minimumWidth: 100  // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.1]: 设置最小宽度
-                            Layout.preferredWidth: 150
                             Layout.fillWidth: true
+                            Layout.maximumWidth: 300  // ✅ 参考模拟量输入输入框最大宽度
                             implicitHeight: playCountSpin.implicitHeight
 
                             DeviceInfo.CustomSpinBox {
