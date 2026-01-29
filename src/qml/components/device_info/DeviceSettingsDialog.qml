@@ -692,10 +692,34 @@ Item {
                             item.deviceName = root.deviceName
                             // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                             item.keyboardManager = keyboardManager
-                            // ✅ 2026-01-28 [FIX 100.300.101]: 传递焦点索引（动态绑定）
-                            item.focusItemIndex = Qt.binding(function() {
-                                return (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
-                            })
+                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.9]: 移除动态绑定，避免事件循环阻塞
+                            // 初始设置焦点索引
+                            item.focusItemIndex = (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
+                        }
+                    }
+
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.9]: 使用 Connections 代替动态绑定
+                    // 避免绑定循环导致事件循环阻塞
+                    Connections {
+                        target: root
+                        enabled: switchInputPageLoader.item !== null
+
+                        function onCurrentFocusAreaChanged() {
+                            if (switchInputPageLoader.item) {
+                                switchInputPageLoader.item.focusItemIndex = (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
+                            }
+                        }
+
+                        function onCurrentCategoryChanged() {
+                            if (switchInputPageLoader.item) {
+                                switchInputPageLoader.item.focusItemIndex = (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
+                            }
+                        }
+
+                        function onCurrentContentItemIndexChanged() {
+                            if (switchInputPageLoader.item && root.currentFocusArea === 2 && root.currentCategory === 1) {
+                                switchInputPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            }
                         }
                     }
 
