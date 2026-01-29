@@ -82,7 +82,9 @@ Write-Host "  ✅ 依赖安装完成" -ForegroundColor Green
 
 # 步骤 5: 添加 Docker GPG 密钥
 Write-Host "`n[5/8] 添加 Docker GPG 密钥..." -ForegroundColor Cyan
+# 2026-01-29: 删除旧密钥以确保重新添加正确的密钥
 $addGpgKey = @"
+sudo rm -f /etc/apt/keyrings/docker.gpg
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL $($selectedMirror.gpg) | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 "@
@@ -91,8 +93,9 @@ Write-Host "  ✅ GPG 密钥添加完成" -ForegroundColor Green
 
 # 步骤 6: 添加 Docker APT 源
 Write-Host "`n[6/8] 配置 Docker APT 源..." -ForegroundColor Cyan
+# 2026-01-29: 使用 echo 直接写入，避免引号问题
 $addRepo = @"
-echo \"deb [arch=`$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] $($selectedMirror.repo) `$(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+echo 'deb [arch=arm64 signed-by=/etc/apt/keyrings/docker.gpg] $($selectedMirror.repo) focal stable' | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt update
 "@
 ssh -i $sshKey "$DeviceUser@$DeviceIp" $addRepo 2>&1 | Out-Null
@@ -115,26 +118,79 @@ sudo usermod -aG docker $DeviceUser
 ssh -i $sshKey "$DeviceUser@$DeviceIp" $startDocker 2>&1 | Out-Null
 Write-Host "  ✅ Docker 服务已启动" -ForegroundColor Green
 
+# 步骤 9: 配置镜像加速
+Write-Host "`n[9/9] 配置 Docker 镜像加速..." -ForegroundColor Cyan
+# 2026-01-29: 自动配置镜像加速器，提高拉取速度
+$configureMirror = @'
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json > /dev/null <<'DOCKEREOF'
+{
+  "registry-mirrors": [
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://hub-mirror.c.163.com",
+    "https://mirror.ccs.tencentyun.com"
+  ],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+DOCKEREOF
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+'@
+ssh -i $sshKey "$DeviceUser@$DeviceIp" "bash -c '$configureMirror'" 2>&1 | Out-Null
+Write-Host "  ✅ 镜像加速配置完成" -ForegroundColor Green
+
 # 验证安装
 Write-Host "`n[验证] 检查安装结果..." -ForegroundColor Cyan
-$dockerVersion = ssh -i $sshKey "$DeviceUser@$DeviceIp" "sudo docker --version"
-$composeVersion = ssh -i $sshKey "$DeviceUser@$DeviceIp" "sudo docker compose version"
-Write-Host "  Docker: $dockerVersion" -ForegroundColor White
-Write-Host "  Docker Compose: $composeVersion" -ForegroundColor White
+$dockerVersion = ssh -i $sshKey "$DeviceUser@$DeviceIp" "sudo docker --version 2>&1"
+$composeVersion = ssh -i $sshKey "$DeviceUser@$DeviceIp" "sudo docker compose version 2>&1"
+
+if ($dockerVersion -match "Docker version") {
+    Write-Host "  ✅ Docker: $dockerVersion" -ForegroundColor Green
+} else {
+    Write-Host "  ❌ Docker 未正确安装" -ForegroundColor Red
+    Write-Host "  错误: $dockerVersion" -ForegroundColor Gray
+}
+
+if ($composeVersion -match "Docker Compose version") {
+    Write-Host "  ✅ Docker Compose: $composeVersion" -ForegroundColor Green
+} else {
+    Write-Host "  ⚠️  Docker Compose: $composeVersion" -ForegroundColor Yellow
+}
+
+# 测试 Docker
+Write-Host "`n[测试] 运行 hello-world 容器..." -ForegroundColor Cyan
+$helloWorld = ssh -i $sshKey "$DeviceUser@$DeviceIp" "sudo docker run --rm hello-world 2>&1"
+if ($helloWorld -match "Hello from Docker") {
+    Write-Host "  ✅ Docker 运行正常！" -ForegroundColor Green
+} else {
+    Write-Host "  ⚠️  Docker 测试失败（可能是网络问题）" -ForegroundColor Yellow
+}
 
 Write-Host "`n=== 安装完成 ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "⚠️  重要提示：" -ForegroundColor Yellow
-Write-Host "  1. 用户 '$DeviceUser' 已添加到 docker 组" -ForegroundColor White
-Write-Host "  2. 需要注销并重新登录，才能无需 sudo 使用 docker 命令" -ForegroundColor White
-Write-Host "  3. 或者在 SSH 会话中运行: newgrp docker" -ForegroundColor White
+Write-Host "📋 下一步操作：" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "验证安装：" -ForegroundColor Cyan
-Write-Host "  ssh -i $sshKey $DeviceUser@$DeviceIp" -ForegroundColor White
-Write-Host "  sudo docker run hello-world" -ForegroundColor White
+Write-Host "1. 重新登录以激活 docker 组权限：" -ForegroundColor Yellow
+Write-Host "   ssh $DeviceUser@$DeviceIp" -ForegroundColor White
+Write-Host "   exit" -ForegroundColor White
+Write-Host "   ssh $DeviceUser@$DeviceIp" -ForegroundColor White
 Write-Host ""
-Write-Host "配置镜像加速（可选）：" -ForegroundColor Cyan
-Write-Host "  sudo mkdir -p /etc/docker" -ForegroundColor White
-Write-Host "  sudo nano /etc/docker/daemon.json" -ForegroundColor White
+Write-Host "2. 验证无需 sudo 即可使用 docker：" -ForegroundColor Yellow
+Write-Host "   docker --version" -ForegroundColor White
+Write-Host "   docker ps" -ForegroundColor White
+Write-Host "   docker run hello-world" -ForegroundColor White
+Write-Host ""
+Write-Host "3. 常用 Docker 命令：" -ForegroundColor Yellow
+Write-Host "   docker ps                    # 查看运行中的容器" -ForegroundColor White
+Write-Host "   docker images                # 查看镜像列表" -ForegroundColor White
+Write-Host "   docker pull ubuntu:20.04     # 拉取镜像" -ForegroundColor White
+Write-Host "   docker run -it ubuntu bash   # 运行容器" -ForegroundColor White
+Write-Host ""
+Write-Host "4. 查看详细文档：" -ForegroundColor Yellow
+Write-Host "   docs\2026-01-29\04-Docker安装完成总结.md" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "🎉 Docker 安装成功！" -ForegroundColor Green
