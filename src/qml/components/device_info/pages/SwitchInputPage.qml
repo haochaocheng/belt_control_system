@@ -276,8 +276,18 @@ Rectangle {
                         console.log("✅ [DEBUG] SwitchInputPage ScrollView 高度:", height)
                     }
 
-                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 改为两列交叉导航布局
-                    RowLayout {
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17]: 临时移除 RowLayout，测试是否还卡住
+                    Text {
+                        text: "测试文本 - 如果看到 Qt.callLater 回调，说明问题在 RowLayout"
+                        color: "white"
+                        font.pixelSize: 16
+                        Component.onCompleted: {
+                            console.log("✅ [DEBUG] 测试 Text 加载完成")
+                        }
+                    }
+
+                    // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 改为两列交叉导航布局
+                    // RowLayout {
                         width: parent.width - 20
                         spacing: 20
 
@@ -826,8 +836,8 @@ Rectangle {
                                 }
                             }
                         }
-                    }  // 右列结束
-                }  // RowLayout 结束
+                    // }  // 右列结束
+                // }  // RowLayout 结束
             }  // ScrollView 结束
 
                 Rectangle {
