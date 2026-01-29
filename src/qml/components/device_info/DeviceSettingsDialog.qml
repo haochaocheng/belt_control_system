@@ -965,14 +965,16 @@ Item {
     }
 
     // ✅ 2026-01-24 [FIX]: 根据类别返回底部按钮列表
+    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.30]: 删除开关量输入和模拟量输入的底部按钮
+    // 原因：这些按钮已经在各自的页面内部实现，避免重复
     function getBottomButtons(categoryIndex) {
         switch(categoryIndex) {
         case 0: // 基本配置
             return ["保存配置", "恢复默认", "导入配置", "导出配置"]
         case 1: // 开关量输入
-            return ["添加输入", "删除输入", "测试输入"]
+            return []  // ✅ 按钮已在 SwitchInputPage 内部实现
         case 2: // 模拟量输入
-            return ["添加输入", "删除输入", "校准"]
+            return []  // ✅ 按钮已在 AnalogInputPage 内部实现
         case 3: // 电机控制
             return ["启动测试", "停止测试", "参数校验"]
         case 4: // 制动器控制
