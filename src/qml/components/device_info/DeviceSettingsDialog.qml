@@ -214,11 +214,24 @@ Item {
         case 2:  // 右侧内容 → 检查是否在参数区域
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
-                // 如果当前在参数区域，返回列表区域
+                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.23]: 参数区域内部的两列交叉导航
                 if (currentPage.focusSubArea === 1) {
-                    currentPage.focusSubArea = 0
-                    console.log("✅ [导航] 从参数区域返回列表区域")
-                    return  // 不切换到左侧类别
+                    // 当前在参数区域，检查是否可以在两列之间切换
+                    var currentIndex = currentPage.focusParamIndex
+
+                    // 两列交叉导航：左列（0,2,4,6,8） vs 右列（1,3,5,7）
+                    if (currentIndex % 2 === 1) {
+                        // 当前在右列，切换到左列
+                        var prevIndex = currentIndex - 1
+                        currentPage.focusParamIndex = prevIndex
+                        console.log("✅ [导航] 参数区域：右列 → 左列，索引:", currentIndex, "→", prevIndex)
+                        return  // 不切换到列表区域
+                    } else {
+                        // 当前在左列，返回列表区域
+                        currentPage.focusSubArea = 0
+                        console.log("✅ [导航] 从参数区域返回列表区域")
+                        return  // 不切换到左侧类别
+                    }
                 }
             }
             // 否则切换到左侧类别
@@ -254,6 +267,23 @@ Item {
                     currentPage.focusParamIndex = 0  // 重置参数焦点索引
                     console.log("✅ [导航] 从列表区域切换到参数区域")
                     return  // 不切换到底部按钮
+                } else if (currentPage.focusSubArea === 1) {
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.23]: 参数区域内部的两列交叉导航
+                    // 当前在参数区域，检查是否可以在两列之间切换
+                    var currentIndex = currentPage.focusParamIndex
+                    var paramCount = currentPage.getParamFieldCount()
+
+                    // 两列交叉导航：左列（0,2,4,6,8） vs 右列（1,3,5,7）
+                    if (currentIndex % 2 === 0) {
+                        // 当前在左列，切换到右列
+                        var nextIndex = currentIndex + 1
+                        if (nextIndex < paramCount) {
+                            currentPage.focusParamIndex = nextIndex
+                            console.log("✅ [导航] 参数区域：左列 → 右列，索引:", currentIndex, "→", nextIndex)
+                            return  // 不切换到底部按钮
+                        }
+                    }
+                    // 如果当前在右列，或者右列没有更多控件，则切换到底部按钮
                 }
             }
             // 否则切换到底部按钮
