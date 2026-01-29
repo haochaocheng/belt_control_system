@@ -688,13 +688,20 @@ Item {
                             console.log("✅ [DeviceSettingsDialog] SwitchInputPage 加载成功")
                             console.log("✅ [DEBUG] SwitchInputPage item 宽度:", item.width)
                             console.log("✅ [DEBUG] SwitchInputPage item 高度:", item.height)
+                            console.log("✅ [DEBUG] 开始设置属性...")
                             item.deviceId = root.deviceId
+                            console.log("✅ [DEBUG] deviceId 设置完成")
                             item.deviceName = root.deviceName
+                            console.log("✅ [DEBUG] deviceName 设置完成")
                             // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                             item.keyboardManager = keyboardManager
+                            console.log("✅ [DEBUG] keyboardManager 设置完成")
                             // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.9]: 移除动态绑定，避免事件循环阻塞
                             // 初始设置焦点索引
+                            console.log("✅ [DEBUG] 开始设置 focusItemIndex...")
                             item.focusItemIndex = (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
+                            console.log("✅ [DEBUG] focusItemIndex 设置完成:", item.focusItemIndex)
+                            console.log("✅ [DEBUG] onLoaded 完成")
                         }
                     }
 
