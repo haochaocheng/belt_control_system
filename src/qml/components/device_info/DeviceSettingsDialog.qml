@@ -373,8 +373,8 @@ Item {
                     flat: true
                     background: Rectangle {
                         color: "transparent"
-                        border.color: (currentFocusArea === 0 && currentTopButtonIndex === 0) ? "#2196F3" : "#3d4556"
-                        border.width: (currentFocusArea === 0 && currentTopButtonIndex === 0) ? 3 : 2
+                        border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 0) ? "#2196F3" : "#3d4556"
+                        border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 0) ? 3 : 2
                         radius: 2
                         opacity: 1.0
                     }
@@ -403,8 +403,8 @@ Item {
                     flat: true
                     background: Rectangle {
                         color: "#2196F3"  // ✅ 科技蓝背景
-                        border.color: (currentFocusArea === 0 && currentTopButtonIndex === 1) ? "#FFFFFF" : "#42A5F5"
-                        border.width: (currentFocusArea === 0 && currentTopButtonIndex === 1) ? 3 : 1
+                        border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 1) ? "#FFFFFF" : "#42A5F5"
+                        border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 1) ? 3 : 1
                         radius: 2
                         opacity: 1.0
                     }
@@ -433,8 +433,8 @@ Item {
                     flat: true
                     background: Rectangle {
                         color: "#FF9800"  // ✅ 橙色背景
-                        border.color: (currentFocusArea === 0 && currentTopButtonIndex === 2) ? "#FFFFFF" : "#FF9800"
-                        border.width: (currentFocusArea === 0 && currentTopButtonIndex === 2) ? 3 : 1
+                        border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 2) ? "#FFFFFF" : "#FF9800"
+                        border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 2) ? 3 : 1
                         radius: 2
                         opacity: 1.0
                     }
@@ -552,7 +552,7 @@ Item {
                             // ✅ 2026-01-25 [工业科技感设计]: 激活状态左侧强调条
                             // ✅ 2026-01-28 [FIX 100.300.101]: 只在焦点区域为1时显示
                             Rectangle {
-                                visible: (currentFocusArea === 1 && root.currentCategory === index)
+                                visible: (root.currentFocusArea === 1 && root.currentCategory === index)
                                 width: 4
                                 height: parent.height
                                 color: "#2196F3"
@@ -857,9 +857,9 @@ Item {
                         background: Rectangle {
                             // ✅ 2026-01-24 [FIX]: 选中状态高亮
                             // ✅ 2026-01-28 [FIX 100.300.101]: 只在焦点区域为3时显示焦点指示器
-                            color: (currentFocusArea === 3 && root.currentBottomButtonIndex === index) ? "#00AA00" : "#555555"
-                            border.color: (currentFocusArea === 3 && root.currentBottomButtonIndex === index) ? "#2196F3" : "#888888"
-                            border.width: (currentFocusArea === 3 && root.currentBottomButtonIndex === index) ? 3 : 1
+                            color: (root.currentFocusArea === 3 && root.currentBottomButtonIndex === index) ? "#00AA00" : "#555555"
+                            border.color: (root.currentFocusArea === 3 && root.currentBottomButtonIndex === index) ? "#2196F3" : "#888888"
+                            border.width: (root.currentFocusArea === 3 && root.currentBottomButtonIndex === index) ? 3 : 1
                             radius: 4
                         }
                         contentItem: Text {
