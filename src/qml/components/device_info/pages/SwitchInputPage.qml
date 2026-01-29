@@ -368,6 +368,81 @@ Rectangle {
                                 z: 10
                             }
                         }
+
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.26]: 模块类型 - 第二行左侧（索引2）
+                        Text {
+                            text: "模块类型:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 0
+                            Layout.row: 1
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 1
+                            Layout.row: 1
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: moduleTypeCombo.implicitHeight
+
+                            DeviceInfo.CustomComboBox {
+                                id: moduleTypeCombo
+                                anchors.fill: parent
+                                keyboardManager: root.keyboardManager
+                                model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
+                            }
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.26]: 播放时长 - 第二行右侧（索引3）
+                        Text {
+                            text: "播放时长:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 2
+                            Layout.row: 1
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 3
+                            Layout.row: 1
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: playDurationSpin.implicitHeight
+
+                            DeviceInfo.CustomSpinBox {
+                                id: playDurationSpin
+                                anchors.fill: parent
+                                from: 1
+                                to: 999
+                                value: 10
+                                editable: true
+                                keyboardManager: root.keyboardManager
+                            }
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
                     }  // GridLayout 结束
 
                     // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17]: 临时移除 RowLayout，测试是否还卡住
@@ -1090,11 +1165,11 @@ Rectangle {
         }
     }
 
-    // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 获取参数字段数量
+    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.26]: 获取参数字段数量
     function getParamFieldCount() {
         // 返回参数区域的输入组件数量
-        // 保护名称、模块类型、寄存器地址、通道编号、保护延时、保护动作、报警级别、是否启用、备注
-        return 9
+        // 当前已添加：保护名称(0)、播放次数(1)、模块类型(2)、播放时长(3)
+        return 4
     }
 
     // 组件加载完成后，加载第一个保护项的数据
