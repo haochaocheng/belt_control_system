@@ -702,6 +702,11 @@ Item {
                             item.focusItemIndex = (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
                             console.log("✅ [DEBUG] focusItemIndex 设置完成:", item.focusItemIndex)
                             console.log("✅ [DEBUG] onLoaded 完成")
+
+                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.12]: 测试事件循环是否阻塞
+                            Qt.callLater(function() {
+                                console.log("✅ [DEBUG] Qt.callLater 回调执行成功 - 事件循环正常")
+                            })
                         }
                     }
 
