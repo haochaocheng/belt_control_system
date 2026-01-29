@@ -275,8 +275,8 @@ Rectangle {
                         width: parent.width - 20
                         spacing: 20
 
-                        // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加隐式高度，让 ScrollView 知道内容大小
-                        implicitHeight: Math.max(leftColumn.implicitHeight, rightColumn.implicitHeight)
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.1]: 移除 implicitHeight 计算，避免递归布局重排
+                        // implicitHeight 会自动根据子元素计算，不需要手动设置
 
                         // ✅ 左列：保护名称(0)、模块类型(2)、寄存器地址(4)、通道编号(6)、保护延时(8)
                         ColumnLayout {
