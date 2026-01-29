@@ -1437,6 +1437,73 @@ Rectangle {
         return 9
     }
 
+    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.32]: 触发参数输入（弹出虚拟键盘）
+    function triggerParamInput(paramIndex) {
+        console.log("✅ [SwitchInputPage] 触发参数输入 - 索引:", paramIndex)
+
+        // 根据索引获取对应的输入控件
+        var inputField = null
+        switch(paramIndex) {
+        case 0: inputField = nameField; break           // 保护名称（TextField）
+        case 1: inputField = playCountSpin; break       // 播放次数（SpinBox）
+        case 2: inputField = moduleTypeCombo; break     // 模块类型（ComboBox）
+        case 3: inputField = playDurationSpin; break    // 播放时长（SpinBox）
+        case 4: inputField = registerAddressSpin; break // 寄存器地址（SpinBox）
+        case 5: inputField = ttsTextField; break        // TTS文字（TextField）
+        case 6: inputField = channelSpin; break         // 通道编号（SpinBox）
+        case 7: inputField = audioFileField; break      // 音频文件（TextField）
+        case 8: inputField = delaySpin; break           // 保护延时（SpinBox）
+        default:
+            console.warn("⚠️ [SwitchInputPage] 无效的参数索引:", paramIndex)
+            return
+        }
+
+        // 弹出虚拟键盘
+        if (inputField && keyboardManager) {
+            console.log("✅ [SwitchInputPage] 打开虚拟键盘 - 控件:", inputField)
+            keyboardManager.openKeyboardForField(inputField, false)  // false = 键盘导航模式
+        } else {
+            if (!inputField) {
+                console.warn("⚠️ [SwitchInputPage] 输入控件未找到 - 索引:", paramIndex)
+            }
+            if (!keyboardManager) {
+                console.warn("⚠️ [SwitchInputPage] 键盘管理器未初始化")
+            }
+        }
+    }
+
+    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.32]: 触发底部按钮点击
+    function triggerButton(buttonIndex) {
+        console.log("✅ [SwitchInputPage] 触发底部按钮 - 索引:", buttonIndex)
+
+        // 根据索引触发对应按钮的点击事件
+        switch(buttonIndex) {
+        case 0:  // 添加输入
+            console.log("✅ [SwitchInputPage] 触发：添加输入")
+            // TODO: 实现添加输入功能
+            break
+        case 1:  // 删除输入
+            console.log("✅ [SwitchInputPage] 触发：删除输入 -", nameField.text)
+            // TODO: 实现删除输入功能
+            break
+        case 2:  // 保存
+            console.log("✅ [SwitchInputPage] 触发：保存")
+            saveProtectionData()
+            break
+        case 3:  // 删除
+            console.log("✅ [SwitchInputPage] 触发：删除 -", nameField.text)
+            // TODO: 实现删除功能
+            break
+        case 4:  // 重置
+            console.log("✅ [SwitchInputPage] 触发：重置")
+            loadProtectionData(root.currentProtectionIndex)
+            break
+        default:
+            console.warn("⚠️ [SwitchInputPage] 无效的按钮索引:", buttonIndex)
+            break
+        }
+    }
+
     // 组件加载完成后，加载第一个保护项的数据
     Component.onCompleted: {
         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.15]: 临时禁用 Component.onCompleted，测试是否还卡住

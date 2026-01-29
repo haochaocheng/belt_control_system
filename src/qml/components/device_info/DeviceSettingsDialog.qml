@@ -431,6 +431,7 @@ Item {
     }
 
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统 - 回车键功能
+    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.32]: 支持子区域的回车键处理
     Keys.onReturnPressed: {
         // 回车键：根据当前区域执行不同操作
         console.log("✅ [导航] 回车键 - 当前区域:", currentFocusArea)
@@ -442,8 +443,33 @@ Item {
         case 1:  // 左侧类别：切换类别（已自动切换，无需额外操作）
             console.log("✅ [导航] 当前类别:", getCategoryName(currentCategory))
             break
-        case 2:  // 右侧内容：弹出虚拟键盘（如果是输入框）
-            triggerContentItem(currentCategory, currentContentItemIndex)
+        case 2:  // 右侧内容：检查子区域
+            var currentPage = getCurrentPage(currentCategory)
+            if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
+                if (currentPage.focusSubArea === 1) {
+                    // ✅ 参数区域：弹出虚拟键盘
+                    if (typeof currentPage.triggerParamInput === "function") {
+                        currentPage.triggerParamInput(currentPage.focusParamIndex)
+                        console.log("✅ [导航] 触发参数输入 - 索引:", currentPage.focusParamIndex)
+                    } else {
+                        console.warn("⚠️ [导航] 当前页面未实现 triggerParamInput 方法")
+                    }
+                } else if (currentPage.focusSubArea === 2) {
+                    // ✅ 底部按钮区域：触发按钮点击
+                    if (typeof currentPage.triggerButton === "function") {
+                        currentPage.triggerButton(currentPage.focusButtonIndex)
+                        console.log("✅ [导航] 触发底部按钮 - 索引:", currentPage.focusButtonIndex)
+                    } else {
+                        console.warn("⚠️ [导航] 当前页面未实现 triggerButton 方法")
+                    }
+                } else {
+                    // 列表区域：使用旧的 triggerInputItem 方法
+                    triggerContentItem(currentCategory, currentContentItemIndex)
+                }
+            } else {
+                // 不支持子区域的页面，使用旧的方法
+                triggerContentItem(currentCategory, currentContentItemIndex)
+            }
             break
         case 3:  // 底部按钮：触发按钮点击
             var bottomButtons = getBottomButtons(currentCategory)
