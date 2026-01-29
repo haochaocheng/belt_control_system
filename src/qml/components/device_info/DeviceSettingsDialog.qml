@@ -97,6 +97,7 @@ Item {
 
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统 - 上下键区域内导航
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
+    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 实现两列交叉导航和底部按钮导航
     Keys.onUpPressed: {
         // 上键：在当前区域内向上导航
         console.log("✅ [导航] 上键 - 当前区域:", currentFocusArea)
@@ -121,13 +122,55 @@ Item {
                         currentContentItemIndex--
                     }
                 } else if (currentPage.focusSubArea === 1) {
-                    // 参数区域：使用 focusParamIndex
-                    if (currentPage.focusParamIndex > 0) {
-                        currentPage.focusParamIndex--
-                        console.log("✅ [导航] 参数区域上移 - 索引:", currentPage.focusParamIndex)
+                    // ✅ 参数区域：两列交叉导航 - 同列向上移动
+                    var currentIndex = currentPage.focusParamIndex
+                    var isRightColumn = (currentIndex % 2 === 1)  // 奇数索引 = 右列
+
+                    if (isRightColumn) {
+                        // 右列：1→3→5→7，向上移动2步
+                        if (currentIndex >= 2) {
+                            currentPage.focusParamIndex = currentIndex - 2
+                            console.log("✅ [导航] 参数区域右列上移:", currentIndex, "→", currentIndex - 2)
+                        } else {
+                            console.log("⚠️ [导航] 已到达右列第一个参数")
+                        }
                     } else {
-                        // ✅ 2026-01-29 [FIX 100.300.102]: 已到达第一个，保持焦点
-                        console.log("⚠️ [导航] 已到达第一个参数")
+                        // 左列：0→2→4→6→8，向上移动2步
+                        if (currentIndex >= 2) {
+                            currentPage.focusParamIndex = currentIndex - 2
+                            console.log("✅ [导航] 参数区域左列上移:", currentIndex, "→", currentIndex - 2)
+                        } else {
+                            console.log("⚠️ [导航] 已到达左列第一个参数")
+                        }
+                    }
+                } else if (currentPage.focusSubArea === 2) {
+                    // ✅ 底部按钮区域：上键导航
+                    var buttonIndex = currentPage.focusButtonIndex
+
+                    // 按钮布局：第一行(0,1) 第二行(2,3,4)
+                    if (buttonIndex >= 2) {
+                        // 第二行 → 第一行
+                        if (buttonIndex === 2) {
+                            currentPage.focusButtonIndex = 0  // 保存 → 添加输入
+                        } else if (buttonIndex === 3) {
+                            currentPage.focusButtonIndex = 1  // 删除 → 删除输入
+                        } else if (buttonIndex === 4) {
+                            currentPage.focusButtonIndex = 1  // 重置 → 删除输入
+                        }
+                        console.log("✅ [导航] 底部按钮上移:", buttonIndex, "→", currentPage.focusButtonIndex)
+                    } else {
+                        // 第一行 → 返回参数区域
+                        currentPage.focusSubArea = 1
+                        // 焦点移到参数区域最后一行
+                        var paramCount = currentPage.getParamFieldCount()
+                        if (buttonIndex === 0) {
+                            // 从添加输入返回 → 左列最后一个
+                            currentPage.focusParamIndex = (paramCount % 2 === 0) ? paramCount - 2 : paramCount - 1
+                        } else {
+                            // 从删除输入返回 → 右列最后一个
+                            currentPage.focusParamIndex = (paramCount % 2 === 0) ? paramCount - 1 : paramCount - 2
+                        }
+                        console.log("✅ [导航] 从底部按钮返回参数区域，索引:", currentPage.focusParamIndex)
                     }
                 }
             } else {
@@ -146,6 +189,7 @@ Item {
     }
 
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
+    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 实现两列交叉导航和底部按钮导航
     Keys.onDownPressed: {
         // 下键：在当前区域内向下导航
         console.log("✅ [导航] 下键 - 当前区域:", currentFocusArea)
@@ -171,14 +215,51 @@ Item {
                         currentContentItemIndex++
                     }
                 } else if (currentPage.focusSubArea === 1) {
-                    // 参数区域：使用 focusParamIndex
+                    // ✅ 参数区域：两列交叉导航 - 同列向下移动
+                    var currentIndex = currentPage.focusParamIndex
                     var paramCount = currentPage.getParamFieldCount()
-                    if (currentPage.focusParamIndex < paramCount - 1) {
-                        currentPage.focusParamIndex++
-                        console.log("✅ [导航] 参数区域下移 - 索引:", currentPage.focusParamIndex)
+                    var isRightColumn = (currentIndex % 2 === 1)  // 奇数索引 = 右列
+
+                    if (isRightColumn) {
+                        // 右列：1→3→5→7，向下移动2步
+                        var nextIndex = currentIndex + 2
+                        if (nextIndex < paramCount) {
+                            currentPage.focusParamIndex = nextIndex
+                            console.log("✅ [导航] 参数区域右列下移:", currentIndex, "→", nextIndex)
+                        } else {
+                            // 已到达右列最后一个 → 进入底部按钮区域
+                            currentPage.focusSubArea = 2
+                            currentPage.focusButtonIndex = 1  // 删除输入（右侧按钮）
+                            console.log("✅ [导航] 从参数区域右列进入底部按钮区域")
+                        }
                     } else {
-                        // ✅ 2026-01-29 [FIX 100.300.102]: 已到达最后一个，保持焦点
-                        console.log("⚠️ [导航] 已到达最后一个参数")
+                        // 左列：0→2→4→6→8，向下移动2步
+                        var nextIndex = currentIndex + 2
+                        if (nextIndex < paramCount) {
+                            currentPage.focusParamIndex = nextIndex
+                            console.log("✅ [导航] 参数区域左列下移:", currentIndex, "→", nextIndex)
+                        } else {
+                            // 已到达左列最后一个 → 进入底部按钮区域
+                            currentPage.focusSubArea = 2
+                            currentPage.focusButtonIndex = 0  // 添加输入（左侧按钮）
+                            console.log("✅ [导航] 从参数区域左列进入底部按钮区域")
+                        }
+                    }
+                } else if (currentPage.focusSubArea === 2) {
+                    // ✅ 底部按钮区域：下键导航
+                    var buttonIndex = currentPage.focusButtonIndex
+
+                    // 按钮布局：第一行(0,1) 第二行(2,3,4)
+                    if (buttonIndex < 2) {
+                        // 第一行 → 第二行
+                        if (buttonIndex === 0) {
+                            currentPage.focusButtonIndex = 2  // 添加输入 → 保存
+                        } else if (buttonIndex === 1) {
+                            currentPage.focusButtonIndex = 3  // 删除输入 → 删除
+                        }
+                        console.log("✅ [导航] 底部按钮下移:", buttonIndex, "→", currentPage.focusButtonIndex)
+                    } else {
+                        console.log("⚠️ [导航] 已到达底部按钮最后一行")
                     }
                 }
             } else {
@@ -200,6 +281,7 @@ Item {
 
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统 - 左右键切换区域
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加子区域切换支持
+    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 添加底部按钮区域左右导航
     Keys.onLeftPressed: {
         // 左键：切换到左侧区域
         console.log("✅ [导航] 左键 - 当前区域:", currentFocusArea)
@@ -211,12 +293,11 @@ Item {
         case 1:  // 左侧类别 → 顶部按钮
             currentFocusArea = 0
             break
-        case 2:  // 右侧内容 → 检查是否在参数区域
+        case 2:  // 右侧内容 → 检查是否在参数区域或底部按钮区域
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
-                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.23]: 参数区域内部的两列交叉导航
                 if (currentPage.focusSubArea === 1) {
-                    // 当前在参数区域，检查是否可以在两列之间切换
+                    // ✅ 参数区域：两列交叉导航
                     var currentIndex = currentPage.focusParamIndex
 
                     // 两列交叉导航：左列（0,2,4,6,8） vs 右列（1,3,5,7）
@@ -232,6 +313,31 @@ Item {
                         console.log("✅ [导航] 从参数区域返回列表区域")
                         return  // 不切换到左侧类别
                     }
+                } else if (currentPage.focusSubArea === 2) {
+                    // ✅ 底部按钮区域：左键导航
+                    var buttonIndex = currentPage.focusButtonIndex
+
+                    // 按钮布局：第一行(0,1) 第二行(2,3,4)
+                    if (buttonIndex === 1) {
+                        // 删除输入 → 添加输入
+                        currentPage.focusButtonIndex = 0
+                        console.log("✅ [导航] 底部按钮左移:", buttonIndex, "→", 0)
+                        return
+                    } else if (buttonIndex === 3) {
+                        // 删除 → 保存
+                        currentPage.focusButtonIndex = 2
+                        console.log("✅ [导航] 底部按钮左移:", buttonIndex, "→", 2)
+                        return
+                    } else if (buttonIndex === 4) {
+                        // 重置 → 删除
+                        currentPage.focusButtonIndex = 3
+                        console.log("✅ [导航] 底部按钮左移:", buttonIndex, "→", 3)
+                        return
+                    } else {
+                        // 已在最左侧，保持焦点
+                        console.log("⚠️ [导航] 已在底部按钮最左侧")
+                        return
+                    }
                 }
             }
             // 否则切换到左侧类别
@@ -246,6 +352,7 @@ Item {
     }
 
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加子区域切换支持
+    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 添加底部按钮区域左右导航
     Keys.onRightPressed: {
         // 右键：切换到右侧区域
         console.log("✅ [导航] 右键 - 当前区域:", currentFocusArea)
@@ -268,8 +375,7 @@ Item {
                     console.log("✅ [导航] 从列表区域切换到参数区域")
                     return  // 不切换到底部按钮
                 } else if (currentPage.focusSubArea === 1) {
-                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.23]: 参数区域内部的两列交叉导航
-                    // 当前在参数区域，检查是否可以在两列之间切换
+                    // ✅ 参数区域：两列交叉导航
                     var currentIndex = currentPage.focusParamIndex
                     var paramCount = currentPage.getParamFieldCount()
 
@@ -283,7 +389,34 @@ Item {
                             return  // 不切换到底部按钮
                         }
                     }
-                    // 如果当前在右列，或者右列没有更多控件，则切换到底部按钮
+                    // 如果当前在右列，或者右列没有更多控件，则保持焦点
+                    console.log("⚠️ [导航] 参数区域已在最右侧")
+                    return
+                } else if (currentPage.focusSubArea === 2) {
+                    // ✅ 底部按钮区域：右键导航
+                    var buttonIndex = currentPage.focusButtonIndex
+
+                    // 按钮布局：第一行(0,1) 第二行(2,3,4)
+                    if (buttonIndex === 0) {
+                        // 添加输入 → 删除输入
+                        currentPage.focusButtonIndex = 1
+                        console.log("✅ [导航] 底部按钮右移:", buttonIndex, "→", 1)
+                        return
+                    } else if (buttonIndex === 2) {
+                        // 保存 → 删除
+                        currentPage.focusButtonIndex = 3
+                        console.log("✅ [导航] 底部按钮右移:", buttonIndex, "→", 3)
+                        return
+                    } else if (buttonIndex === 3) {
+                        // 删除 → 重置
+                        currentPage.focusButtonIndex = 4
+                        console.log("✅ [导航] 底部按钮右移:", buttonIndex, "→", 4)
+                        return
+                    } else {
+                        // 已在最右侧，保持焦点
+                        console.log("⚠️ [导航] 已在底部按钮最右侧")
+                        return
+                    }
                 }
             }
             // 否则切换到底部按钮
