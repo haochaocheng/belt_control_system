@@ -443,6 +443,196 @@ Rectangle {
                                 z: 10
                             }
                         }
+
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.27]: 寄存器地址 - 第三行左侧（索引4）
+                        Text {
+                            text: "寄存器地址:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 0
+                            Layout.row: 2
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 1
+                            Layout.row: 2
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: registerAddressSpin.implicitHeight
+
+                            DeviceInfo.CustomSpinBox {
+                                id: registerAddressSpin
+                                anchors.fill: parent
+                                from: 0
+                                to: 255
+                                value: 2
+                                editable: true
+                                keyboardManager: root.keyboardManager
+                            }
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.27]: TTS文字 - 第三行右侧（索引5）
+                        Text {
+                            text: "TTS文字:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 2
+                            Layout.row: 2
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 3
+                            Layout.row: 2
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: ttsTextField.implicitHeight
+
+                            DeviceInfo.CustomTextField {
+                                id: ttsTextField
+                                anchors.fill: parent
+                                placeholderText: "输入TTS文字"
+                                keyboardManager: root.keyboardManager
+                            }
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.28]: 通道编号 - 第四行左侧（索引6）
+                        Text {
+                            text: "通道编号:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 0
+                            Layout.row: 3
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 1
+                            Layout.row: 3
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: channelSpin.implicitHeight
+
+                            DeviceInfo.CustomSpinBox {
+                                id: channelSpin
+                                anchors.fill: parent
+                                from: 0
+                                to: 15
+                                value: 0
+                                editable: true
+                                keyboardManager: root.keyboardManager
+                            }
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.28]: 音频文件 - 第四行右侧（索引7）
+                        Text {
+                            text: "音频文件:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 2
+                            Layout.row: 3
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 3
+                            Layout.row: 3
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: audioFileField.implicitHeight
+
+                            DeviceInfo.CustomTextField {
+                                id: audioFileField
+                                anchors.fill: parent
+                                placeholderText: "选择音频文件"
+                                readOnly: true
+                                keyboardManager: root.keyboardManager
+                            }
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.29]: 保护延时 - 第五行左侧（索引8）
+                        Text {
+                            text: "保护延时:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 0
+                            Layout.row: 4
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 1
+                            Layout.row: 4
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: delaySpin.implicitHeight
+
+                            DeviceInfo.CustomSpinBox {
+                                id: delaySpin
+                                anchors.fill: parent
+                                from: 0
+                                to: 9999
+                                value: 0
+                                editable: true
+                                keyboardManager: root.keyboardManager
+                            }
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
                     }  // GridLayout 结束
 
                     // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17]: 临时移除 RowLayout，测试是否还卡住
@@ -1165,11 +1355,13 @@ Rectangle {
         }
     }
 
-    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.26]: 获取参数字段数量
+    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.29]: 获取参数字段数量
     function getParamFieldCount() {
         // 返回参数区域的输入组件数量
-        // 当前已添加：保护名称(0)、播放次数(1)、模块类型(2)、播放时长(3)
-        return 4
+        // 已添加全部9个控件：
+        // 保护名称(0)、播放次数(1)、模块类型(2)、播放时长(3)
+        // 寄存器地址(4)、TTS文字(5)、通道编号(6)、音频文件(7)、保护延时(8)
+        return 9
     }
 
     // 组件加载完成后，加载第一个保护项的数据
