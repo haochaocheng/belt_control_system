@@ -1492,19 +1492,17 @@ Rectangle {
         if (inputField) {
             console.log("✅ [SwitchInputPage] 打开 Qt 虚拟键盘 - 控件:", inputField, "模式:", inputMode)
 
-            // 获取父对话框的 qtVirtualKeyboard
-            var dialog = root
-            while (dialog && !dialog.hasOwnProperty("qtVirtualKeyboard")) {
-                dialog = dialog.parent
-            }
-
-            if (dialog && dialog.qtVirtualKeyboard) {
+            // ✅ 2026-01-29 [修复]: 通过 root.qtVirtualKeyboard 直接访问
+            // root 是 DeviceSettingsDialog 的主 Rectangle
+            if (root.qtVirtualKeyboard) {
                 // 打开 Qt 虚拟键盘
-                dialog.qtVirtualKeyboard.openForField(inputField, function(newValue) {
+                root.qtVirtualKeyboard.openForField(inputField, function(newValue) {
                     console.log("✅ [SwitchInputPage] 虚拟键盘输入完成:", newValue)
                 }, inputMode)
             } else {
                 console.warn("⚠️ [SwitchInputPage] 未找到 Qt 虚拟键盘实例")
+                console.warn("   root:", root)
+                console.warn("   root.qtVirtualKeyboard:", root.qtVirtualKeyboard)
             }
         } else {
             console.warn("⚠️ [SwitchInputPage] 输入控件未找到 - 索引:", paramIndex)
