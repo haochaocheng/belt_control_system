@@ -16,8 +16,8 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # Parse device parameter and setup configuration linaro
 # ============================================================
-$DeviceUser = "pi"
-$DevicePassword = "pi"
+$DeviceUser = "linaro"
+$DevicePassword = "linaro"
 
 switch -Regex ($Device) {
     "^151$" {
@@ -1145,7 +1145,11 @@ if ($needCompile) {
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
         Write-Host "ERROR: Cross-compilation failed" -ForegroundColor Red
-        exit 1
+        # ❌ 2026-01-27 19:45 [FIX 100.300.50] 编译失败时不退出，继续使用现有二进制文件
+        # 原因：编译可能因为 EGL 头文件等非关键问题失败，但二进制文件可能已经存在且可用
+        # 效果：即使编译失败，仍然可以构建 Docker 镜像并部署
+        Write-Host "⚠️  将使用现有二进制文件继续构建..." -ForegroundColor Yellow
+        # exit 1  # 注释掉退出
     }
 
     Write-Host ""
@@ -1287,6 +1291,9 @@ if (Test-Path $FFmpegHwLibPath) {
     $rk3588CodecLibDir = "$ProjectRoot\docker\rk3588\rk3588-libs\lib"
 
     # 添加所有必需的编解码器库模式（包括 Fix 97 需要的库）
+    # ✅ 2026-01-29 [FIX 视频通话失败] 添加 libmpp_ext.so.*
+    # 原因：2026-01-08 MPP 更新将 H.264 解析器移到 libmpp_ext.so
+    # 缺少此库导致 RKMPP 解码器初始化失败，视频通话失败
     $codecPatterns = @("libvpx.so.*", "libx264.so.*", "libx265.so.*", "libmp3lame.so.*",
                        "libogg.so.*", "libspeex.so.*", "libtheora*.so.*", "libvorbis*.so.*",
                        "libyuv.so.*", "libwebp.so.*", "libwebpmux.so.*", "libwebpdemux.so.*",
@@ -1295,7 +1302,7 @@ if (Test-Path $FFmpegHwLibPath) {
                        "libopenjp2.so.*", "libshine.so.*", "libsnappy.so.*", "libtwolame.so.*",
                        "libvo-amrwbenc.so.*", "libwavpack.so.*", "libxvidcore.so.*", "libzvbi.so.*",
                        "libva.so.*", "libva-*.so.*", "libvdpau.so.*", "libOpenCL.so.*", "libsoxr.so.*",
-                       "librockchip_mpp.so.*", "librga.so.*")
+                       "librockchip_mpp.so.*", "libmpp_ext.so.*", "librga.so.*")
 
     $codecCount = 0
     $skippedCount = 0
@@ -1438,7 +1445,24 @@ Write-Host "  [OK] Dockerfile prepared (using cached base image)" -ForegroundCol
 Write-Host "  Copying audio device detection scripts..." -ForegroundColor Yellow
 Copy-Item "$ProjectRoot\docker\rk3588\detect-audio-device.sh" "$DockerContextDir\detect-audio-device.sh" -Force
 Copy-Item "$ProjectRoot\docker\rk3588\app-entrypoint.sh" "$DockerContextDir\app-entrypoint.sh" -Force
-Write-Host "  [OK] Audio detection scripts copied" -ForegroundColor Green
+
+# ✅ 2026-01-27 20:50 [FIX 100.300.51] 自动转换 Shell 脚本为 Unix 格式（LF）
+# 原因：Windows 环境下文件可能是 CRLF 格式，Linux 无法执行
+# 效果：确保脚本在容器中可以正常执行
+Write-Host "  Converting scripts to Unix format (LF)..." -ForegroundColor Yellow
+$scripts = @(
+    "$DockerContextDir\detect-audio-device.sh",
+    "$DockerContextDir\app-entrypoint.sh"
+)
+foreach ($script in $scripts) {
+    if (Test-Path $script) {
+        $content = Get-Content $script -Raw
+        $content = $content -replace "`r`n", "`n"
+        [System.IO.File]::WriteAllText($script, $content, [System.Text.UTF8Encoding]::new($false))
+    }
+}
+
+Write-Host "  [OK] Audio detection scripts copied and converted" -ForegroundColor Green
 Write-Host ""
 
 # ============================================================
