@@ -1009,40 +1009,47 @@ Rectangle {
 
     // 组件加载完成后，加载第一个保护项的数据
     Component.onCompleted: {
-        // ✅ 2026-01-25 [数据库集成] 从数据库加载开关量保护配置
-        console.log("✅ [SwitchInputPage] 开始加载设备", deviceId, "的开关量保护配置")
+        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.15]: 临时禁用 Component.onCompleted，测试是否还卡住
+        console.log("✅ [SwitchInputPage] Component.onCompleted 开始")
+        Qt.callLater(function() {
+            console.log("✅ [SwitchInputPage] Qt.callLater 回调执行 - 事件循环正常")
+        })
+        console.log("✅ [SwitchInputPage] Component.onCompleted 完成")
 
-        var protections = deviceConfigMgr.loadAllDigitalProtections(deviceId)
-        console.log("✅ [SwitchInputPage] 从数据库加载了", protections.length, "个保护项")
-
-        if (protections.length > 0) {
-            // 清空现有模型
-            digitalProtectionModel.clear()
-
-            // 加载数据库中的配置
-            for (var i = 0; i < protections.length; i++) {
-                var p = protections[i]
-                digitalProtectionModel.append({
-                    name: p.protection_name,
-                    active: p.active === 1,
-                    moduleType: p.module_type,
-                    registerAddress: p.register_address,
-                    channelNumber: p.channel_number
-                })
-            }
-
-            console.log("✅ [SwitchInputPage] 数据库配置加载完成")
-        } else {
-            console.log("⚠️ [SwitchInputPage] 数据库中没有配置，使用默认配置")
-        }
-
-        // 加载第一个保护项的详细参数
-        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.3]: 使用 Qt.callLater 延迟加载，避免访问未初始化的组件
-        if (digitalProtectionModel.count > 0) {
-            Qt.callLater(function() {
-                loadProtectionData(0)
-                console.log("✅ [SwitchInputPage] 延迟加载第一个保护项完成")
-            })
-        }
+        // // ✅ 2026-01-25 [数据库集成] 从数据库加载开关量保护配置
+        // console.log("✅ [SwitchInputPage] 开始加载设备", deviceId, "的开关量保护配置")
+        //
+        // var protections = deviceConfigMgr.loadAllDigitalProtections(deviceId)
+        // console.log("✅ [SwitchInputPage] 从数据库加载了", protections.length, "个保护项")
+        //
+        // if (protections.length > 0) {
+        //     // 清空现有模型
+        //     digitalProtectionModel.clear()
+        //
+        //     // 加载数据库中的配置
+        //     for (var i = 0; i < protections.length; i++) {
+        //         var p = protections[i]
+        //         digitalProtectionModel.append({
+        //             name: p.protection_name,
+        //             active: p.active === 1,
+        //             moduleType: p.module_type,
+        //             registerAddress: p.register_address,
+        //             channelNumber: p.channel_number
+        //         })
+        //     }
+        //
+        //     console.log("✅ [SwitchInputPage] 数据库配置加载完成")
+        // } else {
+        //     console.log("⚠️ [SwitchInputPage] 数据库中没有配置，使用默认配置")
+        // }
+        //
+        // // 加载第一个保护项的详细参数
+        // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.3]: 使用 Qt.callLater 延迟加载，避免访问未初始化的组件
+        // if (digitalProtectionModel.count > 0) {
+        //     Qt.callLater(function() {
+        //         loadProtectionData(0)
+        //         console.log("✅ [SwitchInputPage] 延迟加载第一个保护项完成")
+        //     })
+        // }
     }
 }
