@@ -684,31 +684,13 @@ Item {
                     }
 
                     onLoaded: {
-                        if (item) {
-                            console.log("✅ [DeviceSettingsDialog] SwitchInputPage 加载成功")
-                            console.log("✅ [DEBUG] SwitchInputPage item 宽度:", item.width)
-                            console.log("✅ [DEBUG] SwitchInputPage item 高度:", item.height)
-                            console.log("✅ [DEBUG] 开始设置属性...")
-                            item.deviceId = root.deviceId
-                            console.log("✅ [DEBUG] deviceId 设置完成")
-                            item.deviceName = root.deviceName
-                            console.log("✅ [DEBUG] deviceName 设置完成")
-                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                            item.keyboardManager = keyboardManager
-                            console.log("✅ [DEBUG] keyboardManager 设置完成")
-
-                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.13]: 延迟设置 focusItemIndex，避免阻塞事件循环
-                            // 让页面先完全加载，然后再设置焦点，避免触发大量绑定重新计算
-                            console.log("✅ [DEBUG] 延迟设置 focusItemIndex...")
-                            Qt.callLater(function() {
-                                console.log("✅ [DEBUG] Qt.callLater 回调开始执行")
-                                if (switchInputPageLoader.item) {
-                                    switchInputPageLoader.item.focusItemIndex = (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
-                                    console.log("✅ [DEBUG] focusItemIndex 延迟设置完成:", switchInputPageLoader.item.focusItemIndex)
-                                }
-                            })
-                            console.log("✅ [DEBUG] onLoaded 完成")
-                        }
+                        console.log("✅ [DEBUG] onLoaded 开始")
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.14]: 完全清空 onLoaded，测试是否还卡住
+                        // 如果还卡住，说明问题不在 onLoaded 中的代码，而在 QML 引擎的页面切换机制
+                        Qt.callLater(function() {
+                            console.log("✅ [DEBUG] Qt.callLater 回调执行 - 事件循环正常")
+                        })
+                        console.log("✅ [DEBUG] onLoaded 完成")
                     }
 
                     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.9]: 使用 Connections 代替动态绑定
