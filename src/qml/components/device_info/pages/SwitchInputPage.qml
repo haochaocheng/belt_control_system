@@ -276,17 +276,18 @@ Rectangle {
                         console.log("✅ [DEBUG] SwitchInputPage ScrollView 高度:", height)
                     }
 
-                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24]: 布局调整 - 标签和输入框左右排列，占70%宽度
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.1]: 修复输入框被挤压问题 - 设置最小宽度
                     GridLayout {
                         width: parent.width * 0.7  // 占70%宽度，右侧留30%给操作按钮
                         columns: 4  // 4列：标签1、输入框1、标签2、输入框2
                         columnSpacing: 10
                         rowSpacing: 12
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24]: 添加调试日志
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.1]: 添加调试日志
                         Component.onCompleted: {
                             console.log("✅ [DEBUG] GridLayout 加载完成")
                             console.log("   宽度:", width, "高度:", height)
+                            console.log("   parent.width:", parent.width)
                         }
 
                         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24]: 保护名称 - 第一行左侧（索引0）
@@ -301,9 +302,11 @@ Rectangle {
                         }
 
                         Item {
-                            Layout.fillWidth: true
                             Layout.column: 1
                             Layout.row: 0
+                            Layout.minimumWidth: 100  // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.1]: 设置最小宽度
+                            Layout.preferredWidth: 150
+                            Layout.fillWidth: true
                             implicitHeight: nameField.implicitHeight
 
                             DeviceInfo.CustomTextField {
@@ -335,9 +338,11 @@ Rectangle {
                         }
 
                         Item {
-                            Layout.fillWidth: true
                             Layout.column: 3
                             Layout.row: 0
+                            Layout.minimumWidth: 100  // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.1]: 设置最小宽度
+                            Layout.preferredWidth: 150
+                            Layout.fillWidth: true
                             implicitHeight: playCountSpin.implicitHeight
 
                             DeviceInfo.CustomSpinBox {
