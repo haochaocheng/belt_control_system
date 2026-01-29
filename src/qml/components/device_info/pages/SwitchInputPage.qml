@@ -276,33 +276,34 @@ Rectangle {
                         console.log("✅ [DEBUG] SwitchInputPage ScrollView 高度:", height)
                     }
 
-                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.19]: 使用 GridLayout 代替 RowLayout，避免循环依赖
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24]: 布局调整 - 标签和输入框左右排列，占70%宽度
                     GridLayout {
-                        width: parent.width - 20
-                        columns: 2  // 固定两列
-                        columnSpacing: 20
+                        width: parent.width * 0.7  // 占70%宽度，右侧留30%给操作按钮
+                        columns: 4  // 4列：标签1、输入框1、标签2、输入框2
+                        columnSpacing: 10
                         rowSpacing: 12
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.19]: 添加调试日志
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24]: 添加调试日志
                         Component.onCompleted: {
                             console.log("✅ [DEBUG] GridLayout 加载完成")
                             console.log("   宽度:", width, "高度:", height)
                         }
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.20]: 添加第一个实际控件 - 保护名称（左列第一行，索引0）
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24]: 保护名称 - 第一行左侧（索引0）
                         Text {
                             text: "保护名称:"
                             font.pixelSize: 14
                             color: "#9E9E9E"
                             Layout.column: 0
                             Layout.row: 0
-                            Layout.preferredWidth: 100
+                            Layout.preferredWidth: 80
+                            Layout.alignment: Qt.AlignVCenter
                         }
 
                         Item {
                             Layout.fillWidth: true
-                            Layout.column: 0
-                            Layout.row: 1
+                            Layout.column: 1
+                            Layout.row: 0
                             implicitHeight: nameField.implicitHeight
 
                             DeviceInfo.CustomTextField {
@@ -322,20 +323,21 @@ Rectangle {
                             }
                         }
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.22]: 添加播放次数（右列第一行，索引1）
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24]: 播放次数 - 第一行右侧（索引1）
                         Text {
                             text: "播放次数:"
                             font.pixelSize: 14
                             color: "#9E9E9E"
-                            Layout.column: 1
+                            Layout.column: 2
                             Layout.row: 0
-                            Layout.preferredWidth: 100
+                            Layout.preferredWidth: 80
+                            Layout.alignment: Qt.AlignVCenter
                         }
 
                         Item {
                             Layout.fillWidth: true
-                            Layout.column: 1
-                            Layout.row: 1
+                            Layout.column: 3
+                            Layout.row: 0
                             implicitHeight: playCountSpin.implicitHeight
 
                             DeviceInfo.CustomSpinBox {
