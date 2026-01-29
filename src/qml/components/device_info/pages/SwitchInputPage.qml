@@ -276,19 +276,18 @@ Rectangle {
                         console.log("✅ [DEBUG] SwitchInputPage ScrollView 高度:", height)
                     }
 
-                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.2]: 参考模拟量输入尺寸 - 标签120px右对齐，字体21px，输入框最大300px
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.3]: 修复 GridLayout 宽度问题 - 使用 width: parent.width - 20
                     GridLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: 10
-                        Layout.rightMargin: 10
+                        width: parent.width - 20  // ✅ 使用固定宽度，而不是 Layout.fillWidth
                         columns: 4  // 4列：标签1、输入框1、标签2、输入框2
                         columnSpacing: 10
                         rowSpacing: 12
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.2]: 添加调试日志
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.3]: 添加调试日志
                         Component.onCompleted: {
                             console.log("✅ [DEBUG] GridLayout 加载完成")
                             console.log("   宽度:", width, "高度:", height)
+                            console.log("   parent.width:", parent.width)
                         }
 
                         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.24.2]: 保护名称 - 第一行左侧（索引0）
