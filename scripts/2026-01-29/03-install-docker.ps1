@@ -139,7 +139,8 @@ DOCKEREOF
 sudo systemctl daemon-reload
 sudo systemctl restart docker
 '@
-    ssh -i $sshKey "$DeviceUser@$DeviceIp" $configureMirror | Out-Null
+    # 2026-01-29: 修复 SSH 命令参数传递问题，使用 bash -c 包装
+    ssh -i $sshKey "$DeviceUser@$DeviceIp" "bash -c '$configureMirror'" | Out-Null
     Write-Host "  ✅ 镜像加速配置完成" -ForegroundColor Green
 }
 
