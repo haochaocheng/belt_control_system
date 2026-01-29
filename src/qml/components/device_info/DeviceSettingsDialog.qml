@@ -96,6 +96,7 @@ Item {
     focus: true
 
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统 - 上下键区域内导航
+    // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
     Keys.onUpPressed: {
         // 上键：在当前区域内向上导航
         console.log("✅ [导航] 上键 - 当前区域:", currentFocusArea)
@@ -111,9 +112,26 @@ Item {
                 currentCategory--
             }
             break
-        case 2:  // 右侧内容
-            if (currentContentItemIndex > 0) {
-                currentContentItemIndex--
+        case 2:  // 右侧内容 - 检查子区域
+            var currentPage = getCurrentPage(currentCategory)
+            if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
+                if (currentPage.focusSubArea === 0) {
+                    // 列表区域：使用 currentContentItemIndex
+                    if (currentContentItemIndex > 0) {
+                        currentContentItemIndex--
+                    }
+                } else if (currentPage.focusSubArea === 1) {
+                    // 参数区域：使用 focusParamIndex
+                    if (currentPage.focusParamIndex > 0) {
+                        currentPage.focusParamIndex--
+                        console.log("✅ [导航] 参数区域上移 - 索引:", currentPage.focusParamIndex)
+                    }
+                }
+            } else {
+                // 不支持子区域的页面，使用 currentContentItemIndex
+                if (currentContentItemIndex > 0) {
+                    currentContentItemIndex--
+                }
             }
             break
         case 3:  // 底部按钮
@@ -124,6 +142,7 @@ Item {
         }
     }
 
+    // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
     Keys.onDownPressed: {
         // 下键：在当前区域内向下导航
         console.log("✅ [导航] 下键 - 当前区域:", currentFocusArea)
@@ -139,10 +158,29 @@ Item {
                 currentCategory++
             }
             break
-        case 2:  // 右侧内容
-            var maxIndex = getContentItemCount(currentCategory)
-            if (currentContentItemIndex < maxIndex - 1) {
-                currentContentItemIndex++
+        case 2:  // 右侧内容 - 检查子区域
+            var currentPage = getCurrentPage(currentCategory)
+            if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
+                if (currentPage.focusSubArea === 0) {
+                    // 列表区域：使用 currentContentItemIndex
+                    var maxIndex = getContentItemCount(currentCategory)
+                    if (currentContentItemIndex < maxIndex - 1) {
+                        currentContentItemIndex++
+                    }
+                } else if (currentPage.focusSubArea === 1) {
+                    // 参数区域：使用 focusParamIndex
+                    var paramCount = currentPage.getParamFieldCount()
+                    if (currentPage.focusParamIndex < paramCount - 1) {
+                        currentPage.focusParamIndex++
+                        console.log("✅ [导航] 参数区域下移 - 索引:", currentPage.focusParamIndex)
+                    }
+                }
+            } else {
+                // 不支持子区域的页面，使用 currentContentItemIndex
+                var maxIndex = getContentItemCount(currentCategory)
+                if (currentContentItemIndex < maxIndex - 1) {
+                    currentContentItemIndex++
+                }
             }
             break
         case 3:  // 底部按钮
@@ -155,6 +193,7 @@ Item {
     }
 
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统 - 左右键切换区域
+    // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加子区域切换支持
     Keys.onLeftPressed: {
         // 左键：切换到左侧区域
         console.log("✅ [导航] 左键 - 当前区域:", currentFocusArea)
@@ -166,7 +205,17 @@ Item {
         case 1:  // 左侧类别 → 顶部按钮
             currentFocusArea = 0
             break
-        case 2:  // 右侧内容 → 左侧类别
+        case 2:  // 右侧内容 → 检查是否在参数区域
+            var currentPage = getCurrentPage(currentCategory)
+            if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
+                // 如果当前在参数区域，返回列表区域
+                if (currentPage.focusSubArea === 1) {
+                    currentPage.focusSubArea = 0
+                    console.log("✅ [导航] 从参数区域返回列表区域")
+                    return  // 不切换到左侧类别
+                }
+            }
+            // 否则切换到左侧类别
             currentFocusArea = 1
             break
         case 3:  // 底部按钮 → 右侧内容
@@ -177,6 +226,7 @@ Item {
         console.log("✅ [导航] 左键后区域:", currentFocusArea)
     }
 
+    // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加子区域切换支持
     Keys.onRightPressed: {
         // 右键：切换到右侧区域
         console.log("✅ [导航] 右键 - 当前区域:", currentFocusArea)
@@ -189,7 +239,18 @@ Item {
             currentFocusArea = 2
             currentContentItemIndex = 0  // 重置内容区域索引
             break
-        case 2:  // 右侧内容 → 底部按钮
+        case 2:  // 右侧内容 → 检查当前页面是否支持子区域导航
+            var currentPage = getCurrentPage(currentCategory)
+            if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
+                // 如果当前在列表区域，切换到参数区域
+                if (currentPage.focusSubArea === 0) {
+                    currentPage.focusSubArea = 1
+                    currentPage.focusParamIndex = 0  // 重置参数焦点索引
+                    console.log("✅ [导航] 从列表区域切换到参数区域")
+                    return  // 不切换到底部按钮
+                }
+            }
+            // 否则切换到底部按钮
             currentFocusArea = 3
             break
         case 3:  // 底部按钮 → 左侧类别（循环）

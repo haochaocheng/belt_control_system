@@ -38,6 +38,21 @@ Rectangle {
         ListElement { name: "主机急停"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 7 }
     }
 
+    // ✅ 2026-01-28 [FIX 100.300.101]: 参数字段模型（动态管理，便于添加/删除参数）
+    ListModel {
+        id: paramFieldsModel
+        // 字段定义：label=标签文本, type=组件类型(text/combo/spin), componentId=组件ID
+        ListElement { label: "保护名称:"; type: "text"; componentId: "nameField" }
+        ListElement { label: "模块类型:"; type: "combo"; componentId: "moduleTypeCombo" }
+        ListElement { label: "寄存器地址:"; type: "spin"; componentId: "registerAddressSpin" }
+        ListElement { label: "通道编号:"; type: "spin"; componentId: "channelSpin" }
+        ListElement { label: "保护延时(秒):"; type: "spin"; componentId: "delaySpin" }
+        ListElement { label: "保护动作:"; type: "combo"; componentId: "actionCombo" }
+        ListElement { label: "报警级别:"; type: "combo"; componentId: "alarmLevelCombo" }
+        ListElement { label: "是否启用:"; type: "switch"; componentId: "enabledSwitch" }
+        ListElement { label: "备注:"; type: "text"; componentId: "remarkField" }
+    }
+
     // ========== 主布局：左右分栏 ==========
     RowLayout {
         anchors.fill: parent
@@ -269,6 +284,7 @@ Rectangle {
                         }
 
                         // 保护名称
+                        // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 10
@@ -281,14 +297,30 @@ Rectangle {
                             }
 
                             // ✅ 2026-01-28 [FIX 100.300.79]: 替换为 CustomTextField
-                            DeviceInfo.CustomTextField {
-                                id: nameField
+                            Item {
                                 Layout.fillWidth: true
-                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                implicitHeight: nameField.implicitHeight
+
+                                DeviceInfo.CustomTextField {
+                                    id: nameField
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                }
+
+                                // 焦点指示器
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? 3 : 0
+                                    radius: 4
+                                    z: 10  // 放在输入框前面
+                                }
                             }
                         }
 
                         // 模块类型
+                        // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 10
@@ -301,26 +333,41 @@ Rectangle {
                             }
 
                             // ✅ 2026-01-28 [FIX 100.300.79]: 替换为 CustomComboBox
-                            DeviceInfo.CustomComboBox {
-                                id: moduleTypeCombo
+                            Item {
                                 Layout.fillWidth: true
-                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                implicitHeight: moduleTypeCombo.implicitHeight
 
-                                model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
+                                DeviceInfo.CustomComboBox {
+                                    id: moduleTypeCombo
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
 
-                                onCurrentTextChanged: {
-                                    // 根据模块类型自动设置寄存器地址
-                                    if (currentText === "输入模块1") {
-                                        registerAddressSpin.value = 2
-                                    } else if (currentText === "输入模块2") {
-                                        registerAddressSpin.value = 3
-                                    } else if (currentText === "输入模块3") {
-                                        registerAddressSpin.value = 4
-                                    } else if (currentText === "输入模块4") {
-                                        registerAddressSpin.value = 5
-                                    } else if (currentText === "输出模块") {
-                                        registerAddressSpin.value = 50
+                                    model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
+
+                                    onCurrentTextChanged: {
+                                        // 根据模块类型自动设置寄存器地址
+                                        if (currentText === "输入模块1") {
+                                            registerAddressSpin.value = 2
+                                        } else if (currentText === "输入模块2") {
+                                            registerAddressSpin.value = 3
+                                        } else if (currentText === "输入模块3") {
+                                            registerAddressSpin.value = 4
+                                        } else if (currentText === "输入模块4") {
+                                            registerAddressSpin.value = 5
+                                        } else if (currentText === "输出模块") {
+                                            registerAddressSpin.value = 50
+                                        }
                                     }
+                                }
+
+                                // 焦点指示器
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? 3 : 0
+                                    radius: 4
+                                    z: 10
                                 }
                             }
                         }
@@ -809,6 +856,13 @@ Rectangle {
         } else {
             console.error("❌ [SwitchInputPage] 保存到数据库失败:", nameField.text)
         }
+    }
+
+    // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 获取参数字段数量
+    function getParamFieldCount() {
+        // 返回参数区域的输入组件数量
+        // 保护名称、模块类型、寄存器地址、通道编号、保护延时、保护动作、报警级别、是否启用、备注
+        return 9
     }
 
     // 组件加载完成后，加载第一个保护项的数据
