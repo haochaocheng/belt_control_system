@@ -322,13 +322,41 @@ Rectangle {
                             }
                         }
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.20]: 右列测试文本（播放次数位置，索引1）
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.22]: 添加播放次数（右列第一行，索引1）
                         Text {
-                            text: "右列测试"
-                            color: "white"
+                            text: "播放次数:"
                             font.pixelSize: 14
+                            color: "#9E9E9E"
                             Layout.column: 1
                             Layout.row: 0
+                            Layout.preferredWidth: 100
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.column: 1
+                            Layout.row: 1
+                            implicitHeight: playCountSpin.implicitHeight
+
+                            DeviceInfo.CustomSpinBox {
+                                id: playCountSpin
+                                anchors.fill: parent
+                                from: 1
+                                to: 99
+                                value: 3
+                                editable: true
+                                keyboardManager: root.keyboardManager
+                            }
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
                         }
                     }  // GridLayout 结束
 
