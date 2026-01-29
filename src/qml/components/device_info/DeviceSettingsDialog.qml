@@ -873,7 +873,8 @@ Item {
                             // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.21]: 恢复属性设置
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
-                            item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-29 [Qt 虚拟键盘]: keyboardManager 已废弃，注释掉
+                            // item.keyboardManager = keyboardManager
                             // ✅ 2026-01-29 [Qt 虚拟键盘]: 设置父对话框引用
                             item.parentDialog = root
                             console.log("✅ [DEBUG] 设置 parentDialog:", root)
