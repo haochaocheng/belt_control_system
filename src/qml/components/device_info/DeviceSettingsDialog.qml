@@ -847,8 +847,9 @@ Item {
                 spacing: 20
 
                 // ✅ 2026-01-24: 使用 Repeater 根据类别动态生成按钮
+                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.7]: 使用 root.getBottomButtons 避免 ReferenceError
                 Repeater {
-                    model: getBottomButtons(root.currentCategory)
+                    model: root.getBottomButtons(root.currentCategory)
 
                     Button {
                         text: modelData
