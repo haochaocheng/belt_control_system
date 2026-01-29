@@ -297,15 +297,17 @@ Item {
                 spacing: 20
 
                 // ✅ 2026-01-25 [工业科技感设计]: 关闭按钮
+                // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器
                 Button {
+                    id: closeButton
                     text: "关闭"
                     width: 80
                     height: 35
                     flat: true
                     background: Rectangle {
                         color: "transparent"
-                        border.color: "#3d4556"  // ✅ 灰色边框
-                        border.width: 2
+                        border.color: (currentFocusArea === 0 && currentTopButtonIndex === 0) ? "#2196F3" : "#3d4556"
+                        border.width: (currentFocusArea === 0 && currentTopButtonIndex === 0) ? 3 : 2
                         radius: 2
                         opacity: 1.0
                     }
@@ -325,15 +327,17 @@ Item {
                 }
 
                 // ✅ 2026-01-25 [工业科技感设计]: 保存按钮
+                // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器
                 Button {
+                    id: saveButton
                     text: "保存"
                     width: 80
                     height: 35
                     flat: true
                     background: Rectangle {
                         color: "#2196F3"  // ✅ 科技蓝背景
-                        border.color: "#42A5F5"
-                        border.width: 1
+                        border.color: (currentFocusArea === 0 && currentTopButtonIndex === 1) ? "#FFFFFF" : "#42A5F5"
+                        border.width: (currentFocusArea === 0 && currentTopButtonIndex === 1) ? 3 : 1
                         radius: 2
                         opacity: 1.0
                     }
@@ -353,15 +357,17 @@ Item {
                 }
 
                 // ✅ 2026-01-25 [工业科技感设计]: 重置按钮
+                // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器
                 Button {
+                    id: resetButton
                     text: "重置"
                     width: 80
                     height: 35
                     flat: true
                     background: Rectangle {
                         color: "#FF9800"  // ✅ 橙色背景
-                        border.color: "#FF9800"
-                        border.width: 1
+                        border.color: (currentFocusArea === 0 && currentTopButtonIndex === 2) ? "#FFFFFF" : "#FF9800"
+                        border.width: (currentFocusArea === 0 && currentTopButtonIndex === 2) ? 3 : 1
                         radius: 2
                         opacity: 1.0
                     }
@@ -438,9 +444,10 @@ Item {
 
                         background: Rectangle {
                             // ✅ 2026-01-26 [FIX 100.300.25.6]: 改为透明，使用背景图片
+                            // ✅ 2026-01-28 [FIX 100.300.101]: 只在焦点区域为1时显示焦点指示器
                             color: "transparent"
-                            border.color: root.currentCategory === index ? "#2196F3" : "#3d4556"
-                            border.width: root.currentCategory === index ? 2 : 1
+                            border.color: (currentFocusArea === 1 && root.currentCategory === index) ? "#2196F3" : "#3d4556"
+                            border.width: (currentFocusArea === 1 && root.currentCategory === index) ? 3 : 1
                             radius: 2
                             opacity: 1.0
 
@@ -475,8 +482,9 @@ Item {
                             }
 
                             // ✅ 2026-01-25 [工业科技感设计]: 激活状态左侧强调条
+                            // ✅ 2026-01-28 [FIX 100.300.101]: 只在焦点区域为1时显示
                             Rectangle {
-                                visible: root.currentCategory === index
+                                visible: (currentFocusArea === 1 && root.currentCategory === index)
                                 width: 4
                                 height: parent.height
                                 color: "#2196F3"
@@ -776,9 +784,10 @@ Item {
                         height: 40
                         background: Rectangle {
                             // ✅ 2026-01-24 [FIX]: 选中状态高亮
-                            color: root.currentBottomButtonIndex === index ? "#00AA00" : "#555555"
-                            border.color: root.currentBottomButtonIndex === index ? "#00FF00" : "#888888"
-                            border.width: root.currentBottomButtonIndex === index ? 2 : 1
+                            // ✅ 2026-01-28 [FIX 100.300.101]: 只在焦点区域为3时显示焦点指示器
+                            color: (currentFocusArea === 3 && root.currentBottomButtonIndex === index) ? "#00AA00" : "#555555"
+                            border.color: (currentFocusArea === 3 && root.currentBottomButtonIndex === index) ? "#2196F3" : "#888888"
+                            border.width: (currentFocusArea === 3 && root.currentBottomButtonIndex === index) ? 3 : 1
                             radius: 4
                         }
                         contentItem: Text {
