@@ -21,9 +21,10 @@ Rectangle {
     property var keyboardManager: null
     // ✅ 2026-01-28 [FIX 100.300.101]: 导航焦点索引（从父对话框传递）
     property int focusItemIndex: -1  // -1 表示无焦点
-    // ✅ 2026-01-28 [FIX 100.300.101]: 导航子区域（0:列表 1:参数）
-    property int focusSubArea: 0  // 0:列表区域 1:参数区域
+    // ✅ 2026-01-28 [FIX 100.300.101]: 导航子区域（0:列表 1:参数 2:操作按钮）
+    property int focusSubArea: 0  // 0:列表区域 1:参数区域 2:操作按钮区域
     property int focusParamIndex: 0  // 参数区域焦点索引
+    property int focusButtonIndex: 0  // ✅ 2026-01-29 [Phase 2.30]: 操作按钮区域焦点索引
 
     // ========== 开关量保护模型 ==========
     ListModel {
@@ -261,12 +262,20 @@ Rectangle {
                 anchors.margins: 15
                 spacing: 12
 
-                // 滚动区域：参数字段
-                ScrollView {
-                    id: paramScrollView  // ✅ 添加 ID
+                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.30]: 添加 RowLayout，分为参数区域（70%）和操作按钮区域（30%）
+                RowLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    clip: true
+                    spacing: 15
+
+                    // 左侧：参数区域（70%）
+                    // 滚动区域：参数字段
+                    ScrollView {
+                        id: paramScrollView  // ✅ 添加 ID
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: parent.width * 0.7  // ✅ 占 70% 宽度
+                        clip: true
 
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     ScrollBar.vertical.policy: ScrollBar.AsNeeded
@@ -634,6 +643,167 @@ Rectangle {
                             }
                         }
                     }  // GridLayout 结束
+                }  // ScrollView 结束（参数区域）
+
+                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.30]: 右侧操作按钮区域（30%）
+                ColumnLayout {
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: parent.width * 0.3  // ✅ 占 30% 宽度
+                    Layout.alignment: Qt.AlignTop
+                    spacing: 15
+
+                    // 第一组按钮：保存、删除、重置
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Button {
+                            id: saveButton
+                            text: "保存"
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 50
+
+                            background: Rectangle {
+                                color: saveButton.pressed ? "#1976D2" : (saveButton.hovered ? "#2196F3" : "#1E88E5")
+                                radius: 4
+                                border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 0) ? 3 : 0
+                            }
+
+                            contentItem: Text {
+                                text: saveButton.text
+                                font.pixelSize: 18
+                                color: "#FFFFFF"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+
+                        Button {
+                            id: deleteButton
+                            text: "删除"
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 50
+
+                            background: Rectangle {
+                                color: deleteButton.pressed ? "#C62828" : (deleteButton.hovered ? "#E53935" : "#D32F2F")
+                                radius: 4
+                                border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 1) ? 3 : 0
+                            }
+
+                            contentItem: Text {
+                                text: deleteButton.text
+                                font.pixelSize: 18
+                                color: "#FFFFFF"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                    }
+
+                    Button {
+                        id: resetButton
+                        text: "重置"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+
+                        background: Rectangle {
+                            color: resetButton.pressed ? "#F57C00" : (resetButton.hovered ? "#FB8C00" : "#FF9800")
+                            radius: 4
+                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 2) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 2) ? 3 : 0
+                        }
+
+                        contentItem: Text {
+                            text: resetButton.text
+                            font.pixelSize: 18
+                            color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
+
+                    // 分隔符
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 2
+                        color: "#3d4556"
+                    }
+
+                    // 第二组按钮：添加输入、删除输入、测试输入
+                    Button {
+                        id: addInputButton
+                        text: "添加输入"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+
+                        background: Rectangle {
+                            color: addInputButton.pressed ? "#388E3C" : (addInputButton.hovered ? "#43A047" : "#4CAF50")
+                            radius: 4
+                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 3) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 3) ? 3 : 0
+                        }
+
+                        contentItem: Text {
+                            text: addInputButton.text
+                            font.pixelSize: 18
+                            color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
+
+                    Button {
+                        id: deleteInputButton
+                        text: "删除输入"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+
+                        background: Rectangle {
+                            color: deleteInputButton.pressed ? "#C62828" : (deleteInputButton.hovered ? "#E53935" : "#D32F2F")
+                            radius: 4
+                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 4) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 4) ? 3 : 0
+                        }
+
+                        contentItem: Text {
+                            text: deleteInputButton.text
+                            font.pixelSize: 18
+                            color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
+
+                    Button {
+                        id: testInputButton
+                        text: "测试输入"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+
+                        background: Rectangle {
+                            color: testInputButton.pressed ? "#0277BD" : (testInputButton.hovered ? "#0288D1" : "#03A9F4")
+                            radius: 4
+                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 5) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 5) ? 3 : 0
+                        }
+
+                        contentItem: Text {
+                            text: testInputButton.text
+                            font.pixelSize: 18
+                            color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
+
+                    // 占位符，填充剩余空间
+                    Item {
+                        Layout.fillHeight: true
+                    }
+                }  // ColumnLayout 结束（操作按钮区域）
+            }  // RowLayout 结束（参数区域 + 操作按钮区域）
 
                     // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17]: 临时移除 RowLayout，测试是否还卡住
                     // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17.1]: 使用块注释注释掉整个 RowLayout 内容
