@@ -278,6 +278,12 @@ Rectangle {
                         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.1]: 移除 implicitHeight 计算，避免递归布局重排
                         // implicitHeight 会自动根据子元素计算，不需要手动设置
 
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.2]: 添加调试日志
+                        Component.onCompleted: {
+                            console.log("✅ [DEBUG] RowLayout 加载完成")
+                            console.log("   宽度:", width, "高度:", height)
+                        }
+
                         // ✅ 左列：保护名称(0)、模块类型(2)、寄存器地址(4)、通道编号(6)、保护延时(8)
                         ColumnLayout {
                             id: leftColumn
