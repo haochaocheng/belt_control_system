@@ -115,9 +115,14 @@ Rectangle {
                         // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
                         height: 45  // 从 60 改为 45（一级标题是 40）
                         color: "transparent"
+
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.8]: 使用中间属性减少绑定计算
+                        // 只计算一次，其他绑定引用这个属性，避免重复计算
+                        readonly property bool isFocused: (root.focusSubArea === 0 && root.focusItemIndex === index)
+
                         // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器边框（只在列表区域显示）
-                        border.color: (root.focusSubArea === 0 && root.focusItemIndex === index) ? "#2196F3" : "transparent"
-                        border.width: (root.focusSubArea === 0 && root.focusItemIndex === index) ? 3 : 0
+                        border.color: isFocused ? "#2196F3" : "transparent"
+                        border.width: isFocused ? 3 : 0
 
                         // ✅ 2026-01-26 [FIX 100.300.25]: 添加背景图片
                         // ✅ 2026-01-26 [FIX 100.300.25.2]: 改用states方式，使用相对路径便于QDS预览
@@ -133,7 +138,7 @@ Rectangle {
                             states: [
                                 State {
                                     name: "focused"
-                                    when: (root.focusSubArea === 0 && root.focusItemIndex === index)
+                                    when: isFocused
                                     PropertyChanges {
                                         target: backgroundImage
                                         source: "../../../images/bhNameBK1.png"
@@ -141,7 +146,7 @@ Rectangle {
                                 },
                                 State {
                                     name: "normal"
-                                    when: !(root.focusSubArea === 0 && root.focusItemIndex === index)
+                                    when: !isFocused
                                     PropertyChanges {
                                         target: backgroundImage
                                         source: "../../../images/bhNameBK.png"
@@ -153,7 +158,7 @@ Rectangle {
                         // ✅ 左侧激活指示条
                         // ✅ 2026-01-28 [FIX 100.300.101]: 响应焦点变化（只在列表区域显示）
                         Rectangle {
-                            visible: (root.focusSubArea === 0 && root.focusItemIndex === index)
+                            visible: isFocused
                             width: 4
                             height: parent.height
                             color: "#2196F3"
@@ -166,8 +171,8 @@ Rectangle {
                             text: model.name
                             // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整字体，使二级标题比一级标题小
                             font.pixelSize: 14  // 从 16 改为 14（与一级标题相同）
-                            font.weight: (root.focusSubArea === 0 && root.focusItemIndex === index) ? Font.Bold : Font.Normal
-                            color: (root.focusSubArea === 0 && root.focusItemIndex === index) ? "#E0E0E0" : "#9E9E9E"
+                            font.weight: isFocused ? Font.Bold : Font.Normal
+                            color: isFocused ? "#E0E0E0" : "#9E9E9E"
                             anchors.centerIn: parent
                         }
 
