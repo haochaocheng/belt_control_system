@@ -511,6 +511,7 @@ Rectangle {
                         }
 
                         // 播放次数
+                        // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 10
@@ -523,18 +524,34 @@ Rectangle {
                             }
 
                             // ✅ 2026-01-28 [FIX 100.300.79]: 替换为 CustomSpinBox
-                            DeviceInfo.CustomSpinBox {
-                                id: playCountSpin
-                                from: 1
-                                to: 99
-                                value: 3
-                                editable: true
+                            Item {
                                 Layout.fillWidth: true
-                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                implicitHeight: playCountSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: playCountSpin
+                                    anchors.fill: parent
+                                    from: 1
+                                    to: 99
+                                    value: 3
+                                    editable: true
+                                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                }
+
+                                // 焦点指示器
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
                             }
                         }
 
                         // 播放时长
+                        // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 10
@@ -547,25 +564,40 @@ Rectangle {
                             }
 
                             // ✅ 2026-01-28 [FIX 100.300.79]: 替换为 CustomSpinBox
-                            DeviceInfo.CustomSpinBox {
-                                id: durationSpin
-                                from: 1
-                                to: 600
-                                value: 50
-                                stepSize: 5
-                                editable: true
+                            Item {
                                 Layout.fillWidth: true
-                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                implicitHeight: durationSpin.implicitHeight
 
-                                property int decimals: 1
-                                property real realValue: value / 10
+                                DeviceInfo.CustomSpinBox {
+                                    id: durationSpin
+                                    anchors.fill: parent
+                                    from: 1
+                                    to: 600
+                                    value: 50
+                                    stepSize: 5
+                                    editable: true
+                                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
 
-                                textFromValue: function(value, locale) {
-                                    return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                    property int decimals: 1
+                                    property real realValue: value / 10
+
+                                    textFromValue: function(value, locale) {
+                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                    }
+
+                                    valueFromText: function(text, locale) {
+                                        return Number.fromLocaleString(locale, text) * 10
+                                    }
                                 }
 
-                                valueFromText: function(text, locale) {
-                                    return Number.fromLocaleString(locale, text) * 10
+                                // 焦点指示器
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? 3 : 0
+                                    radius: 4
+                                    z: 10
                                 }
                             }
                         }
@@ -663,6 +695,7 @@ Rectangle {
                         }
 
                         // TTS文字输入
+                        // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 10
@@ -676,15 +709,31 @@ Rectangle {
                             }
 
                             // ✅ 2026-01-28 [FIX 100.300.79]: 替换为 CustomTextField
-                            DeviceInfo.CustomTextField {
-                                id: ttsTextField
-                                placeholderText: "输入报警文字内容..."
+                            Item {
                                 Layout.fillWidth: true
-                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                implicitHeight: ttsTextField.implicitHeight
+
+                                DeviceInfo.CustomTextField {
+                                    id: ttsTextField
+                                    anchors.fill: parent
+                                    placeholderText: "输入报警文字内容..."
+                                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                }
+
+                                // 焦点指示器
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
                             }
                         }
 
                         // 音频文件选择
+                        // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加焦点指示器
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 10
@@ -698,12 +747,27 @@ Rectangle {
                             }
 
                             // ✅ 2026-01-28 [FIX 100.300.79]: 替换为 CustomTextField
-                            DeviceInfo.CustomTextField {
-                                id: audioField
-                                placeholderText: "选择音频文件..."
+                            Item {
                                 Layout.fillWidth: true
-                                keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                                readOnly: true
+                                implicitHeight: audioField.implicitHeight
+
+                                DeviceInfo.CustomTextField {
+                                    id: audioField
+                                    anchors.fill: parent
+                                    placeholderText: "选择音频文件..."
+                                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                    readOnly: true
+                                }
+
+                                // 焦点指示器
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
                             }
 
                             Button {
