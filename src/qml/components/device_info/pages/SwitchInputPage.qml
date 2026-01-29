@@ -114,8 +114,8 @@ Rectangle {
 
                             states: [
                                 State {
-                                    name: "selected"
-                                    when: root.currentProtectionIndex === index
+                                    name: "focused"
+                                    when: root.focusItemIndex === index
                                     PropertyChanges {
                                         target: backgroundImage
                                         source: "../../../images/bhNameBK1.png"
@@ -123,7 +123,7 @@ Rectangle {
                                 },
                                 State {
                                     name: "normal"
-                                    when: root.currentProtectionIndex !== index
+                                    when: root.focusItemIndex !== index
                                     PropertyChanges {
                                         target: backgroundImage
                                         source: "../../../images/bhNameBK.png"
@@ -133,8 +133,9 @@ Rectangle {
                         }
 
                         // ✅ 左侧激活指示条
+                        // ✅ 2026-01-28 [FIX 100.300.101]: 响应焦点变化
                         Rectangle {
-                            visible: root.currentProtectionIndex === index
+                            visible: root.focusItemIndex === index
                             width: 4
                             height: parent.height
                             color: "#2196F3"
@@ -142,12 +143,13 @@ Rectangle {
                         }
 
                         // ✅ 2026-01-26 [FIX 100.300.25.4]: 开关量名称居中显示
+                        // ✅ 2026-01-28 [FIX 100.300.101]: 响应焦点变化
                         Text {
                             text: model.name
                             // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整字体，使二级标题比一级标题小
                             font.pixelSize: 14  // 从 16 改为 14（与一级标题相同）
-                            font.weight: root.currentProtectionIndex === index ? Font.Bold : Font.Normal
-                            color: root.currentProtectionIndex === index ? "#E0E0E0" : "#9E9E9E"
+                            font.weight: root.focusItemIndex === index ? Font.Bold : Font.Normal
+                            color: root.focusItemIndex === index ? "#E0E0E0" : "#9E9E9E"
                             anchors.centerIn: parent
                         }
 
