@@ -23,7 +23,19 @@ Popup {
         updateCallback = callback
         inputMode = mode || "numeric"
         keyboardModeSelector.currentMode = inputMode
-        keyboardInput.text = textField.text
+
+        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.32.1]: 修复 SpinBox 的 text 属性访问
+        // SpinBox 使用 value 属性，TextField 使用 text 属性
+        if (textField.hasOwnProperty("value")) {
+            // SpinBox - 转换为字符串
+            keyboardInput.text = textField.value.toString()
+        } else if (textField.hasOwnProperty("text")) {
+            // TextField / ComboBox
+            keyboardInput.text = textField.text || ""
+        } else {
+            keyboardInput.text = ""
+        }
+
         root.open()
         keyboardInput.forceActiveFocus()
     }
