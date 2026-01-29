@@ -685,8 +685,19 @@ Item {
 
                     onLoaded: {
                         console.log("✅ [DEBUG] onLoaded 开始")
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.14]: 完全清空 onLoaded，测试是否还卡住
-                        // 如果还卡住，说明问题不在 onLoaded 中的代码，而在 QML 引擎的页面切换机制
+                        if (item) {
+                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.21]: 恢复属性设置
+                            item.deviceId = root.deviceId
+                            item.deviceName = root.deviceName
+                            item.keyboardManager = keyboardManager
+
+                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.21]: 设置初始焦点状态
+                            // 当焦点在内容区域（区域2）且当前类别是开关量输入时
+                            if (root.currentFocusArea === 2 && root.currentCategory === 1) {
+                                item.focusSubArea = 0  // 默认焦点在列表区域
+                                item.focusItemIndex = root.currentContentItemIndex
+                            }
+                        }
                         Qt.callLater(function() {
                             console.log("✅ [DEBUG] Qt.callLater 回调执行 - 事件循环正常")
                         })
@@ -695,25 +706,42 @@ Item {
 
                     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.9]: 使用 Connections 代替动态绑定
                     // 避免绑定循环导致事件循环阻塞
-                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.11]: 临时禁用 Connections，测试是否还卡住
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.21]: 重新启用 Connections，修复焦点同步
                     Connections {
                         target: root
-                        enabled: false  // 临时禁用
+                        enabled: switchInputPageLoader.item !== null
 
                         function onCurrentFocusAreaChanged() {
-                            if (switchInputPageLoader.item) {
-                                switchInputPageLoader.item.focusItemIndex = (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
+                            if (switchInputPageLoader.item && root.currentCategory === 1) {
+                                if (root.currentFocusArea === 2) {
+                                    // 焦点进入内容区域，默认在列表区域
+                                    switchInputPageLoader.item.focusSubArea = 0
+                                    switchInputPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    // 焦点离开内容区域，清除焦点
+                                    switchInputPageLoader.item.focusItemIndex = -1
+                                }
                             }
                         }
 
                         function onCurrentCategoryChanged() {
                             if (switchInputPageLoader.item) {
-                                switchInputPageLoader.item.focusItemIndex = (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
+                                if (root.currentFocusArea === 2 && root.currentCategory === 1) {
+                                    // 切换到开关量输入类别，设置焦点
+                                    switchInputPageLoader.item.focusSubArea = 0
+                                    switchInputPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    // 切换到其他类别，清除焦点
+                                    switchInputPageLoader.item.focusItemIndex = -1
+                                }
                             }
                         }
 
                         function onCurrentContentItemIndexChanged() {
-                            if (switchInputPageLoader.item && root.currentFocusArea === 2 && root.currentCategory === 1) {
+                            if (switchInputPageLoader.item &&
+                                root.currentFocusArea === 2 &&
+                                root.currentCategory === 1) {
+                                // 在开关量列表中导航
                                 switchInputPageLoader.item.focusItemIndex = root.currentContentItemIndex
                             }
                         }
