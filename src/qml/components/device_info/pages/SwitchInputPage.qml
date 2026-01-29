@@ -276,31 +276,55 @@ Rectangle {
                         console.log("✅ [DEBUG] SwitchInputPage ScrollView 高度:", height)
                     }
 
-                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17]: 临时移除 RowLayout，测试是否还卡住
-                    Text {
-                        text: "测试文本 - 如果看到 Qt.callLater 回调，说明问题在 RowLayout"
-                        color: "white"
-                        font.pixelSize: 16
-                        Component.onCompleted: {
-                            console.log("✅ [DEBUG] 测试 Text 加载完成")
-                        }
-                    }
-
-                    // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 改为两列交叉导航布局
-                    // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17.1]: 使用块注释注释掉整个 RowLayout 内容
-                    /*
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.18]: 恢复 RowLayout 框架，测试是否卡住
                     RowLayout {
                         width: parent.width - 20
                         spacing: 20
-
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.1]: 移除 implicitHeight 计算，避免递归布局重排
-                        // implicitHeight 会自动根据子元素计算，不需要手动设置
 
                         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.2]: 添加调试日志
                         Component.onCompleted: {
                             console.log("✅ [DEBUG] RowLayout 加载完成")
                             console.log("   宽度:", width, "高度:", height)
                         }
+
+                        // ✅ 左列：空的 ColumnLayout（Phase 2.18 测试）
+                        ColumnLayout {
+                            id: leftColumn
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: parent.width / 2 - 10
+                            spacing: 12
+
+                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.18]: 临时添加测试文本
+                            Text {
+                                text: "左列测试"
+                                color: "white"
+                                font.pixelSize: 14
+                            }
+                        }
+
+                        // ✅ 右列：空的 ColumnLayout（Phase 2.18 测试）
+                        ColumnLayout {
+                            id: rightColumn
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: parent.width / 2 - 10
+                            spacing: 12
+
+                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.18]: 临时添加测试文本
+                            Text {
+                                text: "右列测试"
+                                color: "white"
+                                font.pixelSize: 14
+                            }
+                        }
+                    }  // RowLayout 结束
+
+                    // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17]: 临时移除 RowLayout，测试是否还卡住
+                    // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17.1]: 使用块注释注释掉整个 RowLayout 内容
+                    /*
+                    // 保留原始的完整 RowLayout 代码，以便后续恢复
+                    RowLayout {
+                        width: parent.width - 20
+                        spacing: 20
 
                         // ✅ 左列：保护名称(0)、模块类型(2)、寄存器地址(4)、通道编号(6)、保护延时(8)
                         ColumnLayout {
