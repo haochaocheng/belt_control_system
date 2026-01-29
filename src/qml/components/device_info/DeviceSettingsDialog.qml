@@ -696,17 +696,18 @@ Item {
                             // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
                             item.keyboardManager = keyboardManager
                             console.log("✅ [DEBUG] keyboardManager 设置完成")
-                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.9]: 移除动态绑定，避免事件循环阻塞
-                            // 初始设置焦点索引
-                            console.log("✅ [DEBUG] 开始设置 focusItemIndex...")
-                            item.focusItemIndex = (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
-                            console.log("✅ [DEBUG] focusItemIndex 设置完成:", item.focusItemIndex)
-                            console.log("✅ [DEBUG] onLoaded 完成")
 
-                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.12]: 测试事件循环是否阻塞
+                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.13]: 延迟设置 focusItemIndex，避免阻塞事件循环
+                            // 让页面先完全加载，然后再设置焦点，避免触发大量绑定重新计算
+                            console.log("✅ [DEBUG] 延迟设置 focusItemIndex...")
                             Qt.callLater(function() {
-                                console.log("✅ [DEBUG] Qt.callLater 回调执行成功 - 事件循环正常")
+                                console.log("✅ [DEBUG] Qt.callLater 回调开始执行")
+                                if (switchInputPageLoader.item) {
+                                    switchInputPageLoader.item.focusItemIndex = (root.currentFocusArea === 2 && root.currentCategory === 1) ? root.currentContentItemIndex : -1
+                                    console.log("✅ [DEBUG] focusItemIndex 延迟设置完成:", switchInputPageLoader.item.focusItemIndex)
+                                }
                             })
+                            console.log("✅ [DEBUG] onLoaded 完成")
                         }
                     }
 
