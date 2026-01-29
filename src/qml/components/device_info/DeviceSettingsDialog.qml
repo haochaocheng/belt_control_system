@@ -512,9 +512,10 @@ Item {
                         background: Rectangle {
                             // ✅ 2026-01-26 [FIX 100.300.25.6]: 改为透明，使用背景图片
                             // ✅ 2026-01-28 [FIX 100.300.101]: 只在焦点区域为1时显示焦点指示器
+                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.5]: 使用 root.currentFocusArea 避免 ReferenceError
                             color: "transparent"
-                            border.color: (currentFocusArea === 1 && root.currentCategory === index) ? "#2196F3" : "#3d4556"
-                            border.width: (currentFocusArea === 1 && root.currentCategory === index) ? 3 : 1
+                            border.color: (root.currentFocusArea === 1 && root.currentCategory === index) ? "#2196F3" : "#3d4556"
+                            border.width: (root.currentFocusArea === 1 && root.currentCategory === index) ? 3 : 1
                             radius: 2
                             opacity: 1.0
 
