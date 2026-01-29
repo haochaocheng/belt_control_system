@@ -1032,8 +1032,12 @@ Rectangle {
         }
 
         // 加载第一个保护项的详细参数
+        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.3]: 使用 Qt.callLater 延迟加载，避免访问未初始化的组件
         if (digitalProtectionModel.count > 0) {
-            loadProtectionData(0)
+            Qt.callLater(function() {
+                loadProtectionData(0)
+                console.log("✅ [SwitchInputPage] 延迟加载第一个保护项完成")
+            })
         }
     }
 }
