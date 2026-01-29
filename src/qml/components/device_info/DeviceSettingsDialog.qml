@@ -707,9 +707,10 @@ Item {
 
                     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.9]: 使用 Connections 代替动态绑定
                     // 避免绑定循环导致事件循环阻塞
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.11]: 临时禁用 Connections，测试是否还卡住
                     Connections {
                         target: root
-                        enabled: switchInputPageLoader.item !== null
+                        enabled: false  // 临时禁用
 
                         function onCurrentFocusAreaChanged() {
                             if (switchInputPageLoader.item) {
