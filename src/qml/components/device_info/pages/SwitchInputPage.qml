@@ -276,47 +276,36 @@ Rectangle {
                         console.log("✅ [DEBUG] SwitchInputPage ScrollView 高度:", height)
                     }
 
-                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.18]: 恢复 RowLayout 框架，测试是否卡住
-                    RowLayout {
+                    // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.19]: 使用 GridLayout 代替 RowLayout，避免循环依赖
+                    GridLayout {
                         width: parent.width - 20
-                        spacing: 20
+                        columns: 2  // 固定两列
+                        columnSpacing: 20
+                        rowSpacing: 12
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.2]: 添加调试日志
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.19]: 添加调试日志
                         Component.onCompleted: {
-                            console.log("✅ [DEBUG] RowLayout 加载完成")
+                            console.log("✅ [DEBUG] GridLayout 加载完成")
                             console.log("   宽度:", width, "高度:", height)
                         }
 
-                        // ✅ 左列：空的 ColumnLayout（Phase 2.18 测试）
-                        ColumnLayout {
-                            id: leftColumn
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: parent.width / 2 - 10
-                            spacing: 12
-
-                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.18]: 临时添加测试文本
-                            Text {
-                                text: "左列测试"
-                                color: "white"
-                                font.pixelSize: 14
-                            }
+                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.19]: 临时添加测试文本
+                        Text {
+                            text: "左列测试"
+                            color: "white"
+                            font.pixelSize: 14
+                            Layout.column: 0
+                            Layout.row: 0
                         }
 
-                        // ✅ 右列：空的 ColumnLayout（Phase 2.18 测试）
-                        ColumnLayout {
-                            id: rightColumn
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: parent.width / 2 - 10
-                            spacing: 12
-
-                            // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.18]: 临时添加测试文本
-                            Text {
-                                text: "右列测试"
-                                color: "white"
-                                font.pixelSize: 14
-                            }
+                        Text {
+                            text: "右列测试"
+                            color: "white"
+                            font.pixelSize: 14
+                            Layout.column: 1
+                            Layout.row: 0
                         }
-                    }  // RowLayout 结束
+                    }  // GridLayout 结束
 
                     // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17]: 临时移除 RowLayout，测试是否还卡住
                     // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17.1]: 使用块注释注释掉整个 RowLayout 内容
