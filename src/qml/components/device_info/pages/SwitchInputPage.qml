@@ -287,7 +287,9 @@ Rectangle {
                     }
 
                     // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2]: 改为两列交叉导航布局
-                    // RowLayout {
+                    // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17.1]: 使用块注释注释掉整个 RowLayout 内容
+                    /*
+                    RowLayout {
                         width: parent.width - 20
                         spacing: 20
 
@@ -836,8 +838,9 @@ Rectangle {
                                 }
                             }
                         }
-                    // }  // 右列结束
-                // }  // RowLayout 结束
+                    }  // 右列结束
+                }  // RowLayout 结束
+                */
             }  // ScrollView 结束
 
                 Rectangle {
