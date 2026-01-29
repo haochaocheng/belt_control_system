@@ -125,6 +125,9 @@ Item {
                     if (currentPage.focusParamIndex > 0) {
                         currentPage.focusParamIndex--
                         console.log("✅ [导航] 参数区域上移 - 索引:", currentPage.focusParamIndex)
+                    } else {
+                        // ✅ 2026-01-29 [FIX 100.300.102]: 已到达第一个，保持焦点
+                        console.log("⚠️ [导航] 已到达第一个参数")
                     }
                 }
             } else {
@@ -173,6 +176,9 @@ Item {
                     if (currentPage.focusParamIndex < paramCount - 1) {
                         currentPage.focusParamIndex++
                         console.log("✅ [导航] 参数区域下移 - 索引:", currentPage.focusParamIndex)
+                    } else {
+                        // ✅ 2026-01-29 [FIX 100.300.102]: 已到达最后一个，保持焦点
+                        console.log("⚠️ [导航] 已到达最后一个参数")
                     }
                 }
             } else {
