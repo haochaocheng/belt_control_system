@@ -1438,37 +1438,76 @@ Rectangle {
     }
 
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.32]: 触发参数输入（弹出虚拟键盘）
+    // ✅ 2026-01-29 [Qt 虚拟键盘]: 使用 Qt 自带的虚拟键盘
     function triggerParamInput(paramIndex) {
         console.log("✅ [SwitchInputPage] 触发参数输入 - 索引:", paramIndex)
 
         // 根据索引获取对应的输入控件
         var inputField = null
+        var inputMode = "numeric"  // 默认数字模式
+
         switch(paramIndex) {
-        case 0: inputField = nameField; break           // 保护名称（TextField）
-        case 1: inputField = playCountSpin; break       // 播放次数（SpinBox）
-        case 2: inputField = moduleTypeCombo; break     // 模块类型（ComboBox）
-        case 3: inputField = playDurationSpin; break    // 播放时长（SpinBox）
-        case 4: inputField = registerAddressSpin; break // 寄存器地址（SpinBox）
-        case 5: inputField = ttsTextField; break        // TTS文字（TextField）
-        case 6: inputField = channelSpin; break         // 通道编号（SpinBox）
-        case 7: inputField = audioFileField; break      // 音频文件（TextField）
-        case 8: inputField = delaySpin; break           // 保护延时（SpinBox）
+        case 0:
+            inputField = nameField           // 保护名称（TextField）
+            inputMode = "chinese"            // 中文输入
+            break
+        case 1:
+            inputField = playCountSpin       // 播放次数（SpinBox）
+            inputMode = "numeric"
+            break
+        case 2:
+            inputField = moduleTypeCombo     // 模块类型（ComboBox）
+            inputMode = "english"
+            break
+        case 3:
+            inputField = playDurationSpin    // 播放时长（SpinBox）
+            inputMode = "numeric"
+            break
+        case 4:
+            inputField = registerAddressSpin // 寄存器地址（SpinBox）
+            inputMode = "numeric"
+            break
+        case 5:
+            inputField = ttsTextField        // TTS文字（TextField）
+            inputMode = "chinese"            // 中文输入
+            break
+        case 6:
+            inputField = channelSpin         // 通道编号（SpinBox）
+            inputMode = "numeric"
+            break
+        case 7:
+            inputField = audioFileField      // 音频文件（TextField）
+            inputMode = "english"
+            break
+        case 8:
+            inputField = delaySpin           // 保护延时（SpinBox）
+            inputMode = "numeric"
+            break
         default:
             console.warn("⚠️ [SwitchInputPage] 无效的参数索引:", paramIndex)
             return
         }
 
-        // 弹出虚拟键盘
-        if (inputField && keyboardManager) {
-            console.log("✅ [SwitchInputPage] 打开虚拟键盘 - 控件:", inputField)
-            keyboardManager.openKeyboardForField(inputField, false)  // false = 键盘导航模式
+        // ✅ 2026-01-29 [Qt 虚拟键盘]: 使用 Qt 自带的虚拟键盘
+        if (inputField) {
+            console.log("✅ [SwitchInputPage] 打开 Qt 虚拟键盘 - 控件:", inputField, "模式:", inputMode)
+
+            // 获取父对话框的 qtVirtualKeyboard
+            var dialog = root
+            while (dialog && !dialog.hasOwnProperty("qtVirtualKeyboard")) {
+                dialog = dialog.parent
+            }
+
+            if (dialog && dialog.qtVirtualKeyboard) {
+                // 打开 Qt 虚拟键盘
+                dialog.qtVirtualKeyboard.openForField(inputField, function(newValue) {
+                    console.log("✅ [SwitchInputPage] 虚拟键盘输入完成:", newValue)
+                }, inputMode)
+            } else {
+                console.warn("⚠️ [SwitchInputPage] 未找到 Qt 虚拟键盘实例")
+            }
         } else {
-            if (!inputField) {
-                console.warn("⚠️ [SwitchInputPage] 输入控件未找到 - 索引:", paramIndex)
-            }
-            if (!keyboardManager) {
-                console.warn("⚠️ [SwitchInputPage] 键盘管理器未初始化")
-            }
+            console.warn("⚠️ [SwitchInputPage] 输入控件未找到 - 索引:", paramIndex)
         }
     }
 

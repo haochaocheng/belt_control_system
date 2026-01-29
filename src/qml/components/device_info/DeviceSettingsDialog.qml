@@ -68,22 +68,17 @@ Item {
     property int currentTopButtonIndex: 0         // 顶部按钮索引 (0:关闭 1:保存 2:重置)
     property int currentContentItemIndex: 0       // 右侧内容区域当前焦点项索引
 
-    // ✅ 2026-01-28 [虚拟键盘管理器]: 创建键盘管理器实例
-    VirtualKeyboardManager {
-        id: keyboardManager
-    }
-
-    // ✅ 2026-01-28 [虚拟键盘实例]: 共享的虚拟键盘实例
-    VirtualKeyboard.EnhancedVirtualKeyboard {
-        id: virtualKeyboard
+    // ✅ 2026-01-29 [Qt 虚拟键盘]: 使用 Qt 自带的虚拟键盘
+    VirtualKeyboard.QtVirtualKeyboardIntegration {
+        id: qtVirtualKeyboard
         parent: Overlay.overlay  // 显示在最顶层
+        z: 2000  // 确保在对话框上方
     }
 
-    // ✅ 2026-01-28 [虚拟键盘初始化]: 初始化键盘管理器
+    // ✅ 2026-01-29 [Qt 虚拟键盘]: 初始化
     // ✅ 2026-01-28 [FIX 100.300.100]: 强制获取焦点
     Component.onCompleted: {
-        keyboardManager.initialize(virtualKeyboard)
-        console.log("✅ [DeviceSettingsDialog] 虚拟键盘管理器已初始化")
+        console.log("✅ [DeviceSettingsDialog] Qt 虚拟键盘已初始化")
 
         // 强制 FocusScope 和对话框获取焦点
         dialogFocusScope.forceActiveFocus()
