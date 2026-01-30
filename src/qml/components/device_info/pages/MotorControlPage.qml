@@ -17,6 +17,15 @@ Rectangle {
     property string deviceName: "1号皮带"
     property int currentMotorIndex: 0  // 当前选中的电机索引 (0-7)
 
+    // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引
+    property int focusItemIndex: -1  // -1 表示无焦点
+    property int focusSubArea: 0  // 0:电机列表区域 1:Tab区域 2:参数区域
+    property int focusTabIndex: 0  // Tab区域焦点索引
+    property int focusParamIndex: 0  // 参数区域焦点索引
+
+    // ✅ 2026-01-30 [FIX 100.300.106]: Qt 虚拟键盘引用
+    property var virtualKeyboard: null
+
     // ========== 背景装饰图片（预留位置，可在QDS中替换）==========
     Image {
         id: backgroundImage
@@ -27,17 +36,19 @@ Rectangle {
         visible: source != ""  // 只有设置了图片才显示
     }
 
-    // ========== 键盘导航支持 ==========
+    // ✅ 2026-01-30 [FIX 100.300.106]: 允许接收焦点，以便虚拟键盘关闭后焦点可以返回
     focus: true
+    activeFocusOnTab: true
 
-    Keys.onPressed: {
-        // 将键盘事件转发给子组件
-        if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
-            motorListPanel.item.focus = true
-        } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
-            motorConfigPanel.item.focus = true
-        }
-    }
+    // ✅ 2026-01-30 [FIX 100.300.106]: 键盘导航支持（暂时保留旧代码，注释掉）
+    // Keys.onPressed: {
+    //     // 将键盘事件转发给子组件
+    //     if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+    //         motorListPanel.item.focus = true
+    //     } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
+    //         motorConfigPanel.item.focus = true
+    //     }
+    // }
 
     // ========== 左右分栏布局 ==========
     Row {
@@ -54,6 +65,8 @@ Rectangle {
 
             onLoaded: {
                 item.currentMotorIndex = Qt.binding(function() { return root.currentMotorIndex })
+                // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引
+                item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
                 item.motorSelected.connect(function(motorIndex) {
                     root.currentMotorIndex = motorIndex
                     console.log("选中电机:", motorIndex + 1)
@@ -77,6 +90,11 @@ Rectangle {
 
             onLoaded: {
                 item.motorIndex = Qt.binding(function() { return root.currentMotorIndex })
+                // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+                item.focusTabIndex = Qt.binding(function() { return root.focusTabIndex })
+                item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
             }
         }
     }

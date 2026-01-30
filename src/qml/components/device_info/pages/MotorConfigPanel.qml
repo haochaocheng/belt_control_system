@@ -14,8 +14,14 @@ Rectangle {
     // ========== 公开属性 ==========
     property int motorIndex: 0  // 当前电机索引 (0-7)
     property int currentTabIndex: 0  // 当前Tab索引
-    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
-    property var keyboardManager: null
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性（已废弃）
+    // property var keyboardManager: null
+
+    // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引（从父页面传递）
+    property int focusSubArea: 0  // 0:电机列表 1:Tab区域 2:参数区域
+    property int focusTabIndex: 0  // Tab区域焦点索引
+    property int focusParamIndex: 0  // 参数区域焦点索引
+    property var virtualKeyboard: null  // Qt 虚拟键盘引用
 
     // ========== 键盘导航支持 ==========
     focus: true
@@ -121,6 +127,16 @@ Rectangle {
                         color: "transparent"
                         border.color: "transparent"
                         border.width: 0
+
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: (root.focusSubArea === 1 && root.focusTabIndex === index) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 1 && root.focusTabIndex === index) ? 3 : 0
+                            radius: 4
+                            z: 11  // 确保在背景图片之上
+                        }
 
                         // ✅ 2026-01-26 [FIX 100.300.25.20]: 添加背景图片
                         Image {

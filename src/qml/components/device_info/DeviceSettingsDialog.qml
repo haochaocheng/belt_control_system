@@ -482,12 +482,13 @@ Item {
     Keys.onEscapePressed: {
         // Escape 键：关闭弹窗
         console.log("🔍 [DeviceSettingsDialog] ========== ESC 键关闭对话框 ==========")
-        console.log("🔍 [DeviceSettingsDialog] 关闭前 - root.visible:", root.visible)
+        console.log("🔍 [DeviceSettingsDialog] 关闭前 - modalContainer.visible:", modalContainer.visible)
         console.log("🔍 [DeviceSettingsDialog] 关闭前 - modalContainer.parentContainer:", modalContainer.parentContainer)
 
-        root.visible = false
+        // ✅ 2026-01-30 [修复]: 隐藏整个 modalContainer（包括遮罩层），而不是只隐藏 root
+        modalContainer.visible = false
 
-        console.log("🔍 [DeviceSettingsDialog] 关闭后 - root.visible:", root.visible)
+        console.log("🔍 [DeviceSettingsDialog] 关闭后 - modalContainer.visible:", modalContainer.visible)
 
         // ✅ 2026-01-30 [修复]: 使用保存的 parentContainer 引用恢复焦点
         if (modalContainer.parentContainer) {
@@ -600,12 +601,13 @@ Item {
                     onClicked: {
                         // ✅ 2026-01-24: 关闭弹窗
                         console.log("🔍 [DeviceSettingsDialog] ========== 关闭按钮被点击 ==========")
-                        console.log("🔍 [DeviceSettingsDialog] 关闭前 - root.visible:", root.visible)
+                        console.log("🔍 [DeviceSettingsDialog] 关闭前 - modalContainer.visible:", modalContainer.visible)
                         console.log("🔍 [DeviceSettingsDialog] 关闭前 - modalContainer.parentContainer:", modalContainer.parentContainer)
 
-                        root.visible = false
+                        // ✅ 2026-01-30 [修复]: 隐藏整个 modalContainer（包括遮罩层），而不是只隐藏 root
+                        modalContainer.visible = false
 
-                        console.log("🔍 [DeviceSettingsDialog] 关闭后 - root.visible:", root.visible)
+                        console.log("🔍 [DeviceSettingsDialog] 关闭后 - modalContainer.visible:", modalContainer.visible)
 
                         // ✅ 2026-01-30 [修复]: 使用保存的 parentContainer 引用恢复焦点
                         if (modalContainer.parentContainer) {
@@ -885,8 +887,8 @@ Item {
                             console.log("✅ [DeviceSettingsDialog] BasicConfigPage 加载成功")
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
-                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                            item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-30 [FIX 100.300.105.1]: keyboardManager 已废弃，注释掉
+                            // item.keyboardManager = keyboardManager
                         }
                     }
 
@@ -1004,14 +1006,63 @@ Item {
                             // ✅ 2026-01-28 [FIX 100.300.73.2]: 移除 Qt.binding()，使用 anchors.fill 方案
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
-                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                            item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-30 [FIX 100.300.105.1]: keyboardManager 已废弃，注释掉
+                            // item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-30 [FIX 100.300.105]: 传递虚拟键盘引用
+                            item.virtualKeyboard = qtVirtualKeyboard
+
+                            // ✅ 2026-01-30 [FIX 100.300.105]: 设置初始焦点状态
+                            if (root.currentFocusArea === 2 && root.currentCategory === 2) {
+                                item.focusSubArea = 0  // 默认焦点在列表区域
+                                item.focusItemIndex = root.currentContentItemIndex
+                            }
                         }
                     }
 
                     onStatusChanged: {
                         if (analogInputPageLoader.status === Loader.Error) {
                             console.error("❌ [DeviceSettingsDialog] AnalogInputPage 加载失败")
+                        }
+                    }
+                }
+
+                // ✅ 2026-01-30 [FIX 100.300.105]: AnalogInputPage 焦点同步
+                Connections {
+                    target: root
+                    enabled: analogInputPageLoader.item !== null
+
+                    function onCurrentFocusAreaChanged() {
+                        if (analogInputPageLoader.item && root.currentCategory === 2) {
+                            if (root.currentFocusArea === 2) {
+                                // 焦点进入内容区域，默认在列表区域
+                                analogInputPageLoader.item.focusSubArea = 0
+                                analogInputPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                // 焦点离开内容区域，清除焦点
+                                analogInputPageLoader.item.focusItemIndex = -1
+                            }
+                        }
+                    }
+
+                    function onCurrentCategoryChanged() {
+                        if (analogInputPageLoader.item) {
+                            if (root.currentFocusArea === 2 && root.currentCategory === 2) {
+                                // 切换到模拟量输入类别，设置焦点
+                                analogInputPageLoader.item.focusSubArea = 0
+                                analogInputPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                // 切换到其他类别，清除焦点
+                                analogInputPageLoader.item.focusItemIndex = -1
+                            }
+                        }
+                    }
+
+                    function onCurrentContentItemIndexChanged() {
+                        if (analogInputPageLoader.item &&
+                            root.currentFocusArea === 2 &&
+                            root.currentCategory === 2) {
+                            // 在模拟量列表中导航
+                            analogInputPageLoader.item.focusItemIndex = root.currentContentItemIndex
                         }
                     }
                 }
@@ -1031,14 +1082,63 @@ Item {
                             console.log("✅ [DeviceSettingsDialog] MotorControlPage 加载成功")
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
-                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                            item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-30 [FIX 100.300.105.1]: keyboardManager 已废弃，注释掉
+                            // item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-30 [FIX 100.300.106]: 传递虚拟键盘引用
+                            item.virtualKeyboard = qtVirtualKeyboard
+
+                            // ✅ 2026-01-30 [FIX 100.300.106]: 设置初始焦点状态
+                            if (root.currentFocusArea === 2 && root.currentCategory === 3) {
+                                item.focusSubArea = 0  // 默认焦点在电机列表区域
+                                item.focusItemIndex = root.currentContentItemIndex
+                            }
                         }
                     }
 
                     onStatusChanged: {
                         if (motorControlPageLoader.status === Loader.Error) {
                             console.error("❌ [DeviceSettingsDialog] MotorControlPage 加载失败")
+                        }
+                    }
+                }
+
+                // ✅ 2026-01-30 [FIX 100.300.106]: MotorControlPage 焦点同步
+                Connections {
+                    target: root
+                    enabled: motorControlPageLoader.item !== null
+
+                    function onCurrentFocusAreaChanged() {
+                        if (motorControlPageLoader.item && root.currentCategory === 3) {
+                            if (root.currentFocusArea === 2) {
+                                // 焦点进入内容区域，默认在电机列表区域
+                                motorControlPageLoader.item.focusSubArea = 0
+                                motorControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                // 焦点离开内容区域，清除焦点
+                                motorControlPageLoader.item.focusItemIndex = -1
+                            }
+                        }
+                    }
+
+                    function onCurrentCategoryChanged() {
+                        if (motorControlPageLoader.item) {
+                            if (root.currentFocusArea === 2 && root.currentCategory === 3) {
+                                // 切换到电机控制类别，设置焦点
+                                motorControlPageLoader.item.focusSubArea = 0
+                                motorControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                // 切换到其他类别，清除焦点
+                                motorControlPageLoader.item.focusItemIndex = -1
+                            }
+                        }
+                    }
+
+                    function onCurrentContentItemIndexChanged() {
+                        if (motorControlPageLoader.item &&
+                            root.currentFocusArea === 2 &&
+                            root.currentCategory === 3) {
+                            // 在电机列表中导航
+                            motorControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
                         }
                     }
                 }
@@ -1057,8 +1157,8 @@ Item {
                             console.log("✅ [DeviceSettingsDialog] BrakeControlPage 加载成功")
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
-                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                            item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-30 [FIX 100.300.105.1]: keyboardManager 已废弃，注释掉
+                            // item.keyboardManager = keyboardManager
                         }
                     }
 
@@ -1083,8 +1183,8 @@ Item {
                             console.log("✅ [DeviceSettingsDialog] TensionControlPage 加载成功")
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
-                            // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                            item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-30 [FIX 100.300.105.1]: keyboardManager 已废弃，注释掉
+                            // item.keyboardManager = keyboardManager
                         }
                     }
 
@@ -1200,9 +1300,9 @@ Item {
         case 1:  // 开关量输入
             return 9  // 9个输入组件
         case 2:  // 模拟量输入
-            return 13  // 13个输入组件
+            return 5  // ✅ 2026-01-30 [FIX 100.300.105]: 5个模拟量保护项
         case 3:  // 电机控制
-            return 3  // 基本配置 Tab 有 3 个 SpinBox
+            return 8  // ✅ 2026-01-30 [FIX 100.300.106]: 8个电机
         case 4:  // 制动器控制
             return 9  // 9个输入组件
         case 5:  // 张紧控制
@@ -1219,12 +1319,13 @@ Item {
         switch(buttonIndex) {
         case 0:  // 关闭
             console.log("🔍 [DeviceSettingsDialog] ========== 导航触发关闭 ==========")
-            console.log("🔍 [DeviceSettingsDialog] 关闭前 - root.visible:", root.visible)
+            console.log("🔍 [DeviceSettingsDialog] 关闭前 - modalContainer.visible:", modalContainer.visible)
             console.log("🔍 [DeviceSettingsDialog] 关闭前 - modalContainer.parentContainer:", modalContainer.parentContainer)
 
-            root.visible = false
+            // ✅ 2026-01-30 [修复]: 隐藏整个 modalContainer（包括遮罩层），而不是只隐藏 root
+            modalContainer.visible = false
 
-            console.log("🔍 [DeviceSettingsDialog] 关闭后 - root.visible:", root.visible)
+            console.log("🔍 [DeviceSettingsDialog] 关闭后 - modalContainer.visible:", modalContainer.visible)
 
             // ✅ 2026-01-30 [修复]: 使用保存的 parentContainer 引用恢复焦点
             if (modalContainer.parentContainer) {

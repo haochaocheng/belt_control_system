@@ -18,6 +18,9 @@ Rectangle {
     // ========== 公开属性 ==========
     property int currentMotorIndex: 0  // 当前选中的电机索引 (0-7)
 
+    // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引（从父页面传递）
+    property int focusItemIndex: -1  // -1 表示无焦点
+
     // ========== 信号 ==========
     signal motorSelected(int motorIndex)  // 电机被选中时发出信号
 
@@ -80,6 +83,16 @@ Rectangle {
             // ✅ 2026-01-26 [FIX 100.300.25.28]: 移除边框
             border.color: "transparent"
             border.width: 0
+
+            // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                border.color: (root.focusItemIndex === index) ? "#2196F3" : "transparent"
+                border.width: (root.focusItemIndex === index) ? 3 : 0
+                radius: 4
+                z: 10
+            }
 
             // ✅ 2026-01-26 [FIX 100.300.25.5]: 添加背景图片
             Image {
