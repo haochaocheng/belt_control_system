@@ -50,7 +50,7 @@ Rectangle {
                     // 是否投入（索引 0）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 40
+                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -65,7 +65,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -149,7 +149,7 @@ Rectangle {
                     // 动作保护类型（索引 2）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 40
+                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -164,7 +164,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -186,7 +186,7 @@ Rectangle {
                     // 温度量程（索引 4）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 40
+                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -201,7 +201,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -223,7 +223,7 @@ Rectangle {
                     // 温度下限（索引 6）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 40
+                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -238,7 +238,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -273,7 +273,7 @@ Rectangle {
                     // 输入点选择（索引 8）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 40
+                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -288,7 +288,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -318,7 +318,7 @@ Rectangle {
                     // 报警类型（索引 1）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 40
+                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -333,7 +333,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -417,7 +417,7 @@ Rectangle {
                     // 故障保护类型（索引 3）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 40
+                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -432,7 +432,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -454,7 +454,7 @@ Rectangle {
                     // 温度上限（索引 5）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 40
+                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -469,7 +469,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -504,7 +504,7 @@ Rectangle {
                     // 过滤干扰延时（索引 7）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 40
+                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -519,7 +519,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
