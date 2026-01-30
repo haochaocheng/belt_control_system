@@ -1,10 +1,12 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import "../" as DeviceInfo  // ✅ 2026-01-30 [FIX 100.300.109 Phase 2]: 导入 NavigationManager
 
 // ✅ 2026-01-25 [电机控制参数设置] 电机控制主页面（左右分栏布局）
 // ✅ 2026-01-25 [FIX 100.311]: 重构为模块化设计，支持键盘操作
 // ✅ 2026-01-25 [FIX 100.312]: 添加背景图片预留位置
 // ✅ 2026-01-25 [FIX 100.314]: 修复QDS预览问题，使用Loader加载组件
+// ✅ 2026-01-30 [FIX 100.300.109 Phase 2]: 集成 NavigationManager，实现平面导航
 Rectangle {
     id: root
     // ✅ 2026-01-26 [FIX 100.300.25.12]: 使用 implicitWidth/Height 替代固定尺寸，确保运行时正确显示
@@ -27,6 +29,71 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.106]: Qt 虚拟键盘引用
     property var virtualKeyboard: null
 
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2]: NavigationManager 实例
+    DeviceInfo.NavigationManager {
+        id: navigationManager
+
+        // 初始化：从电机列表区开始
+        Component.onCompleted: {
+            currentArea = areaMotorList
+            motorListIndex = 0
+            tabIndex = 0
+            paramIndex = 0
+            buttonIndex = 0
+            console.log("✅ [MotorControlPage] NavigationManager 初始化完成")
+        }
+
+        // 监听电机列表索引变化
+        onMotorListIndexChanged: function(newIndex) {
+            console.log("✅ [MotorControlPage] 电机列表索引变化:", newIndex)
+            root.currentMotorIndex = newIndex
+            root.focusItemIndex = newIndex
+        }
+
+        // 监听Tab索引变化，切换参数区显示
+        onTabIndexChanged: function(newIndex) {
+            console.log("✅ [MotorControlPage] Tab索引变化:", newIndex, "参数区自动切换显示")
+            root.focusTabIndex = newIndex
+            // 切换Tab时，参数区自动显示对应的参数
+            if (motorConfigPanel.item) {
+                motorConfigPanel.item.currentTabIndex = newIndex
+            }
+        }
+
+        // 监听参数索引变化
+        onParamIndexChanged: function(newIndex) {
+            console.log("✅ [MotorControlPage] 参数索引变化:", newIndex)
+            root.focusParamIndex = newIndex
+        }
+
+        // 监听按钮索引变化
+        onButtonIndexChanged: function(newIndex) {
+            console.log("✅ [MotorControlPage] 按钮索引变化:", newIndex)
+            // 底部按钮焦点处理（如果需要）
+        }
+
+        // 监听区域变化
+        onAreaChanged: function(newArea) {
+            console.log("✅ [MotorControlPage] 区域变化:", newArea)
+            // 根据区域更新 focusSubArea
+            switch(newArea) {
+            case areaMotorList:
+                root.focusSubArea = 0
+                root.focusItemIndex = motorListIndex
+                break
+            case areaTabBar:
+                root.focusSubArea = 1
+                break
+            case areaParams:
+                root.focusSubArea = 2
+                break
+            case areaButtons:
+                root.focusSubArea = 3
+                break
+            }
+        }
+    }
+
     // ========== 背景装饰图片（预留位置，可在QDS中替换）==========
     Image {
         id: backgroundImage
@@ -41,7 +108,29 @@ Rectangle {
     focus: true
     activeFocusOnTab: true
 
-    // ✅ 2026-01-30 [FIX 100.300.106]: 键盘导航支持（暂时保留旧代码，注释掉）
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2]: 使用 NavigationManager 处理键盘事件
+    // ✅ 平面导航逻辑：只用方向键，不用Enter/Esc/Tab
+    Keys.onUpPressed: {
+        navigationManager.handleDirectionKey("Up")
+        event.accepted = true
+    }
+
+    Keys.onDownPressed: {
+        navigationManager.handleDirectionKey("Down")
+        event.accepted = true
+    }
+
+    Keys.onLeftPressed: {
+        navigationManager.handleDirectionKey("Left")
+        event.accepted = true
+    }
+
+    Keys.onRightPressed: {
+        navigationManager.handleDirectionKey("Right")
+        event.accepted = true
+    }
+
+    // ✅ 2026-01-30 [FIX 100.300.106]: 旧的键盘导航支持（已废弃，注释掉）
     // Keys.onPressed: {
     //     // 将键盘事件转发给子组件
     //     if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
