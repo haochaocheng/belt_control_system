@@ -1,11 +1,13 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 import ".." as DeviceInfo
 
 // ✅ 2026-01-25 [电机控制-基本配置] 基本配置Tab内容
 // ✅ 2026-01-25 [FIX 100.313]: 调整为标签和输入框同一行布局
 // ✅ 2026-01-28 [FIX 100.300.60]: 替换所有 SpinBox 为 DeviceInfo.CustomSpinBox
 // ✅ 2026-01-28 [虚拟键盘集成]: 接收并传递键盘管理器
+// ✅ 2026-01-30 [FIX 100.300.106.4]: 改为两列布局，参考 AnalogInputPage
 Rectangle {
     id: root
     width: 800  // 默认宽度（用于QDS预览）
@@ -21,307 +23,329 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property var virtualKeyboard: null  // Qt 虚拟键盘引用
 
-    // ✅ 2026-01-30 [FIX 100.300.106.3]: 布局模式（一列布局）
-    readonly property string layoutMode: "single-column"  // "single-column" 或 "two-column"
+    // ✅ 2026-01-30 [FIX 100.300.106.3]: 布局模式（两列布局）
+    // ✅ 2026-01-30 [FIX 100.300.106.4]: 改为两列布局，参考 AnalogInputPage
+    readonly property string layoutMode: "two-column"  // "single-column" 或 "two-column"
 
     // ========== 滚动区域 ==========
     ScrollView {
         anchors.fill: parent
         clip: true
 
-        Column {
+        ColumnLayout {
             width: parent.width
-            spacing: 15
-            leftPadding: 30
-        rightPadding: 30
-        topPadding: 30
-        // FIX 100.300.59: Use separate padding to avoid polish() loop
+            spacing: 12
+            implicitWidth: 1200  // 两列布局需要的最小宽度
+            implicitHeight: childrenRect.height
 
-            // ========== 运行状态 ==========
-            Row {
-                width: parent.width - 60  // FIX 100.300.59: Subtract left+right padding
-                spacing: 20
+            // ✅ 2026-01-30 [FIX 100.300.106.4]: 两列布局
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                spacing: 20  // 两列之间的间距
 
-                Text {
-                    text: "运行状态:"
-                    font.pixelSize: 14
-                    color: "#9E9E9E"
-                    width: 120
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+                // ========== 左列 ==========
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 200
+                    Layout.alignment: Qt.AlignTop
+                    spacing: 12
 
-                // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
-                // ✅ 2026-01-30 [FIX 100.300.106.1]: 移除 anchors.verticalCenter，避免 Row 布局冲突
-                Item {
-                    width: 200
-                    height: 40
+                    // 运行状态（索引 0）
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 40
+                        spacing: 10
 
-                    // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 0) ? 3 : 0
-                        radius: 4
-                        z: 10
-                    }
+                        Text {
+                            text: "运行状态:"
+                            font.pixelSize: 14
+                            color: "#9E9E9E"
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
 
-                    Row {
-                        anchors.fill: parent
-                        spacing: 30
+                        // 焦点指示器容器
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            Layout.preferredHeight: 40
 
-                    // 投入选项
-                    Row {
-                        spacing: 8
-
-                        Rectangle {
-                            width: 20
-                            height: 20
-                            radius: 10
-                            border.color: "#2196F3"
-                            border.width: 2
-                            color: "transparent"
-                            anchors.verticalCenter: parent.verticalCenter
-
+                            // 焦点指示器
                             Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: "#2196F3"
-                                anchors.centerIn: parent
-                                visible: true  // 默认选中
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                                border.width: (root.focusParamIndex === 0) ? 3 : 0
+                                radius: 4
+                                z: 10
                             }
 
-                            MouseArea {
+                            Row {
                                 anchors.fill: parent
-                                onClicked: {
-                                    console.log((root.motorIndex + 1) + "号电机: 投入")
+                                spacing: 30
+
+                                // 投入选项
+                                Row {
+                                    spacing: 8
+
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        border.color: "#2196F3"
+                                        border.width: 2
+                                        color: "transparent"
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        Rectangle {
+                                            width: 10
+                                            height: 10
+                                            radius: 5
+                                            color: "#2196F3"
+                                            anchors.centerIn: parent
+                                            visible: true  // 默认选中
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: {
+                                                console.log((root.motorIndex + 1) + "号电机: 投入")
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: "投入"
+                                        font.pixelSize: 14
+                                        color: "#E0E0E0"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+
+                                // 禁用选项
+                                Row {
+                                    spacing: 8
+
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        border.color: "#2196F3"
+                                        border.width: 2
+                                        color: "transparent"
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        Rectangle {
+                                            width: 10
+                                            height: 10
+                                            radius: 5
+                                            color: "#2196F3"
+                                            anchors.centerIn: parent
+                                            visible: false  // 默认不选中
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: {
+                                                console.log((root.motorIndex + 1) + "号电机: 禁用")
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: "禁用"
+                                        font.pixelSize: 14
+                                        color: "#E0E0E0"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
                                 }
                             }
                         }
+                    }
+
+                    // 模块地址（索引 2）
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 40
+                        spacing: 10
 
                         Text {
-                            text: "投入"
+                            text: "模块地址:"
                             font.pixelSize: 14
-                            color: "#E0E0E0"
-                            anchors.verticalCenter: parent.verticalCenter
+                            color: "#9E9E9E"
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        // 焦点指示器容器
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            Layout.preferredHeight: 40
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                                border.width: (root.focusParamIndex === 2) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+
+                            DeviceInfo.CustomSpinBox {
+                                id: moduleAddressSpin
+                                anchors.fill: parent
+                                from: 1
+                                to: 8
+                                value: 1
+                                editable: true
+                            }
                         }
                     }
 
-                    // 禁用选项
-                    Row {
-                        spacing: 8
+                    // 反馈通道（索引 4）
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 40
+                        spacing: 10
 
-                        Rectangle {
-                            width: 20
-                            height: 20
-                            radius: 10
-                            border.color: "#2196F3"
-                            border.width: 2
-                            color: "transparent"
-                            anchors.verticalCenter: parent.verticalCenter
+                        Text {
+                            text: "反馈通道:"
+                            font.pixelSize: 14
+                            color: "#9E9E9E"
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
 
+                        // 焦点指示器容器
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            Layout.preferredHeight: 40
+
+                            // 焦点指示器
                             Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: "#2196F3"
-                                anchors.centerIn: parent
-                                visible: false  // 默认不选中
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                                border.width: (root.focusParamIndex === 4) ? 3 : 0
+                                radius: 4
+                                z: 10
                             }
 
-                            MouseArea {
+                            DeviceInfo.CustomSpinBox {
+                                id: feedbackChannelSpin
                                 anchors.fill: parent
-                                onClicked: {
-                                    console.log((root.motorIndex + 1) + "号电机: 禁用")
+                                from: 0
+                                to: 7
+                                value: root.motorIndex
+                                editable: true
+                            }
+                        }
+                    }
+                }  // 左列结束
+
+                // ========== 右列 ==========
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 200
+                    Layout.alignment: Qt.AlignTop
+                    spacing: 12
+
+                    // 模块类型（索引 1）
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 40
+                        spacing: 10
+
+                        Text {
+                            text: "模块类型:"
+                            font.pixelSize: 14
+                            color: "#9E9E9E"
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        // 焦点指示器容器
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            Layout.preferredHeight: 40
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                                border.width: (root.focusParamIndex === 1) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "#2d3548"
+                                border.color: "#3d4556"
+                                border.width: 1
+                                radius: 2
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "继电器模块"
+                                    font.pixelSize: 14
+                                    color: "#E0E0E0"
                                 }
                             }
                         }
+                    }
+
+                    // 输出通道（索引 3）
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 40
+                        spacing: 10
 
                         Text {
-                            text: "禁用"
+                            text: "输出通道:"
                             font.pixelSize: 14
-                            color: "#E0E0E0"
-                            anchors.verticalCenter: parent.verticalCenter
+                            color: "#9E9E9E"
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        // 焦点指示器容器
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            Layout.preferredHeight: 40
+
+                            // 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                                border.width: (root.focusParamIndex === 3) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+
+                            DeviceInfo.CustomSpinBox {
+                                id: outputChannelSpin
+                                anchors.fill: parent
+                                from: 0
+                                to: 7
+                                value: root.motorIndex
+                                editable: true
+                            }
                         }
                     }
-                    }  // ✅ 2026-01-30 [FIX 100.300.106.1]: 关闭内部 Row（第 66 行）
-                }  // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器结束
-            }
-
-            // ========== 模块类型 ==========
-            Row {
-                width: parent.width - 60  // FIX 100.300.59: Subtract left+right padding
-                spacing: 20
-
-                Text {
-                    text: "模块类型:"
-                    font.pixelSize: 14
-                    color: "#9E9E9E"
-                    width: 120
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
-                // ✅ 2026-01-30 [FIX 100.300.106.1]: 移除 anchors.verticalCenter，避免 Row 布局冲突
-                Item {
-                    width: 200
-                    height: 36
-
-                    // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 1) ? 3 : 0
-                        radius: 4
-                        z: 10
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "#2d3548"
-                        border.color: "#3d4556"
-                        border.width: 1
-                        radius: 2
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "继电器模块"
-                            font.pixelSize: 14
-                            color: "#E0E0E0"
-                        }
-                    }
-                }
-            }
-
-            // ========== 模块地址 ==========
-            Row {
-                width: parent.width - 60  // FIX 100.300.59: Subtract left+right padding
-                spacing: 20
-
-                Text {
-                    text: "模块地址:"
-                    font.pixelSize: 14
-                    color: "#9E9E9E"
-                    width: 120
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
-                // ✅ 2026-01-30 [FIX 100.300.106.1]: 移除 anchors.verticalCenter，避免 Row 布局冲突
-                Item {
-                    width: 120
-                    height: 36
-
-                    // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 2) ? 3 : 0
-                        radius: 4
-                        z: 10
-                    }
-
-                    // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
-                    DeviceInfo.CustomSpinBox {
-                        id: moduleAddressSpin
-                        anchors.fill: parent
-                        from: 1
-                        to: 8
-                        value: 1
-                        editable: true
-                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                    }
-                }
-            }
-
-            // ========== 输出通道 ==========
-            Row {
-                width: parent.width - 60  // FIX 100.300.59: Subtract left+right padding
-                spacing: 20
-
-                Text {
-                    text: "输出通道:"
-                    font.pixelSize: 14
-                    color: "#9E9E9E"
-                    width: 120
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
-                // ✅ 2026-01-30 [FIX 100.300.106.1]: 移除 anchors.verticalCenter，避免 Row 布局冲突
-                Item {
-                    width: 120
-                    height: 36
-
-                    // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 3) ? 3 : 0
-                        radius: 4
-                        z: 10
-                    }
-
-                    // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
-                    DeviceInfo.CustomSpinBox {
-                        id: outputChannelSpin
-                        anchors.fill: parent
-                        from: 0
-                        to: 7
-                        value: root.motorIndex
-                        editable: true
-                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                    }
-                }
-            }
-
-            // ========== 反馈通道 ==========
-            Row {
-                width: parent.width - 60  // FIX 100.300.59: Subtract left+right padding
-                spacing: 20
-
-                Text {
-                    text: "反馈通道:"
-                    font.pixelSize: 14
-                    color: "#9E9E9E"
-                    width: 120
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
-                // ✅ 2026-01-30 [FIX 100.300.106.1]: 移除 anchors.verticalCenter，避免 Row 布局冲突
-                Item {
-                    width: 120
-                    height: 36
-
-                    // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 4) ? 3 : 0
-                        radius: 4
-                        z: 10
-                    }
-
-                    // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
-                    DeviceInfo.CustomSpinBox {
-                        id: feedbackChannelSpin
-                        anchors.fill: parent
-                        from: 0
-                        to: 7
-                        value: root.motorIndex
-                        editable: true
-                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                    }
-                }
-            }
-        }
-    }
+                }  // 右列结束
+            }  // RowLayout 结束
+        }  // ColumnLayout 结束
+    }  // ScrollView 结束
 
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
     // 获取参数字段数量
