@@ -169,6 +169,7 @@ Item {
     // ✅ 2026-01-28 [FIX 100.300.66]: 修复 open() 不是函数错误，使用 visible 属性
     // ✅ 2026-01-30 [修复]: 使用 root 作为父容器，以便对话框关闭后焦点返回到 Screen01
     // ✅ 2026-01-30 [调试]: 添加详细的焦点追踪日志
+    // ✅ 2026-01-30 [修复]: 传递 parentContainer 引用，解决 FocusScope 层级问题
     function openDeviceSettings() {
         console.log("🔍 [Screen01] ========== 打开对话框 ==========")
         console.log("🔍 [Screen01] 当前选中索引:", selectedIndex)
@@ -179,13 +180,14 @@ Item {
         var component = Qt.createComponent("../../components/device_info/DeviceSettingsDialog.qml")
         if (component.status === Component.Ready) {
             var dialog = component.createObject(root, {
-                // 可以传递参数给对话框
-                // deviceIndex: selectedIndex
+                // ✅ 2026-01-30 [修复]: 传递 parentContainer 引用，用于焦点恢复
+                parentContainer: root
             })
             if (dialog) {
                 console.log("🔍 [Screen01] 对话框创建成功")
                 console.log("🔍 [Screen01] dialog.parent === root:", dialog.parent === root)
                 console.log("🔍 [Screen01] dialog.parent:", dialog.parent)
+                console.log("🔍 [Screen01] dialog.parentContainer === root:", dialog.parentContainer === root)
 
                 // ✅ 2026-01-28 [FIX 100.300.66]: DeviceSettingsDialog 是 Rectangle，使用 visible 而不是 open()
                 dialog.visible = true
