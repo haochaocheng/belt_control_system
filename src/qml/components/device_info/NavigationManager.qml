@@ -1,6 +1,7 @@
 import QtQuick 2.15
 
 // ✅ 2026-01-30 [FIX 100.300.109]: 全局导航状态管理器
+// ✅ 2026-01-30 [FIX 100.300.109 v2]: 平面导航逻辑 - 只用方向键，不用Enter
 // 管理4个导航区域的焦点状态和导航逻辑
 QtObject {
     id: navigationManager
@@ -18,9 +19,6 @@ QtObject {
     property int paramIndex: 0                     // 区域C：参数索引（0-8）
     property int buttonIndex: 0                    // 区域D：按钮索引（0-2）
 
-    // ========== 焦点历史（用于Esc返回）==========
-    property var focusHistory: []
-
     // ========== 信号定义 ==========
     signal areaChanged(string newArea)
     signal motorListIndexChanged(int newIndex)
@@ -33,72 +31,9 @@ QtObject {
     // 切换到指定区域
     function switchToArea(newArea) {
         if (currentArea !== newArea) {
-            // 保存当前焦点到历史
-            focusHistory.push({
-                area: currentArea,
-                motorListIndex: motorListIndex,
-                tabIndex: tabIndex,
-                paramIndex: paramIndex,
-                buttonIndex: buttonIndex
-            })
-
             console.log("✅ [NavigationManager] 切换区域:", currentArea, "→", newArea)
             currentArea = newArea
             areaChanged(newArea)
-        }
-    }
-
-    // Tab键：顺序切换区域（A→B→C→D→A）
-    function switchToNextArea() {
-        switch(currentArea) {
-        case areaMotorList:
-            switchToArea(areaTabBar)
-            break
-        case areaTabBar:
-            switchToArea(areaParams)
-            break
-        case areaParams:
-            switchToArea(areaButtons)
-            break
-        case areaButtons:
-            switchToArea(areaMotorList)
-            break
-        }
-    }
-
-    // Shift+Tab：反向切换区域（D→C→B→A→D）
-    function switchToPreviousArea() {
-        switch(currentArea) {
-        case areaMotorList:
-            switchToArea(areaButtons)
-            break
-        case areaTabBar:
-            switchToArea(areaMotorList)
-            break
-        case areaParams:
-            switchToArea(areaTabBar)
-            break
-        case areaButtons:
-            switchToArea(areaParams)
-            break
-        }
-    }
-
-    // Esc键：返回上一个焦点位置
-    function goBack() {
-        if (focusHistory.length > 0) {
-            var lastFocus = focusHistory.pop()
-            currentArea = lastFocus.area
-            motorListIndex = lastFocus.motorListIndex
-            tabIndex = lastFocus.tabIndex
-            paramIndex = lastFocus.paramIndex
-            buttonIndex = lastFocus.buttonIndex
-
-            console.log("✅ [NavigationManager] 返回到:", currentArea)
-            areaChanged(currentArea)
-        } else {
-            // 如果没有历史，默认返回到电机列表区
-            switchToArea(areaMotorList)
         }
     }
 
@@ -111,28 +46,25 @@ QtObject {
         case "Up":
             if (motorListIndex > 0) {
                 newIndex = motorListIndex - 1
-            } else {
-                // 在顶部，跳转到底部按钮区
-                switchToArea(areaButtons)
-                buttonIndex = 2  // 最后一个按钮
-                return
             }
+            // 在顶部，保持不变
             break
 
         case "Down":
             if (motorListIndex < 7) {
                 newIndex = motorListIndex + 1
-            } else {
-                // 在底部，跳转到Tab导航区
-                switchToArea(areaTabBar)
-                return
             }
+            // 在底部，保持不变
             break
 
         case "Right":
             // 向右跳转到Tab导航区
             switchToArea(areaTabBar)
             return
+
+        case "Left":
+            // 在左侧边界，保持不变
+            break
         }
 
         if (newIndex !== motorListIndex) {
@@ -152,36 +84,35 @@ QtObject {
             if (tabIndex > 0) {
                 newIndex = tabIndex - 1
             } else {
-                // 循环到最后一个Tab
-                newIndex = 8
+                // 在第一个Tab，向左跳转到电机列表区
+                switchToArea(areaMotorList)
+                return
             }
             break
 
         case "Right":
             if (tabIndex < 8) {
                 newIndex = tabIndex + 1
-            } else {
-                // 循环到第一个Tab
-                newIndex = 0
             }
+            // 在最后一个Tab，保持不变
             break
 
         case "Up":
-            // 向上跳转到电机列表区
-            switchToArea(areaMotorList)
-            return
+            // 在Tab区域，向上保持不变
+            break
 
         case "Down":
-            // 向下跳转到参数区域
+            // 向下进入当前Tab对应的参数区第一个参数
             switchToArea(areaParams)
             paramIndex = 0  // 从第一个参数开始
+            paramIndexChanged(0)
             return
         }
 
         if (newIndex !== tabIndex) {
             tabIndex = newIndex
             tabIndexChanged(newIndex)
-            console.log("✅ [NavigationManager] Tab索引:", newIndex)
+            console.log("✅ [NavigationManager] Tab索引:", newIndex, "（参数区自动切换显示）")
         }
     }
 
@@ -202,8 +133,8 @@ QtObject {
             // 向上移动（同列）
             if (paramIndex >= 2) {
                 newIndex = paramIndex - 2
-            } else {
-                // 在顶部，跳转到Tab导航区
+            } else if (paramIndex === 0 || paramIndex === 1) {
+                // 在第一个参数，向上返回到对应的Tab
                 switchToArea(areaTabBar)
                 return
             }
@@ -216,14 +147,16 @@ QtObject {
             } else if (paramIndex === 6) {
                 newIndex = 8  // 跳转到第5行
             } else if (paramIndex === 7) {
-                // 右列底部，跳转到底部按钮区
+                // 右列最后一个参数，向下进入底部按钮区
                 switchToArea(areaButtons)
                 buttonIndex = 0
+                buttonIndexChanged(0)
                 return
             } else if (paramIndex === 8) {
-                // 左列底部，跳转到底部按钮区
+                // 左列最后一个参数，向下进入底部按钮区
                 switchToArea(areaButtons)
                 buttonIndex = 0
+                buttonIndexChanged(0)
                 return
             }
             break
@@ -232,24 +165,16 @@ QtObject {
             // 向左移动（同行）
             if (paramIndex % 2 === 1) {
                 newIndex = paramIndex - 1
-            } else {
-                // 在左列，跳转到电机列表区
-                switchToArea(areaMotorList)
-                return
             }
+            // 在左列，保持不变
             break
 
         case "Right":
             // 向右移动（同行）
             if (paramIndex % 2 === 0 && paramIndex < 8) {
                 newIndex = paramIndex + 1
-            } else if (paramIndex === 8) {
-                // 第5行只有左侧，跳转到底部按钮区
-                switchToArea(areaButtons)
-                buttonIndex = 0
-                return
             }
-            // 在右列，保持不变
+            // 在右列或第5行，保持不变
             break
         }
 
@@ -269,31 +194,29 @@ QtObject {
         case "Left":
             if (buttonIndex > 0) {
                 newIndex = buttonIndex - 1
-            } else {
-                // 循环到最后一个按钮
-                newIndex = 2
             }
+            // 在第一个按钮，保持不变
             break
 
         case "Right":
             if (buttonIndex < 2) {
                 newIndex = buttonIndex + 1
-            } else {
-                // 循环到第一个按钮
-                newIndex = 0
             }
+            // 在最后一个按钮，保持不变
             break
 
         case "Up":
-            // 向上跳转到参数区域
+            // 向上返回参数区最后一个参数
             switchToArea(areaParams)
             paramIndex = 8  // 最后一个参数
+            paramIndexChanged(8)
             return
 
         case "Down":
-            // 向下跳转到电机列表区
-            switchToArea(areaMotorList)
-            motorListIndex = 0
+            // 向下循环回参数区最后一个参数
+            switchToArea(areaParams)
+            paramIndex = 8  // 最后一个参数
+            paramIndexChanged(8)
             return
         }
 
@@ -308,7 +231,7 @@ QtObject {
 
     // 处理方向键
     function handleDirectionKey(direction) {
-        console.log("✅ [NavigationManager] 方向键:", direction, "当前区域:", currentArea)
+        console.log("✅ [NavigationManager] 方向键:", direction, "当前区域:", currentArea, "当前索引:", getCurrentIndex())
 
         switch(currentArea) {
         case areaMotorList:
@@ -326,31 +249,23 @@ QtObject {
         }
     }
 
-    // 处理Enter键
-    function handleEnterKey() {
-        console.log("✅ [NavigationManager] Enter键，当前区域:", currentArea)
+    // ========== 辅助函数 ==========
 
+    // 获取当前区域的索引
+    function getCurrentIndex() {
         switch(currentArea) {
         case areaMotorList:
-            console.log("✅ [NavigationManager] 切换到电机:", motorListIndex)
-            // 触发电机切换信号（由外部处理）
-            break
+            return motorListIndex
         case areaTabBar:
-            console.log("✅ [NavigationManager] 切换到Tab:", tabIndex)
-            // 触发Tab切换信号（由外部处理）
-            break
+            return tabIndex
         case areaParams:
-            console.log("✅ [NavigationManager] 激活参数:", paramIndex)
-            // 触发参数激活信号（由外部处理）
-            break
+            return paramIndex
         case areaButtons:
-            console.log("✅ [NavigationManager] 执行按钮:", buttonIndex)
-            // 触发按钮执行信号（由外部处理）
-            break
+            return buttonIndex
+        default:
+            return -1
         }
     }
-
-    // ========== 辅助函数 ==========
 
     // 获取当前焦点的描述信息
     function getCurrentFocusInfo() {
@@ -381,8 +296,13 @@ QtObject {
         tabIndex = 0
         paramIndex = 0
         buttonIndex = 0
-        focusHistory = []
 
         console.log("✅ [NavigationManager] 导航状态已重置")
     }
+
+    // ========== Tab切换时的参数区联动 ==========
+
+    // 当Tab索引改变时，参数区应该自动切换显示对应的参数
+    // 这个逻辑由外部（DeviceSettingsDialog）监听tabIndexChanged信号来实现
+    // NavigationManager只负责管理焦点状态，不负责UI更新
 }
