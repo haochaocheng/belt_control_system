@@ -28,8 +28,9 @@ Rectangle {
         clip: true
 
         // ✅ 2026-01-30 [FIX 100.300.107]: 改为 GridLayout，参考 SwitchInputPage
+        // ✅ 2026-01-30 [FIX 100.300.107.1]: 修改宽度为 90%，避免标签文字被覆盖
         GridLayout {
-            width: paramScrollView.width * 0.7  // ✅ 占 ScrollView 宽度的 70%
+            width: paramScrollView.width * 0.9  // ✅ 占 ScrollView 宽度的 90%
             columns: 4  // 4列：标签1、输入框1、标签2、输入框2
             columnSpacing: 10
             rowSpacing: 12
@@ -367,10 +368,11 @@ Rectangle {
                     id: currentUpperRow
                     anchors.fill: parent
                     spacing: 5
+                    implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.107.1]: 设置固定高度，与其他输入框一致
 
                     DeviceInfo.CustomReadOnlyField {
                         width: parent.width - 30
-                        height: parent.height
+                        height: 60  // ✅ 2026-01-30 [FIX 100.300.107.1]: 设置固定高度
                         text: "80"
                     }
 
@@ -418,10 +420,11 @@ Rectangle {
                     id: currentLowerRow
                     anchors.fill: parent
                     spacing: 5
+                    implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.107.1]: 设置固定高度，与其他输入框一致
 
                     DeviceInfo.CustomReadOnlyField {
                         width: parent.width - 30
-                        height: parent.height
+                        height: 60  // ✅ 2026-01-30 [FIX 100.300.107.1]: 设置固定高度
                         text: "-10"
                     }
 
