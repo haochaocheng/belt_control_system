@@ -18,6 +18,7 @@ Rectangle {
     property int currentMotorIndex: 0  // 当前选中的电机索引 (0-7)
 
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引
+    // ✅ 2026-01-30 [FIX 100.300.106.2]: 修正 focusSubArea 定义
     property int focusItemIndex: -1  // -1 表示无焦点
     property int focusSubArea: 0  // 0:电机列表区域 1:Tab区域 2:参数区域
     property int focusTabIndex: 0  // Tab区域焦点索引
@@ -91,6 +92,7 @@ Rectangle {
             onLoaded: {
                 item.motorIndex = Qt.binding(function() { return root.currentMotorIndex })
                 // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                // ✅ 2026-01-30 [FIX 100.300.106.2]: 直接传递 focusSubArea
                 item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
                 item.focusTabIndex = Qt.binding(function() { return root.focusTabIndex })
                 item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })

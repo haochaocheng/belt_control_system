@@ -18,6 +18,11 @@ Rectangle {
     // property var keyboardManager: null
 
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引（从父页面传递）
+    // ✅ 2026-01-30 [FIX 100.300.106.2]: 修正 focusSubArea 定义
+    // focusSubArea 从 MotorControlPage 传递过来：
+    // - 0: 焦点在电机列表（不在此组件内，不显示焦点）
+    // - 1: 焦点在 Tab 区域（显示 Tab 焦点指示器）
+    // - 2: 焦点在参数区域（显示参数焦点指示器）
     property int focusSubArea: 0  // 0:电机列表 1:Tab区域 2:参数区域
     property int focusTabIndex: 0  // Tab区域焦点索引
     property int focusParamIndex: 0  // 参数区域焦点索引
