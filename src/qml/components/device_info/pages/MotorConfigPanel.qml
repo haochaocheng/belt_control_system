@@ -283,84 +283,105 @@ Rectangle {
 
             // 3: 后轴承温度
             Loader {
+                id: rearBearingTempLoader
                 active: root.currentTabIndex === 3
                 source: "RearBearingTempTab.qml"
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     }
                 }
             }
 
             // 4: A相绕组
             Loader {
+                id: phaseAWindingLoader
                 active: root.currentTabIndex === 4
                 source: "PhaseAWindingTab.qml"
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     }
                 }
             }
 
             // 5: B相绕组
             Loader {
+                id: phaseBWindingLoader
                 active: root.currentTabIndex === 5
                 source: "PhaseBWindingTab.qml"
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     }
                 }
             }
 
             // 6: C相绕组
             Loader {
+                id: phaseCWindingLoader
                 active: root.currentTabIndex === 6
                 source: "PhaseCWindingTab.qml"
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     }
                 }
             }
 
             // 7: 电机温度
             Loader {
+                id: motorTempLoader
                 active: root.currentTabIndex === 7
                 source: "MotorTempTab.qml"
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     }
                 }
             }
 
             // 8: X轴振动
             Loader {
+                id: xAxisVibrationLoader
                 active: root.currentTabIndex === 8
                 source: "XAxisVibrationTab.qml"
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     }
                 }
             }
 
             // 9: Y轴振动
             Loader {
+                id: yAxisVibrationLoader
                 active: root.currentTabIndex === 9
                 source: "YAxisVibrationTab.qml"
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     }
                 }
             }
@@ -376,7 +397,20 @@ Rectangle {
             return currentProtectionLoader.item
         case 2:
             return frontBearingTempLoader.item
-        // TODO: 其他 Tab
+        case 3:
+            return rearBearingTempLoader.item
+        case 4:
+            return phaseAWindingLoader.item
+        case 5:
+            return phaseBWindingLoader.item
+        case 6:
+            return phaseCWindingLoader.item
+        case 7:
+            return motorTempLoader.item
+        case 8:
+            return xAxisVibrationLoader.item
+        case 9:
+            return yAxisVibrationLoader.item
         default:
             return null
         }
