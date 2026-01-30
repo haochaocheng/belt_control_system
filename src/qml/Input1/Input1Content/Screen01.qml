@@ -157,13 +157,14 @@ Item {
 
     // ✅ 2026-01-28 [FIX 100.300.65]: 添加打开设备设置对话框函数
     // ✅ 2026-01-28 [FIX 100.300.66]: 修复 open() 不是函数错误，使用 visible 属性
+    // ✅ 2026-01-30 [修复]: 使用 root 作为父容器，以便对话框关闭后焦点返回到 Screen01
     function openDeviceSettings() {
         console.log("[Screen01] 🔧 打开设备设置对话框，当前选中索引:", selectedIndex)
 
         // 创建并显示 DeviceSettingsDialog
         var component = Qt.createComponent("../../components/device_info/DeviceSettingsDialog.qml")
         if (component.status === Component.Ready) {
-            var dialog = component.createObject(root.parent, {
+            var dialog = component.createObject(root, {
                 // 可以传递参数给对话框
                 // deviceIndex: selectedIndex
             })
