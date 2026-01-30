@@ -227,4 +227,11 @@ Rectangle {
             motorConfigPanel.item.currentTabIndex = tabIndex
         }
     }
+
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 公开键盘事件处理函数
+    // 供DeviceSettingsDialog调用，转发键盘事件给NavigationManager
+    function handleKeyPress(direction) {
+        console.log("✅ [MotorControlPage] 接收键盘事件:", direction)
+        navigationManager.handleDirectionKey(direction)
+    }
 }

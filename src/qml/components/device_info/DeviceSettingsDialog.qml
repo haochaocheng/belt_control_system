@@ -98,6 +98,16 @@ Item {
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 实现两列交叉导航和底部按钮导航
     Keys.onUpPressed: {
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
+        if (currentCategory === 3 && currentFocusArea === 2) {
+            var motorPage = motorControlPageLoader.item
+            if (motorPage && typeof motorPage.handleKeyPress === "function") {
+                motorPage.handleKeyPress("Up")
+                event.accepted = true
+                return
+            }
+        }
+
         // 上键：在当前区域内向上导航
         console.log("✅ [导航] 上键 - 当前区域:", currentFocusArea)
 
@@ -205,6 +215,16 @@ Item {
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 实现两列交叉导航和底部按钮导航
     Keys.onDownPressed: {
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
+        if (currentCategory === 3 && currentFocusArea === 2) {
+            var motorPage = motorControlPageLoader.item
+            if (motorPage && typeof motorPage.handleKeyPress === "function") {
+                motorPage.handleKeyPress("Down")
+                event.accepted = true
+                return
+            }
+        }
+
         // 下键：在当前区域内向下导航
         console.log("✅ [导航] 下键 - 当前区域:", currentFocusArea)
 
@@ -313,6 +333,16 @@ Item {
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加子区域切换支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 添加底部按钮区域左右导航
     Keys.onLeftPressed: {
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
+        if (currentCategory === 3 && currentFocusArea === 2) {
+            var motorPage = motorControlPageLoader.item
+            if (motorPage && typeof motorPage.handleKeyPress === "function") {
+                motorPage.handleKeyPress("Left")
+                event.accepted = true
+                return
+            }
+        }
+
         // 左键：切换到左侧区域
         console.log("✅ [导航] 左键 - 当前区域:", currentFocusArea)
 
@@ -395,6 +425,16 @@ Item {
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加子区域切换支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 添加底部按钮区域左右导航
     Keys.onRightPressed: {
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
+        if (currentCategory === 3 && currentFocusArea === 2) {
+            var motorPage = motorControlPageLoader.item
+            if (motorPage && typeof motorPage.handleKeyPress === "function") {
+                motorPage.handleKeyPress("Right")
+                event.accepted = true
+                return
+            }
+        }
+
         // 右键：切换到右侧区域
         console.log("✅ [导航] 右键 - 当前区域:", currentFocusArea)
 
