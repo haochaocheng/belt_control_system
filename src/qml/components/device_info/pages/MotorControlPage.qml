@@ -51,32 +51,35 @@ Rectangle {
             console.log("✅ [MotorControlPage] 初始状态已同步 - focusItemIndex:", root.focusItemIndex)
         }
 
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.5]: 修复信号处理器参数问题
+        // QML 自动生成的属性变化信号不传递参数，直接使用属性值
+
         // 监听电机列表索引变化
-        onMotorListIndexChanged: function(newIndex) {
-            console.log("✅ [MotorControlPage] 电机列表索引变化:", newIndex)
-            root.currentMotorIndex = newIndex
-            root.focusItemIndex = newIndex
+        onMotorListIndexChanged: {
+            console.log("✅ [MotorControlPage] 电机列表索引变化:", motorListIndex)
+            root.currentMotorIndex = motorListIndex
+            root.focusItemIndex = motorListIndex
         }
 
         // 监听Tab索引变化，切换参数区显示
-        onTabIndexChanged: function(newIndex) {
-            console.log("✅ [MotorControlPage] Tab索引变化:", newIndex, "参数区自动切换显示")
-            root.focusTabIndex = newIndex
+        onTabIndexChanged: {
+            console.log("✅ [MotorControlPage] Tab索引变化:", tabIndex, "参数区自动切换显示")
+            root.focusTabIndex = tabIndex
             // 切换Tab时，参数区自动显示对应的参数
             if (motorConfigPanel.item) {
-                motorConfigPanel.item.currentTabIndex = newIndex
+                motorConfigPanel.item.currentTabIndex = tabIndex
             }
         }
 
         // 监听参数索引变化
-        onParamIndexChanged: function(newIndex) {
-            console.log("✅ [MotorControlPage] 参数索引变化:", newIndex)
-            root.focusParamIndex = newIndex
+        onParamIndexChanged: {
+            console.log("✅ [MotorControlPage] 参数索引变化:", paramIndex)
+            root.focusParamIndex = paramIndex
         }
 
         // 监听按钮索引变化
-        onButtonIndexChanged: function(newIndex) {
-            console.log("✅ [MotorControlPage] 按钮索引变化:", newIndex)
+        onButtonIndexChanged: {
+            console.log("✅ [MotorControlPage] 按钮索引变化:", buttonIndex)
             // 底部按钮焦点处理（如果需要）
         }
 
