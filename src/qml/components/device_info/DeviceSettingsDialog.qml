@@ -477,7 +477,13 @@ Item {
 
     Keys.onEscapePressed: {
         // Escape 键：关闭弹窗
+        console.log("✅ [DeviceSettingsDialog] ESC 键关闭对话框")
         root.visible = false
+        // ✅ 2026-01-30 [修复]: 关闭对话框后，恢复焦点到父容器
+        if (root.parent) {
+            console.log("✅ [DeviceSettingsDialog] 恢复焦点到父容器")
+            root.parent.forceActiveFocus()
+        }
     }
 
     // ========== 背景图片 ==========
@@ -573,7 +579,13 @@ Item {
                     }
                     onClicked: {
                         // ✅ 2026-01-24: 关闭弹窗
+                        console.log("✅ [DeviceSettingsDialog] 关闭按钮被点击")
                         root.visible = false
+                        // ✅ 2026-01-30 [修复]: 关闭对话框后，恢复焦点到父容器
+                        if (root.parent) {
+                            console.log("✅ [DeviceSettingsDialog] 恢复焦点到父容器")
+                            root.parent.forceActiveFocus()
+                        }
                     }
                 }
 
@@ -875,10 +887,9 @@ Item {
                             item.deviceName = root.deviceName
                             // ✅ 2026-01-29 [Qt 虚拟键盘]: keyboardManager 已废弃，注释掉
                             // item.keyboardManager = keyboardManager
-                            // ✅ 2026-01-29 [Qt 虚拟键盘]: 设置父对话框引用
-                            item.parentDialog = root
-                            console.log("✅ [DEBUG] 设置 parentDialog:", root)
-                            console.log("✅ [DEBUG] root.qtVirtualKeyboard:", root.qtVirtualKeyboard)
+                            // ✅ 2026-01-29 [Qt 虚拟键盘]: 直接传递 qtVirtualKeyboard
+                            item.virtualKeyboard = qtVirtualKeyboard
+                            console.log("✅ [DEBUG] 设置 virtualKeyboard:", qtVirtualKeyboard)
 
                             // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.21]: 设置初始焦点状态
                             // 当焦点在内容区域（区域2）且当前类别是开关量输入时
@@ -1175,6 +1186,11 @@ Item {
         case 0:  // 关闭
             console.log("✅ [导航] 触发：关闭")
             root.visible = false
+            // ✅ 2026-01-30 [修复]: 关闭对话框后，恢复焦点到父容器
+            if (root.parent) {
+                console.log("✅ [DeviceSettingsDialog] 恢复焦点到父容器")
+                root.parent.forceActiveFocus()
+            }
             break
         case 1:  // 保存
             console.log("✅ [导航] 触发：保存")
