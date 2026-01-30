@@ -17,6 +17,10 @@ Item {
     anchors.fill: parent
     z: 1000  // 确保在最顶层
 
+    // ✅ 2026-01-30 [修复]: 保存真正的父容器引用（Screen01），用于焦点恢复
+    // 必须在最外层 Item 上定义，才能在 createObject 时设置
+    property var parentContainer: null
+
     // ✅ 2026-01-28 [FIX 100.300.100]: 全屏模态遮罩，阻止所有事件传播到主界面
     MouseArea {
         id: modalOverlay
@@ -62,9 +66,6 @@ Item {
     property int deviceId: 1                      // 设备ID
     property int currentCategory: 0               // 当前选中的参数类别
     property int currentBottomButtonIndex: 0      // ✅ 2026-01-24 [FIX]: 当前选中的底部按钮索引
-
-    // ✅ 2026-01-30 [修复]: 保存真正的父容器引用（Screen01），用于焦点恢复
-    property var parentContainer: null
 
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统
     property int currentFocusArea: 1              // 当前焦点区域 (0:顶部 1:左侧类别 2:右侧内容 3:底部)
@@ -482,23 +483,23 @@ Item {
         // Escape 键：关闭弹窗
         console.log("🔍 [DeviceSettingsDialog] ========== ESC 键关闭对话框 ==========")
         console.log("🔍 [DeviceSettingsDialog] 关闭前 - root.visible:", root.visible)
-        console.log("🔍 [DeviceSettingsDialog] 关闭前 - parentContainer:", parentContainer)
+        console.log("🔍 [DeviceSettingsDialog] 关闭前 - modalContainer.parentContainer:", modalContainer.parentContainer)
 
         root.visible = false
 
         console.log("🔍 [DeviceSettingsDialog] 关闭后 - root.visible:", root.visible)
 
         // ✅ 2026-01-30 [修复]: 使用保存的 parentContainer 引用恢复焦点
-        if (parentContainer) {
+        if (modalContainer.parentContainer) {
             console.log("🔍 [DeviceSettingsDialog] 准备恢复焦点到 parentContainer...")
-            console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", parentContainer.focus)
-            console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", parentContainer.activeFocus)
+            console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", modalContainer.parentContainer.focus)
+            console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", modalContainer.parentContainer.activeFocus)
 
-            parentContainer.forceActiveFocus()
+            modalContainer.parentContainer.forceActiveFocus()
 
             console.log("🔍 [DeviceSettingsDialog] forceActiveFocus() 调用完成")
-            console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", parentContainer.focus)
-            console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", parentContainer.activeFocus)
+            console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", modalContainer.parentContainer.focus)
+            console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", modalContainer.parentContainer.activeFocus)
         } else {
             console.error("🔍 [DeviceSettingsDialog] ❌ parentContainer 为 null，无法恢复焦点！")
         }
@@ -600,23 +601,23 @@ Item {
                         // ✅ 2026-01-24: 关闭弹窗
                         console.log("🔍 [DeviceSettingsDialog] ========== 关闭按钮被点击 ==========")
                         console.log("🔍 [DeviceSettingsDialog] 关闭前 - root.visible:", root.visible)
-                        console.log("🔍 [DeviceSettingsDialog] 关闭前 - parentContainer:", parentContainer)
+                        console.log("🔍 [DeviceSettingsDialog] 关闭前 - modalContainer.parentContainer:", modalContainer.parentContainer)
 
                         root.visible = false
 
                         console.log("🔍 [DeviceSettingsDialog] 关闭后 - root.visible:", root.visible)
 
                         // ✅ 2026-01-30 [修复]: 使用保存的 parentContainer 引用恢复焦点
-                        if (parentContainer) {
+                        if (modalContainer.parentContainer) {
                             console.log("🔍 [DeviceSettingsDialog] 准备恢复焦点到 parentContainer...")
-                            console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", parentContainer.focus)
-                            console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", parentContainer.activeFocus)
+                            console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", modalContainer.parentContainer.focus)
+                            console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", modalContainer.parentContainer.activeFocus)
 
-                            parentContainer.forceActiveFocus()
+                            modalContainer.parentContainer.forceActiveFocus()
 
                             console.log("🔍 [DeviceSettingsDialog] forceActiveFocus() 调用完成")
-                            console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", parentContainer.focus)
-                            console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", parentContainer.activeFocus)
+                            console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", modalContainer.parentContainer.focus)
+                            console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", modalContainer.parentContainer.activeFocus)
                         }
                         console.log("🔍 [DeviceSettingsDialog] =====================================")
                     }
@@ -1219,23 +1220,23 @@ Item {
         case 0:  // 关闭
             console.log("🔍 [DeviceSettingsDialog] ========== 导航触发关闭 ==========")
             console.log("🔍 [DeviceSettingsDialog] 关闭前 - root.visible:", root.visible)
-            console.log("🔍 [DeviceSettingsDialog] 关闭前 - parentContainer:", parentContainer)
+            console.log("🔍 [DeviceSettingsDialog] 关闭前 - modalContainer.parentContainer:", modalContainer.parentContainer)
 
             root.visible = false
 
             console.log("🔍 [DeviceSettingsDialog] 关闭后 - root.visible:", root.visible)
 
             // ✅ 2026-01-30 [修复]: 使用保存的 parentContainer 引用恢复焦点
-            if (parentContainer) {
+            if (modalContainer.parentContainer) {
                 console.log("🔍 [DeviceSettingsDialog] 准备恢复焦点到 parentContainer...")
-                console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", parentContainer.focus)
-                console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", parentContainer.activeFocus)
+                console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", modalContainer.parentContainer.focus)
+                console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", modalContainer.parentContainer.activeFocus)
 
-                parentContainer.forceActiveFocus()
+                modalContainer.parentContainer.forceActiveFocus()
 
                 console.log("🔍 [DeviceSettingsDialog] forceActiveFocus() 调用完成")
-                console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", parentContainer.focus)
-                console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", parentContainer.activeFocus)
+                console.log("🔍 [DeviceSettingsDialog] parentContainer.focus:", modalContainer.parentContainer.focus)
+                console.log("🔍 [DeviceSettingsDialog] parentContainer.activeFocus:", modalContainer.parentContainer.activeFocus)
             }
             console.log("🔍 [DeviceSettingsDialog] =====================================")
             break
