@@ -13,14 +13,20 @@ Rectangle {
     implicitHeight: 600
     color: "transparent"
 
+    // ✅ 2026-01-30 [修复]: 允许接收焦点，以便虚拟键盘关闭后焦点可以返回
+    focus: true
+    activeFocusOnTab: true
+
     // ========== 公开属性 ==========
     property int deviceId: 1
     property string deviceName: "1号皮带"
     property int currentProtectionIndex: 0  // 当前选中的保护项索引
     // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性（已废弃，保留兼容性）
     property var keyboardManager: null
-    // ✅ 2026-01-29 [Qt 虚拟键盘]: 父对话框引用
+    // ✅ 2026-01-29 [Qt 虚拟键盘]: 父对话框引用（已废弃）
     property var parentDialog: null
+    // ✅ 2026-01-29 [Qt 虚拟键盘]: 直接引用虚拟键盘
+    property var virtualKeyboard: null
     // ✅ 2026-01-28 [FIX 100.300.101]: 导航焦点索引（从父对话框传递）
     property int focusItemIndex: -1  // -1 表示无焦点
     // ✅ 2026-01-28 [FIX 100.300.101]: 导航子区域（0:列表 1:参数 2:底部按钮）
@@ -1494,18 +1500,15 @@ Rectangle {
         if (inputField) {
             console.log("✅ [SwitchInputPage] 打开 Qt 虚拟键盘 - 控件:", inputField, "模式:", inputMode)
 
-            // ✅ 2026-01-29 [修复]: 通过 parentDialog 访问 qtVirtualKeyboard
-            if (parentDialog && parentDialog.qtVirtualKeyboard) {
-                // 打开 Qt 虚拟键盘
-                parentDialog.qtVirtualKeyboard.openForField(inputField, function(newValue) {
+            // ✅ 2026-01-29 [修复]: 直接使用 virtualKeyboard
+            if (virtualKeyboard) {
+                // ✅ 2026-01-30 [修复]: 传递父页面引用，用于恢复焦点
+                virtualKeyboard.openForField(inputField, function(newValue) {
                     console.log("✅ [SwitchInputPage] 虚拟键盘输入完成:", newValue)
-                }, inputMode)
+                }, inputMode, root)
             } else {
                 console.warn("⚠️ [SwitchInputPage] 未找到 Qt 虚拟键盘实例")
-                console.warn("   parentDialog:", parentDialog)
-                if (parentDialog) {
-                    console.warn("   parentDialog.qtVirtualKeyboard:", parentDialog.qtVirtualKeyboard)
-                }
+                console.warn("   virtualKeyboard:", virtualKeyboard)
             }
         } else {
             console.warn("⚠️ [SwitchInputPage] 输入控件未找到 - 索引:", paramIndex)

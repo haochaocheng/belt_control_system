@@ -55,7 +55,7 @@ Rectangle {
 
                         Text {
                             text: "是否投入:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -106,7 +106,7 @@ Rectangle {
 
                                     Text {
                                         text: "投入"
-                                        font.pixelSize: 14
+                                        font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                                         color: "#E0E0E0"
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
@@ -137,7 +137,7 @@ Rectangle {
 
                                     Text {
                                         text: "禁用"
-                                        font.pixelSize: 14
+                                        font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                                         color: "#E0E0E0"
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
@@ -154,7 +154,7 @@ Rectangle {
 
                         Text {
                             text: "动作保护类型:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -191,7 +191,7 @@ Rectangle {
 
                         Text {
                             text: "电流量程:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -228,7 +228,7 @@ Rectangle {
 
                         Text {
                             text: "电流下限:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -262,7 +262,7 @@ Rectangle {
 
                                 Text {
                                     text: "A"
-                                    font.pixelSize: 14
+                                    font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                                     color: "#9E9E9E"
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
@@ -278,7 +278,7 @@ Rectangle {
 
                         Text {
                             text: "过滤干扰延时:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -323,7 +323,7 @@ Rectangle {
 
                         Text {
                             text: "报警类型:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -374,7 +374,7 @@ Rectangle {
 
                                     Text {
                                         text: "按次数"
-                                        font.pixelSize: 14
+                                        font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                                         color: "#E0E0E0"
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
@@ -405,7 +405,7 @@ Rectangle {
 
                                     Text {
                                         text: "按时间"
-                                        font.pixelSize: 14
+                                        font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                                         color: "#E0E0E0"
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
@@ -422,7 +422,7 @@ Rectangle {
 
                         Text {
                             text: "故障保护类型:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -459,7 +459,7 @@ Rectangle {
 
                         Text {
                             text: "电流上限:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -493,7 +493,7 @@ Rectangle {
 
                                 Text {
                                     text: "A"
-                                    font.pixelSize: 14
+                                    font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                                     color: "#9E9E9E"
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
@@ -509,7 +509,7 @@ Rectangle {
 
                         Text {
                             text: "输入点选择:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight

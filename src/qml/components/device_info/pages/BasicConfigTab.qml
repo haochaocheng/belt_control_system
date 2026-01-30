@@ -60,7 +60,7 @@ Rectangle {
 
                         Text {
                             text: "运行状态:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -173,7 +173,7 @@ Rectangle {
 
                         Text {
                             text: "模块地址:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -214,7 +214,7 @@ Rectangle {
 
                         Text {
                             text: "反馈通道:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -263,7 +263,7 @@ Rectangle {
 
                         Text {
                             text: "模块类型:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
@@ -310,7 +310,7 @@ Rectangle {
 
                         Text {
                             text: "输出通道:"
-                            font.pixelSize: 14
+                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
                             color: "#9E9E9E"
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight

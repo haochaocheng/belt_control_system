@@ -5,6 +5,7 @@ import ".." as DeviceInfo  // ✅ 2026-01-27 [FIX 100.300.32]: 导入自定义�
 
 // ✅ 2026-01-25 [模拟量输入页面] 左右分栏布局：左侧列表 + 右侧参数编辑
 // ✅ 2026-01-28 [虚拟键盘集成]: 接收并传递键盘管理器
+// ✅ 2026-01-30 [FIX 100.300.105]: 添加完整的导航系统（参考 SwitchInputPage）
 Rectangle {
     id: root
     // ✅ 2026-01-28 [FIX 100.300.75]: 增加 implicitWidth 到 1400，充分利用右侧空间
@@ -13,12 +14,24 @@ Rectangle {
     implicitHeight: 600
     color: "transparent"
 
+    // ✅ 2026-01-30 [FIX 100.300.105]: 允许接收焦点，以便虚拟键盘关闭后焦点可以返回
+    focus: true
+    activeFocusOnTab: true
+
     // ========== 公开属性 ==========
     property int deviceId: 1
     property string deviceName: "1号皮带"
     property int currentProtectionIndex: 0  // 当前选中的保护项索引
-    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性（已废弃，保留兼容性）
     property var keyboardManager: null
+    // ✅ 2026-01-30 [FIX 100.300.105]: Qt 虚拟键盘引用
+    property var virtualKeyboard: null
+    // ✅ 2026-01-30 [FIX 100.300.105]: 导航焦点索引（从父对话框传递）
+    property int focusItemIndex: -1  // -1 表示无焦点
+    // ✅ 2026-01-30 [FIX 100.300.105]: 导航子区域（0:列表 1:参数 2:底部按钮）
+    property int focusSubArea: 0  // 0:列表区域 1:参数区域 2:底部按钮区域
+    property int focusParamIndex: 0  // 参数区域焦点索引
+    property int focusButtonIndex: 0  // 底部按钮区域焦点索引
 
     // ========== 模拟量保护模型 ==========
     ListModel {
@@ -98,8 +111,12 @@ Rectangle {
                         // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
                         height: 45  // 从 60 改为 45（一级标题是 40）
                         color: "transparent"
-                        border.color: "transparent"
-                        border.width: 0
+                        // ✅ 2026-01-30 [FIX 100.300.105]: 添加焦点指示器边框
+                        border.color: isFocused ? "#2196F3" : "transparent"
+                        border.width: isFocused ? 3 : 0
+
+                        // ✅ 2026-01-30 [FIX 100.300.105]: 焦点状态判断
+                        readonly property bool isFocused: (root.focusSubArea === 0 && root.focusItemIndex === index)
 
                         // ✅ 2026-01-26 [FIX 100.300.25.5]: 添加背景图片
                         Image {
@@ -108,27 +125,28 @@ Rectangle {
                             fillMode: Image.Stretch
                             z: -1  // 放在最底层
 
-                            // 使用相对路径，便于QDS预览
-                            source: "../../../images/bhNameBK.png"
+                            // ✅ 2026-01-30 [FIX 100.300.105]: 根据焦点状态切换背景图片
+                            source: isFocused ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
 
-                            states: [
-                                State {
-                                    name: "selected"
-                                    when: root.currentProtectionIndex === index
-                                    PropertyChanges {
-                                        target: backgroundImage
-                                        source: "../../../images/bhNameBK1.png"
-                                    }
-                                },
-                                State {
-                                    name: "normal"
-                                    when: root.currentProtectionIndex !== index
-                                    PropertyChanges {
-                                        target: backgroundImage
-                                        source: "../../../images/bhNameBK.png"
-                                    }
-                                }
-                            ]
+                            // ✅ 2026-01-30 [注释]: 保留原有的 states，但现在由 isFocused 控制
+                            // states: [
+                            //     State {
+                            //         name: "selected"
+                            //         when: root.currentProtectionIndex === index
+                            //         PropertyChanges {
+                            //             target: backgroundImage
+                            //             source: "../../../images/bhNameBK1.png"
+                            //         }
+                            //     },
+                            //     State {
+                            //         name: "normal"
+                            //         when: root.currentProtectionIndex !== index
+                            //         PropertyChanges {
+                            //             target: backgroundImage
+                            //             source: "../../../images/bhNameBK.png"
+                            //         }
+                            //     }
+                            // ]
                         }
 
                         // ✅ 左侧激活指示条
@@ -141,12 +159,13 @@ Rectangle {
                         }
 
                         // ✅ 2026-01-26 [FIX 100.300.25.5]: 模拟量名称居中显示
+                        // ✅ 2026-01-30 [FIX 100.300.105]: 根据焦点状态调整文字样式
                         Text {
                             text: model.name
                             // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整字体，使二级标题比一级标题小
                             font.pixelSize: 14  // 从 16 改为 14（与一级标题相同）
-                            font.weight: root.currentProtectionIndex === index ? Font.Bold : Font.Normal
-                            color: root.currentProtectionIndex === index ? "#E0E0E0" : "#9E9E9E"
+                            font.weight: isFocused ? Font.Bold : Font.Normal
+                            color: isFocused ? "#E0E0E0" : "#9E9E9E"
                             anchors.centerIn: parent
                         }
 
@@ -293,8 +312,10 @@ Rectangle {
                                 spacing: 12
 
                                 // 保护名称
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -305,17 +326,35 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomTextField {
-                                        id: nameField
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 0）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
+
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
+
+                                        DeviceInfo.CustomTextField {
+                                            id: nameField
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        }
                                     }
                                 }
 
                                 // 模块类型
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -326,34 +365,52 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomComboBox {
-                                        id: moduleTypeCombo
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 2）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
 
-                                        model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
 
-                                        onCurrentTextChanged: {
-                                            // 根据模块类型自动设置寄存器地址
-                                            if (currentText === "输入模块1") {
-                                                registerAddressSpin.value = 2
-                                            } else if (currentText === "输入模块2") {
-                                                registerAddressSpin.value = 3
-                                            } else if (currentText === "输入模块3") {
-                                                registerAddressSpin.value = 4
-                                            } else if (currentText === "输入模块4") {
-                                                registerAddressSpin.value = 5
-                                            } else if (currentText === "输出模块") {
-                                                registerAddressSpin.value = 50
+                                        DeviceInfo.CustomComboBox {
+                                            id: moduleTypeCombo
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+
+                                            model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
+
+                                            onCurrentTextChanged: {
+                                                // 根据模块类型自动设置寄存器地址
+                                                if (currentText === "输入模块1") {
+                                                    registerAddressSpin.value = 2
+                                                } else if (currentText === "输入模块2") {
+                                                    registerAddressSpin.value = 3
+                                                } else if (currentText === "输入模块3") {
+                                                    registerAddressSpin.value = 4
+                                                } else if (currentText === "输入模块4") {
+                                                    registerAddressSpin.value = 5
+                                                } else if (currentText === "输出模块") {
+                                                    registerAddressSpin.value = 50
+                                                }
                                             }
                                         }
                                     }
                                 }
 
                                 // 寄存器地址
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
                                     visible: moduleTypeCombo.currentText !== "主模块"
 
@@ -365,20 +422,38 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: registerAddressSpin
-                                        from: 0
-                                        to: 255
-                                        editable: true
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 4）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
+
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
+
+                                        DeviceInfo.CustomSpinBox {
+                                            id: registerAddressSpin
+                                            from: 0
+                                            to: 255
+                                            editable: true
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        }
                                     }
                                 }
 
                                 // 通道编号
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -389,14 +464,30 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: channelSpin
-                                        from: 0
-                                        to: 7
-                                        editable: true
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 6）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
+
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
+
+                                        DeviceInfo.CustomSpinBox {
+                                            id: channelSpin
+                                            from: 0
+                                            to: 7
+                                            editable: true
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        }
                                     }
                                 }
 
@@ -408,8 +499,10 @@ Rectangle {
                                 }
 
                                 // 上限值
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -420,22 +513,40 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: upperLimitSpin
-                                        from: 0
-                                        to: 10000
-                                        value: 100
-                                        stepSize: 10
-                                        editable: true
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 8）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
+
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
+
+                                        DeviceInfo.CustomSpinBox {
+                                            id: upperLimitSpin
+                                            from: 0
+                                            to: 10000
+                                            value: 100
+                                            stepSize: 10
+                                            editable: true
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        }
                                     }
                                 }
 
                                 // 下限值
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -446,22 +557,40 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: lowerLimitSpin
-                                        from: 0
-                                        to: 10000
-                                        value: 0
-                                        stepSize: 10
-                                        editable: true
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 10）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
+
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 10) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 10) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
+
+                                        DeviceInfo.CustomSpinBox {
+                                            id: lowerLimitSpin
+                                            from: 0
+                                            to: 10000
+                                            value: 0
+                                            stepSize: 10
+                                            editable: true
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        }
                                     }
                                 }
 
                                 // 量程
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -472,22 +601,40 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: rangeSpin
-                                        from: 1
-                                        to: 10000
-                                        value: 100
-                                        stepSize: 10
-                                        editable: true
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 12）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
+
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 12) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 12) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
+
+                                        DeviceInfo.CustomSpinBox {
+                                            id: rangeSpin
+                                            from: 1
+                                            to: 10000
+                                            value: 100
+                                            stepSize: 10
+                                            editable: true
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        }
                                     }
                                 }
 
                                 // 单位
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -498,14 +645,30 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomComboBox {
-                                        id: unitCombo
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 14）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                                        model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
-                                        editable: true
-                                        currentIndex: 0
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
+
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 14) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 14) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
+
+                                        DeviceInfo.CustomComboBox {
+                                            id: unitCombo
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                            model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
+                                            editable: true
+                                            currentIndex: 0
+                                        }
                                     }
                                 }
                             }  // 左列结束
@@ -533,8 +696,10 @@ Rectangle {
                                 spacing: 12
 
                                 // 保护延时
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -545,33 +710,51 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: delaySpin
-                                        from: 0
-                                        to: 600
-                                        value: 10
-                                        stepSize: 1
-                                        editable: true
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 1）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
 
-                                        property int decimals: 1
-                                        property real realValue: value / 10
-
-                                        textFromValue: function(value, locale) {
-                                            return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? 3 : 0
+                                            radius: 4
+                                            z: 10
                                         }
 
-                                        valueFromText: function(text, locale) {
-                                            return Number.fromLocaleString(locale, text) * 10
+                                        DeviceInfo.CustomSpinBox {
+                                            id: delaySpin
+                                            from: 0
+                                            to: 600
+                                            value: 10
+                                            stepSize: 1
+                                            editable: true
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+
+                                            property int decimals: 1
+                                            property real realValue: value / 10
+
+                                            textFromValue: function(value, locale) {
+                                                return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                            }
+
+                                            valueFromText: function(text, locale) {
+                                                return Number.fromLocaleString(locale, text) * 10
+                                            }
                                         }
                                     }
                                 }
 
                                 // 播放次数
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -582,21 +765,39 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: playCountSpin
-                                        from: 1
-                                        to: 99
-                                        value: 3
-                                        editable: true
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 3）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
+
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
+
+                                        DeviceInfo.CustomSpinBox {
+                                            id: playCountSpin
+                                            from: 1
+                                            to: 99
+                                            value: 3
+                                            editable: true
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        }
                                     }
                                 }
 
                                 // 播放时长
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -607,26 +808,42 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: durationSpin
-                                        from: 1
-                                        to: 600
-                                        value: 50
-                                        stepSize: 5
-                                        editable: true
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 5）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
 
-                                        property int decimals: 1
-                                        property real realValue: value / 10
-
-                                        textFromValue: function(value, locale) {
-                                            return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? 3 : 0
+                                            radius: 4
+                                            z: 10
                                         }
 
-                                        valueFromText: function(text, locale) {
-                                            return Number.fromLocaleString(locale, text) * 10
+                                        DeviceInfo.CustomSpinBox {
+                                            id: durationSpin
+                                            from: 1
+                                            to: 600
+                                            value: 50
+                                            stepSize: 5
+                                            editable: true
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+
+                                            property int decimals: 1
+                                            property real realValue: value / 10
+
+                                            textFromValue: function(value, locale) {
+                                                return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                            }
+
+                                            valueFromText: function(text, locale) {
+                                                return Number.fromLocaleString(locale, text) * 10
+                                            }
                                         }
                                     }
                                 }
@@ -639,8 +856,10 @@ Rectangle {
                                 }
 
                                 // 语音报警类型
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含 RadioButton 组
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
 
                                     Text {
@@ -651,82 +870,106 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    RadioButton {
-                                        id: ttsRadio
-                                        text: "文字转语音"
-                                        checked: true
-                                        font.pixelSize: 12
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 7）
+                                    Item {
+                                        Layout.fillWidth: true
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
 
-                                        indicator: Rectangle {
-                                            implicitWidth: 18
-                                            implicitHeight: 18
-                                            x: ttsRadio.leftPadding
-                                            y: parent.height / 2 - height / 2
-                                            radius: 9
-                                            border.color: ttsRadio.checked ? "#00d4ff" : "#7f8c8d"
-                                            border.width: 2
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
                                             color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
 
-                                            Rectangle {
-                                                width: 10
-                                                height: 10
-                                                x: 4
-                                                y: 4
-                                                radius: 5
-                                                color: "#3d4556"
-                                                visible: ttsRadio.checked
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            spacing: 10
+
+                                            RadioButton {
+                                                id: ttsRadio
+                                                text: "文字转语音"
+                                                checked: true
+                                                font.pixelSize: 12
+
+                                                indicator: Rectangle {
+                                                    implicitWidth: 18
+                                                    implicitHeight: 18
+                                                    x: ttsRadio.leftPadding
+                                                    y: parent.height / 2 - height / 2
+                                                    radius: 9
+                                                    border.color: ttsRadio.checked ? "#00d4ff" : "#7f8c8d"
+                                                    border.width: 2
+                                                    color: "transparent"
+
+                                                    Rectangle {
+                                                        width: 10
+                                                        height: 10
+                                                        x: 4
+                                                        y: 4
+                                                        radius: 5
+                                                        color: "#3d4556"
+                                                        visible: ttsRadio.checked
+                                                    }
+                                                }
+
+                                                contentItem: Text {
+                                                    text: ttsRadio.text
+                                                    font: ttsRadio.font
+                                                    color: "#E0E0E0"
+                                                    leftPadding: ttsRadio.indicator.width + 8
+                                                    verticalAlignment: Text.AlignVCenter
+                                                }
                                             }
-                                        }
 
-                                        contentItem: Text {
-                                            text: ttsRadio.text
-                                            font: ttsRadio.font
-                                            color: "#E0E0E0"
-                                            leftPadding: ttsRadio.indicator.width + 8
-                                            verticalAlignment: Text.AlignVCenter
-                                        }
-                                    }
+                                            RadioButton {
+                                                id: fileRadio
+                                                text: "音频文件"
+                                                checked: false
+                                                font.pixelSize: 12
 
-                                    RadioButton {
-                                        id: fileRadio
-                                        text: "音频文件"
-                                        checked: false
-                                        font.pixelSize: 12
+                                                indicator: Rectangle {
+                                                    implicitWidth: 18
+                                                    implicitHeight: 18
+                                                    x: fileRadio.leftPadding
+                                                    y: parent.height / 2 - height / 2
+                                                    radius: 9
+                                                    border.color: fileRadio.checked ? "#00d4ff" : "#7f8c8d"
+                                                    border.width: 2
+                                                    color: "transparent"
 
-                                        indicator: Rectangle {
-                                            implicitWidth: 18
-                                            implicitHeight: 18
-                                            x: fileRadio.leftPadding
-                                            y: parent.height / 2 - height / 2
-                                            radius: 9
-                                            border.color: fileRadio.checked ? "#00d4ff" : "#7f8c8d"
-                                            border.width: 2
-                                            color: "transparent"
+                                                    Rectangle {
+                                                        width: 10
+                                                        height: 10
+                                                        x: 4
+                                                        y: 4
+                                                        radius: 5
+                                                        color: "#3d4556"
+                                                        visible: fileRadio.checked
+                                                    }
+                                                }
 
-                                            Rectangle {
-                                                width: 10
-                                                height: 10
-                                                x: 4
-                                                y: 4
-                                                radius: 5
-                                                color: "#3d4556"
-                                                visible: fileRadio.checked
+                                                contentItem: Text {
+                                                    text: fileRadio.text
+                                                    font: fileRadio.font
+                                                    color: "#E0E0E0"
+                                                    leftPadding: fileRadio.indicator.width + 8
+                                                    verticalAlignment: Text.AlignVCenter
+                                                }
                                             }
-                                        }
-
-                                        contentItem: Text {
-                                            text: fileRadio.text
-                                            font: fileRadio.font
-                                            color: "#E0E0E0"
-                                            leftPadding: fileRadio.indicator.width + 8
-                                            verticalAlignment: Text.AlignVCenter
                                         }
                                     }
                                 }
 
                                 // TTS文字输入
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
                                     visible: ttsRadio.checked
 
@@ -738,18 +981,36 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomTextField {
-                                        id: ttsTextField
-                                        placeholderText: "输入报警文字内容..."
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 9）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
+
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 9) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 9) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
+
+                                        DeviceInfo.CustomTextField {
+                                            id: ttsTextField
+                                            placeholderText: "输入报警文字内容..."
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        }
                                     }
                                 }
 
                                 // 音频文件选择
+                                // ✅ 2026-01-30 [FIX 100.300.105.1]: 修改焦点指示器范围，只包含输入框
                                 RowLayout {
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
                                     spacing: 10
                                     visible: fileRadio.checked
 
@@ -761,13 +1022,29 @@ Rectangle {
                                         horizontalAlignment: Text.AlignRight  // ✅ 右对齐
                                     }
 
-                                    DeviceInfo.CustomTextField {
-                                        id: audioField
-                                        placeholderText: "选择音频文件..."
+                                    // ✅ 2026-01-30 [FIX 100.300.105.1]: 焦点指示器容器（索引 11）
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.87]: 固定最大宽度 300px
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                                        readOnly: true
+                                        Layout.maximumWidth: 300
+                                        Layout.preferredHeight: 40
+
+                                        // 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
+
+                                        DeviceInfo.CustomTextField {
+                                            id: audioField
+                                            placeholderText: "选择音频文件..."
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                            readOnly: true
+                                        }
                                     }
 
                                     Button {
@@ -809,80 +1086,126 @@ Rectangle {
                 }
 
                 // 底部按钮
+                // ✅ 2026-01-30 [FIX 100.300.105]: 添加焦点指示器
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
 
-                    Button {
-                        text: "保存"
+                    // 保存按钮（索引 0）
+                    Item {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
 
-                        background: Rectangle {
-                            color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
-                            radius: 2
+                        // 焦点指示器
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 0) ? 3 : 0
+                            radius: 4
+                            z: 10
                         }
 
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 13
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
+                        Button {
+                            anchors.fill: parent
+                            text: "保存"
 
-                        onClicked: {
-                            saveProtectionData()
+                            background: Rectangle {
+                                color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
+                                radius: 2
+                            }
+
+                            contentItem: Text {
+                                text: parent.text
+                                font.pixelSize: 13
+                                font.bold: true
+                                color: "white"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            onClicked: {
+                                saveProtectionData()
+                            }
                         }
                     }
 
-                    Button {
-                        text: "删除"
+                    // 删除按钮（索引 1）
+                    Item {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
 
-                        background: Rectangle {
-                            color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
-                            radius: 2
+                        // 焦点指示器
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 1) ? 3 : 0
+                            radius: 4
+                            z: 10
                         }
 
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 13
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
+                        Button {
+                            anchors.fill: parent
+                            text: "删除"
 
-                        onClicked: {
-                            console.log("删除保护:", nameField.text)
-                            // TODO: 实现删除功能
+                            background: Rectangle {
+                                color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
+                                radius: 2
+                            }
+
+                            contentItem: Text {
+                                text: parent.text
+                                font.pixelSize: 13
+                                font.bold: true
+                                color: "white"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            onClicked: {
+                                console.log("删除保护:", nameField.text)
+                                // TODO: 实现删除功能
+                            }
                         }
                     }
 
-                    Button {
-                        text: "重置"
+                    // 重置按钮（索引 2）
+                    Item {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
 
-                        background: Rectangle {
-                            color: parent.pressed ? "#7f8c8d" : (parent.hovered ? "#95a5a6" : "#7f8c8d")
-                            radius: 2
+                        // 焦点指示器
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 2) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 2) ? 3 : 0
+                            radius: 4
+                            z: 10
                         }
 
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 13
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
+                        Button {
+                            anchors.fill: parent
+                            text: "重置"
 
-                        onClicked: {
-                            loadProtectionData(root.currentProtectionIndex)
+                            background: Rectangle {
+                                color: parent.pressed ? "#7f8c8d" : (parent.hovered ? "#95a5a6" : "#7f8c8d")
+                                radius: 2
+                            }
+
+                            contentItem: Text {
+                                text: parent.text
+                                font.pixelSize: 13
+                                font.bold: true
+                                color: "white"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            onClicked: {
+                                loadProtectionData(root.currentProtectionIndex)
+                            }
                         }
                     }
                 }
@@ -1023,6 +1346,122 @@ Rectangle {
         // 加载第一个保护项的详细参数
         if (analogProtectionModel.count > 0) {
             loadProtectionData(0)
+        }
+    }
+
+    // ========== 导航函数 ==========
+    // ✅ 2026-01-30 [FIX 100.300.105]: 添加导航系统函数
+
+    // 返回参数区域的字段数量
+    function getParamFieldCount() {
+        return 16  // 模拟量输入有16个参数字段（左列8个 + 右列8个）
+    }
+
+    // 触发参数输入（打开虚拟键盘）
+    function triggerParamInput(paramIndex) {
+        console.log("✅ [AnalogInputPage] 触发参数输入 - 索引:", paramIndex)
+
+        var inputField = null
+        var inputMode = "numeric"  // 默认数字模式
+
+        switch(paramIndex) {
+        case 0:  // 保护名称
+            inputField = nameField
+            inputMode = "chinese"
+            break
+        case 1:  // 保护延时
+            inputField = delaySpin
+            inputMode = "numeric"
+            break
+        case 2:  // 模块类型
+            inputField = moduleTypeCombo
+            inputMode = "english"
+            break
+        case 3:  // 播放次数
+            inputField = playCountSpin
+            inputMode = "numeric"
+            break
+        case 4:  // 寄存器地址
+            inputField = registerAddressSpin
+            inputMode = "numeric"
+            break
+        case 5:  // 播放时长
+            inputField = durationSpin
+            inputMode = "numeric"
+            break
+        case 6:  // 通道编号
+            inputField = channelSpin
+            inputMode = "numeric"
+            break
+        case 7:  // 语音报警类型（RadioButton 组，切换选中状态）
+            if (ttsRadio.checked) {
+                fileRadio.checked = true
+            } else {
+                ttsRadio.checked = true
+            }
+            console.log("✅ [AnalogInputPage] 切换语音报警类型:", ttsRadio.checked ? "文字转语音" : "音频文件")
+            return  // RadioButton 不需要打开虚拟键盘
+        case 8:  // 上限值
+            inputField = upperLimitSpin
+            inputMode = "numeric"
+            break
+        case 9:  // TTS文字
+            inputField = ttsTextField
+            inputMode = "chinese"
+            break
+        case 10:  // 下限值
+            inputField = lowerLimitSpin
+            inputMode = "numeric"
+            break
+        case 11:  // 音频文件
+            inputField = audioField
+            inputMode = "english"
+            break
+        case 12:  // 量程
+            inputField = rangeSpin
+            inputMode = "numeric"
+            break
+        case 14:  // 单位
+            inputField = unitCombo
+            inputMode = "english"
+            break
+        default:
+            console.warn("⚠️ [AnalogInputPage] 未知的参数索引:", paramIndex)
+            return
+        }
+
+        // 打开虚拟键盘
+        if (virtualKeyboard && inputField) {
+            console.log("✅ [AnalogInputPage] 打开 Qt 虚拟键盘 - 控件:", inputField, "模式:", inputMode)
+            virtualKeyboard.openForField(inputField, function(newValue) {
+                console.log("✅ [AnalogInputPage] 虚拟键盘输入完成:", newValue)
+            }, inputMode, root)
+        } else {
+            console.warn("⚠️ [AnalogInputPage] 虚拟键盘或输入控件不可用")
+        }
+    }
+
+    // 触发底部按钮
+    function triggerButton(buttonIndex) {
+        console.log("✅ [AnalogInputPage] 触发底部按钮 - 索引:", buttonIndex)
+
+        switch(buttonIndex) {
+        case 0:  // 保存
+            console.log("✅ [AnalogInputPage] 触发：保存")
+            saveProtectionData()
+            break
+        case 1:  // 删除
+            console.log("✅ [AnalogInputPage] 触发：删除")
+            console.log("删除保护:", nameField.text)
+            // TODO: 实现删除功能
+            break
+        case 2:  // 重置
+            console.log("✅ [AnalogInputPage] 触发：重置")
+            loadProtectionData(root.currentProtectionIndex)
+            break
+        default:
+            console.warn("⚠️ [AnalogInputPage] 未知的按钮索引:", buttonIndex)
+            break
         }
     }
 }
