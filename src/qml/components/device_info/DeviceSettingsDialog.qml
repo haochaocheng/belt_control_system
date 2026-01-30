@@ -121,25 +121,40 @@ Item {
                         currentContentItemIndex--
                     }
                 } else if (currentPage.focusSubArea === 1) {
-                    // ✅ 参数区域：两列交叉导航 - 同列向上移动
-                    var currentIndex = currentPage.focusParamIndex
-                    var isRightColumn = (currentIndex % 2 === 1)  // 奇数索引 = 右列
+                    // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
+                    var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
+                    var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
 
-                    if (isRightColumn) {
-                        // 右列：1→3→5→7，向上移动2步
-                        if (currentIndex >= 2) {
-                            currentPage.focusParamIndex = currentIndex - 2
-                            console.log("✅ [导航] 参数区域右列上移:", currentIndex, "→", currentIndex - 2)
+                    if (layoutMode === "single-column") {
+                        // ✅ 一列布局：直接向上移动
+                        var currentIndex = currentPage.focusParamIndex
+                        if (currentIndex > 0) {
+                            currentPage.focusParamIndex = currentIndex - 1
+                            console.log("✅ [导航] 参数区域（一列）上移:", currentIndex, "→", currentIndex - 1)
                         } else {
-                            console.log("⚠️ [导航] 已到达右列第一个参数")
+                            console.log("⚠️ [导航] 已到达第一个参数")
                         }
                     } else {
-                        // 左列：0→2→4→6→8，向上移动2步
-                        if (currentIndex >= 2) {
-                            currentPage.focusParamIndex = currentIndex - 2
-                            console.log("✅ [导航] 参数区域左列上移:", currentIndex, "→", currentIndex - 2)
+                        // ✅ 两列布局：同列向上移动
+                        var currentIndex = currentPage.focusParamIndex
+                        var isRightColumn = (currentIndex % 2 === 1)  // 奇数索引 = 右列
+
+                        if (isRightColumn) {
+                            // 右列：1→3→5→7，向上移动2步
+                            if (currentIndex >= 2) {
+                                currentPage.focusParamIndex = currentIndex - 2
+                                console.log("✅ [导航] 参数区域右列上移:", currentIndex, "→", currentIndex - 2)
+                            } else {
+                                console.log("⚠️ [导航] 已到达右列第一个参数")
+                            }
                         } else {
-                            console.log("⚠️ [导航] 已到达左列第一个参数")
+                            // 左列：0→2→4→6→8，向上移动2步
+                            if (currentIndex >= 2) {
+                                currentPage.focusParamIndex = currentIndex - 2
+                                console.log("✅ [导航] 参数区域左列上移:", currentIndex, "→", currentIndex - 2)
+                            } else {
+                                console.log("⚠️ [导航] 已到达左列第一个参数")
+                            }
                         }
                     }
                 } else if (currentPage.focusSubArea === 2) {
@@ -214,34 +229,50 @@ Item {
                         currentContentItemIndex++
                     }
                 } else if (currentPage.focusSubArea === 1) {
-                    // ✅ 参数区域：两列交叉导航 - 同列向下移动
-                    var currentIndex = currentPage.focusParamIndex
-                    var paramCount = currentPage.getParamFieldCount()
-                    var isRightColumn = (currentIndex % 2 === 1)  // 奇数索引 = 右列
+                    // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
+                    var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
+                    var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
 
-                    if (isRightColumn) {
-                        // 右列：1→3→5→7，向下移动2步
-                        var nextIndex = currentIndex + 2
-                        if (nextIndex < paramCount) {
-                            currentPage.focusParamIndex = nextIndex
-                            console.log("✅ [导航] 参数区域右列下移:", currentIndex, "→", nextIndex)
+                    if (layoutMode === "single-column") {
+                        // ✅ 一列布局：直接向下移动
+                        var currentIndex = currentPage.focusParamIndex
+                        var paramCount = currentPage.getParamFieldCount()
+                        if (currentIndex < paramCount - 1) {
+                            currentPage.focusParamIndex = currentIndex + 1
+                            console.log("✅ [导航] 参数区域（一列）下移:", currentIndex, "→", currentIndex + 1)
                         } else {
-                            // 已到达右列最后一个 → 进入底部按钮区域
-                            currentPage.focusSubArea = 2
-                            currentPage.focusButtonIndex = 1  // 删除输入（右侧按钮）
-                            console.log("✅ [导航] 从参数区域右列进入底部按钮区域")
+                            console.log("⚠️ [导航] 已到达最后一个参数")
                         }
                     } else {
-                        // 左列：0→2→4→6→8，向下移动2步
-                        var nextIndex = currentIndex + 2
-                        if (nextIndex < paramCount) {
-                            currentPage.focusParamIndex = nextIndex
-                            console.log("✅ [导航] 参数区域左列下移:", currentIndex, "→", nextIndex)
+                        // ✅ 两列布局：同列向下移动
+                        var currentIndex = currentPage.focusParamIndex
+                        var paramCount = currentPage.getParamFieldCount()
+                        var isRightColumn = (currentIndex % 2 === 1)  // 奇数索引 = 右列
+
+                        if (isRightColumn) {
+                            // 右列：1→3→5→7，向下移动2步
+                            var nextIndex = currentIndex + 2
+                            if (nextIndex < paramCount) {
+                                currentPage.focusParamIndex = nextIndex
+                                console.log("✅ [导航] 参数区域右列下移:", currentIndex, "→", nextIndex)
+                            } else {
+                                // 已到达右列最后一个 → 进入底部按钮区域
+                                currentPage.focusSubArea = 2
+                                currentPage.focusButtonIndex = 1  // 删除输入（右侧按钮）
+                                console.log("✅ [导航] 从参数区域右列进入底部按钮区域")
+                            }
                         } else {
-                            // 已到达左列最后一个 → 进入底部按钮区域
-                            currentPage.focusSubArea = 2
-                            currentPage.focusButtonIndex = 0  // 添加输入（左侧按钮）
-                            console.log("✅ [导航] 从参数区域左列进入底部按钮区域")
+                            // 左列：0→2→4→6→8，向下移动2步
+                            var nextIndex = currentIndex + 2
+                            if (nextIndex < paramCount) {
+                                currentPage.focusParamIndex = nextIndex
+                                console.log("✅ [导航] 参数区域左列下移:", currentIndex, "→", nextIndex)
+                            } else {
+                                // 已到达左列最后一个 → 进入底部按钮区域
+                                currentPage.focusSubArea = 2
+                                currentPage.focusButtonIndex = 0  // 添加输入（左侧按钮）
+                                console.log("✅ [导航] 从参数区域左列进入底部按钮区域")
+                            }
                         }
                     }
                 } else if (currentPage.focusSubArea === 2) {
@@ -296,21 +327,32 @@ Item {
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
                 if (currentPage.focusSubArea === 1) {
-                    // ✅ 参数区域：两列交叉导航
-                    var currentIndex = currentPage.focusParamIndex
+                    // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
+                    var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
+                    var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
 
-                    // 两列交叉导航：左列（0,2,4,6,8） vs 右列（1,3,5,7）
-                    if (currentIndex % 2 === 1) {
-                        // 当前在右列，切换到左列
-                        var prevIndex = currentIndex - 1
-                        currentPage.focusParamIndex = prevIndex
-                        console.log("✅ [导航] 参数区域：右列 → 左列，索引:", currentIndex, "→", prevIndex)
-                        return  // 不切换到列表区域
-                    } else {
-                        // 当前在左列，返回列表区域
+                    if (layoutMode === "single-column") {
+                        // ✅ 一列布局：左键返回列表区域
                         currentPage.focusSubArea = 0
-                        console.log("✅ [导航] 从参数区域返回列表区域")
+                        console.log("✅ [导航] 从参数区域（一列）返回列表区域")
                         return  // 不切换到左侧类别
+                    } else {
+                        // ✅ 两列布局：两列交叉导航
+                        var currentIndex = currentPage.focusParamIndex
+
+                        // 两列交叉导航：左列（0,2,4,6,8） vs 右列（1,3,5,7）
+                        if (currentIndex % 2 === 1) {
+                            // 当前在右列，切换到左列
+                            var prevIndex = currentIndex - 1
+                            currentPage.focusParamIndex = prevIndex
+                            console.log("✅ [导航] 参数区域：右列 → 左列，索引:", currentIndex, "→", prevIndex)
+                            return  // 不切换到列表区域
+                        } else {
+                            // 当前在左列，返回列表区域
+                            currentPage.focusSubArea = 0
+                            console.log("✅ [导航] 从参数区域返回列表区域")
+                            return  // 不切换到左侧类别
+                        }
                     }
                 } else if (currentPage.focusSubArea === 2) {
                     // ✅ 底部按钮区域：左键导航
@@ -374,23 +416,33 @@ Item {
                     console.log("✅ [导航] 从列表区域切换到参数区域")
                     return  // 不切换到底部按钮
                 } else if (currentPage.focusSubArea === 1) {
-                    // ✅ 参数区域：两列交叉导航
-                    var currentIndex = currentPage.focusParamIndex
-                    var paramCount = currentPage.getParamFieldCount()
+                    // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
+                    var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
+                    var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
 
-                    // 两列交叉导航：左列（0,2,4,6,8） vs 右列（1,3,5,7）
-                    if (currentIndex % 2 === 0) {
-                        // 当前在左列，切换到右列
-                        var nextIndex = currentIndex + 1
-                        if (nextIndex < paramCount) {
-                            currentPage.focusParamIndex = nextIndex
-                            console.log("✅ [导航] 参数区域：左列 → 右列，索引:", currentIndex, "→", nextIndex)
-                            return  // 不切换到底部按钮
+                    if (layoutMode === "single-column") {
+                        // ✅ 一列布局：右键保持焦点（不支持切换列）
+                        console.log("⚠️ [导航] 参数区域（一列）已在最右侧")
+                        return
+                    } else {
+                        // ✅ 两列布局：两列交叉导航
+                        var currentIndex = currentPage.focusParamIndex
+                        var paramCount = currentPage.getParamFieldCount()
+
+                        // 两列交叉导航：左列（0,2,4,6,8） vs 右列（1,3,5,7）
+                        if (currentIndex % 2 === 0) {
+                            // 当前在左列，切换到右列
+                            var nextIndex = currentIndex + 1
+                            if (nextIndex < paramCount) {
+                                currentPage.focusParamIndex = nextIndex
+                                console.log("✅ [导航] 参数区域：左列 → 右列，索引:", currentIndex, "→", nextIndex)
+                                return  // 不切换到底部按钮
+                            }
                         }
+                        // 如果当前在右列，或者右列没有更多控件，则保持焦点
+                        console.log("⚠️ [导航] 参数区域已在最右侧")
+                        return
                     }
-                    // 如果当前在右列，或者右列没有更多控件，则保持焦点
-                    console.log("⚠️ [导航] 参数区域已在最右侧")
-                    return
                 } else if (currentPage.focusSubArea === 2) {
                     // ✅ 底部按钮区域：右键导航
                     var buttonIndex = currentPage.focusButtonIndex

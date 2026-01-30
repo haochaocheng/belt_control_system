@@ -16,6 +16,9 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property var virtualKeyboard: null  // Qt 虚拟键盘引用
 
+    // ✅ 2026-01-30 [FIX 100.300.106.3]: 布局模式（两列布局）
+    readonly property string layoutMode: "two-column"  // "single-column" 或 "two-column"
+
     // ========== 滚动视图 ==========
     ScrollView {
         anchors.fill: parent
