@@ -11,8 +11,7 @@ Popup {
     height: 300
     y: parent.height - height
     modal: false
-    // ✅ 2026-01-30 [修复]: 允许接收键盘事件，以便处理 ESC 键
-    focus: true
+    // ✅ 2026-01-30 [修复]: 使用 Shortcut 捕获 ESC 键，不需要 focus
     closePolicy: Popup.NoAutoClose
 
     property var targetTextField: null
@@ -77,18 +76,18 @@ Popup {
         parentPage = null
     }
 
-    // ✅ 2026-01-30 [修复]: 处理 ESC 键关闭虚拟键盘
-    Keys.onPressed: (event) => {
-        if (event.key === Qt.Key_Escape) {
-            console.log("✅ [QtVirtualKeyboard] ESC 键被按下，关闭虚拟键盘")
+    // ✅ 2026-01-30 [修复]: 使用 Shortcut 捕获 ESC 键（不受焦点影响）
+    Shortcut {
+        enabled: root.visible
+        sequence: "Esc"
+        onActivated: {
+            console.log("✅ [QtVirtualKeyboard] Shortcut ESC 键被按下，关闭虚拟键盘")
             // 保存输入内容
             if (root.targetTextField && root.updateCallback) {
                 root.updateCallback(root.targetTextField.text)
             }
             // 关闭虚拟键盘
             root.close()
-            // 阻止事件继续传播到父容器
-            event.accepted = true
         }
     }
 
