@@ -25,8 +25,18 @@ Item {
     focus: true
     activeFocusOnTab: true
 
+    // ✅ 2026-01-30 [调试]: 详细追踪焦点变化
     onActiveFocusChanged: {
-        console.log("[Screen01] 🎯 焦点状态:", activeFocus ? "✅ 获得" : "❌ 失去")
+        console.log("🔍 [Screen01] ========== 焦点状态变化 ==========")
+        console.log("🔍 [Screen01] activeFocus:", activeFocus ? "✅ 获得焦点" : "❌ 失去焦点")
+        console.log("🔍 [Screen01] focus 属性:", focus)
+        console.log("🔍 [Screen01] parent:", parent)
+        console.log("🔍 [Screen01] parent.objectName:", parent ? parent.objectName : "无")
+        console.log("🔍 [Screen01] =====================================")
+    }
+
+    onFocusChanged: {
+        console.log("🔍 [Screen01] focus 属性变化:", focus)
     }
 
     // ✅ 2026-01-28 [FIX 100.300.65]: 添加双击事件打开设备设置对话框
@@ -158,8 +168,12 @@ Item {
     // ✅ 2026-01-28 [FIX 100.300.65]: 添加打开设备设置对话框函数
     // ✅ 2026-01-28 [FIX 100.300.66]: 修复 open() 不是函数错误，使用 visible 属性
     // ✅ 2026-01-30 [修复]: 使用 root 作为父容器，以便对话框关闭后焦点返回到 Screen01
+    // ✅ 2026-01-30 [调试]: 添加详细的焦点追踪日志
     function openDeviceSettings() {
-        console.log("[Screen01] 🔧 打开设备设置对话框，当前选中索引:", selectedIndex)
+        console.log("🔍 [Screen01] ========== 打开对话框 ==========")
+        console.log("🔍 [Screen01] 当前选中索引:", selectedIndex)
+        console.log("🔍 [Screen01] 打开前 - activeFocus:", activeFocus)
+        console.log("🔍 [Screen01] 打开前 - focus:", focus)
 
         // 创建并显示 DeviceSettingsDialog
         var component = Qt.createComponent("../../components/device_info/DeviceSettingsDialog.qml")
@@ -169,10 +183,18 @@ Item {
                 // deviceIndex: selectedIndex
             })
             if (dialog) {
+                console.log("🔍 [Screen01] 对话框创建成功")
+                console.log("🔍 [Screen01] dialog.parent === root:", dialog.parent === root)
+                console.log("🔍 [Screen01] dialog.parent:", dialog.parent)
+
                 // ✅ 2026-01-28 [FIX 100.300.66]: DeviceSettingsDialog 是 Rectangle，使用 visible 而不是 open()
                 dialog.visible = true
                 dialog.z = 1000  // 确保在最上层
-                console.log("[Screen01] ✅ DeviceSettingsDialog 已打开")
+
+                console.log("🔍 [Screen01] 对话框已显示")
+                console.log("🔍 [Screen01] 打开后 - activeFocus:", activeFocus)
+                console.log("🔍 [Screen01] 打开后 - focus:", focus)
+                console.log("🔍 [Screen01] =====================================")
             } else {
                 console.error("[Screen01] ❌ 无法创建 DeviceSettingsDialog 对象")
             }
