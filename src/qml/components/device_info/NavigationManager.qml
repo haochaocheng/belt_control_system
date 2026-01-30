@@ -19,12 +19,13 @@ QtObject {
     property int paramIndex: 0                     // 区域C：参数索引（0-8）
     property int buttonIndex: 0                    // 区域D：按钮索引（0-2）
 
-    // ========== 信号定义 ==========
-    signal areaChanged(string newArea)
-    signal motorListIndexChanged(int newIndex)
-    signal tabIndexChanged(int newIndex)
-    signal paramIndexChanged(int newIndex)
-    signal buttonIndexChanged(int newIndex)
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除重复的信号定义
+    // QML会自动为每个property生成对应的Changed信号，不需要手动定义
+    // 例如：motorListIndex 会自动生成 onMotorListIndexChanged 信号
+    // 手动定义会导致 "Duplicate signal name" 错误
+
+    // ========== 自定义信号 ==========
+    signal areaChanged(string newArea)  // 区域切换信号（自定义，因为需要传递参数）
 
     // ========== 区域切换函数 ==========
 
@@ -69,7 +70,8 @@ QtObject {
 
         if (newIndex !== motorListIndex) {
             motorListIndex = newIndex
-            motorListIndexChanged(newIndex)
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
+            // motorListIndex 改变时会自动触发 onMotorListIndexChanged 信号
             console.log("✅ [NavigationManager] 电机列表索引:", newIndex)
         }
     }
@@ -105,13 +107,13 @@ QtObject {
             // 向下进入当前Tab对应的参数区第一个参数
             switchToArea(areaParams)
             paramIndex = 0  // 从第一个参数开始
-            paramIndexChanged(0)
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
             return
         }
 
         if (newIndex !== tabIndex) {
             tabIndex = newIndex
-            tabIndexChanged(newIndex)
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
             console.log("✅ [NavigationManager] Tab索引:", newIndex, "（参数区自动切换显示）")
         }
     }
@@ -150,13 +152,13 @@ QtObject {
                 // 右列最后一个参数，向下进入底部按钮区
                 switchToArea(areaButtons)
                 buttonIndex = 0
-                buttonIndexChanged(0)
+                // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
                 return
             } else if (paramIndex === 8) {
                 // 左列最后一个参数，向下进入底部按钮区
                 switchToArea(areaButtons)
                 buttonIndex = 0
-                buttonIndexChanged(0)
+                // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
                 return
             }
             break
@@ -180,7 +182,7 @@ QtObject {
 
         if (newIndex !== paramIndex) {
             paramIndex = newIndex
-            paramIndexChanged(newIndex)
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
             console.log("✅ [NavigationManager] 参数索引:", newIndex)
         }
     }
@@ -209,20 +211,20 @@ QtObject {
             // 向上返回参数区最后一个参数
             switchToArea(areaParams)
             paramIndex = 8  // 最后一个参数
-            paramIndexChanged(8)
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
             return
 
         case "Down":
             // 向下循环回参数区最后一个参数
             switchToArea(areaParams)
             paramIndex = 8  // 最后一个参数
-            paramIndexChanged(8)
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
             return
         }
 
         if (newIndex !== buttonIndex) {
             buttonIndex = newIndex
-            buttonIndexChanged(newIndex)
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
             console.log("✅ [NavigationManager] 按钮索引:", newIndex)
         }
     }
