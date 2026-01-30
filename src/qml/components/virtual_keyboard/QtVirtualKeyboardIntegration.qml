@@ -55,6 +55,18 @@ Popup {
         // style: KeyboardStyle { }
     }
 
+    // ✅ 2026-01-30 [修复]: 虚拟键盘关闭时恢复焦点
+    onClosed: {
+        console.log("✅ [QtVirtualKeyboard] 虚拟键盘已关闭，恢复焦点")
+        // 移除输入框的焦点，让焦点返回到父容器
+        if (targetTextField) {
+            targetTextField.focus = false
+        }
+        // 清空目标输入框引用
+        targetTextField = null
+        updateCallback = null
+    }
+
     // Close button
     Button {
         anchors.right: parent.right
@@ -79,6 +91,7 @@ Popup {
         }
 
         onClicked: {
+            console.log("✅ [QtVirtualKeyboard] 关闭按钮被点击")
             if (root.targetTextField && root.updateCallback) {
                 root.updateCallback(root.targetTextField.text)
             }
