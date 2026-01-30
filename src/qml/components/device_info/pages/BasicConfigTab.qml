@@ -35,6 +35,7 @@ Rectangle {
 
         // ✅ 2026-01-30 [FIX 100.300.107]: 改为 GridLayout，参考 SwitchInputPage
         // ✅ 2026-01-30 [FIX 100.300.107.1]: 修改宽度为 90%，避免标签文字被覆盖
+        // ✅ 2026-01-30 [FIX 100.300.107.3]: 增加标签宽度从 120 到 160，确保长标签完整显示
         GridLayout {
             width: paramScrollView.width * 0.9  // ✅ 占 ScrollView 宽度的 90%
             columns: 4  // 4列：标签1、输入框1、标签2、输入框2
@@ -50,7 +51,7 @@ Rectangle {
                 color: "#9E9E9E"
                 Layout.column: 0
                 Layout.row: 0
-                Layout.preferredWidth: 120
+                Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
 
@@ -162,7 +163,7 @@ Rectangle {
                 color: "#9E9E9E"
                 Layout.column: 2
                 Layout.row: 0
-                Layout.preferredWidth: 120
+                Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
 
@@ -211,7 +212,7 @@ Rectangle {
                 color: "#9E9E9E"
                 Layout.column: 0
                 Layout.row: 1
-                Layout.preferredWidth: 120
+                Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
 
@@ -250,7 +251,7 @@ Rectangle {
                 color: "#9E9E9E"
                 Layout.column: 2
                 Layout.row: 1
-                Layout.preferredWidth: 120
+                Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
 
@@ -291,7 +292,7 @@ Rectangle {
                 color: "#9E9E9E"
                 Layout.column: 0
                 Layout.row: 2
-                Layout.preferredWidth: 120
+                Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
 
