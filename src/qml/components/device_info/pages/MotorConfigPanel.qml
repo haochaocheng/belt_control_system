@@ -89,6 +89,7 @@ Rectangle {
 
         // ✅ 使用 Flickable 支持横向滑动（Tab较多时）
         // ✅ 2026-01-26 [FIX 100.300.21.1]: 改用 Flickable 支持鼠标拖动和滚轮滑动
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.7]: 添加自动滚动到当前Tab
         Flickable {
             id: tabFlickable
             anchors.fill: parent
@@ -97,6 +98,32 @@ Rectangle {
             contentHeight: height  // 内容高度等于自身高度（不需要纵向滚动）
             flickableDirection: Flickable.HorizontalFlick  // 只允许横向滑动
             boundsBehavior: Flickable.StopAtBounds  // 到达边界时停止
+
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.7]: 自动滚动到当前Tab
+            function scrollToTab(tabIndex) {
+                if (tabIndex < 0) return
+
+                // 每个Tab宽度120，计算目标Tab的位置
+                var tabWidth = 120
+                var targetX = tabIndex * tabWidth
+
+                // 计算需要滚动到的位置，使目标Tab居中显示
+                var centerX = targetX - (width / 2) + (tabWidth / 2)
+
+                // 限制在有效范围内
+                centerX = Math.max(0, Math.min(centerX, contentWidth - width))
+
+                // 平滑滚动到目标位置
+                contentX = centerX
+            }
+
+            // 监听 currentTabIndex 变化，自动滚动
+            Connections {
+                target: root
+                function onCurrentTabIndexChanged() {
+                    tabFlickable.scrollToTab(root.currentTabIndex)
+                }
+            }
 
             // ✅ 2026-01-26 [FIX]: 支持鼠标滚轮横向滚动
             MouseArea {
