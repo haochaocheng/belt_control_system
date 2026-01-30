@@ -14,8 +14,12 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property int motorIndex: 0  // 当前电机索引 (0-7)
-    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
-    property var keyboardManager: null
+    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性（已废弃）
+    // property var keyboardManager: null
+
+    // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引（从父页面传递）
+    property int focusParamIndex: 0  // 参数区域焦点索引
+    property var virtualKeyboard: null  // Qt 虚拟键盘引用
 
     // ========== 滚动区域 ==========
     ScrollView {
@@ -43,8 +47,25 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                Row {
-                    spacing: 30
+                // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
+                Item {
+                    width: 200
+                    height: 40
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 0) ? 3 : 0
+                        radius: 4
+                        z: 10
+                    }
+
+                    Row {
+                        anchors.fill: parent
+                        spacing: 30
 
                     // 投入选项
                     Row {
@@ -121,7 +142,7 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
-                }
+                }  // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器结束
             }
 
             // ========== 模块类型 ==========
@@ -137,19 +158,35 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                Rectangle {
+                // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
+                Item {
                     width: 200
                     height: 36
-                    color: "#2d3548"
-                    border.color: "#3d4556"
-                    border.width: 1
-                    radius: 2
+                    anchors.verticalCenter: parent.verticalCenter
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "继电器模块"
-                        font.pixelSize: 14
-                        color: "#E0E0E0"
+                    // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 1) ? 3 : 0
+                        radius: 4
+                        z: 10
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "#2d3548"
+                        border.color: "#3d4556"
+                        border.width: 1
+                        radius: 2
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "继电器模块"
+                            font.pixelSize: 14
+                            color: "#E0E0E0"
+                        }
                     }
                 }
             }
@@ -167,16 +204,32 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
-                DeviceInfo.CustomSpinBox {
-                    id: moduleAddressSpin
+                // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
+                Item {
                     width: 120
                     height: 36
-                    from: 1
-                    to: 8
-                    value: 1
-                    editable: true
-                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 2) ? 3 : 0
+                        radius: 4
+                        z: 10
+                    }
+
+                    // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
+                    DeviceInfo.CustomSpinBox {
+                        id: moduleAddressSpin
+                        anchors.fill: parent
+                        from: 1
+                        to: 8
+                        value: 1
+                        editable: true
+                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
                 }
             }
 
@@ -193,16 +246,32 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
-                DeviceInfo.CustomSpinBox {
-                    id: outputChannelSpin
+                // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
+                Item {
                     width: 120
                     height: 36
-                    from: 0
-                    to: 7
-                    value: root.motorIndex
-                    editable: true
-                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 3) ? 3 : 0
+                        radius: 4
+                        z: 10
+                    }
+
+                    // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
+                    DeviceInfo.CustomSpinBox {
+                        id: outputChannelSpin
+                        anchors.fill: parent
+                        from: 0
+                        to: 7
+                        value: root.motorIndex
+                        editable: true
+                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
                 }
             }
 
@@ -219,18 +288,80 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
-                DeviceInfo.CustomSpinBox {
-                    id: feedbackChannelSpin
+                // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
+                Item {
                     width: 120
                     height: 36
-                    from: 0
-                    to: 7
-                    value: root.motorIndex
-                    editable: true
-                    keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 4) ? 3 : 0
+                        radius: 4
+                        z: 10
+                    }
+
+                    // ✅ 2026-01-28 [FIX 100.300.60]: 替换为 DeviceInfo.CustomSpinBox
+                    DeviceInfo.CustomSpinBox {
+                        id: feedbackChannelSpin
+                        anchors.fill: parent
+                        from: 0
+                        to: 7
+                        value: root.motorIndex
+                        editable: true
+                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                    }
                 }
             }
+        }
+    }
+
+    // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
+    // 获取参数字段数量
+    function getParamFieldCount() {
+        return 5  // 5个参数字段：运行状态、模块类型、模块地址、输出通道、反馈通道
+    }
+
+    // 触发参数输入
+    function triggerParamInput(paramIndex) {
+        console.log("✅ [BasicConfigTab] 触发参数输入 - 索引:", paramIndex)
+
+        var inputField = null
+        var inputMode = "numeric"  // 默认数字模式
+
+        switch(paramIndex) {
+        case 0:  // 运行状态（RadioButton 组）
+            console.log("✅ [BasicConfigTab] 切换运行状态")
+            // TODO: 切换运行状态
+            break
+        case 1:  // 模块类型（只读）
+            console.log("✅ [BasicConfigTab] 模块类型（只读）")
+            break
+        case 2:  // 模块地址
+            inputField = moduleAddressSpin
+            inputMode = "numeric"
+            break
+        case 3:  // 输出通道
+            inputField = outputChannelSpin
+            inputMode = "numeric"
+            break
+        case 4:  // 反馈通道
+            inputField = feedbackChannelSpin
+            inputMode = "numeric"
+            break
+        }
+
+        // 打开虚拟键盘
+        if (virtualKeyboard && inputField) {
+            console.log("✅ [BasicConfigTab] 打开 Qt 虚拟键盘 - 控件:", inputField, "模式:", inputMode)
+            virtualKeyboard.openForField(inputField, function(newValue) {
+                console.log("✅ [BasicConfigTab] 虚拟键盘输入完成:", newValue)
+            }, inputMode, root)
+        } else {
+            console.log("⚠️ [BasicConfigTab] 虚拟键盘或输入控件不可用")
         }
     }
 }

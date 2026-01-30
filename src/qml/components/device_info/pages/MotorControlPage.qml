@@ -98,4 +98,34 @@ Rectangle {
             }
         }
     }
+
+    // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
+    // 获取参数字段数量
+    function getParamFieldCount() {
+        var currentTab = motorConfigPanel.item ? motorConfigPanel.item.getCurrentTab() : null
+        if (currentTab && typeof currentTab.getParamFieldCount === "function") {
+            return currentTab.getParamFieldCount()
+        }
+        return 0
+    }
+
+    // 触发参数输入
+    function triggerParamInput(paramIndex) {
+        console.log("✅ [MotorControlPage] 触发参数输入 - 索引:", paramIndex)
+
+        var currentTab = motorConfigPanel.item ? motorConfigPanel.item.getCurrentTab() : null
+        if (currentTab && typeof currentTab.triggerParamInput === "function") {
+            currentTab.triggerParamInput(paramIndex)
+        } else {
+            console.log("⚠️ [MotorControlPage] 当前 Tab 不支持参数输入")
+        }
+    }
+
+    // 切换 Tab
+    function triggerTabSwitch(tabIndex) {
+        console.log("✅ [MotorControlPage] 切换 Tab - 索引:", tabIndex)
+        if (motorConfigPanel.item) {
+            motorConfigPanel.item.currentTabIndex = tabIndex
+        }
+    }
 }

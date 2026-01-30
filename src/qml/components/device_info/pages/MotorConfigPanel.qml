@@ -236,7 +236,11 @@ Rectangle {
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                        // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器已废弃
+                        // item.keyboardManager = root.keyboardManager
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     }
                 }
             }
@@ -350,6 +354,19 @@ Rectangle {
                     }
                 }
             }
+        }
+    }
+
+    // ✅ 2026-01-30 [FIX 100.300.106]: 获取当前 Tab 的引用
+    function getCurrentTab() {
+        switch(root.currentTabIndex) {
+        case 0:
+            return basicConfigLoader.item
+        case 1:
+            return currentProtectionLoader.item
+        // TODO: 其他 Tab
+        default:
+            return null
         }
     }
 }
