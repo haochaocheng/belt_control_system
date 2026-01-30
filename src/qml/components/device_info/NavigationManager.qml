@@ -15,7 +15,7 @@ QtObject {
     // ========== 当前焦点状态 ==========
     property string currentArea: areaMotorList     // 当前焦点区域
     property int motorListIndex: 0                 // 区域A：电机列表索引（0-7）
-    property int tabIndex: 0                       // 区域B：Tab索引（0-8）
+    property int tabIndex: 0                       // 区域B：Tab索引（0-9，共10个Tab）
     property int paramIndex: 0                     // 区域C：参数索引（0-8）
     property int buttonIndex: 0                    // 区域D：按钮索引（0-2）
 
@@ -93,7 +93,7 @@ QtObject {
             break
 
         case "Right":
-            if (tabIndex < 8) {
+            if (tabIndex < 9) {  // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.6]: 修正最大Tab索引为9（共10个Tab）
                 newIndex = tabIndex + 1
             }
             // 在最后一个Tab，保持不变
