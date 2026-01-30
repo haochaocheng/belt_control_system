@@ -268,12 +268,15 @@ Rectangle {
 
             // 2: 前轴承温度
             Loader {
+                id: frontBearingTempLoader
                 active: root.currentTabIndex === 2
                 source: "FrontBearingTempTab.qml"
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     }
                 }
             }
@@ -371,6 +374,8 @@ Rectangle {
             return basicConfigLoader.item
         case 1:
             return currentProtectionLoader.item
+        case 2:
+            return frontBearingTempLoader.item
         // TODO: 其他 Tab
         default:
             return null
