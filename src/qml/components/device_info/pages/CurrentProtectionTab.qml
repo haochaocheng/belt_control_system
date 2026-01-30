@@ -366,13 +366,13 @@ Rectangle {
 
                 Row {
                     id: currentUpperRow
-                    anchors.fill: parent
+                    width: parent.width
+                    height: 60  // ✅ 2026-01-30 [FIX 100.300.107.2]: 设置 Row 的固定高度
                     spacing: 5
-                    implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.107.1]: 设置固定高度，与其他输入框一致
 
                     DeviceInfo.CustomReadOnlyField {
                         width: parent.width - 30
-                        height: 60  // ✅ 2026-01-30 [FIX 100.300.107.1]: 设置固定高度
+                        height: 60  // ✅ 2026-01-30 [FIX 100.300.107.2]: 设置固定高度
                         text: "80"
                     }
 
@@ -418,13 +418,13 @@ Rectangle {
 
                 Row {
                     id: currentLowerRow
-                    anchors.fill: parent
+                    width: parent.width
+                    height: 60  // ✅ 2026-01-30 [FIX 100.300.107.2]: 设置 Row 的固定高度
                     spacing: 5
-                    implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.107.1]: 设置固定高度，与其他输入框一致
 
                     DeviceInfo.CustomReadOnlyField {
                         width: parent.width - 30
-                        height: 60  // ✅ 2026-01-30 [FIX 100.300.107.1]: 设置固定高度
+                        height: 60  // ✅ 2026-01-30 [FIX 100.300.107.2]: 设置固定高度
                         text: "-10"
                     }
 
