@@ -3,3 +3,4 @@ CustomComboBox 1.0 CustomComboBox.qml
 CustomTextField 1.0 CustomTextField.qml
 CustomSpinBox 1.0 CustomSpinBox.qml
 CustomReadOnlyField 1.0 CustomReadOnlyField.qml
+NavigationManager 1.0 NavigationManager.qml
