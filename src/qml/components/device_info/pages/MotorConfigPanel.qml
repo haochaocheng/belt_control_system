@@ -28,20 +28,23 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property var virtualKeyboard: null  // Qt 虚拟键盘引用
 
-    // ========== 键盘导航支持 ==========
-    focus: true
-
-    Keys.onLeftPressed: {
-        if (root.currentTabIndex > 0) {
-            root.currentTabIndex--
-        }
-    }
-
-    Keys.onRightPressed: {
-        if (root.currentTabIndex < 9) {  // 10个Tab (0-9)
-            root.currentTabIndex++
-        }
-    }
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.3]: 移除旧的键盘导航支持
+    // 原因：与 NavigationManager 冲突，导致导航逻辑不正确
+    // 现在由 MotorControlPage 的 NavigationManager 统一处理键盘事件
+    // ========== 旧的键盘导航支持（已废弃，注释掉）==========
+    // focus: true
+    //
+    // Keys.onLeftPressed: {
+    //     if (root.currentTabIndex > 0) {
+    //         root.currentTabIndex--
+    //     }
+    // }
+    //
+    // Keys.onRightPressed: {
+    //     if (root.currentTabIndex < 9) {  // 10个Tab (0-9)
+    //         root.currentTabIndex++
+    //     }
+    // }
 
     // ========== 标题栏 ==========
     Rectangle {
