@@ -48,10 +48,10 @@ Rectangle {
                 }
 
                 // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
+                // ✅ 2026-01-30 [FIX 100.300.106.1]: 移除 anchors.verticalCenter，避免 Row 布局冲突
                 Item {
                     width: 200
                     height: 40
-                    anchors.verticalCenter: parent.verticalCenter
 
                     // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
                     Rectangle {
@@ -142,6 +142,7 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
+                    }  // ✅ 2026-01-30 [FIX 100.300.106.1]: 关闭内部 Row（第 66 行）
                 }  // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器结束
             }
 
@@ -159,10 +160,10 @@ Rectangle {
                 }
 
                 // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
+                // ✅ 2026-01-30 [FIX 100.300.106.1]: 移除 anchors.verticalCenter，避免 Row 布局冲突
                 Item {
                     width: 200
                     height: 36
-                    anchors.verticalCenter: parent.verticalCenter
 
                     // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
                     Rectangle {
@@ -205,10 +206,10 @@ Rectangle {
                 }
 
                 // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
+                // ✅ 2026-01-30 [FIX 100.300.106.1]: 移除 anchors.verticalCenter，避免 Row 布局冲突
                 Item {
                     width: 120
                     height: 36
-                    anchors.verticalCenter: parent.verticalCenter
 
                     // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
                     Rectangle {
@@ -247,10 +248,10 @@ Rectangle {
                 }
 
                 // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
+                // ✅ 2026-01-30 [FIX 100.300.106.1]: 移除 anchors.verticalCenter，避免 Row 布局冲突
                 Item {
                     width: 120
                     height: 36
-                    anchors.verticalCenter: parent.verticalCenter
 
                     // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
                     Rectangle {
@@ -289,10 +290,10 @@ Rectangle {
                 }
 
                 // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器容器
+                // ✅ 2026-01-30 [FIX 100.300.106.1]: 移除 anchors.verticalCenter，避免 Row 布局冲突
                 Item {
                     width: 120
                     height: 36
-                    anchors.verticalCenter: parent.verticalCenter
 
                     // ✅ 2026-01-30 [FIX 100.300.106]: 焦点指示器
                     Rectangle {
