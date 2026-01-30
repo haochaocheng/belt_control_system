@@ -11,18 +11,22 @@ Popup {
     height: 300
     y: parent.height - height
     modal: false
-    focus: false
+    // ✅ 2026-01-30 [修复]: 允许接收键盘事件，以便处理 ESC 键
+    focus: true
     closePolicy: Popup.NoAutoClose
 
     property var targetTextField: null
     property var updateCallback: null
     property string inputMode: "numeric"
+    // ✅ 2026-01-30 [修复]: 保存父页面引用，用于恢复焦点
+    property var parentPage: null
 
     // Show keyboard for specific field
-    function openForField(textField, callback, mode) {
+    function openForField(textField, callback, mode, parentPageRef) {
         targetTextField = textField
         updateCallback = callback
         inputMode = mode || "numeric"
+        parentPage = parentPageRef || null
 
         // Set input method hints based on mode
         if (textField) {
@@ -58,13 +62,34 @@ Popup {
     // ✅ 2026-01-30 [修复]: 虚拟键盘关闭时恢复焦点
     onClosed: {
         console.log("✅ [QtVirtualKeyboard] 虚拟键盘已关闭，恢复焦点")
-        // 移除输入框的焦点，让焦点返回到父容器
+        // 移除输入框的焦点
         if (targetTextField) {
             targetTextField.focus = false
         }
-        // 清空目标输入框引用
+        // ✅ 2026-01-30 [修复]: 主动将焦点返回到父页面
+        if (parentPage) {
+            console.log("✅ [QtVirtualKeyboard] 恢复焦点到父页面")
+            parentPage.forceActiveFocus()
+        }
+        // 清空引用
         targetTextField = null
         updateCallback = null
+        parentPage = null
+    }
+
+    // ✅ 2026-01-30 [修复]: 处理 ESC 键关闭虚拟键盘
+    Keys.onPressed: (event) => {
+        if (event.key === Qt.Key_Escape) {
+            console.log("✅ [QtVirtualKeyboard] ESC 键被按下，关闭虚拟键盘")
+            // 保存输入内容
+            if (root.targetTextField && root.updateCallback) {
+                root.updateCallback(root.targetTextField.text)
+            }
+            // 关闭虚拟键盘
+            root.close()
+            // 阻止事件继续传播到父容器
+            event.accepted = true
+        }
     }
 
     // Close button
