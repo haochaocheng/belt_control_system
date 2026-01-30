@@ -26,6 +26,7 @@ QtObject {
 
     // ========== 自定义信号 ==========
     signal areaChanged(string newArea)  // 区域切换信号（自定义，因为需要传递参数）
+    signal returnToCategory()  // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.8]: 返回到左侧类别信号
 
     // ========== 区域切换函数 ==========
 
@@ -64,8 +65,10 @@ QtObject {
             return
 
         case "Left":
-            // 在左侧边界，保持不变
-            break
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.8]: 向左返回到大类（电机控制）
+            // 通过自定义信号通知外部返回到左侧类别
+            returnToCategory()
+            return
         }
 
         if (newIndex !== motorListIndex) {

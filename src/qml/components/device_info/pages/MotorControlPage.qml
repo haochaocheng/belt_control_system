@@ -86,22 +86,45 @@ Rectangle {
         // 监听区域变化
         onAreaChanged: function(newArea) {
             console.log("✅ [MotorControlPage] 区域变化:", newArea)
-            // 根据区域更新 focusSubArea
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.8]: 清除其他区域的焦点指示器
+            // 根据区域更新 focusSubArea，并清除其他区域的焦点索引
             switch(newArea) {
             case areaMotorList:
                 root.focusSubArea = 0
                 root.focusItemIndex = motorListIndex
+                // 清除其他区域的焦点
+                root.focusTabIndex = -1
+                root.focusParamIndex = -1
                 break
             case areaTabBar:
                 root.focusSubArea = 1
+                root.focusTabIndex = tabIndex
+                // 清除其他区域的焦点
+                root.focusItemIndex = -1
+                root.focusParamIndex = -1
                 break
             case areaParams:
                 root.focusSubArea = 2
+                root.focusParamIndex = paramIndex
+                // 清除其他区域的焦点
+                root.focusItemIndex = -1
+                root.focusTabIndex = -1
                 break
             case areaButtons:
                 root.focusSubArea = 3
+                // 清除其他区域的焦点
+                root.focusItemIndex = -1
+                root.focusTabIndex = -1
+                root.focusParamIndex = -1
                 break
             }
+        }
+
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.8]: 监听返回到类别信号
+        onReturnToCategory: {
+            console.log("✅ [MotorControlPage] 返回到左侧类别")
+            // 发出信号通知 DeviceSettingsDialog 返回到左侧类别
+            root.requestReturnToCategory()
         }
     }
 
@@ -230,6 +253,9 @@ Rectangle {
             motorConfigPanel.item.currentTabIndex = tabIndex
         }
     }
+
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.8]: 公开信号，供 DeviceSettingsDialog 监听
+    signal requestReturnToCategory()  // 请求返回到左侧类别
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 公开键盘事件处理函数
     // 供DeviceSettingsDialog调用，转发键盘事件给NavigationManager

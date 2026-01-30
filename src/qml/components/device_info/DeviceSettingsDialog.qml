@@ -1184,6 +1184,12 @@ Item {
                                 item.focusSubArea = 0  // 默认焦点在电机列表区域
                                 item.focusItemIndex = root.currentContentItemIndex
                             }
+
+                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.8]: 监听返回到类别信号
+                            item.requestReturnToCategory.connect(function() {
+                                console.log("✅ [DeviceSettingsDialog] 接收到返回类别请求")
+                                root.currentFocusArea = 1  // 切换到左侧类别区域
+                            })
                         }
                     }
 
