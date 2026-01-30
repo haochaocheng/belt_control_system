@@ -254,7 +254,9 @@ Rectangle {
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        item.keyboardManager = root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     }
                 }
             }
