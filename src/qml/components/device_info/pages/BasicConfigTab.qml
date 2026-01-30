@@ -29,322 +29,299 @@ Rectangle {
 
     // ========== 滚动区域 ==========
     ScrollView {
+        id: paramScrollView  // ✅ 2026-01-30 [FIX 100.300.107]: 添加 ID，用于 GridLayout 宽度计算
         anchors.fill: parent
         clip: true
 
-        ColumnLayout {
-            width: parent.width
-            spacing: 12
-            implicitWidth: 1200  // 两列布局需要的最小宽度
-            implicitHeight: childrenRect.height
+        // ✅ 2026-01-30 [FIX 100.300.107]: 改为 GridLayout，参考 SwitchInputPage
+        GridLayout {
+            width: paramScrollView.width * 0.7  // ✅ 占 ScrollView 宽度的 70%
+            columns: 4  // 4列：标签1、输入框1、标签2、输入框2
+            columnSpacing: 10
+            rowSpacing: 12
 
-            // ✅ 2026-01-30 [FIX 100.300.106.4]: 两列布局
-            RowLayout {
+            // ========== 第一行：运行状态（左侧，索引0）、模块类型（右侧，索引1）==========
+
+            // 运行状态标签
+            Text {
+                text: "运行状态:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 0
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 运行状态输入（RadioButton 组）
+            Item {
+                Layout.column: 1
+                Layout.row: 0
                 Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-                spacing: 20  // 两列之间的间距
+                Layout.maximumWidth: 300
+                implicitHeight: runningStateRow.implicitHeight  // ✅ 引用 Row 的 implicitHeight
 
-                // ========== 左列 ==========
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.minimumWidth: 200
-                    Layout.alignment: Qt.AlignTop
-                    spacing: 12
+                Row {
+                    id: runningStateRow
+                    anchors.fill: parent
+                    spacing: 30
 
-                    // 运行状态（索引 0）
-                    RowLayout {
-                        Layout.fillWidth: true
-                        implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
-                        spacing: 10
+                    // 投入选项
+                    Row {
+                        spacing: 8
 
-                        Text {
-                            text: "运行状态:"
-                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                            horizontalAlignment: Text.AlignRight
-                        }
+                        Rectangle {
+                            width: 20
+                            height: 20
+                            radius: 10
+                            border.color: "#2196F3"
+                            border.width: 2
+                            color: "transparent"
+                            anchors.verticalCenter: parent.verticalCenter
 
-                        // 焦点指示器容器
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.maximumWidth: 300
-                            implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
-
-                            // 焦点指示器
                             Rectangle {
-                                anchors.fill: parent
-                                color: "transparent"
-                                border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
-                                border.width: (root.focusParamIndex === 0) ? 3 : 0
-                                radius: 4
-                                z: 10
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: "#2196F3"
+                                anchors.centerIn: parent
+                                visible: true  // 默认选中
                             }
 
-                            Row {
+                            MouseArea {
                                 anchors.fill: parent
-                                spacing: 30
-
-                                // 投入选项
-                                Row {
-                                    spacing: 8
-
-                                    Rectangle {
-                                        width: 20
-                                        height: 20
-                                        radius: 10
-                                        border.color: "#2196F3"
-                                        border.width: 2
-                                        color: "transparent"
-                                        anchors.verticalCenter: parent.verticalCenter
-
-                                        Rectangle {
-                                            width: 10
-                                            height: 10
-                                            radius: 5
-                                            color: "#2196F3"
-                                            anchors.centerIn: parent
-                                            visible: true  // 默认选中
-                                        }
-
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            onClicked: {
-                                                console.log((root.motorIndex + 1) + "号电机: 投入")
-                                            }
-                                        }
-                                    }
-
-                                    Text {
-                                        text: "投入"
-                                        font.pixelSize: 14
-                                        color: "#E0E0E0"
-                                        anchors.verticalCenter: parent.verticalCenter
-                                    }
-                                }
-
-                                // 禁用选项
-                                Row {
-                                    spacing: 8
-
-                                    Rectangle {
-                                        width: 20
-                                        height: 20
-                                        radius: 10
-                                        border.color: "#2196F3"
-                                        border.width: 2
-                                        color: "transparent"
-                                        anchors.verticalCenter: parent.verticalCenter
-
-                                        Rectangle {
-                                            width: 10
-                                            height: 10
-                                            radius: 5
-                                            color: "#2196F3"
-                                            anchors.centerIn: parent
-                                            visible: false  // 默认不选中
-                                        }
-
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            onClicked: {
-                                                console.log((root.motorIndex + 1) + "号电机: 禁用")
-                                            }
-                                        }
-                                    }
-
-                                    Text {
-                                        text: "禁用"
-                                        font.pixelSize: 14
-                                        color: "#E0E0E0"
-                                        anchors.verticalCenter: parent.verticalCenter
-                                    }
+                                onClicked: {
+                                    console.log((root.motorIndex + 1) + "号电机: 投入")
                                 }
                             }
                         }
-                    }
-
-                    // 模块地址（索引 2）
-                    RowLayout {
-                        Layout.fillWidth: true
-                        implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
-                        spacing: 10
 
                         Text {
-                            text: "模块地址:"
-                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                            horizontalAlignment: Text.AlignRight
-                        }
-
-                        // 焦点指示器容器
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.maximumWidth: 300
-                            implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
-
-                            // 焦点指示器
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "transparent"
-                                border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
-                                border.width: (root.focusParamIndex === 2) ? 3 : 0
-                                radius: 4
-                                z: 10
-                            }
-
-                            DeviceInfo.CustomSpinBox {
-                                id: moduleAddressSpin
-                                anchors.fill: parent
-                                from: 1
-                                to: 8
-                                value: 1
-                                editable: true
-                            }
+                            text: "投入"
+                            font.pixelSize: 21
+                            color: "#E0E0E0"
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
 
-                    // 反馈通道（索引 4）
-                    RowLayout {
-                        Layout.fillWidth: true
-                        implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
-                        spacing: 10
+                    // 禁用选项
+                    Row {
+                        spacing: 8
 
-                        Text {
-                            text: "反馈通道:"
-                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                            horizontalAlignment: Text.AlignRight
-                        }
-
-                        // 焦点指示器容器
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.maximumWidth: 300
-                            implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
-
-                            // 焦点指示器
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "transparent"
-                                border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
-                                border.width: (root.focusParamIndex === 4) ? 3 : 0
-                                radius: 4
-                                z: 10
-                            }
-
-                            DeviceInfo.CustomSpinBox {
-                                id: feedbackChannelSpin
-                                anchors.fill: parent
-                                from: 0
-                                to: 7
-                                value: root.motorIndex
-                                editable: true
-                            }
-                        }
-                    }
-                }  // 左列结束
-
-                // ========== 右列 ==========
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.minimumWidth: 200
-                    Layout.alignment: Qt.AlignTop
-                    spacing: 12
-
-                    // 模块类型（索引 1）
-                    RowLayout {
-                        Layout.fillWidth: true
-                        implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
-                        spacing: 10
-
-                        Text {
-                            text: "模块类型:"
-                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                            horizontalAlignment: Text.AlignRight
-                        }
-
-                        // 焦点指示器容器
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.maximumWidth: 300
-                            implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
-
-                            // 焦点指示器
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "transparent"
-                                border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
-                                border.width: (root.focusParamIndex === 1) ? 3 : 0
-                                radius: 4
-                                z: 10
-                            }
+                        Rectangle {
+                            width: 20
+                            height: 20
+                            radius: 10
+                            border.color: "#2196F3"
+                            border.width: 2
+                            color: "transparent"
+                            anchors.verticalCenter: parent.verticalCenter
 
                             Rectangle {
-                                anchors.fill: parent
-                                color: "#2d3548"
-                                border.color: "#3d4556"
-                                border.width: 1
-                                radius: 2
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: "#2196F3"
+                                anchors.centerIn: parent
+                                visible: false  // 默认不选中
+                            }
 
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "继电器模块"
-                                    font.pixelSize: 14
-                                    color: "#E0E0E0"
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    console.log((root.motorIndex + 1) + "号电机: 禁用")
                                 }
                             }
                         }
-                    }
-
-                    // 输出通道（索引 3）
-                    RowLayout {
-                        Layout.fillWidth: true
-                        implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
-                        spacing: 10
 
                         Text {
-                            text: "输出通道:"
-                            font.pixelSize: 21  // ✅ 2026-01-30 [FIX 100.300.106.6]: 统一文字大小为 21（参考开关量参数区）
-                            color: "#9E9E9E"
-                            Layout.preferredWidth: 120
-                            horizontalAlignment: Text.AlignRight
-                        }
-
-                        // 焦点指示器容器
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.maximumWidth: 300
-                            implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
-
-                            // 焦点指示器
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "transparent"
-                                border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                                border.width: (root.focusParamIndex === 3) ? 3 : 0
-                                radius: 4
-                                z: 10
-                            }
-
-                            DeviceInfo.CustomSpinBox {
-                                id: outputChannelSpin
-                                anchors.fill: parent
-                                from: 0
-                                to: 7
-                                value: root.motorIndex
-                                editable: true
-                            }
+                            text: "禁用"
+                            font.pixelSize: 21
+                            color: "#E0E0E0"
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
-                }  // 右列结束
-            }  // RowLayout 结束
-        }  // ColumnLayout 结束
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 0) ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
+            }
+
+            // 模块类型标签
+            Text {
+                text: "模块类型:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 0
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 模块类型输入（只读显示框）
+            Item {
+                Layout.column: 3
+                Layout.row: 0
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: moduleTypeDisplay.implicitHeight  // ✅ 引用 Rectangle 的 implicitHeight
+
+                Rectangle {
+                    id: moduleTypeDisplay
+                    anchors.fill: parent
+                    color: "#2d3548"
+                    border.color: "#3d4556"
+                    border.width: 1
+                    radius: 2
+                    implicitHeight: 60  // ✅ 设置固定高度
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "继电器模块"
+                        font.pixelSize: 21
+                        color: "#E0E0E0"
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 1) ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
+            }
+
+            // ========== 第二行：模块地址（左侧，索引2）、输出通道（右侧，索引3）==========
+
+            // 模块地址标签
+            Text {
+                text: "模块地址:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 1
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 模块地址输入
+            Item {
+                Layout.column: 1
+                Layout.row: 1
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: moduleAddressSpin.implicitHeight  // ✅ 引用 SpinBox 的 implicitHeight
+
+                DeviceInfo.CustomSpinBox {
+                    id: moduleAddressSpin
+                    anchors.fill: parent
+                    from: 1
+                    to: 8
+                    value: 1
+                    editable: true
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 2) ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
+            }
+
+            // 输出通道标签
+            Text {
+                text: "输出通道:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 1
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 输出通道输入
+            Item {
+                Layout.column: 3
+                Layout.row: 1
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: outputChannelSpin.implicitHeight  // ✅ 引用 SpinBox 的 implicitHeight
+
+                DeviceInfo.CustomSpinBox {
+                    id: outputChannelSpin
+                    anchors.fill: parent
+                    from: 0
+                    to: 7
+                    value: root.motorIndex
+                    editable: true
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 3) ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
+            }
+
+            // ========== 第三行：反馈通道（左侧，索引4）==========
+
+            // 反馈通道标签
+            Text {
+                text: "反馈通道:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 2
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 反馈通道输入
+            Item {
+                Layout.column: 1
+                Layout.row: 2
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: feedbackChannelSpin.implicitHeight  // ✅ 引用 SpinBox 的 implicitHeight
+
+                DeviceInfo.CustomSpinBox {
+                    id: feedbackChannelSpin
+                    anchors.fill: parent
+                    from: 0
+                    to: 7
+                    value: root.motorIndex
+                    editable: true
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 4) ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
+            }
+        }  // GridLayout 结束
     }  // ScrollView 结束
 
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
