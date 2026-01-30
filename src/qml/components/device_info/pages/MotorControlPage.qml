@@ -41,6 +41,14 @@ Rectangle {
             paramIndex = 0
             buttonIndex = 0
             console.log("✅ [MotorControlPage] NavigationManager 初始化完成")
+
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.1]: 立即同步初始状态到root
+            root.currentMotorIndex = 0
+            root.focusItemIndex = 0
+            root.focusSubArea = 0
+            root.focusTabIndex = 0
+            root.focusParamIndex = 0
+            console.log("✅ [MotorControlPage] 初始状态已同步 - focusItemIndex:", root.focusItemIndex)
         }
 
         // 监听电机列表索引变化
