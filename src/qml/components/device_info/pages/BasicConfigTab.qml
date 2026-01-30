@@ -55,7 +55,7 @@ Rectangle {
                     // 运行状态（索引 0）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
+                        implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -70,7 +70,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
+                            implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -168,7 +168,7 @@ Rectangle {
                     // 模块地址（索引 2）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
+                        implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -183,7 +183,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
+                            implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -209,7 +209,7 @@ Rectangle {
                     // 反馈通道（索引 4）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
+                        implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -224,7 +224,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
+                            implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -258,7 +258,7 @@ Rectangle {
                     // 模块类型（索引 1）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
+                        implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -273,7 +273,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
+                            implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
@@ -305,7 +305,7 @@ Rectangle {
                     // 输出通道（索引 3）
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
+                        implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
                         spacing: 10
 
                         Text {
@@ -320,7 +320,7 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            Layout.preferredHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
+                            implicitHeight: 60  // ✅ 2026-01-30 [FIX 100.300.106.7]: 统一输入框高度为 60（参考 CustomReadOnlyField）
 
                             // 焦点指示器
                             Rectangle {
