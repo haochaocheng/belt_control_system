@@ -272,9 +272,22 @@ Rectangle {
                         Layout.preferredHeight: 35
 
                         background: Rectangle {
-                            color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
+                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
+                            // 焦点时背景色更亮
+                            color: {
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 0) {
+                                    return "#2ecc71"  // 焦点时：亮绿色
+                                } else if (parent.pressed) {
+                                    return "#27ae60"
+                                } else if (parent.hovered) {
+                                    return "#2ecc71"
+                                } else {
+                                    return "#27ae60"
+                                }
+                            }
                             radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? 2 : 0
+                            // 增加边框宽度：2px → 5px
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? 5 : 0
                             border.color: "#2196F3"
                         }
 
@@ -300,9 +313,22 @@ Rectangle {
                         Layout.preferredHeight: 35
 
                         background: Rectangle {
-                            color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
+                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
+                            // 焦点时背景色更亮
+                            color: {
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 1) {
+                                    return "#e74c3c"  // 焦点时：亮橙色
+                                } else if (parent.pressed) {
+                                    return "#c0392b"
+                                } else if (parent.hovered) {
+                                    return "#e74c3c"
+                                } else {
+                                    return "#d35400"
+                                }
+                            }
                             radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 1 ? 2 : 0
+                            // 增加边框宽度：2px → 5px
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 1 ? 5 : 0
                             border.color: "#2196F3"
                         }
 
@@ -334,9 +360,22 @@ Rectangle {
                         Layout.preferredHeight: 35
 
                         background: Rectangle {
-                            color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
+                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
+                            // 焦点时背景色更亮
+                            color: {
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 2) {
+                                    return "#2ecc71"  // 焦点时：亮绿色
+                                } else if (parent.pressed) {
+                                    return "#27ae60"
+                                } else if (parent.hovered) {
+                                    return "#2ecc71"
+                                } else {
+                                    return "#27ae60"
+                                }
+                            }
                             radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? 2 : 0
+                            // 增加边框宽度：2px → 5px
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? 5 : 0
                             border.color: "#2196F3"
                         }
 
@@ -362,9 +401,22 @@ Rectangle {
                         Layout.preferredHeight: 35
 
                         background: Rectangle {
-                            color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
+                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
+                            // 焦点时背景色更亮
+                            color: {
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 3) {
+                                    return "#e74c3c"  // 焦点时：亮橙色
+                                } else if (parent.pressed) {
+                                    return "#c0392b"
+                                } else if (parent.hovered) {
+                                    return "#e74c3c"
+                                } else {
+                                    return "#d35400"
+                                }
+                            }
                             radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 3 ? 2 : 0
+                            // 增加边框宽度：2px → 5px
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 3 ? 5 : 0
                             border.color: "#2196F3"
                         }
 
@@ -390,9 +442,22 @@ Rectangle {
                         Layout.preferredHeight: 35
 
                         background: Rectangle {
-                            color: parent.pressed ? "#7f8c8d" : (parent.hovered ? "#95a5a6" : "#7f8c8d")
+                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
+                            // 焦点时背景色更亮
+                            color: {
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 4) {
+                                    return "#95a5a6"  // 焦点时：亮灰色
+                                } else if (parent.pressed) {
+                                    return "#7f8c8d"
+                                } else if (parent.hovered) {
+                                    return "#95a5a6"
+                                } else {
+                                    return "#7f8c8d"
+                                }
+                            }
                             radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 4 ? 2 : 0
+                            // 增加边框宽度：2px → 5px
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 4 ? 5 : 0
                             border.color: "#2196F3"
                         }
 
