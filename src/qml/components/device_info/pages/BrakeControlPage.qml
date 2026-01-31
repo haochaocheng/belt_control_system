@@ -1,8 +1,10 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import "../" as DeviceInfo  // ✅ 2026-01-31 [FIX 100.300.112]: 导入 NavigationManager
 
 // ✅ 2026-01-27 [制动器控制参数设置] 制动器控制主页面（左右分栏布局）
 // 设计风格与电机控制完全一样
+// ✅ 2026-01-31 [FIX 100.300.112]: 集成 NavigationManager，实现平面导航
 Rectangle {
     id: root
     // ✅ 使用 implicitWidth/Height 替代固定尺寸，确保运行时正确显示
@@ -14,6 +16,202 @@ Rectangle {
     property int deviceId: 1
     property string deviceName: "1号皮带"
     property int currentBrakeIndex: 0  // 当前选中的制动器索引 (0-7)
+
+    // ✅ 2026-01-31 [FIX 100.300.112]: 导航焦点索引（从父对话框传递）
+    property int focusItemIndex: -1  // -1 表示无焦点
+    // 导航子区域（0:制动器列表 1:参数区域 2:底部按钮区域）
+    property int focusSubArea: 0
+    property int focusParamIndex: 0  // 参数区域焦点索引
+    property int focusButtonIndex: 0  // 底部按钮区域焦点索引
+    // Qt 虚拟键盘引用
+    property var virtualKeyboard: null
+
+    // ✅ 2026-01-31 [FIX 100.300.112]: NavigationManager 实例
+    DeviceInfo.NavigationManager {
+        id: navigationManager
+
+        // 区域定义
+        readonly property int areaBrakeList: 0      // 制动器列表区域
+        readonly property int areaParams: 1         // 参数区域
+        readonly property int areaButtons: 2        // 底部按钮区域
+
+        // 当前状态
+        property int currentArea: areaBrakeList
+        property int brakeListIndex: 0  // 制动器列表索引（0-7）
+        property int paramIndex: 0      // 参数索引（0-9）
+        property int buttonIndex: 0     // 按钮索引（0-1）
+
+        Component.onCompleted: {
+            console.log("✅ [BrakeControlPage] NavigationManager 初始化完成")
+
+            // 初始化焦点状态
+            root.focusItemIndex = 0
+            root.focusSubArea = 0
+
+            console.log("✅ [BrakeControlPage] 初始状态已同步 - focusItemIndex:", root.focusItemIndex)
+        }
+
+        // 监听制动器列表索引变化
+        onBrakeListIndexChanged: {
+            root.currentBrakeIndex = brakeListIndex
+
+            // 根据区域更新 focusSubArea
+            if (currentArea === areaBrakeList) {
+                root.focusSubArea = 0
+                root.focusItemIndex = brakeListIndex
+                root.focusParamIndex = -1
+                root.focusButtonIndex = -1
+            }
+        }
+
+        // 监听参数索引变化
+        onParamIndexChanged: {
+            if (currentArea === areaParams) {
+                root.focusSubArea = 1
+                root.focusParamIndex = paramIndex
+                root.focusItemIndex = -1
+                root.focusButtonIndex = -1
+            }
+        }
+
+        // 监听按钮索引变化
+        onButtonIndexChanged: {
+            if (currentArea === areaButtons) {
+                root.focusSubArea = 2
+                root.focusButtonIndex = buttonIndex
+                root.focusItemIndex = -1
+                root.focusParamIndex = -1
+            }
+        }
+
+        // 区域切换函数
+        function switchToArea(newArea) {
+            currentArea = newArea
+
+            switch(newArea) {
+            case areaBrakeList:
+                root.focusSubArea = 0
+                root.focusItemIndex = brakeListIndex
+                root.focusParamIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaParams:
+                root.focusSubArea = 1
+                root.focusParamIndex = paramIndex
+                root.focusItemIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaButtons:
+                root.focusSubArea = 2
+                root.focusButtonIndex = buttonIndex
+                root.focusItemIndex = -1
+                root.focusParamIndex = -1
+                break
+            }
+        }
+
+        // 导航函数（参考 MotorControlPage 的实现）
+        function moveInListArea(direction) {
+            // 制动器列表导航（8个制动器，0-7）
+            var newIndex = brakeListIndex
+
+            switch(direction) {
+            case "Up":
+                if (brakeListIndex > 0) {
+                    newIndex = brakeListIndex - 1
+                }
+                break
+            case "Down":
+                if (brakeListIndex < 7) {
+                    newIndex = brakeListIndex + 1
+                }
+                break
+            case "Right":
+                // 右键：进入参数区域
+                switchToArea(areaParams)
+                paramIndex = 0
+                return
+            }
+
+            if (newIndex !== brakeListIndex) {
+                brakeListIndex = newIndex
+            }
+        }
+
+        function moveInParamArea(direction) {
+            // 参数区域导航（10个参数，0-9，GridLayout 4列布局）
+            var newIndex = paramIndex
+
+            switch(direction) {
+            case "Left":
+                if (paramIndex % 2 === 1) {
+                    // 右列 → 左列
+                    newIndex = paramIndex - 1
+                } else {
+                    // 左列最左，返回制动器列表
+                    switchToArea(areaBrakeList)
+                    return
+                }
+                break
+            case "Right":
+                if (paramIndex % 2 === 0) {
+                    // 左列 → 右列
+                    newIndex = paramIndex + 1
+                }
+                break
+            case "Up":
+                if (paramIndex >= 2) {
+                    newIndex = paramIndex - 2
+                }
+                break
+            case "Down":
+                if (paramIndex <= 7) {
+                    newIndex = paramIndex + 2
+                } else {
+                    // 最后一行，进入按钮区域
+                    switchToArea(areaButtons)
+                    buttonIndex = 0
+                    return
+                }
+                break
+            }
+
+            if (newIndex !== paramIndex && newIndex >= 0 && newIndex <= 9) {
+                paramIndex = newIndex
+            }
+        }
+
+        function moveInButtonArea(direction) {
+            // 底部按钮导航（2个按钮，0-1）
+            var newIndex = buttonIndex
+
+            switch(direction) {
+            case "Left":
+                if (buttonIndex > 0) {
+                    newIndex = buttonIndex - 1
+                } else {
+                    // 最左，返回制动器列表
+                    switchToArea(areaBrakeList)
+                    return
+                }
+                break
+            case "Right":
+                if (buttonIndex < 1) {
+                    newIndex = buttonIndex + 1
+                }
+                break
+            case "Up":
+                // 返回参数区域最后一个参数
+                switchToArea(areaParams)
+                paramIndex = 9
+                return
+            }
+
+            if (newIndex !== buttonIndex) {
+                buttonIndex = newIndex
+            }
+        }
+    }
 
     // ========== 背景装饰图片（预留位置，可在QDS中替换）==========
     Image {
@@ -28,14 +226,62 @@ Rectangle {
     // ========== 键盘导航支持 ==========
     focus: true
 
-    Keys.onPressed: {
-        // 将键盘事件转发给子组件
-        if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
-            brakeListPanel.item.focus = true
-        } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
-            brakeConfigPanel.item.focus = true
+    // ✅ 2026-01-31 [FIX 100.300.112]: 使用 NavigationManager 处理键盘事件
+    Keys.onPressed: (event) => {
+        var direction = ""
+
+        switch(event.key) {
+        case Qt.Key_Up:
+            direction = "Up"
+            break
+        case Qt.Key_Down:
+            direction = "Down"
+            break
+        case Qt.Key_Left:
+            direction = "Left"
+            break
+        case Qt.Key_Right:
+            direction = "Right"
+            break
+        case Qt.Key_Return:
+        case Qt.Key_Enter:
+            // 回车键：触发当前焦点项
+            if (navigationManager.currentArea === navigationManager.areaParams) {
+                brakeConfigPanel.item.triggerParamInput(navigationManager.paramIndex)
+            } else if (navigationManager.currentArea === navigationManager.areaButtons) {
+                brakeConfigPanel.item.triggerButton(navigationManager.buttonIndex)
+            }
+            event.accepted = true
+            return
+        default:
+            return
         }
+
+        // 根据当前区域调用对应的导航函数
+        switch(navigationManager.currentArea) {
+        case navigationManager.areaBrakeList:
+            navigationManager.moveInListArea(direction)
+            break
+        case navigationManager.areaParams:
+            navigationManager.moveInParamArea(direction)
+            break
+        case navigationManager.areaButtons:
+            navigationManager.moveInButtonArea(direction)
+            break
+        }
+
+        event.accepted = true
     }
+
+    // ❌ 2026-01-31 [FIX 100.300.112]: 旧的键盘导航支持（已废弃，注释掉）
+    // Keys.onPressed: {
+    //     // 将键盘事件转发给子组件
+    //     if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+    //         brakeListPanel.item.focus = true
+    //     } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
+    //         brakeConfigPanel.item.focus = true
+    //     }
+    // }
 
     // ========== 左右分栏布局 ==========
     Row {
@@ -52,8 +298,11 @@ Rectangle {
 
             onLoaded: {
                 item.currentBrakeIndex = Qt.binding(function() { return root.currentBrakeIndex })
+                // ✅ 2026-01-31 [FIX 100.300.112]: 传递焦点索引
+                item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
                 item.brakeSelected.connect(function(brakeIndex) {
                     root.currentBrakeIndex = brakeIndex
+                    navigationManager.brakeListIndex = brakeIndex
                     console.log("选中制动器:", brakeIndex + 1)
                 })
             }
@@ -75,6 +324,11 @@ Rectangle {
 
             onLoaded: {
                 item.brakeIndex = Qt.binding(function() { return root.currentBrakeIndex })
+                // ✅ 2026-01-31 [FIX 100.300.112]: 传递焦点索引和虚拟键盘
+                item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+                item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                item.focusButtonIndex = Qt.binding(function() { return root.focusButtonIndex })
+                item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
             }
         }
     }
