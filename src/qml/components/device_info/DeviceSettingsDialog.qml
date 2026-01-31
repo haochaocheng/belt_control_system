@@ -101,6 +101,7 @@ Item {
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
         // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 制动器控制页面使用NavigationManager
+        // ✅ 2026-01-31 [FIX 100.300.112.8]: 张紧控制页面使用NavigationManager
         if (currentCategory === 3 && currentFocusArea === 2) {
             var motorPage = motorControlPageLoader.item
             if (motorPage && typeof motorPage.handleKeyPress === "function") {
@@ -114,6 +115,15 @@ Item {
             var brakePage = brakeControlPageLoader.item
             if (brakePage && typeof brakePage.handleKeyPress === "function") {
                 brakePage.handleKeyPress("Up")
+                event.accepted = true
+                return
+            }
+        }
+
+        if (currentCategory === 5 && currentFocusArea === 2) {
+            var tensionPage = tensionControlPageLoader.item
+            if (tensionPage && typeof tensionPage.handleKeyPress === "function") {
+                tensionPage.handleKeyPress("Up")
                 event.accepted = true
                 return
             }
@@ -242,6 +252,16 @@ Item {
             var brakePage = brakeControlPageLoader.item
             if (brakePage && typeof brakePage.handleKeyPress === "function") {
                 brakePage.handleKeyPress("Down")
+                event.accepted = true
+                return
+            }
+        }
+
+        // ✅ 2026-01-31 [FIX 100.300.112.8]: 张紧控制页面使用NavigationManager
+        if (currentCategory === 5 && currentFocusArea === 2) {
+            var tensionPage = tensionControlPageLoader.item
+            if (tensionPage && typeof tensionPage.handleKeyPress === "function") {
+                tensionPage.handleKeyPress("Down")
                 event.accepted = true
                 return
             }
@@ -405,6 +425,30 @@ Item {
                     }
                 }
 
+                // ✅ 2026-01-31 [FIX 100.300.112.8]: 检查是否是 TensionControlPage（4区域模式）
+                var isTensionControlPage = (currentCategory === 5)  // 张紧控制类别
+
+                if (isTensionControlPage) {
+                    // ✅ TensionControlPage 4区域模式：左键由内部 NavigationManager 处理
+                    var tensionPage = tensionControlPageLoader.item
+
+                    // 检查当前子区域：0=列表 1=使用状态 2=参数 3=按钮
+                    if (tensionPage && tensionPage.focusSubArea !== 0) {
+                        // 在使用状态、参数或按钮区域：转发给内部 NavigationManager
+                        if (typeof tensionPage.handleKeyPress === "function") {
+                            tensionPage.handleKeyPress("Left")
+                            event.accepted = true
+                            console.log("✅ [导航] TensionControlPage 左键由内部 NavigationManager 处理")
+                            return
+                        }
+                    } else {
+                        // 在列表区域：左键返回到左侧类别区域
+                        console.log("✅ [导航] TensionControlPage 列表区域左键返回类别")
+                        currentFocusArea = 1  // 切换到左侧类别
+                        return
+                    }
+                }
+
                 if (currentPage.focusSubArea === 1) {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
                     var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
@@ -490,6 +534,16 @@ Item {
             var brakePage = brakeControlPageLoader.item
             if (brakePage && typeof brakePage.handleKeyPress === "function") {
                 brakePage.handleKeyPress("Right")
+                event.accepted = true
+                return
+            }
+        }
+
+        // ✅ 2026-01-31 [FIX 100.300.112.8]: 张紧控制页面使用NavigationManager
+        if (currentCategory === 5 && currentFocusArea === 2) {
+            var tensionPage = tensionControlPageLoader.item
+            if (tensionPage && typeof tensionPage.handleKeyPress === "function") {
+                tensionPage.handleKeyPress("Right")
                 event.accepted = true
                 return
             }
@@ -1400,12 +1454,59 @@ Item {
                             item.deviceName = root.deviceName
                             // ✅ 2026-01-30 [FIX 100.300.105.1]: keyboardManager 已废弃，注释掉
                             // item.keyboardManager = keyboardManager
+
+                            // ✅ 2026-01-31 [FIX 100.300.112.8]: 初始化焦点状态
+                            if (root.currentFocusArea === 2 && root.currentCategory === 5) {
+                                item.focusSubArea = 0  // 默认焦点在控制列表区域
+                                item.focusItemIndex = root.currentContentItemIndex
+                            }
                         }
                     }
 
                     onStatusChanged: {
                         if (tensionControlPageLoader.status === Loader.Error) {
                             console.error("❌ [DeviceSettingsDialog] TensionControlPage 加载失败")
+                        }
+                    }
+                }
+
+                // ✅ 2026-01-31 [FIX 100.300.112.8]: TensionControlPage 焦点同步
+                Connections {
+                    target: root
+                    enabled: tensionControlPageLoader.item !== null
+
+                    function onCurrentFocusAreaChanged() {
+                        if (tensionControlPageLoader.item && root.currentCategory === 5) {
+                            if (root.currentFocusArea === 2) {
+                                // 焦点进入内容区域，默认在控制列表区域
+                                tensionControlPageLoader.item.focusSubArea = 0
+                                tensionControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                // 焦点离开内容区域，清除焦点
+                                tensionControlPageLoader.item.focusItemIndex = -1
+                            }
+                        }
+                    }
+
+                    function onCurrentCategoryChanged() {
+                        if (tensionControlPageLoader.item) {
+                            if (root.currentCategory === 5 && root.currentFocusArea === 2) {
+                                // 切换到张紧控制类别，设置焦点
+                                tensionControlPageLoader.item.focusSubArea = 0
+                                tensionControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                // 切换到其他类别，清除焦点
+                                tensionControlPageLoader.item.focusItemIndex = -1
+                            }
+                        }
+                    }
+
+                    function onCurrentContentItemIndexChanged() {
+                        if (tensionControlPageLoader.item &&
+                            root.currentFocusArea === 2 &&
+                            root.currentCategory === 5) {
+                            // 在控制列表中导航
+                            tensionControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
                         }
                     }
                 }
