@@ -19,6 +19,8 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property int currentBrakeIndex: 0  // 当前选中的制动器索引 (0-7)
+    // ✅ 2026-01-31 [FIX 100.300.112.1]: 导航焦点索引（从父页面传递）
+    property int focusItemIndex: -1  // -1 表示无焦点
 
     // ========== 信号 ==========
     signal brakeSelected(int brakeIndex)  // 制动器被选中时发出信号
@@ -84,6 +86,16 @@ Rectangle {
             // ✅ 移除边框
             border.color: "transparent"
             border.width: 0
+
+            // ✅ 2026-01-31 [FIX 100.300.112.1]: 焦点指示器
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                border.color: (root.focusItemIndex === index) ? "#2196F3" : "transparent"
+                border.width: (root.focusItemIndex === index) ? 3 : 0
+                radius: 4
+                z: 10
+            }
 
             // ✅ 添加背景图片
             Image {
