@@ -3,7 +3,8 @@ import QtQuick.Controls 2.15
 import "../" as DeviceInfo  // ✅ 2026-01-31 [FIX 100.300.112.8]: 导入 NavigationManager
 
 // ✅ 2026-01-27 [张紧控制参数设置] 张紧控制主页面（左右分栏布局）
-// ✅ 2026-01-31 [FIX 100.300.112.8]: 添加 NavigationManager 支持（4区域模式）
+// ✅ 2026-01-31 [FIX 100.300.112.8]: 添加 NavigationManager 支持（3区域模式）
+// ✅ 2026-01-31 [FIX 100.300.112.8.3]: 改为3区域模式（无使用状态区域）
 // 设计风格与电机控制、制动器控制完全一样
 Rectangle {
     id: root
@@ -18,8 +19,9 @@ Rectangle {
     property int currentControlIndex: 0  // 当前选中的控制索引 (0=张力传感器, 1=独立张紧控制)
 
     // ✅ 2026-01-31 [FIX 100.300.112.8]: 导航焦点属性
+    // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 改为3区域模式（0:列表 1:参数 2:按钮）
     property int focusItemIndex: -1  // -1 表示无焦点
-    property int focusSubArea: 0  // 0:列表区域 1:使用状态 2:参数区域 3:按钮区域
+    property int focusSubArea: 0  // 0:列表区域 1:参数区域 2:按钮区域
     property int focusParamIndex: 0  // 参数区域焦点索引
     property int focusButtonIndex: 0  // 底部按钮区域焦点索引
     // Qt 虚拟键盘引用
@@ -39,15 +41,14 @@ Rectangle {
         id: navigationManager
 
         // 区域定义
+        // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 改为3区域模式（无使用状态区域）
         readonly property int areaControlList: 0      // 控制列表区域
-        readonly property int areaUsageStatus: 1      // 使用状态区域（投入/禁用）
-        readonly property int areaParams: 2           // 参数区域
-        readonly property int areaButtons: 3          // 底部按钮区域
+        readonly property int areaParams: 1           // 参数区域
+        readonly property int areaButtons: 2          // 底部按钮区域
 
         // 当前状态
         property int currentArea: areaControlList
         property int controlListIndex: 0      // 控制列表索引（0-1）
-        property int usageStatusIndex: 0      // 使用状态索引（0:投入 1:禁用）
         property int paramIndex: 0            // 参数索引
         property int buttonIndex: 0           // 按钮索引（0-2）
 
@@ -76,21 +77,10 @@ Rectangle {
             }
         }
 
-        // 监听使用状态索引变化
-        onUsageStatusIndexChanged: {
-            if (currentArea === areaUsageStatus) {
-                root.focusSubArea = 1  // 使用状态区域
-                root.focusItemIndex = -1
-                root.focusParamIndex = -1
-                root.focusButtonIndex = -1
-                console.log("✅ [TensionControlPage] 更新焦点 - 使用状态索引:", usageStatusIndex)
-            }
-        }
-
         // 监听参数索引变化
         onParamIndexChanged: {
             if (currentArea === areaParams) {
-                root.focusSubArea = 2
+                root.focusSubArea = 1  // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 参数区域改为1
                 root.focusParamIndex = paramIndex
                 root.focusItemIndex = -1
                 root.focusButtonIndex = -1
@@ -100,7 +90,7 @@ Rectangle {
         // 监听按钮索引变化
         onButtonIndexChanged: {
             if (currentArea === areaButtons) {
-                root.focusSubArea = 3
+                root.focusSubArea = 2  // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 按钮区域改为2
                 root.focusButtonIndex = buttonIndex
                 root.focusItemIndex = -1
                 root.focusParamIndex = -1
@@ -108,7 +98,9 @@ Rectangle {
         }
 
         // 区域切换函数
+        // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 改为3区域模式
         function switchToArea(newArea) {
+            console.log("✅ [TensionControlPage] switchToArea:", newArea)
             currentArea = newArea
 
             switch(newArea) {
@@ -118,20 +110,14 @@ Rectangle {
                 root.focusParamIndex = -1
                 root.focusButtonIndex = -1
                 break
-            case areaUsageStatus:
-                root.focusSubArea = 1
-                root.focusItemIndex = -1
-                root.focusParamIndex = -1
-                root.focusButtonIndex = -1
-                break
             case areaParams:
-                root.focusSubArea = 2
+                root.focusSubArea = 1  // ✅ 参数区域改为1
                 root.focusParamIndex = paramIndex
                 root.focusItemIndex = -1
                 root.focusButtonIndex = -1
                 break
             case areaButtons:
-                root.focusSubArea = 3
+                root.focusSubArea = 2  // ✅ 按钮区域改为2
                 root.focusButtonIndex = buttonIndex
                 root.focusItemIndex = -1
                 root.focusParamIndex = -1
@@ -156,9 +142,9 @@ Rectangle {
                 }
                 break
             case "Right":
-                // 右键进入使用状态区域
-                switchToArea(areaUsageStatus)
-                usageStatusIndex = 0
+                // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 右键直接进入参数区域（无使用状态）
+                switchToArea(areaParams)
+                paramIndex = 0
                 return
             }
 
@@ -170,28 +156,13 @@ Rectangle {
             }
         }
 
-        // 导航函数：使用状态区域
-        function moveInUsageStatusArea(direction) {
-            switch(direction) {
-            case "Left":
-                // 左键：返回控制列表
-                switchToArea(areaControlList)
-                return
-            case "Right":
-                // 右键：进入参数区域
-                switchToArea(areaParams)
-                paramIndex = 0
-                return
-            case "Down":
-                // 下键：进入参数区域
-                switchToArea(areaParams)
-                paramIndex = 0
-                return
-            }
-        }
+        // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 移除使用状态区域导航（张紧控制无使用状态）
+        // function moveInUsageStatusArea(direction) { ... }
 
         // 导航函数：参数区域
+        // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 左键和上键返回控制列表（无使用状态）
         function moveInParamArea(direction) {
+            console.log("✅ [TensionControlPage] moveInParamArea - direction:", direction, "paramIndex:", paramIndex)
             var newIndex = paramIndex
             // 参数数量根据控制类型不同：张力传感器(14个) vs 独立张紧控制(待定)
             var maxIndex = 13  // 暂定最大索引
@@ -202,8 +173,8 @@ Rectangle {
                     // 右列 → 左列
                     newIndex = paramIndex - 1
                 } else {
-                    // 左列最左，返回使用状态区域
-                    switchToArea(areaUsageStatus)
+                    // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 左列最左，返回控制列表
+                    switchToArea(areaControlList)
                     return
                 }
                 break
@@ -217,8 +188,8 @@ Rectangle {
                 if (paramIndex >= 2) {
                     newIndex = paramIndex - 2
                 } else {
-                    // 第一行，返回使用状态区域
-                    switchToArea(areaUsageStatus)
+                    // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 第一行，返回控制列表
+                    switchToArea(areaControlList)
                     return
                 }
                 break
@@ -235,12 +206,15 @@ Rectangle {
             }
 
             if (newIndex !== paramIndex && newIndex >= 0 && newIndex <= maxIndex) {
+                console.log("✅ [TensionControlPage] 更新 paramIndex:", paramIndex, "→", newIndex)
                 paramIndex = newIndex
             }
         }
 
         // 导航函数：按钮区域（3个按钮，0-2）
+        // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 左键返回控制列表（无使用状态）
         function moveInButtonArea(direction) {
+            console.log("✅ [TensionControlPage] moveInButtonArea - direction:", direction, "buttonIndex:", buttonIndex)
             var newIndex = buttonIndex
 
             switch(direction) {
@@ -248,8 +222,8 @@ Rectangle {
                 if (buttonIndex > 0) {
                     newIndex = buttonIndex - 1
                 } else {
-                    // 最左，返回使用状态区域
-                    switchToArea(areaUsageStatus)
+                    // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 最左，返回控制列表（无使用状态）
+                    switchToArea(areaControlList)
                     return
                 }
                 break
@@ -266,6 +240,7 @@ Rectangle {
             }
 
             if (newIndex !== buttonIndex) {
+                console.log("✅ [TensionControlPage] 更新 buttonIndex:", buttonIndex, "→", newIndex)
                 buttonIndex = newIndex
             }
         }
@@ -285,6 +260,7 @@ Rectangle {
     focus: true
 
     // ✅ 2026-01-31 [FIX 100.300.112.8]: 使用 NavigationManager 处理键盘事件
+    // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 改为3区域模式（移除使用状态区域）
     Keys.onPressed: (event) => {
         var direction = ""
 
@@ -304,10 +280,7 @@ Rectangle {
         case Qt.Key_Return:
         case Qt.Key_Enter:
             // 回车键：触发当前焦点项
-            if (navigationManager.currentArea === navigationManager.areaUsageStatus) {
-                // 切换投入/禁用选项
-                tensionControlConfigPanel.item.toggleUsageStatus()
-            } else if (navigationManager.currentArea === navigationManager.areaParams) {
+            if (navigationManager.currentArea === navigationManager.areaParams) {
                 tensionControlConfigPanel.item.triggerParamInput(navigationManager.paramIndex)
             } else if (navigationManager.currentArea === navigationManager.areaButtons) {
                 tensionControlConfigPanel.item.triggerButton(navigationManager.buttonIndex)
@@ -323,9 +296,6 @@ Rectangle {
         case navigationManager.areaControlList:
             navigationManager.moveInListArea(direction)
             break
-        case navigationManager.areaUsageStatus:
-            navigationManager.moveInUsageStatusArea(direction)
-            break
         case navigationManager.areaParams:
             navigationManager.moveInParamArea(direction)
             break
@@ -338,6 +308,7 @@ Rectangle {
     }
 
     // ✅ 2026-01-31 [FIX 100.300.112.8]: 处理键盘事件（供 DeviceSettingsDialog 调用）
+    // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 改为3区域模式（移除使用状态区域）
     function handleKeyPress(direction) {
         console.log("✅ [TensionControlPage] handleKeyPress - direction:", direction)
 
@@ -345,9 +316,6 @@ Rectangle {
         switch(navigationManager.currentArea) {
         case navigationManager.areaControlList:
             navigationManager.moveInListArea(direction)
-            break
-        case navigationManager.areaUsageStatus:
-            navigationManager.moveInUsageStatusArea(direction)
             break
         case navigationManager.areaParams:
             navigationManager.moveInParamArea(direction)
@@ -403,8 +371,8 @@ Rectangle {
             onLoaded: {
                 item.controlIndex = Qt.binding(function() { return root.currentControlIndex })
                 // ✅ 2026-01-31 [FIX 100.300.112.8]: 传递焦点索引和虚拟键盘
+                // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 移除 usageStatusIndex（无使用状态区域）
                 item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
-                item.focusUsageStatusIndex = Qt.binding(function() { return navigationManager.usageStatusIndex })
                 item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                 item.focusButtonIndex = Qt.binding(function() { return root.focusButtonIndex })
                 item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
