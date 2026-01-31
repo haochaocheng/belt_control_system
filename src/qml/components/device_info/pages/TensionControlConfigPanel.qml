@@ -20,8 +20,9 @@ Rectangle {
     // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
     property var keyboardManager: null
     // ✅ 2026-01-31 [FIX 100.300.112.8.2]: 导航焦点属性
-    property int focusSubArea: 0  // 0:列表区域 1:使用状态 2:参数区域 3:按钮区域
-    property int focusUsageStatusIndex: 0  // 使用状态焦点索引（0:投入 1:禁用）
+    // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 改为3区域模式（0:列表 1:参数 2:按钮）
+    property int focusSubArea: 0  // 0:列表区域 1:参数区域 2:按钮区域
+    property int focusUsageStatusIndex: 0  // 使用状态焦点索引（保留但不使用）
     property int focusParamIndex: 0  // 参数区域焦点索引
     property int focusButtonIndex: 0  // 底部按钮区域焦点索引
     property var virtualKeyboard: null  // Qt 虚拟键盘引用
