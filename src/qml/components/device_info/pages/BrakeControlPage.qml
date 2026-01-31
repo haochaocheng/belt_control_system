@@ -27,10 +27,12 @@ Rectangle {
     property var virtualKeyboard: null
 
     // ✅ 2026-01-31 [FIX 100.300.112.5]: 监听 focusItemIndex 变化，同步到 currentBrakeIndex
+    // ✅ 2026-01-31 [FIX 100.300.112.5.1]: 同时更新 navigationManager.brakeListIndex
     onFocusItemIndexChanged: {
         if (focusSubArea === 0 && focusItemIndex >= 0 && focusItemIndex <= 7) {
-            console.log("✅ [BrakeControlPage] focusItemIndex 变化:", focusItemIndex, "→ 更新 currentBrakeIndex")
+            console.log("✅ [BrakeControlPage] focusItemIndex 变化:", focusItemIndex, "→ 更新 currentBrakeIndex 和 brakeListIndex")
             currentBrakeIndex = focusItemIndex
+            navigationManager.brakeListIndex = focusItemIndex
         }
     }
 
