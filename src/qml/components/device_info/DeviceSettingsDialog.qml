@@ -100,10 +100,20 @@ Item {
     Keys.onUpPressed: function(event) {
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
+        // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 制动器控制页面使用NavigationManager
         if (currentCategory === 3 && currentFocusArea === 2) {
             var motorPage = motorControlPageLoader.item
             if (motorPage && typeof motorPage.handleKeyPress === "function") {
                 motorPage.handleKeyPress("Up")
+                event.accepted = true
+                return
+            }
+        }
+
+        if (currentCategory === 4 && currentFocusArea === 2) {
+            var brakePage = brakeControlPageLoader.item
+            if (brakePage && typeof brakePage.handleKeyPress === "function") {
+                brakePage.handleKeyPress("Up")
                 event.accepted = true
                 return
             }
@@ -218,10 +228,20 @@ Item {
     Keys.onDownPressed: function(event) {
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
+        // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 制动器控制页面使用NavigationManager
         if (currentCategory === 3 && currentFocusArea === 2) {
             var motorPage = motorControlPageLoader.item
             if (motorPage && typeof motorPage.handleKeyPress === "function") {
                 motorPage.handleKeyPress("Down")
+                event.accepted = true
+                return
+            }
+        }
+
+        if (currentCategory === 4 && currentFocusArea === 2) {
+            var brakePage = brakeControlPageLoader.item
+            if (brakePage && typeof brakePage.handleKeyPress === "function") {
+                brakePage.handleKeyPress("Down")
                 event.accepted = true
                 return
             }
@@ -359,6 +379,15 @@ Item {
         case 2:  // 右侧内容 → 检查是否在参数区域或底部按钮区域
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
+                // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 检查是否是 BrakeControlPage（4区域模式）
+                var isBrakeControlPage = (currentCategory === 4)  // 制动器控制类别
+
+                if (isBrakeControlPage) {
+                    // ✅ BrakeControlPage 4区域模式：左键由内部 NavigationManager 处理
+                    console.log("✅ [导航] BrakeControlPage 左键由内部 NavigationManager 处理")
+                    return
+                }
+
                 if (currentPage.focusSubArea === 1) {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
                     var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
@@ -430,10 +459,20 @@ Item {
     Keys.onRightPressed: function(event) {
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
+        // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 制动器控制页面使用NavigationManager
         if (currentCategory === 3 && currentFocusArea === 2) {
             var motorPage = motorControlPageLoader.item
             if (motorPage && typeof motorPage.handleKeyPress === "function") {
                 motorPage.handleKeyPress("Right")
+                event.accepted = true
+                return
+            }
+        }
+
+        if (currentCategory === 4 && currentFocusArea === 2) {
+            var brakePage = brakeControlPageLoader.item
+            if (brakePage && typeof brakePage.handleKeyPress === "function") {
+                brakePage.handleKeyPress("Right")
                 event.accepted = true
                 return
             }
@@ -453,6 +492,16 @@ Item {
         case 2:  // 右侧内容 → 检查当前页面是否支持子区域导航
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
+                // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 检查是否是 BrakeControlPage（4区域模式）
+                var isBrakeControlPage = (currentCategory === 4)  // 制动器控制类别
+
+                if (isBrakeControlPage) {
+                    // ✅ BrakeControlPage 4区域模式：0=列表 1=使用状态 2=参数 3=按钮
+                    // 右键由 BrakeControlPage 内部的 NavigationManager 处理，不在这里处理
+                    console.log("✅ [导航] BrakeControlPage 右键由内部 NavigationManager 处理")
+                    return
+                }
+
                 // 如果当前在列表区域，切换到参数区域
                 if (currentPage.focusSubArea === 0) {
                     currentPage.focusSubArea = 1

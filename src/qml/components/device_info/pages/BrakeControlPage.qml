@@ -424,6 +424,28 @@ Rectangle {
 
     // ========== 转发函数（供 DeviceSettingsDialog 调用）==========
     // ✅ 2026-01-31 [FIX 100.300.112.2]: 添加转发函数，将调用转发给 BrakeConfigPanel
+    // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 添加 handleKeyPress 函数，处理 DeviceSettingsDialog 的键盘事件
+
+    // 处理键盘事件（供 DeviceSettingsDialog 调用）
+    function handleKeyPress(direction) {
+        console.log("✅ [BrakeControlPage] handleKeyPress - direction:", direction)
+
+        // 根据当前区域调用对应的导航函数
+        switch(navigationManager.currentArea) {
+        case navigationManager.areaBrakeList:
+            navigationManager.moveInListArea(direction)
+            break
+        case navigationManager.areaUsageStatus:
+            navigationManager.moveInUsageStatusArea(direction)
+            break
+        case navigationManager.areaParams:
+            navigationManager.moveInParamArea(direction)
+            break
+        case navigationManager.areaButtons:
+            navigationManager.moveInButtonArea(direction)
+            break
+        }
+    }
 
     // 返回参数区域的字段数量
     function getParamFieldCount() {
