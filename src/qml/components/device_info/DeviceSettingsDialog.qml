@@ -384,6 +384,12 @@ Item {
 
                 if (isBrakeControlPage) {
                     // ✅ BrakeControlPage 4区域模式：左键由内部 NavigationManager 处理
+                    // ✅ 2026-01-31 [FIX 100.300.112.7.4]: 调用 handleKeyPress 处理左键
+                    var brakePage = brakeControlPageLoader.item
+                    if (brakePage && typeof brakePage.handleKeyPress === "function") {
+                        brakePage.handleKeyPress("Left")
+                        event.accepted = true
+                    }
                     console.log("✅ [导航] BrakeControlPage 左键由内部 NavigationManager 处理")
                     return
                 }
