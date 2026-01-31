@@ -19,6 +19,10 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property int currentControlIndex: 0  // 当前选中的控制索引 (0=张力传感器, 1=独立张紧控制)
+    // ✅ 2026-01-31 [FIX 100.300.112.8.2]: 导航焦点索引（从父页面传递）
+    property int focusItemIndex: -1  // -1 表示无焦点
+    // ✅ 2026-01-31 [FIX 100.300.112.8.2]: 导航子区域（从父页面传递）
+    property int focusSubArea: 0  // 0:列表区域 1:使用状态 2:参数区域 3:按钮区域
 
     // ========== 信号 ==========
     signal controlSelected(int controlIndex)  // 控制被选中时发出信号
@@ -87,6 +91,17 @@ Rectangle {
             // ✅ 移除边框
             border.color: "transparent"
             border.width: 0
+
+            // ✅ 2026-01-31 [FIX 100.300.112.8.2]: 焦点指示器
+            // ✅ 只在列表区域（focusSubArea === 0）时显示
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                border.color: (root.focusSubArea === 0 && root.focusItemIndex === index) ? "#2196F3" : "transparent"
+                border.width: (root.focusSubArea === 0 && root.focusItemIndex === index) ? 3 : 0
+                radius: 4
+                z: 10
+            }
 
             // ✅ 添加背景图片
             Image {
