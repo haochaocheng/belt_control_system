@@ -146,6 +146,7 @@ Rectangle {
                                 }
 
                                 // ========== 保护类型 ==========
+                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 1
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: 10
@@ -157,18 +158,33 @@ Rectangle {
                                         Layout.preferredWidth: 120
                                     }
 
-                                    DeviceInfo.CustomComboBox {
-                                        id: typeCombo
-                                        enabled: false  // 固定为"模拟量"
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                                        model: ["模拟量", "开关量"]
-                                        currentIndex: 0
+                                        Layout.maximumWidth: 300
+                                        implicitHeight: typeCombo.implicitHeight
+
+                                        DeviceInfo.CustomComboBox {
+                                            id: typeCombo
+                                            anchors.fill: parent
+                                            enabled: false
+                                            keyboardManager: root.keyboardManager
+                                            model: ["模拟量", "开关量"]
+                                            currentIndex: 0
+                                        }
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
                                     }
                                 }
 
                                 // ========== 模块类型 ==========
+                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 2
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: 10
@@ -180,17 +196,32 @@ Rectangle {
                                         Layout.preferredWidth: 120
                                     }
 
-                                    DeviceInfo.CustomComboBox {
-                                        id: moduleTypeCombo
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                                        model: ["模拟量模块1", "模拟量模块2", "模拟量模块3", "模拟量模块4"]
-                                        currentIndex: 0
+                                        Layout.maximumWidth: 300
+                                        implicitHeight: moduleTypeCombo.implicitHeight
+
+                                        DeviceInfo.CustomComboBox {
+                                            id: moduleTypeCombo
+                                            anchors.fill: parent
+                                            keyboardManager: root.keyboardManager
+                                            model: ["模拟量模块1", "模拟量模块2", "模拟量模块3", "模拟量模块4"]
+                                            currentIndex: 0
+                                        }
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
                                     }
                                 }
 
                                 // ========== 寄存器地址 ==========
+                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 3
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: 10
@@ -202,19 +233,34 @@ Rectangle {
                                         Layout.preferredWidth: 120
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: registerAddressSpin
-                                        from: 0
-                                        to: 255
-                                        value: 6  // 张力默认寄存器地址
-                                        editable: true
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        implicitHeight: registerAddressSpin.implicitHeight
+
+                                        DeviceInfo.CustomSpinBox {
+                                            id: registerAddressSpin
+                                            anchors.fill: parent
+                                            from: 0
+                                            to: 255
+                                            value: 6
+                                            editable: true
+                                            keyboardManager: root.keyboardManager
+                                        }
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
                                     }
                                 }
 
                                 // ========== 上限值 ==========
+                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 4
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: 10
@@ -226,20 +272,35 @@ Rectangle {
                                         Layout.preferredWidth: 120
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: upperLimitSpin
-                                        from: 0
-                                        to: 10000
-                                        value: 100
-                                        stepSize: 10
-                                        editable: true
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        implicitHeight: upperLimitSpin.implicitHeight
+
+                                        DeviceInfo.CustomSpinBox {
+                                            id: upperLimitSpin
+                                            anchors.fill: parent
+                                            from: 0
+                                            to: 10000
+                                            value: 100
+                                            stepSize: 10
+                                            editable: true
+                                            keyboardManager: root.keyboardManager
+                                        }
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
                                     }
                                 }
 
                                 // ========== 下限值 ==========
+                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 5
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: 10
@@ -251,20 +312,35 @@ Rectangle {
                                         Layout.preferredWidth: 120
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: lowerLimitSpin
-                                        from: 0
-                                        to: 10000
-                                        value: 0
-                                        stepSize: 10
-                                        editable: true
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        implicitHeight: lowerLimitSpin.implicitHeight
+
+                                        DeviceInfo.CustomSpinBox {
+                                            id: lowerLimitSpin
+                                            anchors.fill: parent
+                                            from: 0
+                                            to: 10000
+                                            value: 0
+                                            stepSize: 10
+                                            editable: true
+                                            keyboardManager: root.keyboardManager
+                                        }
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
                                     }
                                 }
 
                                 // ========== 量程 ==========
+                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 6
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: 10
@@ -276,16 +352,30 @@ Rectangle {
                                         Layout.preferredWidth: 120
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: rangeSpin
-                                        from: 1
-                                        to: 10000
-                                        value: 100
-                                        stepSize: 10
-                                        editable: true
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        implicitHeight: rangeSpin.implicitHeight
+
+                                        DeviceInfo.CustomSpinBox {
+                                            id: rangeSpin
+                                            anchors.fill: parent
+                                            from: 1
+                                            to: 10000
+                                            value: 100
+                                            stepSize: 10
+                                            editable: true
+                                            keyboardManager: root.keyboardManager
+                                        }
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
                                     }
                                 }
                             }
