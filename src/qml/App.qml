@@ -187,6 +187,11 @@ Item {
         // Page 4: Device Operation Log - 设备运行信息
         DeviceOperationLog {
         }
+
+        // ✅ 2026-01-31 [FIX 100.300.112.8.9]: 添加 Input1Page（第5个页面）
+        // Page 5: Input1 Page - QDS 设计的输入界面
+        Input1Page {
+        }
     }
 
     // Page indicator - Floating at bottom
