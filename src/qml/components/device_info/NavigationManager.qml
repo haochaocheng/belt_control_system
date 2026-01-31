@@ -19,6 +19,12 @@ QtObject {
     property int paramIndex: 0                     // 区域C：参数索引（0-8）
     property int buttonIndex: 0                    // 区域D：按钮索引（0-4，共5个按钮）
 
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3]: 当前Tab的最后一个参数索引
+    // 不同Tab有不同的参数数量：
+    // - 基本配置（Tab 0）：6个参数（0-5），最后索引=5
+    // - 其他Tab（Tab 1-9）：9个参数（0-8），最后索引=8
+    property int lastParamIndex: 8  // 默认为8（大多数Tab）
+
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除重复的信号定义
     // QML会自动为每个property生成对应的Changed信号，不需要手动定义
     // 例如：motorListIndex 会自动生成 onMotorListIndexChanged 信号
@@ -116,8 +122,15 @@ QtObject {
 
         if (newIndex !== tabIndex) {
             tabIndex = newIndex
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3]: 根据Tab索引更新最后一个参数索引
+            // 基本配置（Tab 0）有6个参数（0-5），其他Tab有9个参数（0-8）
+            if (newIndex === 0) {
+                lastParamIndex = 5  // 基本配置：最后参数索引=5
+            } else {
+                lastParamIndex = 8  // 其他Tab：最后参数索引=8
+            }
             // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
-            console.log("✅ [NavigationManager] Tab索引:", newIndex, "（参数区自动切换显示）")
+            console.log("✅ [NavigationManager] Tab索引:", newIndex, "（参数区自动切换显示）lastParamIndex:", lastParamIndex)
         }
     }
 
@@ -146,23 +159,21 @@ QtObject {
             break
 
         case "Down":
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3]: 使用 lastParamIndex 判断最后一个参数
             // 向下移动（同列）
-            if (paramIndex <= 5) {
-                newIndex = paramIndex + 2
-            } else if (paramIndex === 6) {
-                newIndex = 8  // 跳转到第5行
-            } else if (paramIndex === 7) {
-                // 右列最后一个参数，向下进入底部按钮区
+
+            // 计算下一个索引（同列下一行）
+            var nextIndex = paramIndex + 2
+
+            // 检查下一个索引是否超出范围
+            if (nextIndex > lastParamIndex) {
+                // 超出范围，进入底部按钮区
                 switchToArea(areaButtons)
                 buttonIndex = 0
-                // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
                 return
-            } else if (paramIndex === 8) {
-                // 左列最后一个参数，向下进入底部按钮区
-                switchToArea(areaButtons)
-                buttonIndex = 0
-                // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
-                return
+            } else {
+                // 在范围内，移动到下一个索引
+                newIndex = nextIndex
             }
             break
 
