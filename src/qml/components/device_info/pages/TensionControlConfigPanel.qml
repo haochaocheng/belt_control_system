@@ -106,421 +106,393 @@ Rectangle {
                             columnSpacing: 10
                             rowSpacing: 12
 
-                            // ========== 左列 ==========
-                            ColumnLayout {
+                            // ========== 第一行：保护名称（左）、单位（右）==========
+                            // 参数索引: 0 - 保护名称（左列，行0）
+                            Text {
+                                text: "保护名称:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 0
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 0
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: parent.width / 2 - 10
-                                spacing: 15
+                                Layout.maximumWidth: 300
+                                implicitHeight: nameField.implicitHeight
 
-                                // ========== 保护名称 ==========
-                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 0
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    Text {
-                                        text: "保护名称:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
-
-                                    Item {
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300
-                                        implicitHeight: nameField.implicitHeight
-
-                                        DeviceInfo.CustomTextField {
-                                            id: nameField
-                                            anchors.fill: parent
-                                            text: "张力"
-                                            enabled: false  // 固定为"张力"
-                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                                        }
-
-                                        // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 焦点指示器
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            color: "transparent"
-                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? "#2196F3" : "transparent"
-                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? 3 : 0
-                                            radius: 4
-                                            z: 10
-                                        }
-                                    }
+                                DeviceInfo.CustomTextField {
+                                    id: nameField
+                                    anchors.fill: parent
+                                    text: "张力"
+                                    enabled: false
+                                    keyboardManager: root.keyboardManager
                                 }
 
-                                // ========== 保护类型 ==========
-                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 1
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    Text {
-                                        text: "保护类型:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
-
-                                    Item {
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300
-                                        implicitHeight: typeCombo.implicitHeight
-
-                                        DeviceInfo.CustomComboBox {
-                                            id: typeCombo
-                                            anchors.fill: parent
-                                            enabled: false
-                                            keyboardManager: root.keyboardManager
-                                            model: ["模拟量", "开关量"]
-                                            currentIndex: 0
-                                        }
-
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            color: "transparent"
-                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? "#2196F3" : "transparent"
-                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? 3 : 0
-                                            radius: 4
-                                            z: 10
-                                        }
-                                    }
-                                }
-
-                                // ========== 模块类型 ==========
-                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 2
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    Text {
-                                        text: "模块类型:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
-
-                                    Item {
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300
-                                        implicitHeight: moduleTypeCombo.implicitHeight
-
-                                        DeviceInfo.CustomComboBox {
-                                            id: moduleTypeCombo
-                                            anchors.fill: parent
-                                            keyboardManager: root.keyboardManager
-                                            model: ["模拟量模块1", "模拟量模块2", "模拟量模块3", "模拟量模块4"]
-                                            currentIndex: 0
-                                        }
-
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            color: "transparent"
-                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? "#2196F3" : "transparent"
-                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? 3 : 0
-                                            radius: 4
-                                            z: 10
-                                        }
-                                    }
-                                }
-
-                                // ========== 寄存器地址 ==========
-                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 3
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    Text {
-                                        text: "寄存器地址:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
-
-                                    Item {
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300
-                                        implicitHeight: registerAddressSpin.implicitHeight
-
-                                        DeviceInfo.CustomSpinBox {
-                                            id: registerAddressSpin
-                                            anchors.fill: parent
-                                            from: 0
-                                            to: 255
-                                            value: 6
-                                            editable: true
-                                            keyboardManager: root.keyboardManager
-                                        }
-
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            color: "transparent"
-                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
-                                            radius: 4
-                                            z: 10
-                                        }
-                                    }
-                                }
-
-                                // ========== 上限值 ==========
-                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 4
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    Text {
-                                        text: "上限值:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
-
-                                    Item {
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300
-                                        implicitHeight: upperLimitSpin.implicitHeight
-
-                                        DeviceInfo.CustomSpinBox {
-                                            id: upperLimitSpin
-                                            anchors.fill: parent
-                                            from: 0
-                                            to: 10000
-                                            value: 100
-                                            stepSize: 10
-                                            editable: true
-                                            keyboardManager: root.keyboardManager
-                                        }
-
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            color: "transparent"
-                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
-                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
-                                            radius: 4
-                                            z: 10
-                                        }
-                                    }
-                                }
-
-                                // ========== 下限值 ==========
-                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 5
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    Text {
-                                        text: "下限值:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
-
-                                    Item {
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300
-                                        implicitHeight: lowerLimitSpin.implicitHeight
-
-                                        DeviceInfo.CustomSpinBox {
-                                            id: lowerLimitSpin
-                                            anchors.fill: parent
-                                            from: 0
-                                            to: 10000
-                                            value: 0
-                                            stepSize: 10
-                                            editable: true
-                                            keyboardManager: root.keyboardManager
-                                        }
-
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            color: "transparent"
-                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? "#2196F3" : "transparent"
-                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? 3 : 0
-                                            radius: 4
-                                            z: 10
-                                        }
-                                    }
-                                }
-
-                                // ========== 量程 ==========
-                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 6
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    Text {
-                                        text: "量程:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
-
-                                    Item {
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300
-                                        implicitHeight: rangeSpin.implicitHeight
-
-                                        DeviceInfo.CustomSpinBox {
-                                            id: rangeSpin
-                                            anchors.fill: parent
-                                            from: 1
-                                            to: 10000
-                                            value: 100
-                                            stepSize: 10
-                                            editable: true
-                                            keyboardManager: root.keyboardManager
-                                        }
-
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            color: "transparent"
-                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? "#2196F3" : "transparent"
-                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? 3 : 0
-                                            radius: 4
-                                            z: 10
-                                        }
-                                    }
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? 3 : 0
+                                    radius: 4
+                                    z: 10
                                 }
                             }
 
-                            // ========== 右列 ==========
-                            ColumnLayout {
+                            // 参数索引: 1 - 单位（右列，行0）
+                            Text {
+                                text: "单位:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 0
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 0
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: parent.width / 2 - 10
-                                spacing: 15
+                                Layout.maximumWidth: 300
+                                implicitHeight: unitCombo.implicitHeight
 
-                                // ========== 单位 ==========
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
+                                DeviceInfo.CustomComboBox {
+                                    id: unitCombo
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+                                    model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
+                                    editable: true
+                                    currentIndex: 1
+                                }
 
-                                    Text {
-                                        text: "单位:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // ========== 第二行：保护类型（左）、保护延时（右）==========
+                            // 参数索引: 2 - 保护类型（左列，行1）
+                            Text {
+                                text: "保护类型:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 1
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 1
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: typeCombo.implicitHeight
+
+                                DeviceInfo.CustomComboBox {
+                                    id: typeCombo
+                                    anchors.fill: parent
+                                    enabled: false
+                                    keyboardManager: root.keyboardManager
+                                    model: ["模拟量", "开关量"]
+                                    currentIndex: 0
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // 参数索引: 3 - 保护延时（右列，行1）
+                            Text {
+                                text: "保护延时(秒):"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 1
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 1
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: delaySpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: delaySpin
+                                    from: 0
+                                    to: 600
+                                    value: 10
+                                    stepSize: 1
+                                    editable: true
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+
+                                    property int decimals: 1
+                                    property real realValue: value / 10
+
+                                    textFromValue: function(value, locale) {
+                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
                                     }
 
-                                    DeviceInfo.CustomComboBox {
-                                        id: unitCombo
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                                        model: ["m/s", "T", "℃", "kW", "A", "V", "MPa", "%"]
-                                        editable: true
-                                        currentIndex: 1  // 默认选择 "T"（张力单位）
+                                    valueFromText: function(text, locale) {
+                                        return Number.fromLocaleString(locale, text) * 10
                                     }
                                 }
 
-                                // ========== 保护延时 ==========
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
 
-                                    Text {
-                                        text: "保护延时(秒):"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
+                            // ========== 第三行：模块类型（左）、播放次数（右）==========
+                            // 参数索引: 4 - 模块类型（左列，行2）
+                            Text {
+                                text: "模块类型:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 2
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 2
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: moduleTypeCombo.implicitHeight
+
+                                DeviceInfo.CustomComboBox {
+                                    id: moduleTypeCombo
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+                                    model: ["模拟量模块1", "模拟量模块2", "模拟量模块3", "模拟量模块4"]
+                                    currentIndex: 0
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // 参数索引: 5 - 播放次数（右列，行2）
+                            Text {
+                                text: "播放次数:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 2
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 2
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: playCountSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: playCountSpin
+                                    from: 1
+                                    to: 99
+                                    value: 3
+                                    editable: true
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // ========== 第四行：寄存器地址（左）、播放时长（右）==========
+                            // 参数索引: 6 - 寄存器地址（左列，行3）
+                            Text {
+                                text: "寄存器地址:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 3
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 3
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: registerAddressSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: registerAddressSpin
+                                    anchors.fill: parent
+                                    from: 0
+                                    to: 255
+                                    value: 6
+                                    editable: true
+                                    keyboardManager: root.keyboardManager
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // 参数索引: 7 - 播放时长（右列，行3）
+                            Text {
+                                text: "播放时长(秒):"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 3
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 3
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: durationSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: durationSpin
+                                    from: 1
+                                    to: 600
+                                    value: 50
+                                    stepSize: 5
+                                    editable: true
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+
+                                    property int decimals: 1
+                                    property real realValue: value / 10
+
+                                    textFromValue: function(value, locale) {
+                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
                                     }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: delaySpin
-                                        from: 0
-                                        to: 600
-                                        value: 10  // 默认1.0秒 * 10
-                                        stepSize: 1
-                                        editable: true
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-
-                                        property int decimals: 1
-                                        property real realValue: value / 10
-
-                                        textFromValue: function(value, locale) {
-                                            return Number(value / 10).toLocaleString(locale, 'f', 1)
-                                        }
-
-                                        valueFromText: function(text, locale) {
-                                            return Number.fromLocaleString(locale, text) * 10
-                                        }
+                                    valueFromText: function(text, locale) {
+                                        return Number.fromLocaleString(locale, text) * 10
                                     }
                                 }
 
-                                // ========== 播放次数 ==========
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
 
-                                    Text {
-                                        text: "播放次数:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
+                            // ========== 第五行：上限值（左）、语音报警（右）==========
+                            // 参数索引: 8 - 上限值（左列，行4）
+                            Text {
+                                text: "上限值:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 4
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
 
-                                    DeviceInfo.CustomSpinBox {
-                                        id: playCountSpin
-                                        from: 1
-                                        to: 99
-                                        value: 3
-                                        editable: true
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                                    }
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 4
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: upperLimitSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: upperLimitSpin
+                                    anchors.fill: parent
+                                    from: 0
+                                    to: 10000
+                                    value: 100
+                                    stepSize: 10
+                                    editable: true
+                                    keyboardManager: root.keyboardManager
                                 }
 
-                                // ========== 播放时长 ==========
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    Text {
-                                        text: "播放时长(秒):"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
-
-                                    DeviceInfo.CustomSpinBox {
-                                        id: durationSpin
-                                        from: 1
-                                        to: 600
-                                        value: 50  // 默认5.0秒 * 10
-                                        stepSize: 5
-                                        editable: true
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-
-                                        property int decimals: 1
-                                        property real realValue: value / 10
-
-                                        textFromValue: function(value, locale) {
-                                            return Number(value / 10).toLocaleString(locale, 'f', 1)
-                                        }
-
-                                        valueFromText: function(text, locale) {
-                                            return Number.fromLocaleString(locale, text) * 10
-                                        }
-                                    }
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? 3 : 0
+                                    radius: 4
+                                    z: 10
                                 }
+                            }
 
-                                // ========== 语音报警类型 ==========
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
+                            // 参数索引: 9 - 语音报警（右列，行4）
+                            Text {
+                                text: "语音报警:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 4
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
 
-                                    Text {
-                                        text: "语音报警:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 4
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: radioRow.implicitHeight
+
+                                Row {
+                                    id: radioRow
+                                    spacing: 30
 
                                     RadioButton {
                                         id: ttsRadio
@@ -595,56 +567,172 @@ Rectangle {
                                     }
                                 }
 
-                                // ========== 报警文字 ==========
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-                                    visible: ttsRadio.checked
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 9) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 9) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
 
-                                    Text {
-                                        text: "报警文字:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
+                            // ========== 第六行：下限值（左）、报警文字（右）==========
+                            // 参数索引: 10 - 下限值（左列，行5）
+                            Text {
+                                text: "下限值:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 5
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
 
-                                    DeviceInfo.CustomTextField {
-                                        id: ttsTextField
-                                        text: "张力保护报警"
-                                        placeholderText: "输入报警文字内容..."
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
-                                    }
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 5
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: lowerLimitSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: lowerLimitSpin
+                                    anchors.fill: parent
+                                    from: 0
+                                    to: 10000
+                                    value: 0
+                                    stepSize: 10
+                                    editable: true
+                                    keyboardManager: root.keyboardManager
                                 }
 
-                                // ========== 音频文件 ==========
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-                                    visible: fileRadio.checked
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 10) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 10) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
 
-                                    Text {
-                                        text: "音频文件:"
-                                        font.pixelSize: 21
-                                        color: "#9E9E9E"
-                                        Layout.preferredWidth: 120
-                                    }
+                            // 参数索引: 11 - 报警文字（右列，行5）
+                            Text {
+                                text: "报警文字:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 5
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                                visible: ttsRadio.checked
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 5
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: ttsTextField.implicitHeight
+                                visible: ttsRadio.checked
+
+                                DeviceInfo.CustomTextField {
+                                    id: ttsTextField
+                                    text: "张力保护报警"
+                                    placeholderText: "输入报警文字内容..."
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // ========== 第七行：量程（左）、音频文件（右）==========
+                            // 参数索引: 12 - 量程（左列，行6）
+                            Text {
+                                text: "量程:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 6
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 6
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: rangeSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: rangeSpin
+                                    anchors.fill: parent
+                                    from: 1
+                                    to: 10000
+                                    value: 100
+                                    stepSize: 10
+                                    editable: true
+                                    keyboardManager: root.keyboardManager
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 12) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 12) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // 参数索引: 13 - 音频文件（右列，行6）
+                            Text {
+                                text: "音频文件:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 6
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                                visible: fileRadio.checked
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 6
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: audioFieldRow.implicitHeight
+                                visible: fileRadio.checked
+
+                                Row {
+                                    id: audioFieldRow
+                                    spacing: 10
+                                    anchors.fill: parent
 
                                     DeviceInfo.CustomTextField {
                                         id: audioField
                                         text: ""
                                         placeholderText: "选择音频文件..."
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: 200  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度（留空间给浏览按钮）
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        width: parent.width - 70
+                                        keyboardManager: root.keyboardManager
                                         readOnly: true
                                     }
 
                                     Button {
                                         text: "浏览"
-                                        Layout.preferredWidth: 60
-                                        Layout.preferredHeight: 35
+                                        width: 60
+                                        height: 35
 
                                         background: Rectangle {
                                             color: parent.pressed ? "#1976D2" : (parent.hovered ? "#2196F3" : "#1E88E5")
@@ -661,9 +749,17 @@ Rectangle {
 
                                         onClicked: {
                                             console.log("浏览音频文件")
-                                            // TODO: 打开文件选择对话框
                                         }
                                     }
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 13) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 13) ? 3 : 0
+                                    radius: 4
+                                    z: 10
                                 }
                             }
                         }
@@ -742,3 +838,4 @@ Rectangle {
         }
     }
 }
+
