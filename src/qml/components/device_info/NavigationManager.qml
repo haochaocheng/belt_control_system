@@ -250,6 +250,7 @@ QtObject {
             break
 
         case "Up":
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.3]: 使用 lastParamIndex 返回参数区
             // 向上：从第二行到第一行，或返回参数区
             if (buttonIndex === 2) {
                 newIndex = 0  // 保存 → 添加输入
@@ -260,7 +261,7 @@ QtObject {
             } else {
                 // 在第一行，向上返回参数区最后一个参数
                 switchToArea(areaParams)
-                paramIndex = 8  // 最后一个参数
+                paramIndex = lastParamIndex  // ✅ 使用 lastParamIndex 而不是硬编码的8
                 return
             }
             break
