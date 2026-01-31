@@ -17,7 +17,7 @@ QtObject {
     property int motorListIndex: 0                 // 区域A：电机列表索引（0-7）
     property int tabIndex: 0                       // 区域B：Tab索引（0-9，共10个Tab）
     property int paramIndex: 0                     // 区域C：参数索引（0-8）
-    property int buttonIndex: 0                    // 区域D：按钮索引（0-2）
+    property int buttonIndex: 0                    // 区域D：按钮索引（0-4，共5个按钮）
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除重复的信号定义
     // QML会自动为每个property生成对应的Changed信号，不需要手动定义
@@ -191,35 +191,63 @@ QtObject {
     }
 
     // ========== 区域D：底部按钮导航 ==========
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11]: 更新按钮数量为 5 个（0-4）
+    // 按钮布局：
+    // 第一行：[0] 添加输入  [1] 删除输入
+    // 第二行：[2] 保存      [3] 删除      [4] 重置
 
     function moveInButtonArea(direction) {
         var newIndex = buttonIndex
 
         switch(direction) {
         case "Left":
-            if (buttonIndex > 0) {
-                newIndex = buttonIndex - 1
+            // 左键：在同一行向左移动
+            if (buttonIndex === 1) {
+                newIndex = 0  // 删除输入 → 添加输入
+            } else if (buttonIndex === 3) {
+                newIndex = 2  // 删除 → 保存
+            } else if (buttonIndex === 4) {
+                newIndex = 3  // 重置 → 删除
             }
-            // 在第一个按钮，保持不变
+            // 在第一列，保持不变
             break
 
         case "Right":
-            if (buttonIndex < 2) {
-                newIndex = buttonIndex + 1
+            // 右键：在同一行向右移动
+            if (buttonIndex === 0) {
+                newIndex = 1  // 添加输入 → 删除输入
+            } else if (buttonIndex === 2) {
+                newIndex = 3  // 保存 → 删除
+            } else if (buttonIndex === 3) {
+                newIndex = 4  // 删除 → 重置
             }
-            // 在最后一个按钮，保持不变
+            // 在最后一列，保持不变
             break
 
         case "Up":
-            // 向上返回参数区最后一个参数
-            switchToArea(areaParams)
-            paramIndex = 8  // 最后一个参数
-            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
-            return
+            // 向上：从第二行到第一行，或返回参数区
+            if (buttonIndex === 2) {
+                newIndex = 0  // 保存 → 添加输入
+            } else if (buttonIndex === 3) {
+                newIndex = 1  // 删除 → 删除输入
+            } else if (buttonIndex === 4) {
+                newIndex = 1  // 重置 → 删除输入
+            } else {
+                // 在第一行，向上返回参数区最后一个参数
+                switchToArea(areaParams)
+                paramIndex = 8  // 最后一个参数
+                return
+            }
+            break
 
         case "Down":
-            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.9]: 修复按钮区向下键导航
-            // 在按钮区，向下键保持不变（不再返回参数区，避免切换循环）
+            // 向下：从第一行到第二行，或保持不变
+            if (buttonIndex === 0) {
+                newIndex = 2  // 添加输入 → 保存
+            } else if (buttonIndex === 1) {
+                newIndex = 3  // 删除输入 → 删除
+            }
+            // 在第二行，保持不变
             break
         }
 
