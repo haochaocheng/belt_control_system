@@ -755,6 +755,7 @@ Rectangle {
                                 Layout.preferredWidth: 160
                                 horizontalAlignment: Text.AlignRight
                                 visible: ttsRadio.checked
+                                Layout.preferredHeight: visible ? implicitHeight : 0
                             }
 
                             Item {
@@ -764,6 +765,7 @@ Rectangle {
                                 Layout.maximumWidth: 300
                                 implicitHeight: ttsTextField.implicitHeight
                                 visible: ttsRadio.checked
+                                Layout.preferredHeight: visible ? implicitHeight : 0
 
                                 DeviceInfo.CustomTextField {
                                     id: ttsTextField
@@ -782,7 +784,46 @@ Rectangle {
                                 }
                             }
 
-                            // ========== 第六行：下限值（左）、音频文件（右）==========
+                            // 参数索引: 11 - 音频文件（右列，行4，条件显示，与TTS文字共用同一行）
+                            Text {
+                                text: "音频文件:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 4
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                                visible: fileRadio.checked
+                                Layout.preferredHeight: visible ? implicitHeight : 0
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 4
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: audioField.implicitHeight
+                                visible: fileRadio.checked
+                                Layout.preferredHeight: visible ? implicitHeight : 0
+
+                                DeviceInfo.CustomTextField {
+                                    id: audioField
+                                    placeholderText: "选择音频文件..."
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // ========== 第五行：下限值（左）、量程（右）==========
                             // 参数索引: 10 - 下限值（左列，行5）
                             Text {
                                 text: "下限值:"
@@ -822,45 +863,7 @@ Rectangle {
                                 }
                             }
 
-                            // 参数索引: 11 - 音频文件（右列，行5，条件显示）
-                            Text {
-                                text: "音频文件:"
-                                font.pixelSize: 21
-                                color: "#9E9E9E"
-                                Layout.column: 2
-                                Layout.row: 5
-                                Layout.preferredWidth: 160
-                                horizontalAlignment: Text.AlignRight
-                                visible: fileRadio.checked
-                            }
-
-                            Item {
-                                Layout.column: 3
-                                Layout.row: 5
-                                Layout.fillWidth: true
-                                Layout.maximumWidth: 300
-                                implicitHeight: audioField.implicitHeight
-                                visible: fileRadio.checked
-
-                                DeviceInfo.CustomTextField {
-                                    id: audioField
-                                    placeholderText: "选择音频文件..."
-                                    anchors.fill: parent
-                                    keyboardManager: root.keyboardManager
-                                    readOnly: true
-                                }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? 3 : 0
-                                    radius: 4
-                                    z: 10
-                                }
-                            }
-
-                            // ========== 第七行：单位（左）、量程（右）==========
+                            // ========== 第六行：单位（左）、量程（右）==========
                             // 参数索引: 12 - 单位（左列，行6）
                             Text {
                                 text: "单位:"
