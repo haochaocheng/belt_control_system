@@ -297,7 +297,9 @@ Rectangle {
             source: "BrakeListPanel.qml"
 
             onLoaded: {
-                item.currentBrakeIndex = Qt.binding(function() { return root.currentBrakeIndex })
+                // ✅ 2026-01-31 [FIX 100.300.112.3]: 绑定到 navigationManager.brakeListIndex 而不是 root.currentBrakeIndex
+                // 这样 NavigationManager 的导航逻辑才能正确更新列表焦点
+                item.currentBrakeIndex = Qt.binding(function() { return navigationManager.brakeListIndex })
                 // ✅ 2026-01-31 [FIX 100.300.112]: 传递焦点索引
                 item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
                 item.brakeSelected.connect(function(brakeIndex) {
