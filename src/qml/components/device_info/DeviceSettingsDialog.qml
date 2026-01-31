@@ -97,8 +97,9 @@ Item {
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统 - 上下键区域内导航
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 实现两列交叉导航和底部按钮导航
-    Keys.onUpPressed: {
+    Keys.onUpPressed: function(event) {
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
         if (currentCategory === 3 && currentFocusArea === 2) {
             var motorPage = motorControlPageLoader.item
             if (motorPage && typeof motorPage.handleKeyPress === "function") {
@@ -214,8 +215,9 @@ Item {
 
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 实现两列交叉导航和底部按钮导航
-    Keys.onDownPressed: {
+    Keys.onDownPressed: function(event) {
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
         if (currentCategory === 3 && currentFocusArea === 2) {
             var motorPage = motorControlPageLoader.item
             if (motorPage && typeof motorPage.handleKeyPress === "function") {
@@ -332,8 +334,9 @@ Item {
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统 - 左右键切换区域
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加子区域切换支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 添加底部按钮区域左右导航
-    Keys.onLeftPressed: {
+    Keys.onLeftPressed: function(event) {
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
         if (currentCategory === 3 && currentFocusArea === 2) {
             var motorPage = motorControlPageLoader.item
             if (motorPage && typeof motorPage.handleKeyPress === "function") {
@@ -424,8 +427,9 @@ Item {
 
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加子区域切换支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 添加底部按钮区域左右导航
-    Keys.onRightPressed: {
+    Keys.onRightPressed: function(event) {
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
+        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
         if (currentCategory === 3 && currentFocusArea === 2) {
             var motorPage = motorControlPageLoader.item
             if (motorPage && typeof motorPage.handleKeyPress === "function") {
