@@ -255,6 +255,7 @@ Rectangle {
 
                 // 滚动区域：参数字段
                 ScrollView {
+                    id: paramScrollView  // ✅ 2026-01-31 [FIX 100.300.110.1]: 添加 id，供 GridLayout 引用
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
