@@ -318,6 +318,8 @@ Rectangle {
                 item.currentBrakeIndex = Qt.binding(function() { return navigationManager.brakeListIndex })
                 // ✅ 2026-01-31 [FIX 100.300.112]: 传递焦点索引
                 item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
+                // ✅ 2026-01-31 [FIX 100.300.112.6]: 传递焦点子区域
+                item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
                 item.brakeSelected.connect(function(brakeIndex) {
                     root.currentBrakeIndex = brakeIndex
                     navigationManager.brakeListIndex = brakeIndex
