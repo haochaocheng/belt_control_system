@@ -12,7 +12,16 @@ qt_add_qml_module(qml_module
         pages/AlarmPage.qml
         pages/DeviceOperationLog.qml
         pages/Input1Page.qml
-        # 2026-01-19: Input1 模块 QML 组件（6 个，自动检测）
+        # 2026-01-19: Input1 模块 QML 组件（9 个，自动检测）
+        Input1/Input1Content/Back.ui.qml
+        Input1/Input1Content/BHState.ui.qml
+        Input1/Input1Content/DataShow.ui.qml
+        Input1/Input1Content/Head_MiddleMenu.ui.qml
+        Input1/Input1Content/Head.ui.qml
+        Input1/Input1Content/MyIN_Data.ui.qml
+        Input1/Input1Content/MyIN_State.ui.qml
+        Input1/Input1Content/Screen01.ui.qml
+        Input1/Input1Content/Screen01Form.ui.qml
         # ✅ 2026-01-27 [FIX 100.300.52] 添加缺失的 Head 组件
         # ✅ 2026-01-27 [FIX 100.300.54] 添加键盘导航支持
         Input1/Input1Content/Back.ui.qml
@@ -208,20 +217,6 @@ qt_add_qml_module(qml_module
         Input1/Input1Content/images/state_bk3.png
         Input1/Input1Content/images/state_bk4.png
         Input1/Input1Content/images/switch_value.svg
-        # ✅ 2026-01-31 [FIX 100.300.112.8.6]: device_info 图片资源
-        components/device_info/images/024.png
-        components/device_info/images/024-1.png
-        components/device_info/images/034.png
-        components/device_info/images/042.png
-        components/device_info/images/059.png
-        components/device_info/images/118.png
-        components/device_info/images/290.png
-        components/device_info/images/33.png
-        components/device_info/images/351.png
-        components/device_info/images/deviceInfo125.png
-        components/device_info/images/deviceInfo40.png
-        components/device_info/images/DJHeadbutton1.png
-        components/device_info/images/DJHeadbutton2.png
     RESOURCE_PREFIX /qt/qml
     NO_PLUGIN_OPTIONAL
 )
@@ -266,7 +261,17 @@ target_link_libraries(input1_qml_module PRIVATE
 # ❌ 2026-01-27 18:55 [FIX 100.300.49] 注释掉孤立的文件列表
 # 原因：这些文件列表没有包含在任何 CMake 命令中，导致解析错误
 # 这些文件已经在上面的 qt_add_qml_module 中通过 RESOURCE_PREFIX 自动包含
-#        # 2026-01-19: Input1 模块 QML 组件（6 个，自动检测）
+# ✅ 2026-01-31 [FIX 100.300.112.8.7] 修复 CMake 解析错误 - 注释掉孤立的文件列表
+#        # 2026-01-19: Input1 模块 QML 组件（9 个，自动检测）
+#        Input1/Input1Content/Back.ui.qml
+#        Input1/Input1Content/BHState.ui.qml
+#        Input1/Input1Content/DataShow.ui.qml
+#        Input1/Input1Content/Head_MiddleMenu.ui.qml
+#        Input1/Input1Content/Head.ui.qml
+#        Input1/Input1Content/MyIN_Data.ui.qml
+#        Input1/Input1Content/MyIN_State.ui.qml
+#        Input1/Input1Content/Screen01.ui.qml
+#        Input1/Input1Content/Screen01Form.ui.qml
 #        Input1/Input1Content/Back.ui.qml
 #        Input1/Input1Content/BHState.ui.qml
 #        Input1/Input1Content/DataShow.ui.qml
