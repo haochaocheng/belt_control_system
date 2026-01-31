@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15  // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.1]: 添加 Layouts 导入
 import "../" as DeviceInfo  // ✅ 2026-01-30 [FIX 100.300.109 Phase 2]: 导入 NavigationManager
 
 // ✅ 2026-01-25 [电机控制参数设置] 电机控制主页面（左右分栏布局）
