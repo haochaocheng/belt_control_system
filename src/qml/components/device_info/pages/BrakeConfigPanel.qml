@@ -23,7 +23,9 @@ Rectangle {
     // ✅ 2026-01-31 [FIX 100.300.111]: Qt 虚拟键盘引用
     property var virtualKeyboard: null
     // ✅ 2026-01-31 [FIX 100.300.111]: 导航焦点索引
-    property int focusSubArea: 0  // 0:无焦点 1:参数区域 2:底部按钮区域
+    // ✅ 2026-01-31 [FIX 100.300.112.7]: 更新区域定义，添加使用状态索引
+    property int focusSubArea: 0  // 0:制动器列表 1:使用状态 2:参数区域 3:底部按钮区域
+    property int focusUsageStatusIndex: 0  // 使用状态焦点索引（0:投入 1:禁用）
     property int focusParamIndex: 0  // 参数区域焦点索引（0-9）
     property int focusButtonIndex: 0  // 底部按钮区域焦点索引（0-1）
 
@@ -87,6 +89,7 @@ Rectangle {
                 implicitHeight: childrenRect.height  // ✅ 2026-01-28 自适应高度
 
                 // ========== 使用状态 ==========
+                // ✅ 2026-01-31 [FIX 100.300.112.7]: 添加焦点指示器
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 10
@@ -101,30 +104,62 @@ Rectangle {
                     RowLayout {
                         spacing: 20
 
-                        RadioButton {
-                            id: statusEnabled
-                            text: "投入"
-                            checked: true
-                            font.pixelSize: 14
-                            contentItem: Text {
-                                text: statusEnabled.text
-                                font: statusEnabled.font
-                                color: "#E0E0E0"
-                                leftPadding: statusEnabled.indicator.width + statusEnabled.spacing
-                                verticalAlignment: Text.AlignVCenter
+                        // ✅ 2026-01-31 [FIX 100.300.112.7]: 投入 RadioButton（索引0）
+                        Item {
+                            implicitWidth: statusEnabled.implicitWidth
+                            implicitHeight: statusEnabled.implicitHeight
+
+                            RadioButton {
+                                id: statusEnabled
+                                text: "投入"
+                                checked: true
+                                font.pixelSize: 14
+                                contentItem: Text {
+                                    text: statusEnabled.text
+                                    font: statusEnabled.font
+                                    color: "#E0E0E0"
+                                    leftPadding: statusEnabled.indicator.width + statusEnabled.spacing
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+
+                            // ✅ 2026-01-31 [FIX 100.300.112.7]: 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusUsageStatusIndex === 0) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusUsageStatusIndex === 0) ? 3 : 0
+                                radius: 4
+                                z: 10
                             }
                         }
 
-                        RadioButton {
-                            id: statusDisabled
-                            text: "禁用"
-                            font.pixelSize: 14
-                            contentItem: Text {
-                                text: statusDisabled.text
-                                font: statusDisabled.font
-                                color: "#E0E0E0"
-                                leftPadding: statusDisabled.indicator.width + statusDisabled.spacing
-                                verticalAlignment: Text.AlignVCenter
+                        // ✅ 2026-01-31 [FIX 100.300.112.7]: 禁用 RadioButton（索引1）
+                        Item {
+                            implicitWidth: statusDisabled.implicitWidth
+                            implicitHeight: statusDisabled.implicitHeight
+
+                            RadioButton {
+                                id: statusDisabled
+                                text: "禁用"
+                                font.pixelSize: 14
+                                contentItem: Text {
+                                    text: statusDisabled.text
+                                    font: statusDisabled.font
+                                    color: "#E0E0E0"
+                                    leftPadding: statusDisabled.indicator.width + statusDisabled.spacing
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+
+                            // ✅ 2026-01-31 [FIX 100.300.112.7]: 焦点指示器
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusUsageStatusIndex === 1) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusUsageStatusIndex === 1) ? 3 : 0
+                                radius: 4
+                                z: 10
                             }
                         }
                     }
@@ -179,8 +214,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? 3 : 0
+                            border.color: (root.focusSubArea === 2 && root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusParamIndex === 0) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -215,8 +250,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 1) ? 3 : 0
+                            border.color: (root.focusSubArea === 2 && root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusParamIndex === 1) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -252,8 +287,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 2) ? 3 : 0
+                            border.color: (root.focusSubArea === 2 && root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusParamIndex === 2) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -288,8 +323,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
+                            border.color: (root.focusSubArea === 2 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusParamIndex === 3) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -325,8 +360,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
+                            border.color: (root.focusSubArea === 2 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusParamIndex === 4) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -361,8 +396,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 5) ? 3 : 0
+                            border.color: (root.focusSubArea === 2 && root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusParamIndex === 5) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -398,8 +433,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 6) ? 3 : 0
+                            border.color: (root.focusSubArea === 2 && root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusParamIndex === 6) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -434,8 +469,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 7) ? 3 : 0
+                            border.color: (root.focusSubArea === 2 && root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusParamIndex === 7) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -471,8 +506,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 8) ? 3 : 0
+                            border.color: (root.focusSubArea === 2 && root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusParamIndex === 8) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -507,8 +542,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 9) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 9) ? 3 : 0
+                            border.color: (root.focusSubArea === 2 && root.focusParamIndex === 9) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 2 && root.focusParamIndex === 9) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -532,8 +567,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 0) ? 5 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? 5 : 0
                             radius: 4
                             z: 10
                         }
@@ -546,7 +581,7 @@ Rectangle {
                             background: Rectangle {
                                 // 焦点时背景色更亮
                                 color: {
-                                    if (root.focusSubArea === 2 && root.focusButtonIndex === 0) {
+                                    if (root.focusSubArea === 3 && root.focusButtonIndex === 0) {
                                         return "#2ecc71"  // 焦点时：亮绿色
                                     } else if (parent.pressed) {
                                         return "#1976D2"
@@ -583,8 +618,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 1) ? 5 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? 5 : 0
                             radius: 4
                             z: 10
                         }
@@ -597,7 +632,7 @@ Rectangle {
                             background: Rectangle {
                                 // 焦点时背景色更亮
                                 color: {
-                                    if (root.focusSubArea === 2 && root.focusButtonIndex === 1) {
+                                    if (root.focusSubArea === 3 && root.focusButtonIndex === 1) {
                                         return "#95a5a6"  // 焦点时：亮灰色
                                     } else if (parent.pressed) {
                                         return "#616161"
@@ -698,6 +733,25 @@ Rectangle {
             }, inputMode, root)
         } else {
             console.warn("⚠️ [BrakeConfigPanel] 虚拟键盘或输入控件不可用")
+        }
+    }
+
+    // ✅ 2026-01-31 [FIX 100.300.112.7]: 触发使用状态切换
+    function triggerUsageStatus(usageStatusIndex) {
+        console.log("✅ [BrakeConfigPanel] 触发使用状态切换 - 索引:", usageStatusIndex)
+
+        switch(usageStatusIndex) {
+        case 0:  // 投入
+            statusEnabled.checked = true
+            console.log("✅ [BrakeConfigPanel] 设置为：投入")
+            break
+        case 1:  // 禁用
+            statusDisabled.checked = true
+            console.log("✅ [BrakeConfigPanel] 设置为：禁用")
+            break
+        default:
+            console.warn("⚠️ [BrakeConfigPanel] 未知的使用状态索引:", usageStatusIndex)
+            break
         }
     }
 

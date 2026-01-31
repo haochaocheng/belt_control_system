@@ -37,19 +37,22 @@ Rectangle {
     }
 
     // ✅ 2026-01-31 [FIX 100.300.112]: NavigationManager 实例
+    // ✅ 2026-01-31 [FIX 100.300.112.7]: 增加使用状态区域
     DeviceInfo.NavigationManager {
         id: navigationManager
 
         // 区域定义
         readonly property int areaBrakeList: 0      // 制动器列表区域
-        readonly property int areaParams: 1         // 参数区域
-        readonly property int areaButtons: 2        // 底部按钮区域
+        readonly property int areaUsageStatus: 1    // 使用状态区域（投入/禁用）
+        readonly property int areaParams: 2         // 参数区域
+        readonly property int areaButtons: 3        // 底部按钮区域
 
         // 当前状态
         property int currentArea: areaBrakeList
-        property int brakeListIndex: 0  // 制动器列表索引（0-7）
-        property int paramIndex: 0      // 参数索引（0-9）
-        property int buttonIndex: 0     // 按钮索引（0-1）
+        property int brakeListIndex: 0      // 制动器列表索引（0-7）
+        property int usageStatusIndex: 0    // 使用状态索引（0:投入 1:禁用）
+        property int paramIndex: 0          // 参数索引（0-9）
+        property int buttonIndex: 0         // 按钮索引（0-1）
 
         Component.onCompleted: {
             console.log("✅ [BrakeControlPage] NavigationManager 初始化完成")
@@ -76,10 +79,21 @@ Rectangle {
             }
         }
 
+        // ✅ 2026-01-31 [FIX 100.300.112.7]: 监听使用状态索引变化
+        onUsageStatusIndexChanged: {
+            if (currentArea === areaUsageStatus) {
+                root.focusSubArea = 1  // 使用状态区域
+                root.focusItemIndex = -1
+                root.focusParamIndex = -1
+                root.focusButtonIndex = -1
+                console.log("✅ [BrakeControlPage] 更新焦点 - 使用状态索引:", usageStatusIndex)
+            }
+        }
+
         // 监听参数索引变化
         onParamIndexChanged: {
             if (currentArea === areaParams) {
-                root.focusSubArea = 1
+                root.focusSubArea = 2  // ✅ 2026-01-31 [FIX 100.300.112.7]: 参数区域改为2
                 root.focusParamIndex = paramIndex
                 root.focusItemIndex = -1
                 root.focusButtonIndex = -1
@@ -89,7 +103,7 @@ Rectangle {
         // 监听按钮索引变化
         onButtonIndexChanged: {
             if (currentArea === areaButtons) {
-                root.focusSubArea = 2
+                root.focusSubArea = 3  // ✅ 2026-01-31 [FIX 100.300.112.7]: 按钮区域改为3
                 root.focusButtonIndex = buttonIndex
                 root.focusItemIndex = -1
                 root.focusParamIndex = -1
@@ -97,6 +111,7 @@ Rectangle {
         }
 
         // 区域切换函数
+        // ✅ 2026-01-31 [FIX 100.300.112.7]: 增加使用状态区域
         function switchToArea(newArea) {
             currentArea = newArea
 
@@ -107,14 +122,20 @@ Rectangle {
                 root.focusParamIndex = -1
                 root.focusButtonIndex = -1
                 break
-            case areaParams:
+            case areaUsageStatus:
                 root.focusSubArea = 1
+                root.focusItemIndex = -1
+                root.focusParamIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaParams:
+                root.focusSubArea = 2
                 root.focusParamIndex = paramIndex
                 root.focusItemIndex = -1
                 root.focusButtonIndex = -1
                 break
             case areaButtons:
-                root.focusSubArea = 2
+                root.focusSubArea = 3
                 root.focusButtonIndex = buttonIndex
                 root.focusItemIndex = -1
                 root.focusParamIndex = -1
@@ -123,6 +144,7 @@ Rectangle {
         }
 
         // 导航函数（参考 MotorControlPage 的实现）
+        // ✅ 2026-01-31 [FIX 100.300.112.7]: 右键进入使用状态区域
         function moveInListArea(direction) {
             console.log("✅ [BrakeControlPage] moveInListArea - direction:", direction, "brakeListIndex:", brakeListIndex)
             // 制动器列表导航（8个制动器，0-7）
@@ -140,9 +162,9 @@ Rectangle {
                 }
                 break
             case "Right":
-                // 右键：进入参数区域
-                switchToArea(areaParams)
-                paramIndex = 0
+                // ✅ 2026-01-31 [FIX 100.300.112.7]: 右键进入使用状态区域
+                switchToArea(areaUsageStatus)
+                usageStatusIndex = 0
                 return
             }
 
@@ -154,6 +176,35 @@ Rectangle {
             }
         }
 
+        // ✅ 2026-01-31 [FIX 100.300.112.7]: 使用状态区域导航
+        function moveInUsageStatusArea(direction) {
+            // 使用状态区域导航（2个选项：0=投入 1=禁用）
+            var newIndex = usageStatusIndex
+
+            switch(direction) {
+            case "Left":
+                // 左键：返回制动器列表
+                switchToArea(areaBrakeList)
+                return
+            case "Right":
+                // 右键：在两个选项之间切换
+                if (usageStatusIndex === 0) {
+                    newIndex = 1
+                }
+                break
+            case "Down":
+                // 下键：进入参数区域
+                switchToArea(areaParams)
+                paramIndex = 0
+                return
+            }
+
+            if (newIndex !== usageStatusIndex) {
+                usageStatusIndex = newIndex
+            }
+        }
+
+        // ✅ 2026-01-31 [FIX 100.300.112.7]: 参数区域导航（左键和上键返回使用状态区域）
         function moveInParamArea(direction) {
             // 参数区域导航（10个参数，0-9，GridLayout 4列布局）
             var newIndex = paramIndex
@@ -164,8 +215,8 @@ Rectangle {
                     // 右列 → 左列
                     newIndex = paramIndex - 1
                 } else {
-                    // 左列最左，返回制动器列表
-                    switchToArea(areaBrakeList)
+                    // ✅ 2026-01-31 [FIX 100.300.112.7]: 左列最左，返回使用状态区域
+                    switchToArea(areaUsageStatus)
                     return
                 }
                 break
@@ -178,6 +229,10 @@ Rectangle {
             case "Up":
                 if (paramIndex >= 2) {
                     newIndex = paramIndex - 2
+                } else {
+                    // ✅ 2026-01-31 [FIX 100.300.112.7]: 第一行，返回使用状态区域
+                    switchToArea(areaUsageStatus)
+                    return
                 }
                 break
             case "Down":
@@ -197,6 +252,7 @@ Rectangle {
             }
         }
 
+        // ✅ 2026-01-31 [FIX 100.300.112.7]: 按钮区域导航（左键返回使用状态区域）
         function moveInButtonArea(direction) {
             // 底部按钮导航（2个按钮，0-1）
             var newIndex = buttonIndex
@@ -206,8 +262,8 @@ Rectangle {
                 if (buttonIndex > 0) {
                     newIndex = buttonIndex - 1
                 } else {
-                    // 最左，返回制动器列表
-                    switchToArea(areaBrakeList)
+                    // ✅ 2026-01-31 [FIX 100.300.112.7]: 最左，返回使用状态区域
+                    switchToArea(areaUsageStatus)
                     return
                 }
                 break
@@ -243,6 +299,7 @@ Rectangle {
     focus: true
 
     // ✅ 2026-01-31 [FIX 100.300.112]: 使用 NavigationManager 处理键盘事件
+    // ✅ 2026-01-31 [FIX 100.300.112.7]: 增加使用状态区域处理
     Keys.onPressed: (event) => {
         var direction = ""
 
@@ -262,7 +319,10 @@ Rectangle {
         case Qt.Key_Return:
         case Qt.Key_Enter:
             // 回车键：触发当前焦点项
-            if (navigationManager.currentArea === navigationManager.areaParams) {
+            if (navigationManager.currentArea === navigationManager.areaUsageStatus) {
+                // ✅ 2026-01-31 [FIX 100.300.112.7]: 触发使用状态切换
+                brakeConfigPanel.item.triggerUsageStatus(navigationManager.usageStatusIndex)
+            } else if (navigationManager.currentArea === navigationManager.areaParams) {
                 brakeConfigPanel.item.triggerParamInput(navigationManager.paramIndex)
             } else if (navigationManager.currentArea === navigationManager.areaButtons) {
                 brakeConfigPanel.item.triggerButton(navigationManager.buttonIndex)
@@ -277,6 +337,10 @@ Rectangle {
         switch(navigationManager.currentArea) {
         case navigationManager.areaBrakeList:
             navigationManager.moveInListArea(direction)
+            break
+        case navigationManager.areaUsageStatus:
+            // ✅ 2026-01-31 [FIX 100.300.112.7]: 使用状态区域导航
+            navigationManager.moveInUsageStatusArea(direction)
             break
         case navigationManager.areaParams:
             navigationManager.moveInParamArea(direction)
@@ -345,7 +409,9 @@ Rectangle {
             onLoaded: {
                 item.brakeIndex = Qt.binding(function() { return root.currentBrakeIndex })
                 // ✅ 2026-01-31 [FIX 100.300.112]: 传递焦点索引和虚拟键盘
+                // ✅ 2026-01-31 [FIX 100.300.112.7]: 传递使用状态焦点索引
                 item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+                item.focusUsageStatusIndex = Qt.binding(function() { return navigationManager.usageStatusIndex })
                 item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                 item.focusButtonIndex = Qt.binding(function() { return root.focusButtonIndex })
                 item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
