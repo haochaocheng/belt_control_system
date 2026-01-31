@@ -61,6 +61,7 @@ qt_add_qml_module(qml_module
         components/virtual_keyboard/NumericKeyboard.qml
         components/virtual_keyboard/EnglishKeyboard.qml
         components/virtual_keyboard/ChineseKeyboard.qml
+        components/virtual_keyboard/QtVirtualKeyboardIntegration.qml  # ✅ 2026-01-31 [FIX 100.300.112.8.11]: 添加 Qt 虚拟键盘集成组件
         components/sip_phone/SipDialerPopup.qml
         components/sip_phone/SipMainPage.qml
         components/sip_phone/SipPhoneWindow.qml
