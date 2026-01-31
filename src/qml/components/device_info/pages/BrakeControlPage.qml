@@ -53,6 +53,7 @@ Rectangle {
 
         // 监听制动器列表索引变化
         onBrakeListIndexChanged: {
+            console.log("✅ [BrakeControlPage] brakeListIndex 变化:", brakeListIndex)
             root.currentBrakeIndex = brakeListIndex
 
             // 根据区域更新 focusSubArea
@@ -61,6 +62,7 @@ Rectangle {
                 root.focusItemIndex = brakeListIndex
                 root.focusParamIndex = -1
                 root.focusButtonIndex = -1
+                console.log("✅ [BrakeControlPage] 更新焦点 - focusItemIndex:", root.focusItemIndex)
             }
         }
 
@@ -112,6 +114,7 @@ Rectangle {
 
         // 导航函数（参考 MotorControlPage 的实现）
         function moveInListArea(direction) {
+            console.log("✅ [BrakeControlPage] moveInListArea - direction:", direction, "brakeListIndex:", brakeListIndex)
             // 制动器列表导航（8个制动器，0-7）
             var newIndex = brakeListIndex
 
@@ -134,7 +137,10 @@ Rectangle {
             }
 
             if (newIndex !== brakeListIndex) {
+                console.log("✅ [BrakeControlPage] 更新 brakeListIndex:", brakeListIndex, "→", newIndex)
                 brakeListIndex = newIndex
+            } else {
+                console.log("⚠️ [BrakeControlPage] brakeListIndex 未变化，仍为:", brakeListIndex)
             }
         }
 
