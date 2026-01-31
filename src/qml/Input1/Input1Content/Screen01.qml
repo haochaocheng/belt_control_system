@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Controls
 import Input1
-import Input1Content
+// ✅ 2026-01-31 [FIX 100.300.112.8.10]: 删除 Input1Content 导入（模块不存在）
+// import Input1Content  // ❌ 此模块未在 CMakeLists.txt 中定义
 
 // ✅ 2026-01-27 [FIX 100.300.54]: Screen01 包装器 - 添加键盘导航功能
 // ✅ 2026-01-27 [FIX 100.300.56]: 添加 Input1Content 导入以加载 Screen01Form
