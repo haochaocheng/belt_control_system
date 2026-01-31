@@ -178,9 +178,13 @@ Rectangle {
 
         // ✅ 2026-01-31 [FIX 100.300.112.7]: 使用状态区域导航
         // ✅ 2026-01-31 [FIX 100.300.112.7.1]: 修复右键切换逻辑，支持双向切换
+        // ✅ 2026-01-31 [FIX 100.300.112.7.3]: 右键进入参数区域，回车键切换选项
         function moveInUsageStatusArea(direction) {
-            // 使用状态区域导航（2个选项：0=投入 1=禁用）
-            var newIndex = usageStatusIndex
+            // 使用状态区域导航（整个区域作为一个焦点单元）
+            // 左键：返回制动器列表
+            // 右键：进入参数区域
+            // 下键：进入参数区域
+            // 回车键：切换投入/禁用选项（在 Keys.onPressed 中处理）
 
             switch(direction) {
             case "Left":
@@ -188,22 +192,15 @@ Rectangle {
                 switchToArea(areaBrakeList)
                 return
             case "Right":
-                // ✅ 2026-01-31 [FIX 100.300.112.7.1]: 右键在两个选项之间切换（0 ↔ 1）
-                if (usageStatusIndex === 0) {
-                    newIndex = 1
-                } else {
-                    newIndex = 0
-                }
-                break
+                // ✅ 2026-01-31 [FIX 100.300.112.7.3]: 右键进入参数区域（不再切换选项）
+                switchToArea(areaParams)
+                paramIndex = 0
+                return
             case "Down":
                 // 下键：进入参数区域
                 switchToArea(areaParams)
                 paramIndex = 0
                 return
-            }
-
-            if (newIndex !== usageStatusIndex) {
-                usageStatusIndex = newIndex
             }
         }
 
@@ -323,8 +320,8 @@ Rectangle {
         case Qt.Key_Enter:
             // 回车键：触发当前焦点项
             if (navigationManager.currentArea === navigationManager.areaUsageStatus) {
-                // ✅ 2026-01-31 [FIX 100.300.112.7]: 触发使用状态切换
-                brakeConfigPanel.item.triggerUsageStatus(navigationManager.usageStatusIndex)
+                // ✅ 2026-01-31 [FIX 100.300.112.7.3]: 切换投入/禁用选项
+                brakeConfigPanel.item.toggleUsageStatus()
             } else if (navigationManager.currentArea === navigationManager.areaParams) {
                 brakeConfigPanel.item.triggerParamInput(navigationManager.paramIndex)
             } else if (navigationManager.currentArea === navigationManager.areaButtons) {

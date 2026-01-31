@@ -90,6 +90,7 @@ Rectangle {
 
                 // ========== 使用状态 ==========
                 // ✅ 2026-01-31 [FIX 100.300.112.7]: 添加焦点指示器
+                // ✅ 2026-01-31 [FIX 100.300.112.7.3]: 整个区域作为一个焦点单元
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 10
@@ -101,18 +102,18 @@ Rectangle {
                         color: "#E0E0E0"
                     }
 
-                    RowLayout {
-                        spacing: 20
+                    // ✅ 2026-01-31 [FIX 100.300.112.7.3]: 整个 RowLayout 作为一个焦点单元
+                    Item {
+                        Layout.fillWidth: true
+                        implicitHeight: radioRow.implicitHeight + 20
 
-                        // ✅ 2026-01-31 [FIX 100.300.112.7]: 投入 RadioButton（索引0）
-                        // ✅ 2026-01-31 [FIX 100.300.112.7.1]: 设置固定宽度和高度，确保焦点方框包括整个区域
-                        Item {
-                            Layout.preferredWidth: 120
-                            Layout.preferredHeight: 40
+                        RowLayout {
+                            id: radioRow
+                            anchors.centerIn: parent
+                            spacing: 20
 
                             RadioButton {
                                 id: statusEnabled
-                                anchors.fill: parent
                                 text: "投入"
                                 checked: true
                                 font.pixelSize: 14
@@ -125,26 +126,8 @@ Rectangle {
                                 }
                             }
 
-                            // ✅ 2026-01-31 [FIX 100.300.112.7]: 焦点指示器
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "transparent"
-                                border.color: (root.focusSubArea === 1 && root.focusUsageStatusIndex === 0) ? "#2196F3" : "transparent"
-                                border.width: (root.focusSubArea === 1 && root.focusUsageStatusIndex === 0) ? 3 : 0
-                                radius: 4
-                                z: 10
-                            }
-                        }
-
-                        // ✅ 2026-01-31 [FIX 100.300.112.7]: 禁用 RadioButton（索引1）
-                        // ✅ 2026-01-31 [FIX 100.300.112.7.1]: 设置固定宽度和高度，确保焦点方框包括整个区域
-                        Item {
-                            Layout.preferredWidth: 120
-                            Layout.preferredHeight: 40
-
                             RadioButton {
                                 id: statusDisabled
-                                anchors.fill: parent
                                 text: "禁用"
                                 font.pixelSize: 14
                                 contentItem: Text {
@@ -155,16 +138,16 @@ Rectangle {
                                     verticalAlignment: Text.AlignVCenter
                                 }
                             }
+                        }
 
-                            // ✅ 2026-01-31 [FIX 100.300.112.7]: 焦点指示器
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "transparent"
-                                border.color: (root.focusSubArea === 1 && root.focusUsageStatusIndex === 1) ? "#2196F3" : "transparent"
-                                border.width: (root.focusSubArea === 1 && root.focusUsageStatusIndex === 1) ? 3 : 0
-                                radius: 4
-                                z: 10
-                            }
+                        // ✅ 2026-01-31 [FIX 100.300.112.7.3]: 焦点指示器包围整个区域
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: (root.focusSubArea === 1) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 1) ? 3 : 0
+                            radius: 4
+                            z: 10
                         }
                     }
                 }
@@ -741,21 +724,38 @@ Rectangle {
     }
 
     // ✅ 2026-01-31 [FIX 100.300.112.7]: 触发使用状态切换
-    function triggerUsageStatus(usageStatusIndex) {
-        console.log("✅ [BrakeConfigPanel] 触发使用状态切换 - 索引:", usageStatusIndex)
+    // ✅ 2026-01-31 [FIX 100.300.112.7]: 触发使用状态切换（基于索引）
+    // ✅ 2026-01-31 [FIX 100.300.112.7.3]: 已废弃，改用 toggleUsageStatus()
+    // function triggerUsageStatus(usageStatusIndex) {
+    //     console.log("✅ [BrakeConfigPanel] 触发使用状态切换 - 索引:", usageStatusIndex)
+    //
+    //     switch(usageStatusIndex) {
+    //     case 0:  // 投入
+    //         statusEnabled.checked = true
+    //         console.log("✅ [BrakeConfigPanel] 设置为：投入")
+    //         break
+    //     case 1:  // 禁用
+    //         statusDisabled.checked = true
+    //         console.log("✅ [BrakeConfigPanel] 设置为：禁用")
+    //         break
+    //     default:
+    //         console.warn("⚠️ [BrakeConfigPanel] 未知的使用状态索引:", usageStatusIndex)
+    //         break
+    //     }
+    // }
 
-        switch(usageStatusIndex) {
-        case 0:  // 投入
-            statusEnabled.checked = true
-            console.log("✅ [BrakeConfigPanel] 设置为：投入")
-            break
-        case 1:  // 禁用
+    // ✅ 2026-01-31 [FIX 100.300.112.7.3]: 切换使用状态（投入 ↔ 禁用）
+    function toggleUsageStatus() {
+        console.log("✅ [BrakeConfigPanel] 切换使用状态")
+
+        if (statusEnabled.checked) {
+            // 当前是投入，切换到禁用
             statusDisabled.checked = true
-            console.log("✅ [BrakeConfigPanel] 设置为：禁用")
-            break
-        default:
-            console.warn("⚠️ [BrakeConfigPanel] 未知的使用状态索引:", usageStatusIndex)
-            break
+            console.log("✅ [BrakeConfigPanel] 切换为：禁用")
+        } else {
+            // 当前是禁用，切换到投入
+            statusEnabled.checked = true
+            console.log("✅ [BrakeConfigPanel] 切换为：投入")
         }
     }
 
