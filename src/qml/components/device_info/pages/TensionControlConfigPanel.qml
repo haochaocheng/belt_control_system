@@ -108,6 +108,7 @@ Rectangle {
                                 spacing: 15
 
                                 // ========== 保护名称 ==========
+                                // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 参数索引 0
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: 10
@@ -119,13 +120,28 @@ Rectangle {
                                         Layout.preferredWidth: 120
                                     }
 
-                                    DeviceInfo.CustomTextField {
-                                        id: nameField
-                                        text: "张力"
-                                        enabled: false  // 固定为"张力"
+                                    Item {
                                         Layout.fillWidth: true
-                                        Layout.maximumWidth: 300  // ✅ 2026-01-28 [FIX 100.300.89]: 限制最大宽度
-                                        keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        Layout.maximumWidth: 300
+                                        implicitHeight: nameField.implicitHeight
+
+                                        DeviceInfo.CustomTextField {
+                                            id: nameField
+                                            anchors.fill: parent
+                                            text: "张力"
+                                            enabled: false  // 固定为"张力"
+                                            keyboardManager: root.keyboardManager  // ✅ 2026-01-28 [虚拟键盘]: 传递键盘管理器
+                                        }
+
+                                        // ✅ 2026-01-31 [FIX 100.300.112.8.4]: 焦点指示器
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: "transparent"
+                                            border.color: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                                            border.width: (root.focusSubArea === 1 && root.focusParamIndex === 0) ? 3 : 0
+                                            radius: 4
+                                            z: 10
+                                        }
                                     }
                                 }
 
