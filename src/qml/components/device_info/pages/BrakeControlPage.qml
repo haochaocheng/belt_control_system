@@ -332,4 +332,37 @@ Rectangle {
             }
         }
     }
+
+    // ========== 转发函数（供 DeviceSettingsDialog 调用）==========
+    // ✅ 2026-01-31 [FIX 100.300.112.2]: 添加转发函数，将调用转发给 BrakeConfigPanel
+
+    // 返回参数区域的字段数量
+    function getParamFieldCount() {
+        if (brakeConfigPanel.item && typeof brakeConfigPanel.item.getParamFieldCount === "function") {
+            return brakeConfigPanel.item.getParamFieldCount()
+        }
+        return 0
+    }
+
+    // 触发参数输入
+    function triggerParamInput(paramIndex) {
+        console.log("✅ [BrakeControlPage] 触发参数输入 - 索引:", paramIndex)
+
+        if (brakeConfigPanel.item && typeof brakeConfigPanel.item.triggerParamInput === "function") {
+            brakeConfigPanel.item.triggerParamInput(paramIndex)
+        } else {
+            console.log("⚠️ [BrakeControlPage] BrakeConfigPanel 不支持参数输入")
+        }
+    }
+
+    // 触发按钮点击
+    function triggerButton(buttonIndex) {
+        console.log("✅ [BrakeControlPage] 触发按钮 - 索引:", buttonIndex)
+
+        if (brakeConfigPanel.item && typeof brakeConfigPanel.item.triggerButton === "function") {
+            brakeConfigPanel.item.triggerButton(buttonIndex)
+        } else {
+            console.log("⚠️ [BrakeControlPage] BrakeConfigPanel 不支持按钮触发")
+        }
+    }
 }
