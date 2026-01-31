@@ -20,8 +20,9 @@ QtObject {
     property int buttonIndex: 0                    // 区域D：按钮索引（0-4，共5个按钮）
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3]: 当前Tab的最后一个参数索引
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.1]: 修正基本配置参数数量为5个
     // 不同Tab有不同的参数数量：
-    // - 基本配置（Tab 0）：6个参数（0-5），最后索引=5
+    // - 基本配置（Tab 0）：5个参数（0-4），最后索引=4
     // - 其他Tab（Tab 1-9）：9个参数（0-8），最后索引=8
     property int lastParamIndex: 8  // 默认为8（大多数Tab）
 
@@ -123,9 +124,10 @@ QtObject {
         if (newIndex !== tabIndex) {
             tabIndex = newIndex
             // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3]: 根据Tab索引更新最后一个参数索引
-            // 基本配置（Tab 0）有6个参数（0-5），其他Tab有9个参数（0-8）
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.1]: 修正基本配置参数数量为5个
+            // 基本配置（Tab 0）有5个参数（0-4），其他Tab有9个参数（0-8）
             if (newIndex === 0) {
-                lastParamIndex = 5  // 基本配置：最后参数索引=5
+                lastParamIndex = 4  // 基本配置：最后参数索引=4（5个参数：运行状态、模块类型、模块地址、输出通道、反馈通道）
             } else {
                 lastParamIndex = 8  // 其他Tab：最后参数索引=8
             }
