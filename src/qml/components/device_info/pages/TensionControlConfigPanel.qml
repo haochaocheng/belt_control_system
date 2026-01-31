@@ -78,6 +78,7 @@ Rectangle {
             Item {
                 // ========== 滚动区域：参数字段 ==========
                 ScrollView {
+                    id: paramScrollView  // ✅ 2026-01-31 [FIX 100.300.112.8.5]: 添加 id，供 GridLayout 引用
                     anchors.fill: parent
                     anchors.margins: 15
                     clip: true
@@ -96,10 +97,14 @@ Rectangle {
                         implicitHeight: childrenRect.height
                         spacing: 15
 
-                        // ✅ 2026-01-28 [FIX 100.300.89]: 两列布局 - 参数区域
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 20
+                        // ✅ 2026-01-31 [FIX 100.300.112.8.5]: 改为 GridLayout 布局，与 SwitchInputPage/AnalogInputPage 保持一致
+                        // ❌ 2026-01-31 [注释]: 移除旧的 RowLayout 两列布局
+                        // 原因：统一界面布局风格，提高代码可维护性，优化参数字段的视觉对齐，使参数索引符合两列交叉的导航逻辑
+                        GridLayout {
+                            width: paramScrollView.width * 0.9
+                            columns: 4  // 4列：标签1、输入框1、标签2、输入框2
+                            columnSpacing: 10
+                            rowSpacing: 12
 
                             // ========== 左列 ==========
                             ColumnLayout {
