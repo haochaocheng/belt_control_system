@@ -69,6 +69,40 @@ qt_add_qml_module(qml_module
         components/sip_phone/pages/SipContactsPage.qml
         components/sip_phone/pages/SipHistoryPage.qml
         components/sip_phone/pages/SipSettingsPage.qml
+        # ✅ 2026-01-31 [FIX 100.300.112.8.6]: 添加 device_info 组件（设备信息对话框）
+        components/device_info/DeviceSettingsDialog.qml
+        components/device_info/DeviceInfoGrid.qml
+        components/device_info/DeviceInfoItem.qml
+        components/device_info/CustomTextField.qml
+        components/device_info/CustomSpinBox.qml
+        components/device_info/CustomComboBox.qml
+        components/device_info/CustomReadOnlyField.qml
+        components/device_info/IndustrialTheme.qml
+        components/device_info/NavigationManager.qml
+        components/device_info/VirtualKeyboardManager.qml
+        # ✅ 2026-01-31 [FIX 100.300.112.8.6]: device_info 页面组件
+        components/device_info/pages/BasicConfigPage.qml
+        components/device_info/pages/BasicConfigTab.qml
+        components/device_info/pages/SwitchInputPage.qml
+        components/device_info/pages/AnalogInputPage.qml
+        components/device_info/pages/MotorControlPage.qml
+        components/device_info/pages/MotorListPanel.qml
+        components/device_info/pages/MotorConfigPanel.qml
+        components/device_info/pages/BrakeControlPage.qml
+        components/device_info/pages/BrakeListPanel.qml
+        components/device_info/pages/BrakeConfigPanel.qml
+        components/device_info/pages/TensionControlPage.qml
+        components/device_info/pages/TensionControlListPanel.qml
+        components/device_info/pages/TensionControlConfigPanel.qml
+        components/device_info/pages/CurrentProtectionTab.qml
+        components/device_info/pages/MotorTempTab.qml
+        components/device_info/pages/FrontBearingTempTab.qml
+        components/device_info/pages/RearBearingTempTab.qml
+        components/device_info/pages/XAxisVibrationTab.qml
+        components/device_info/pages/YAxisVibrationTab.qml
+        components/device_info/pages/PhaseAWindingTab.qml
+        components/device_info/pages/PhaseBWindingTab.qml
+        components/device_info/pages/PhaseCWindingTab.qml
     RESOURCES
         images/header.png
         sounds/ringtone.wav
@@ -174,6 +208,20 @@ qt_add_qml_module(qml_module
         Input1/Input1Content/images/state_bk3.png
         Input1/Input1Content/images/state_bk4.png
         Input1/Input1Content/images/switch_value.svg
+        # ✅ 2026-01-31 [FIX 100.300.112.8.6]: device_info 图片资源
+        components/device_info/images/024.png
+        components/device_info/images/024-1.png
+        components/device_info/images/034.png
+        components/device_info/images/042.png
+        components/device_info/images/059.png
+        components/device_info/images/118.png
+        components/device_info/images/290.png
+        components/device_info/images/33.png
+        components/device_info/images/351.png
+        components/device_info/images/deviceInfo125.png
+        components/device_info/images/deviceInfo40.png
+        components/device_info/images/DJHeadbutton1.png
+        components/device_info/images/DJHeadbutton2.png
     RESOURCE_PREFIX /qt/qml
     NO_PLUGIN_OPTIONAL
 )
