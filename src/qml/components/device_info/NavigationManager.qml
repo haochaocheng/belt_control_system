@@ -218,11 +218,9 @@ QtObject {
             return
 
         case "Down":
-            // 向下循环回参数区最后一个参数
-            switchToArea(areaParams)
-            paramIndex = 8  // 最后一个参数
-            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
-            return
+            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.9]: 修复按钮区向下键导航
+            // 在按钮区，向下键保持不变（不再返回参数区，避免切换循环）
+            break
         }
 
         if (newIndex !== buttonIndex) {
