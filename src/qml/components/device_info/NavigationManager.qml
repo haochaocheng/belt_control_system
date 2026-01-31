@@ -21,10 +21,22 @@ QtObject {
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3]: 当前Tab的最后一个参数索引
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.1]: 修正基本配置参数数量为5个
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.2]: 初始化时根据tabIndex设置lastParamIndex
     // 不同Tab有不同的参数数量：
     // - 基本配置（Tab 0）：5个参数（0-4），最后索引=4
     // - 其他Tab（Tab 1-9）：9个参数（0-8），最后索引=8
-    property int lastParamIndex: 8  // 默认为8（大多数Tab）
+    property int lastParamIndex: 4  // 默认为4（初始Tab 0是基本配置）
+
+    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.2]: 初始化时设置正确的lastParamIndex
+    Component.onCompleted: {
+        // 根据初始tabIndex设置lastParamIndex
+        if (tabIndex === 0) {
+            lastParamIndex = 4  // 基本配置
+        } else {
+            lastParamIndex = 8  // 其他Tab
+        }
+        console.log("✅ [NavigationManager] 初始化 - tabIndex:", tabIndex, "lastParamIndex:", lastParamIndex)
+    }
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除重复的信号定义
     // QML会自动为每个property生成对应的Changed信号，不需要手动定义
