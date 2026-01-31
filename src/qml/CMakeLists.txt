@@ -12,16 +12,8 @@ qt_add_qml_module(qml_module
         pages/AlarmPage.qml
         pages/DeviceOperationLog.qml
         pages/Input1Page.qml
-        # 2026-01-19: Input1 模块 QML 组件（9 个，自动检测）
-        Input1/Input1Content/Back.ui.qml
-        Input1/Input1Content/BHState.ui.qml
-        Input1/Input1Content/DataShow.ui.qml
-        Input1/Input1Content/Head_MiddleMenu.ui.qml
-        Input1/Input1Content/Head.ui.qml
-        Input1/Input1Content/MyIN_Data.ui.qml
-        Input1/Input1Content/MyIN_State.ui.qml
-        Input1/Input1Content/Screen01.ui.qml
-        Input1/Input1Content/Screen01Form.ui.qml
+        # ✅ 2026-01-31 [FIX 100.300.112.8.8] 删除重复的 Input1 文件列表（Line 16-24）
+        # 保留 Line 27-35 的列表，因为它包含正确的 Screen01.qml
         # ✅ 2026-01-27 [FIX 100.300.52] 添加缺失的 Head 组件
         # ✅ 2026-01-27 [FIX 100.300.54] 添加键盘导航支持
         Input1/Input1Content/Back.ui.qml
