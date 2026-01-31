@@ -385,13 +385,24 @@ Item {
                 if (isBrakeControlPage) {
                     // ✅ BrakeControlPage 4区域模式：左键由内部 NavigationManager 处理
                     // ✅ 2026-01-31 [FIX 100.300.112.7.4]: 调用 handleKeyPress 处理左键
+                    // ✅ 2026-01-31 [FIX 100.300.112.7.5]: 只在非列表区域时转发，列表区域左键返回类别
                     var brakePage = brakeControlPageLoader.item
-                    if (brakePage && typeof brakePage.handleKeyPress === "function") {
-                        brakePage.handleKeyPress("Left")
-                        event.accepted = true
+
+                    // 检查当前子区域：0=列表 1=使用状态 2=参数 3=按钮
+                    if (brakePage && brakePage.focusSubArea !== 0) {
+                        // 在使用状态、参数或按钮区域：转发给内部 NavigationManager
+                        if (typeof brakePage.handleKeyPress === "function") {
+                            brakePage.handleKeyPress("Left")
+                            event.accepted = true
+                            console.log("✅ [导航] BrakeControlPage 左键由内部 NavigationManager 处理")
+                            return
+                        }
+                    } else {
+                        // 在列表区域：左键返回到左侧类别区域
+                        console.log("✅ [导航] BrakeControlPage 列表区域左键返回类别")
+                        currentFocusArea = 1  // 切换到左侧类别
+                        return
                     }
-                    console.log("✅ [导航] BrakeControlPage 左键由内部 NavigationManager 处理")
-                    return
                 }
 
                 if (currentPage.focusSubArea === 1) {
