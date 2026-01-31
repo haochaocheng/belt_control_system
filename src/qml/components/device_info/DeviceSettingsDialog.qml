@@ -1259,14 +1259,61 @@ Item {
                             console.log("✅ [DeviceSettingsDialog] BrakeControlPage 加载成功")
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
-                            // ✅ 2026-01-30 [FIX 100.300.105.1]: keyboardManager 已废弃，注释掉
-                            // item.keyboardManager = keyboardManager
+                            // ✅ 2026-01-31 [FIX 100.300.112.4]: 传递虚拟键盘引用
+                            item.virtualKeyboard = qtVirtualKeyboard
+
+                            // ✅ 2026-01-31 [FIX 100.300.112.4]: 设置初始焦点状态
+                            if (root.currentFocusArea === 2 && root.currentCategory === 4) {
+                                item.focusSubArea = 0  // 默认焦点在制动器列表区域
+                                item.focusItemIndex = root.currentContentItemIndex
+                            }
                         }
                     }
 
                     onStatusChanged: {
                         if (brakeControlPageLoader.status === Loader.Error) {
                             console.error("❌ [DeviceSettingsDialog] BrakeControlPage 加载失败")
+                        }
+                    }
+                }
+
+                // ✅ 2026-01-31 [FIX 100.300.112.4]: BrakeControlPage 焦点同步
+                Connections {
+                    target: root
+                    enabled: brakeControlPageLoader.item !== null
+
+                    function onCurrentFocusAreaChanged() {
+                        if (brakeControlPageLoader.item && root.currentCategory === 4) {
+                            if (root.currentFocusArea === 2) {
+                                // 焦点进入内容区域，默认在制动器列表区域
+                                brakeControlPageLoader.item.focusSubArea = 0
+                                brakeControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                // 焦点离开内容区域，清除焦点
+                                brakeControlPageLoader.item.focusItemIndex = -1
+                            }
+                        }
+                    }
+
+                    function onCurrentCategoryChanged() {
+                        if (brakeControlPageLoader.item) {
+                            if (root.currentFocusArea === 2 && root.currentCategory === 4) {
+                                // 切换到制动器控制类别，设置焦点
+                                brakeControlPageLoader.item.focusSubArea = 0
+                                brakeControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                // 切换到其他类别，清除焦点
+                                brakeControlPageLoader.item.focusItemIndex = -1
+                            }
+                        }
+                    }
+
+                    function onCurrentContentItemIndexChanged() {
+                        if (brakeControlPageLoader.item &&
+                            root.currentFocusArea === 2 &&
+                            root.currentCategory === 4) {
+                            // 在制动器列表中导航
+                            brakeControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
                         }
                     }
                 }
