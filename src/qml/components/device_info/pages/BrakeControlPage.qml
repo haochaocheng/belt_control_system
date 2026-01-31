@@ -26,6 +26,14 @@ Rectangle {
     // Qt 虚拟键盘引用
     property var virtualKeyboard: null
 
+    // ✅ 2026-01-31 [FIX 100.300.112.5]: 监听 focusItemIndex 变化，同步到 currentBrakeIndex
+    onFocusItemIndexChanged: {
+        if (focusSubArea === 0 && focusItemIndex >= 0 && focusItemIndex <= 7) {
+            console.log("✅ [BrakeControlPage] focusItemIndex 变化:", focusItemIndex, "→ 更新 currentBrakeIndex")
+            currentBrakeIndex = focusItemIndex
+        }
+    }
+
     // ✅ 2026-01-31 [FIX 100.300.112]: NavigationManager 实例
     DeviceInfo.NavigationManager {
         id: navigationManager
