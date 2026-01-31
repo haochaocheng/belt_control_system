@@ -105,12 +105,14 @@ Rectangle {
                         spacing: 20
 
                         // ✅ 2026-01-31 [FIX 100.300.112.7]: 投入 RadioButton（索引0）
+                        // ✅ 2026-01-31 [FIX 100.300.112.7.1]: 设置固定宽度和高度，确保焦点方框包括整个区域
                         Item {
-                            implicitWidth: statusEnabled.implicitWidth
-                            implicitHeight: statusEnabled.implicitHeight
+                            Layout.preferredWidth: 120
+                            Layout.preferredHeight: 40
 
                             RadioButton {
                                 id: statusEnabled
+                                anchors.fill: parent
                                 text: "投入"
                                 checked: true
                                 font.pixelSize: 14
@@ -135,12 +137,14 @@ Rectangle {
                         }
 
                         // ✅ 2026-01-31 [FIX 100.300.112.7]: 禁用 RadioButton（索引1）
+                        // ✅ 2026-01-31 [FIX 100.300.112.7.1]: 设置固定宽度和高度，确保焦点方框包括整个区域
                         Item {
-                            implicitWidth: statusDisabled.implicitWidth
-                            implicitHeight: statusDisabled.implicitHeight
+                            Layout.preferredWidth: 120
+                            Layout.preferredHeight: 40
 
                             RadioButton {
                                 id: statusDisabled
+                                anchors.fill: parent
                                 text: "禁用"
                                 font.pixelSize: 14
                                 contentItem: Text {

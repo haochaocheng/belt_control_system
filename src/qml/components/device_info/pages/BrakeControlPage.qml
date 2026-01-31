@@ -177,6 +177,7 @@ Rectangle {
         }
 
         // ✅ 2026-01-31 [FIX 100.300.112.7]: 使用状态区域导航
+        // ✅ 2026-01-31 [FIX 100.300.112.7.1]: 修复右键切换逻辑，支持双向切换
         function moveInUsageStatusArea(direction) {
             // 使用状态区域导航（2个选项：0=投入 1=禁用）
             var newIndex = usageStatusIndex
@@ -187,9 +188,11 @@ Rectangle {
                 switchToArea(areaBrakeList)
                 return
             case "Right":
-                // 右键：在两个选项之间切换
+                // ✅ 2026-01-31 [FIX 100.300.112.7.1]: 右键在两个选项之间切换（0 ↔ 1）
                 if (usageStatusIndex === 0) {
                     newIndex = 1
+                } else {
+                    newIndex = 0
                 }
                 break
             case "Down":
