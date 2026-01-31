@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import DeviceInfo 1.0 as DeviceInfo
+import "../" as DeviceInfo  // ✅ 2026-01-31 [FIX 100.300.112.8]: 导入 NavigationManager
 
 // ✅ 2026-01-27 [张紧控制参数设置] 张紧控制主页面（左右分栏布局）
 // ✅ 2026-01-31 [FIX 100.300.112.8]: 添加 NavigationManager 支持（4区域模式）
