@@ -1326,7 +1326,7 @@ Item {
                     }
                 }
 
-                // ✅ 2026-01-30 [FIX 100.300.106]: MotorControlPage 焦点同步
+                // ✅ 2026-01-30 [FIX 100.300.106]: MotorControlPage 焦点同步（从 Dialog 到 Page）
                 Connections {
                     target: root
                     enabled: motorControlPageLoader.item !== null
@@ -1367,6 +1367,25 @@ Item {
                     }
                 }
 
+                // ✅ 2026-01-31 [FIX 100.300.112.8.14]: MotorControlPage 反向焦点同步（从 Page 到 Dialog）
+                // 当用户在电机列表中导航时，同步更新 Dialog 的 currentContentItemIndex
+                // 这样当焦点离开再返回时，能恢复到正确的位置
+                Connections {
+                    target: motorControlPageLoader.item
+                    enabled: motorControlPageLoader.item !== null
+
+                    function onFocusItemIndexChanged() {
+                        if (root.currentCategory === 3 &&
+                            root.currentFocusArea === 2 &&
+                            motorControlPageLoader.item.focusSubArea === 0 &&
+                            motorControlPageLoader.item.focusItemIndex >= 0) {
+                            // 只在焦点在电机列表区域时同步
+                            console.log("✅ [DeviceSettingsDialog] 同步电机列表焦点:", motorControlPageLoader.item.focusItemIndex)
+                            root.currentContentItemIndex = motorControlPageLoader.item.focusItemIndex
+                        }
+                    }
+                }
+
                 // 4: 制动器控制
                 // ✅ 2026-01-28 [FIX 100.300.84]: 使用 BrakeControlPage 组件
                 Loader {
@@ -1399,7 +1418,7 @@ Item {
                     }
                 }
 
-                // ✅ 2026-01-31 [FIX 100.300.112.4]: BrakeControlPage 焦点同步
+                // ✅ 2026-01-31 [FIX 100.300.112.4]: BrakeControlPage 焦点同步（从 Dialog 到 Page）
                 Connections {
                     target: root
                     enabled: brakeControlPageLoader.item !== null
@@ -1440,6 +1459,24 @@ Item {
                     }
                 }
 
+                // ✅ 2026-01-31 [FIX 100.300.112.8.14]: BrakeControlPage 反向焦点同步（从 Page 到 Dialog）
+                // 当用户在制动器列表中导航时，同步更新 Dialog 的 currentContentItemIndex
+                Connections {
+                    target: brakeControlPageLoader.item
+                    enabled: brakeControlPageLoader.item !== null
+
+                    function onFocusItemIndexChanged() {
+                        if (root.currentCategory === 4 &&
+                            root.currentFocusArea === 2 &&
+                            brakeControlPageLoader.item.focusSubArea === 0 &&
+                            brakeControlPageLoader.item.focusItemIndex >= 0) {
+                            // 只在焦点在制动器列表区域时同步
+                            console.log("✅ [DeviceSettingsDialog] 同步制动器列表焦点:", brakeControlPageLoader.item.focusItemIndex)
+                            root.currentContentItemIndex = brakeControlPageLoader.item.focusItemIndex
+                        }
+                    }
+                }
+
                 // 5: 张紧控制
                 // ✅ 2026-01-28 [FIX 100.300.88]: 使用 TensionControlPage 组件
                 Loader {
@@ -1472,7 +1509,7 @@ Item {
                     }
                 }
 
-                // ✅ 2026-01-31 [FIX 100.300.112.8]: TensionControlPage 焦点同步
+                // ✅ 2026-01-31 [FIX 100.300.112.8]: TensionControlPage 焦点同步（从 Dialog 到 Page）
                 Connections {
                     target: root
                     enabled: tensionControlPageLoader.item !== null
@@ -1509,6 +1546,24 @@ Item {
                             root.currentCategory === 5) {
                             // 在控制列表中导航
                             tensionControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                        }
+                    }
+                }
+
+                // ✅ 2026-01-31 [FIX 100.300.112.8.14]: TensionControlPage 反向焦点同步（从 Page 到 Dialog）
+                // 当用户在张紧控制列表中导航时，同步更新 Dialog 的 currentContentItemIndex
+                Connections {
+                    target: tensionControlPageLoader.item
+                    enabled: tensionControlPageLoader.item !== null
+
+                    function onFocusItemIndexChanged() {
+                        if (root.currentCategory === 5 &&
+                            root.currentFocusArea === 2 &&
+                            tensionControlPageLoader.item.focusSubArea === 0 &&
+                            tensionControlPageLoader.item.focusItemIndex >= 0) {
+                            // 只在焦点在控制列表区域时同步
+                            console.log("✅ [DeviceSettingsDialog] 同步张紧控制列表焦点:", tensionControlPageLoader.item.focusItemIndex)
+                            root.currentContentItemIndex = tensionControlPageLoader.item.focusItemIndex
                         }
                     }
                 }
