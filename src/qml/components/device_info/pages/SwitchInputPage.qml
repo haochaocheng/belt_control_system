@@ -34,6 +34,16 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property int focusButtonIndex: 0  // ✅ 2026-01-29 [Phase 2.30]: 底部按钮区域焦点索引（0-4）
 
+    // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 监听焦点变化，同步更新 currentProtectionIndex
+    // 当焦点在列表区域移动时，同步更新选中项索引
+    onFocusItemIndexChanged: {
+        if (focusSubArea === 0 && focusItemIndex >= 0 && focusItemIndex < digitalProtectionModel.count) {
+            console.log("✅ [SwitchInputPage] focusItemIndex 变化:", focusItemIndex, "→ 更新 currentProtectionIndex")
+            currentProtectionIndex = focusItemIndex
+            loadProtectionData(focusItemIndex)
+        }
+    }
+
     // ========== 开关量保护模型 ==========
     ListModel {
         id: digitalProtectionModel
@@ -128,6 +138,10 @@ Rectangle {
                         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.8]: 使用中间属性减少绑定计算
                         // 只计算一次，其他绑定引用这个属性，避免重复计算
                         readonly property bool isFocused: (root.focusSubArea === 0 && root.focusItemIndex === index)
+                        // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 分离选中状态和焦点状态
+                        // 选中状态：只依赖 currentProtectionIndex（焦点离开列表时保持选中）
+                        // 焦点状态：依赖 focusSubArea 和 focusItemIndex（焦点离开列表时消失）
+                        readonly property bool isSelected: (root.currentProtectionIndex === index)
 
                         // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器边框（只在列表区域显示）
                         border.color: isFocused ? "#2196F3" : "transparent"
@@ -135,6 +149,7 @@ Rectangle {
 
                         // ✅ 2026-01-26 [FIX 100.300.25]: 添加背景图片
                         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.16]: 临时移除 states，使用简单绑定测试
+                        // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 背景图片只依赖选中状态，不依赖焦点状态
                         Image {
                             id: backgroundImage
                             anchors.fill: parent
@@ -142,7 +157,7 @@ Rectangle {
                             z: -1  // 放在最底层
 
                             // 使用相对路径，便于QDS预览（向上三级到qml目录）
-                            source: isFocused ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
+                            source: isSelected ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
 
                             // // ✅ 2026-01-26 [FIX 100.300.25.2]: 改用states方式，使用相对路径便于QDS预览
                             // states: [

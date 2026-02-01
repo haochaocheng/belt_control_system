@@ -33,6 +33,16 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property int focusButtonIndex: 0  // 底部按钮区域焦点索引
 
+    // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 监听焦点变化，同步更新 currentProtectionIndex
+    // 当焦点在列表区域移动时，同步更新选中项索引
+    onFocusItemIndexChanged: {
+        if (focusSubArea === 0 && focusItemIndex >= 0 && focusItemIndex < analogProtectionModel.count) {
+            console.log("✅ [AnalogInputPage] focusItemIndex 变化:", focusItemIndex, "→ 更新 currentProtectionIndex")
+            currentProtectionIndex = focusItemIndex
+            loadProtectionData(focusItemIndex)
+        }
+    }
+
     // ========== 模拟量保护模型 ==========
     ListModel {
         id: analogProtectionModel
@@ -117,6 +127,10 @@ Rectangle {
 
                         // ✅ 2026-01-30 [FIX 100.300.105]: 焦点状态判断
                         readonly property bool isFocused: (root.focusSubArea === 0 && root.focusItemIndex === index)
+                        // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 分离选中状态和焦点状态
+                        // 选中状态：只依赖 currentProtectionIndex（焦点离开列表时保持选中）
+                        // 焦点状态：依赖 focusSubArea 和 focusItemIndex（焦点离开列表时消失）
+                        readonly property bool isSelected: (root.currentProtectionIndex === index)
 
                         // ✅ 2026-01-26 [FIX 100.300.25.5]: 添加背景图片
                         Image {
@@ -126,7 +140,8 @@ Rectangle {
                             z: -1  // 放在最底层
 
                             // ✅ 2026-01-30 [FIX 100.300.105]: 根据焦点状态切换背景图片
-                            source: isFocused ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
+                            // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 背景图片只依赖选中状态，不依赖焦点状态
+                            source: isSelected ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
 
                             // ✅ 2026-01-30 [注释]: 保留原有的 states，但现在由 isFocused 控制
                             // states: [
