@@ -32,6 +32,16 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.106]: Qt 虚拟键盘引用
     property var virtualKeyboard: null
 
+    // ✅ 2026-01-31 [FIX 100.300.112.8.16]: 监听 focusItemIndex 变化，同步到 currentMotorIndex
+    // 当 DeviceSettingsDialog 恢复焦点位置时，同步更新选中状态
+    onFocusItemIndexChanged: {
+        if (focusSubArea === 0 && focusItemIndex >= 0 && focusItemIndex < 8) {
+            console.log("✅ [MotorControlPage] focusItemIndex 变化:", focusItemIndex, "→ 同步 currentMotorIndex")
+            currentMotorIndex = focusItemIndex
+            navigationManager.motorListIndex = focusItemIndex
+        }
+    }
+
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2]: NavigationManager 实例
     DeviceInfo.NavigationManager {
         id: navigationManager
