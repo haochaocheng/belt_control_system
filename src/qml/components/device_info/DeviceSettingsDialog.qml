@@ -72,6 +72,43 @@ Item {
     property int currentTopButtonIndex: 0         // 顶部按钮索引 (0:关闭 1:保存 2:重置)
     property int currentContentItemIndex: 0       // 右侧内容区域当前焦点项索引
 
+    // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 为每个类别保存独立的内容索引
+    // 避免切换类别时焦点位置丢失
+    property var categoryContentIndexMap: ({
+        0: 0,  // 基本配置
+        1: 0,  // 开关量输入
+        2: 0,  // 模拟量输入
+        3: 0,  // 电机控制
+        4: 0,  // 制动器控制
+        5: 0,  // 张紧控制
+        6: 0   // 逻辑控制
+    })
+
+    // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听类别切换，保存和恢复内容索引
+    onCurrentCategoryChanged: {
+        // 保存旧类别的内容索引（如果有的话）
+        // 注意：这里不需要保存，因为反向同步已经在更新 categoryContentIndexMap
+
+        // 恢复新类别的内容索引
+        var savedIndex = categoryContentIndexMap[currentCategory]
+        if (savedIndex !== undefined) {
+            console.log("✅ [DeviceSettingsDialog] 切换到类别", currentCategory, "恢复内容索引:", savedIndex)
+            currentContentItemIndex = savedIndex
+        } else {
+            console.log("⚠️ [DeviceSettingsDialog] 类别", currentCategory, "没有保存的索引，使用默认值 0")
+            currentContentItemIndex = 0
+        }
+    }
+
+    // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听内容索引变化，保存到对应类别
+    onCurrentContentItemIndexChanged: {
+        console.log("✅ [DeviceSettingsDialog] 内容索引变化:", currentContentItemIndex, "类别:", currentCategory)
+        // 更新当前类别的内容索引
+        var newMap = categoryContentIndexMap
+        newMap[currentCategory] = currentContentItemIndex
+        categoryContentIndexMap = newMap
+    }
+
     // ✅ 2026-01-29 [Qt 虚拟键盘]: 使用 Qt 自带的虚拟键盘
     VirtualKeyboard.QtVirtualKeyboardIntegration {
         id: qtVirtualKeyboard
