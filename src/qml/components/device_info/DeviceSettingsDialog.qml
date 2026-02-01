@@ -558,7 +558,9 @@ Item {
             break
         case 1:  // 左侧类别 → 右侧内容
             currentFocusArea = 2
-            currentContentItemIndex = 0  // 重置内容区域索引
+            // ✅ 2026-01-31 [FIX 100.300.112.8.13]: 不重置内容区域索引，保持之前的选中状态
+            // 电机控制、制动器控制、张紧控制等页面需要保持之前选中的项
+            // currentContentItemIndex = 0  // ❌ 不应该重置，会导致焦点和选中状态不同步
             break
         case 2:  // 右侧内容 → 检查当前页面是否支持子区域导航
             var currentPage = getCurrentPage(currentCategory)
