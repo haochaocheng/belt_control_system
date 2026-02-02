@@ -167,6 +167,30 @@ Item {
         anchors.fill: parent
         currentIndex: 0
 
+        // ✅ 2026-01-31 [FIX 100.300.112.8.17]: 监听页面切换，恢复焦点
+        onCurrentIndexChanged: {
+            console.log("[SwipeView] 页面切换到索引:", currentIndex)
+
+            // 当切换到 Input1Page（索引4）时，将焦点转移到 Screen01
+            if (currentIndex === 4) {
+                console.log("[SwipeView] 切换到 Input1Page，恢复 Screen01 焦点")
+                Qt.callLater(function() {
+                    var input1Page = swipeView.itemAt(4)
+                    if (input1Page && input1Page.children[0]) {
+                        var screenLoader = input1Page.children[0]
+                        if (screenLoader && screenLoader.item) {
+                            console.log("[SwipeView] 找到 Screen01，强制获取焦点")
+                            screenLoader.item.forceActiveFocus()
+                        } else {
+                            console.warn("[SwipeView] ⚠️ Screen01 未加载")
+                        }
+                    } else {
+                        console.warn("[SwipeView] ⚠️ Input1Page 未找到")
+                    }
+                })
+            }
+        }
+
         // Page 1: Control Panel - New Belt Control System Interface
         ControlPanel {
             motorRunning: app.motorRunning
