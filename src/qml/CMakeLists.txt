@@ -108,6 +108,29 @@ qt_add_qml_module(qml_module
     RESOURCES
         images/header.png
         sounds/ringtone.wav
+        # 2026-02-02 [FIX 100.300.112.8.18]: DeviceSettingsDialog 使用的图片资源
+        images/036.png
+        images/118.png
+        images/154.png
+        images/156.png
+        images/bhNameBK.png
+        images/bhNameBK1.png
+        images/dvList.png
+        images/dvList2.png
+        components/device_info/images/024.png
+        components/device_info/images/024-1.png
+        components/device_info/images/034.png
+        components/device_info/images/042.png
+        components/device_info/images/059.png
+        components/device_info/images/082.png
+        components/device_info/images/118.png
+        components/device_info/images/290.png
+        components/device_info/images/33.png
+        components/device_info/images/351.png
+        components/device_info/images/deviceInfo125.png
+        components/device_info/images/deviceInfo40.png
+        components/device_info/images/DJHeadbutton1.png
+        components/device_info/images/DJHeadbutton2.png
         # 2026-01-12: Input1 模块资源文件（101 个图片，全英文文件名）
         Input1/Input1Content/images/082.png
         Input1/Input1Content/images/15823432333.svg
