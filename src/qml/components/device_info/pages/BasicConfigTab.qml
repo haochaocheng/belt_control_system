@@ -246,7 +246,6 @@ Rectangle {
 
                 // 焦点指示器
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.3]: 添加调试日志
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
@@ -255,11 +254,6 @@ Rectangle {
                     radius: 4
                     z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
                     enabled: false  // ✅ 不拦截鼠标事件
-
-                    // ✅ 2026-02-02 [FIX 100.300.112.8.24.3]: 调试日志
-                    onBorderColorChanged: {
-                        console.log("🔍 [BasicConfigTab] 模块地址焦点指示器 - borderColor:", border.color, "focusParamIndex:", root.focusParamIndex)
-                    }
                 }
             }
 
@@ -358,7 +352,6 @@ Rectangle {
 
                 // 焦点指示器
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.3]: 添加调试日志
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
@@ -367,11 +360,6 @@ Rectangle {
                     radius: 4
                     z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
                     enabled: false  // ✅ 不拦截鼠标事件
-
-                    // ✅ 2026-02-02 [FIX 100.300.112.8.24.3]: 调试日志
-                    onBorderColorChanged: {
-                        console.log("🔍 [BasicConfigTab] 反馈通道焦点指示器 - borderColor:", border.color, "focusParamIndex:", root.focusParamIndex)
-                    }
                 }
             }
         }  // GridLayout 结束
