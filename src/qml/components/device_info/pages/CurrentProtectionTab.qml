@@ -191,8 +191,8 @@ Rectangle {
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
-                    border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 2) ? 3 : 0
+                    border.color: (root.focusParamIndex === 10) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 10) ? 3 : 0
                     radius: 4
                     z: 1000
                     enabled: false
@@ -260,7 +260,7 @@ Rectangle {
                     anchors.fill: parent
                     color: "transparent"
                     border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 3) ? 3 : 0
+                    border.width: (root.focusParamIndex === 9) ? 3 : 0
                     radius: 4
                     z: 1000
                     enabled: false
@@ -312,8 +312,8 @@ Rectangle {
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
-                    border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 2) ? 3 : 0
+                    border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 4) ? 3 : 0
                     radius: 4
                     z: 1000
                     enabled: false
@@ -326,7 +326,7 @@ Rectangle {
                 font.pixelSize: 21
                 color: "#9E9E9E"
                 Layout.column: 2
-                Layout.row: 1
+                Layout.row: 2
                 Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
@@ -360,46 +360,28 @@ Rectangle {
                     onClicked: function(mouse) {
 
 
-                        console.log("✅ [CurrentProtectionTab] 鼠标点击故障保护类型，发射信号: requestFocusParamIndex(3)")
+                        console.log("✅ [CurrentProtectionTab] 鼠标点击故障保护类型，发射信号: requestFocusParamIndex(5)")
 
 
-                        root.requestFocusParamIndex(3)
-
-
+                        root.requestFocusParamIndex(5)
                         mouse.accepted = false
-
-
                     }
-
-
                 }
 
-
-
                 // 焦点指示器
-
-
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
-
-
                 Rectangle {
-
-
                     anchors.fill: parent
-
-
                     color: "transparent"
-
-
-                    border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 3) ? 3 : 0
+                    border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 5) ? 3 : 0
                     radius: 4
                     z: 1000  // ✅ 从 10 增加到 1000
                     enabled: false
                 }
             }
 
-            // ========== 第三行：电流量程（左侧，索引4）、电流上限（右侧，索引5）==========
+            // ========== 第四行：电流量程（左侧，索引6）、电流上限（右侧，索引7）==========
 
             // 电流量程标签
             Text {
@@ -407,7 +389,7 @@ Rectangle {
                 font.pixelSize: 21
                 color: "#9E9E9E"
                 Layout.column: 0
-                Layout.row: 2
+                Layout.row: 3
                 Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
@@ -416,7 +398,7 @@ Rectangle {
             // 电流量程输入（可输入，带单位）
             Item {
                 Layout.column: 1
-                Layout.row: 2
+                Layout.row: 3
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: currentRangeRow.implicitHeight
@@ -449,8 +431,8 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
-                        console.log("✅ [CurrentProtectionTab] 鼠标点击电流量程，发射信号: requestFocusParamIndex(4)")
-                        root.requestFocusParamIndex(4)
+                        console.log("✅ [CurrentProtectionTab] 鼠标点击电流量程，发射信号: requestFocusParamIndex(6)")
+                        root.requestFocusParamIndex(6)
                         mouse.accepted = false
                     }
                 }
@@ -460,8 +442,8 @@ Rectangle {
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
-                    border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 4) ? 3 : 0
+                    border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 6) ? 3 : 0
                     radius: 4
                     z: 1000  // ✅ 从 10 增加到 1000
                     enabled: false
@@ -474,7 +456,7 @@ Rectangle {
                 font.pixelSize: 21
                 color: "#9E9E9E"
                 Layout.column: 2
-                Layout.row: 2
+                Layout.row: 3
                 Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
@@ -483,7 +465,7 @@ Rectangle {
             // 电流上限输入（可输入，带单位）
             Item {
                 Layout.column: 3
-                Layout.row: 2
+                Layout.row: 3
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: currentUpperRow.implicitHeight
@@ -524,10 +506,10 @@ Rectangle {
                     onClicked: function(mouse) {
 
 
-                        console.log("✅ [CurrentProtectionTab] 鼠标点击电流上限，发射信号: requestFocusParamIndex(5)")
+                        console.log("✅ [CurrentProtectionTab] 鼠标点击电流上限，发射信号: requestFocusParamIndex(7)")
 
 
-                        root.requestFocusParamIndex(5)
+                        root.requestFocusParamIndex(7)
 
 
                         mouse.accepted = false
@@ -555,15 +537,15 @@ Rectangle {
                     color: "transparent"
 
 
-                    border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 5) ? 3 : 0
+                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 7) ? 3 : 0
                     radius: 4
                     z: 1000  // ✅ 从 10 增加到 1000
                     enabled: false
                 }
             }
 
-            // ========== 第四行：电流下限（左侧，索引6）、输入点选择（右侧，索引7）==========
+            // ========== 第五行：电流下限（左侧，索引8）、输入点选择（右侧，索引9）==========
 
             // 电流下限标签
             Text {
@@ -571,7 +553,7 @@ Rectangle {
                 font.pixelSize: 21
                 color: "#9E9E9E"
                 Layout.column: 0
-                Layout.row: 3
+                Layout.row: 4
                 Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
@@ -580,7 +562,7 @@ Rectangle {
             // 电流下限输入（可输入，带单位）
             Item {
                 Layout.column: 1
-                Layout.row: 3
+                Layout.row: 4
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: currentLowerRow.implicitHeight
@@ -613,8 +595,8 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
-                        console.log("✅ [CurrentProtectionTab] 鼠标点击电流下限，发射信号: requestFocusParamIndex(6)")
-                        root.requestFocusParamIndex(6)
+                        console.log("✅ [CurrentProtectionTab] 鼠标点击电流下限，发射信号: requestFocusParamIndex(8)")
+                        root.requestFocusParamIndex(8)
                         mouse.accepted = false
                     }
                 }
@@ -624,8 +606,8 @@ Rectangle {
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
-                    border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 6) ? 3 : 0
+                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 8) ? 3 : 0
                     radius: 4
                     z: 1000  // ✅ 从 10 增加到 1000
                     enabled: false
@@ -638,7 +620,7 @@ Rectangle {
                 font.pixelSize: 21
                 color: "#9E9E9E"
                 Layout.column: 2
-                Layout.row: 3
+                Layout.row: 4
                 Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
@@ -647,7 +629,7 @@ Rectangle {
             // 输入点选择输入（下拉框）
             Item {
                 Layout.column: 3
-                Layout.row: 3
+                Layout.row: 4
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: inputPointField.implicitHeight
@@ -665,8 +647,8 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
-                        console.log("✅ [CurrentProtectionTab] 鼠标点击输入点选择，发射信号: requestFocusParamIndex(7)")
-                        root.requestFocusParamIndex(7)
+                        console.log("✅ [CurrentProtectionTab] 鼠标点击输入点选择，发射信号: requestFocusParamIndex(9)")
+                        root.requestFocusParamIndex(9)
                         mouse.accepted = false
                     }
                 }
@@ -676,15 +658,15 @@ Rectangle {
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
-                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 7) ? 3 : 0
+                    border.color: (root.focusParamIndex === 9) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 9) ? 3 : 0
                     radius: 4
                     z: 1000  // ✅ 从 10 增加到 1000
                     enabled: false
                 }
             }
 
-            // ========== 第五行：过滤干扰延时（左侧，索引8）==========
+            // ========== 第六行：过滤干扰延时（左侧，索引10）==========
 
             // 过滤干扰延时标签
             Text {
@@ -692,7 +674,7 @@ Rectangle {
                 font.pixelSize: 21
                 color: "#9E9E9E"
                 Layout.column: 0
-                Layout.row: 4
+                Layout.row: 5
                 Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
@@ -701,7 +683,7 @@ Rectangle {
             // 过滤干扰延时输入（可输入，带单位）
             Item {
                 Layout.column: 1
-                Layout.row: 4
+                Layout.row: 5
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: filterDelayRow.implicitHeight
@@ -734,8 +716,8 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
-                        console.log("✅ [CurrentProtectionTab] 鼠标点击过滤干扰延时，发射信号: requestFocusParamIndex(8)")
-                        root.requestFocusParamIndex(8)
+                        console.log("✅ [CurrentProtectionTab] 鼠标点击过滤干扰延时，发射信号: requestFocusParamIndex(10)")
+                        root.requestFocusParamIndex(10)
                         mouse.accepted = false
                     }
                 }
@@ -745,8 +727,8 @@ Rectangle {
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
-                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 8) ? 3 : 0
+                    border.color: (root.focusParamIndex === 10) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 10) ? 3 : 0
                     radius: 4
                     z: 1000  // ✅ 从 10 增加到 1000
                     enabled: false
