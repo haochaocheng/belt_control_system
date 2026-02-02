@@ -108,30 +108,7 @@ qt_add_qml_module(qml_module
     RESOURCES
         images/header.png
         sounds/ringtone.wav
-        # 2026-02-02 [FIX 100.300.112.8.18]: DeviceSettingsDialog 使用的图片资源
-        images/036.png
-        images/118.png
-        images/154.png
-        images/156.png
-        images/bhNameBK.png
-        images/bhNameBK1.png
-        images/dvList.png
-        images/dvList2.png
-        components/device_info/images/024.png
-        components/device_info/images/024-1.png
-        components/device_info/images/034.png
-        components/device_info/images/042.png
-        components/device_info/images/059.png
-        components/device_info/images/082.png
-        components/device_info/images/118.png
-        components/device_info/images/290.png
-        components/device_info/images/33.png
-        components/device_info/images/351.png
-        components/device_info/images/deviceInfo125.png
-        components/device_info/images/deviceInfo40.png
-        components/device_info/images/DJHeadbutton1.png
-        components/device_info/images/DJHeadbutton2.png
-        # 2026-01-12: Input1 模块资源文件（101 个图片，全英文文件名）
+        # 2026-01-12: Input1 模块资源文件（102 个图片，全英文文件名）
         Input1/Input1Content/images/082.png
         Input1/Input1Content/images/15823432333.svg
         Input1/Input1Content/images/back_Lift.svg
@@ -207,6 +184,7 @@ qt_add_qml_module(qml_module
         Input1/Input1Content/images/IN_Data.png
         Input1/Input1Content/images/IN_State.png
         Input1/Input1Content/images/input_type.svg
+        Input1/Input1Content/images/inputData_Zhuangshi.png
         Input1/Input1Content/images/middle_top_status_bg_sides.png
         Input1/Input1Content/images/middle_top_status_bg.png
         Input1/Input1Content/images/path_1.svg
@@ -233,6 +211,16 @@ qt_add_qml_module(qml_module
         Input1/Input1Content/images/state_bk3.png
         Input1/Input1Content/images/state_bk4.png
         Input1/Input1Content/images/switch_value.svg
+        # 2026-01-19: Input1 模块 QML 组件（9 个，自动检测）
+        Input1/Input1Content/Back.ui.qml
+        Input1/Input1Content/BHState.ui.qml
+        Input1/Input1Content/DataShow.ui.qml
+        Input1/Input1Content/Head_MiddleMenu.ui.qml
+        Input1/Input1Content/Head.ui.qml
+        Input1/Input1Content/MyIN_Data.ui.qml
+        Input1/Input1Content/MyIN_State.ui.qml
+        Input1/Input1Content/Screen01.ui.qml
+        Input1/Input1Content/Screen01Form.ui.qml
     RESOURCE_PREFIX /qt/qml
     NO_PLUGIN_OPTIONAL
 )
@@ -278,7 +266,17 @@ target_link_libraries(input1_qml_module PRIVATE
 # 原因：这些文件列表没有包含在任何 CMake 命令中，导致解析错误
 # 这些文件已经在上面的 qt_add_qml_module 中通过 RESOURCE_PREFIX 自动包含
 # ✅ 2026-01-31 [FIX 100.300.112.8.7] 修复 CMake 解析错误 - 注释掉孤立的文件列表
+# ✅ 2026-02-02 [FIX 100.300.112.8.19.4] 修复 CMake 解析错误 - 注释掉第 270-278 行的孤立文件列表
 #        # 2026-01-19: Input1 模块 QML 组件（9 个，自动检测）
+#        Input1/Input1Content/Back.ui.qml
+#        Input1/Input1Content/BHState.ui.qml
+#        Input1/Input1Content/DataShow.ui.qml
+#        Input1/Input1Content/Head_MiddleMenu.ui.qml
+#        Input1/Input1Content/Head.ui.qml
+#        Input1/Input1Content/MyIN_Data.ui.qml
+#        Input1/Input1Content/MyIN_State.ui.qml
+#        Input1/Input1Content/Screen01.ui.qml
+#        Input1/Input1Content/Screen01Form.ui.qml
 #        Input1/Input1Content/Back.ui.qml
 #        Input1/Input1Content/BHState.ui.qml
 #        Input1/Input1Content/DataShow.ui.qml
