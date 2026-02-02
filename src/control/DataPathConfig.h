@@ -10,6 +10,7 @@
 **      ├── config.ini           # 系统配置文件
 **      ├── alarm_history.db     # 报警历史数据库
 **      ├── protection_config.db # 保护配置数据库
+**      ├── device_config.db     # 设备配置数据库（2026-02-02新增）
 **      ├── operation_logs.db    # 操作日志数据库
 **      ├── contacts.db          # SIP联系人数据库
 **      └── call_history.db      # SIP通话记录数据库
@@ -73,6 +74,16 @@ public:
     static QString getProtectionConfigDbPath()
     {
         return getDataDirectory() + "/protection_config.db";
+    }
+
+    /**
+     * @brief 获取设备配置数据库完整路径
+     * @return device_config.db 的绝对路径
+     * @note 2026-02-02 [FIX 100.300.112.8.20]: 新增设备配置数据库路径
+     */
+    static QString getDeviceConfigDbPath()
+    {
+        return getDataDirectory() + "/device_config.db";
     }
 
     /**
@@ -142,6 +153,7 @@ public:
         qDebug() << "配置文件:" << getConfigFilePath();
         qDebug() << "报警历史数据库:" << getAlarmHistoryDbPath();
         qDebug() << "保护配置数据库:" << getProtectionConfigDbPath();
+        qDebug() << "设备配置数据库:" << getDeviceConfigDbPath();  // ✅ 2026-02-02 [FIX 100.300.112.8.20]: 新增
         qDebug() << "操作日志数据库:" << getOperationLogDbPath();
         qDebug() << "联系人数据库:" << getContactsDbPath();
         qDebug() << "通话记录数据库:" << getCallHistoryDbPath();

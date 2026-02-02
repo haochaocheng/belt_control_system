@@ -4,6 +4,7 @@ set(CONTROL_SOURCES
     CommonControl.cpp
     SystemConfig.cpp
     DeviceDatabase.cpp
+    DeviceConfigManager.cpp  # ✅ 2026-02-02 [FIX 100.300.112.8.20]: 添加设备配置管理器源文件
     belt_controller.cpp
     MaintenanceControl.cpp
     LocalControl.cpp
@@ -19,6 +20,7 @@ set(CONTROL_HEADERS
     CommonControl.h
     SystemConfig.h
     DeviceDatabase.h
+    DeviceConfigManager.h  # ✅ 2026-02-02 [FIX 100.300.112.8.20]: 添加设备配置管理器头文件
     belt_controller.h
     MaintenanceControl.h
     LocalControl.h

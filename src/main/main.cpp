@@ -24,6 +24,7 @@
 #include "control/AlarmPlaybackService.h"
 #include "control/AlarmHistoryDatabase.h"
 #include "control/DataPathConfig.h"
+#include "control/DeviceConfigManager.h"  // ✅ 2026-02-02 [FIX 100.300.112.8.20]: 添加设备配置管理器头文件
 #include "network/NetworkTask.h"
 
 // 全局日志文件
@@ -123,6 +124,10 @@ int main(int argc, char *argv[]) {
         ProtectionConfigManager protectionConfigMgr;
         protectionConfigMgr.initialize(DataPathConfig::getProtectionConfigDbPath());
 
+        // ✅ 2026-02-02 [FIX 100.300.112.8.20]: 初始化设备配置管理器
+        DeviceConfigManager deviceConfigMgr;
+        deviceConfigMgr.initDatabase(DataPathConfig::getDeviceConfigDbPath());
+
         NetworkTask networkTask;
 
         CommonControl commonControl;
@@ -151,6 +156,7 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("operationLogDB", &operationLogDB);
         engine.rootContext()->setContextProperty("alarmHistoryDB", &alarmHistoryDB);
         engine.rootContext()->setContextProperty("protectionConfigMgr", &protectionConfigMgr);
+        engine.rootContext()->setContextProperty("deviceConfigMgr", &deviceConfigMgr);  // ✅ 2026-02-02 [FIX 100.300.112.8.20]: 注册设备配置管理器到QML
         engine.rootContext()->setContextProperty("commonControl", &commonControl);
         engine.rootContext()->setContextProperty("maintenanceControl", &maintenanceControl);
         engine.rootContext()->setContextProperty("localControl", &localControl);
