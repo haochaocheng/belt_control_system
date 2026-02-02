@@ -335,7 +335,7 @@ Rectangle {
             // 故障保护类型输入（下拉框）
             Item {
                 Layout.column: 3
-                Layout.row: 1
+                Layout.row: 2
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: faultProtectionField.implicitHeight
