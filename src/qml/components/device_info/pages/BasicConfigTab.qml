@@ -16,8 +16,8 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property int motorIndex: 0  // 当前电机索引 (0-7)
-    // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性（已废弃）
-    // property var keyboardManager: null
+    // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 恢复键盘管理器属性（与 AnalogInputPage 保持一致）
+    property var keyboardManager: null
 
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引（从父页面传递）
     property int focusParamIndex: 0  // 参数区域焦点索引
@@ -231,6 +231,7 @@ Rectangle {
                     to: 8
                     value: 1
                     editable: true
+                    keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
                 }
 
                 // 焦点指示器
@@ -270,6 +271,7 @@ Rectangle {
                     to: 7
                     value: root.motorIndex
                     editable: true
+                    keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
                 }
 
                 // 焦点指示器
@@ -311,6 +313,7 @@ Rectangle {
                     to: 7
                     value: root.motorIndex
                     editable: true
+                    keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
                 }
 
                 // 焦点指示器
