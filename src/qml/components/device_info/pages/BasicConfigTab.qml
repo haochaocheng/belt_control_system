@@ -235,27 +235,25 @@ Rectangle {
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.1]: 移除 SpinBox 焦点,显示焦点指示器
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
                         console.log("✅ [BasicConfigTab] 鼠标点击模块地址，同步焦点索引: 2")
                         root.focusParamIndex = 2
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.1]: 移除 SpinBox 的焦点,显示焦点指示器
-                        moduleAddressSpin.focus = false
-                        root.focus = true  // 将焦点返回给父容器
-                        mouse.accepted = true  // 不让事件传递给 SpinBox
+                        mouse.accepted = false  // 让事件继续传递给 SpinBox
                     }
                 }
 
                 // 焦点指示器
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
                     border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 2) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
+                    enabled: false  // ✅ 不拦截鼠标事件
                 }
             }
 
@@ -289,27 +287,25 @@ Rectangle {
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.1]: 移除 SpinBox 焦点,显示焦点指示器
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
                         console.log("✅ [BasicConfigTab] 鼠标点击输出通道，同步焦点索引: 3")
                         root.focusParamIndex = 3
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.1]: 移除 SpinBox 的焦点,显示焦点指示器
-                        outputChannelSpin.focus = false
-                        root.focus = true  // 将焦点返回给父容器
-                        mouse.accepted = true  // 不让事件传递给 SpinBox
+                        mouse.accepted = false  // 让事件继续传递给 SpinBox
                     }
                 }
 
                 // 焦点指示器
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
                     border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 3) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
+                    enabled: false  // ✅ 不拦截鼠标事件
                 }
             }
 
@@ -345,27 +341,25 @@ Rectangle {
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.1]: 移除 SpinBox 焦点,显示焦点指示器
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
                         console.log("✅ [BasicConfigTab] 鼠标点击反馈通道，同步焦点索引: 4")
                         root.focusParamIndex = 4
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.1]: 移除 SpinBox 的焦点,显示焦点指示器
-                        feedbackChannelSpin.focus = false
-                        root.focus = true  // 将焦点返回给父容器
-                        mouse.accepted = true  // 不让事件传递给 SpinBox
+                        mouse.accepted = false  // 让事件继续传递给 SpinBox
                     }
                 }
 
                 // 焦点指示器
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
                     border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 4) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
+                    enabled: false  // ✅ 不拦截鼠标事件
                 }
             }
         }  // GridLayout 结束
