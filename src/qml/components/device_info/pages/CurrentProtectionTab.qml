@@ -104,80 +104,21 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 报警类型输入（RadioButton 组）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 改为 CustomComboBox，支持回车键切换
+            // 报警类型输入（下拉框）
             Item {
                 Layout.column: 3
                 Layout.row: 0
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: alarmTypeRow.implicitHeight  // ✅ 引用 Row 的 implicitHeight
+                implicitHeight: alarmTypeField.implicitHeight
 
-                Row {
-                    id: alarmTypeRow
+                DeviceInfo.CustomComboBox {
+                    id: alarmTypeField
                     anchors.fill: parent
-                    spacing: 30
-
-                    // 按次数选项
-                    Row {
-                        spacing: 8
-
-                        Rectangle {
-                            width: 20
-                            height: 20
-                            radius: 10
-                            border.color: "#2196F3"
-                            border.width: 2
-                            color: "transparent"
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: "#2196F3"
-                                anchors.centerIn: parent
-                                visible: true  // 默认选中
-                            }
-                        }
-
-                        Text {
-                            text: "按次数"
-                            font.pixelSize: 21
-                            color: "#E0E0E0"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    // 按时间选项
-                    Row {
-                        spacing: 8
-
-                        Rectangle {
-                            width: 20
-                            height: 20
-                            radius: 10
-                            border.color: "#2196F3"
-                            border.width: 2
-                            color: "transparent"
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: "#2196F3"
-                                anchors.centerIn: parent
-                                visible: false  // 默认不选中
-                            }
-                        }
-
-                        Text {
-                            text: "按时间"
-                            font.pixelSize: 21
-                            color: "#E0E0E0"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
+                    model: ["按次数", "按时间"]
+                    currentIndex: 0  // 默认选中"按次数"
+                    keyboardManager: root.keyboardManager
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
@@ -203,7 +144,130 @@ Rectangle {
                 }
             }
 
-            // ========== 第二行：动作保护类型（左侧，索引2）、故障保护类型（右侧，索引3）==========
+            // ========== 第二行：次数设置（左侧，索引2，条件显示）、时间设置（右侧，索引3，条件显示）==========
+
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 次数设置（当报警类型为"按次数"时显示）
+            // 次数设置标签
+            Text {
+                text: "次数设置:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 1
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+                visible: alarmTypeField.currentIndex === 0  // 当选择"按次数"时显示
+            }
+
+            // 次数设置输入
+            Item {
+                Layout.column: 1
+                Layout.row: 1
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: countSettingField.implicitHeight
+                visible: alarmTypeField.currentIndex === 0  // 当选择"按次数"时显示
+
+                DeviceInfo.CustomSpinBox {
+                    id: countSettingField
+                    anchors.fill: parent
+                    from: 1
+                    to: 100
+                    value: 3
+                    keyboardManager: root.keyboardManager
+                }
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [CurrentProtectionTab] 鼠标点击次数设置，发射信号: requestFocusParamIndex(2)")
+                        root.requestFocusParamIndex(2)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 2) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
+                }
+            }
+
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 时间设置（当报警类型为"按时间"时显示）
+            // 时间设置标签
+            Text {
+                text: "时间设置:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 1
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+                visible: alarmTypeField.currentIndex === 1  // 当选择"按时间"时显示
+            }
+
+            // 时间设置输入（带单位 0.1秒）
+            Item {
+                Layout.column: 3
+                Layout.row: 1
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: timeSettingRow.implicitHeight
+                visible: alarmTypeField.currentIndex === 1  // 当选择"按时间"时显示
+
+                Row {
+                    id: timeSettingRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: timeSettingField
+                        width: parent.width - 60
+                        height: 60
+                        from: 1
+                        to: 1000
+                        value: 10
+                        keyboardManager: root.keyboardManager
+                    }
+
+                    Text {
+                        text: "0.1秒"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [CurrentProtectionTab] 鼠标点击时间设置，发射信号: requestFocusParamIndex(3)")
+                        root.requestFocusParamIndex(3)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 3) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
+                }
+            }
+
+            // ========== 第三行：动作保护类型（左侧，索引4）、故障保护类型（右侧，索引5）==========
 
             // 动作保护类型标签
             Text {
@@ -211,7 +275,7 @@ Rectangle {
                 font.pixelSize: 21
                 color: "#9E9E9E"
                 Layout.column: 0
-                Layout.row: 1
+                Layout.row: 2
                 Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
                 horizontalAlignment: Text.AlignRight
             }
@@ -220,7 +284,7 @@ Rectangle {
             // 动作保护类型输入（下拉框）
             Item {
                 Layout.column: 1
-                Layout.row: 1
+                Layout.row: 2
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: actionProtectionField.implicitHeight
@@ -237,8 +301,8 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
-                        console.log("✅ [CurrentProtectionTab] 鼠标点击动作保护类型，发射信号: requestFocusParamIndex(2)")
-                        root.requestFocusParamIndex(2)
+                        console.log("✅ [CurrentProtectionTab] 鼠标点击动作保护类型，发射信号: requestFocusParamIndex(4)")
+                        root.requestFocusParamIndex(4)
                         mouse.accepted = false
                     }
                 }
@@ -348,63 +412,54 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 电流量程输入（只读）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 改为 CustomSpinBox，可输入数据，单位在外部
+            // 电流量程输入（可输入，带单位）
             Item {
                 Layout.column: 1
                 Layout.row: 2
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: currentRangeField.implicitHeight  // ✅ 引用 CustomReadOnlyField 的 implicitHeight
+                implicitHeight: currentRangeRow.implicitHeight
 
-                DeviceInfo.CustomReadOnlyField {
-                    id: currentRangeField
-                    anchors.fill: parent
-                    text: "0-100A"
+                Row {
+                    id: currentRangeRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: currentRangeField
+                        width: parent.width - 30
+                        height: 60
+                        from: 0
+                        to: 1000
+                        value: 100
+                        keyboardManager: root.keyboardManager
+                    }
+
+                    Text {
+                        text: "A"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
-
-
                 MouseArea {
-
-
                     anchors.fill: parent
-
-
                     onClicked: function(mouse) {
-
-
                         console.log("✅ [CurrentProtectionTab] 鼠标点击电流量程，发射信号: requestFocusParamIndex(4)")
-
-
                         root.requestFocusParamIndex(4)
-
-
                         mouse.accepted = false
-
-
                     }
-
-
                 }
 
-
-
                 // 焦点指示器
-
-
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
-
-
                 Rectangle {
-
-
                     anchors.fill: parent
-
-
                     color: "transparent"
-
-
                     border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 4) ? 3 : 0
                     radius: 4
@@ -424,24 +479,29 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 电流上限输入（只读，带单位）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 改为 CustomSpinBox，可输入数据
+            // 电流上限输入（可输入，带单位）
             Item {
                 Layout.column: 3
                 Layout.row: 2
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: currentUpperRow.implicitHeight  // ✅ 引用 Row 的 implicitHeight
+                implicitHeight: currentUpperRow.implicitHeight
 
                 Row {
                     id: currentUpperRow
                     width: parent.width
-                    height: 60  // ✅ 2026-01-30 [FIX 100.300.107.2]: 设置 Row 的固定高度
+                    height: 60
                     spacing: 5
 
-                    DeviceInfo.CustomReadOnlyField {
+                    DeviceInfo.CustomSpinBox {
+                        id: currentUpperField
                         width: parent.width - 30
-                        height: 60  // ✅ 2026-01-30 [FIX 100.300.107.2]: 设置固定高度
-                        text: "80"
+                        height: 60
+                        from: 0
+                        to: 1000
+                        value: 80
+                        keyboardManager: root.keyboardManager
                     }
 
                     Text {
@@ -516,24 +576,29 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 电流下限输入（只读，带单位）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 改为 CustomSpinBox，可输入数据
+            // 电流下限输入（可输入，带单位）
             Item {
                 Layout.column: 1
                 Layout.row: 3
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: currentLowerRow.implicitHeight  // ✅ 引用 Row 的 implicitHeight
+                implicitHeight: currentLowerRow.implicitHeight
 
                 Row {
                     id: currentLowerRow
                     width: parent.width
-                    height: 60  // ✅ 2026-01-30 [FIX 100.300.107.2]: 设置 Row 的固定高度
+                    height: 60
                     spacing: 5
 
-                    DeviceInfo.CustomReadOnlyField {
+                    DeviceInfo.CustomSpinBox {
+                        id: currentLowerField
                         width: parent.width - 30
-                        height: 60  // ✅ 2026-01-30 [FIX 100.300.107.2]: 设置固定高度
-                        text: "-10"
+                        height: 60
+                        from: -1000
+                        to: 1000
+                        value: -10
+                        keyboardManager: root.keyboardManager
                     }
 
                     Text {
@@ -545,48 +610,20 @@ Rectangle {
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
-
-
                 MouseArea {
-
-
                     anchors.fill: parent
-
-
                     onClicked: function(mouse) {
-
-
                         console.log("✅ [CurrentProtectionTab] 鼠标点击电流下限，发射信号: requestFocusParamIndex(6)")
-
-
                         root.requestFocusParamIndex(6)
-
-
                         mouse.accepted = false
-
-
                     }
-
-
                 }
 
-
-
                 // 焦点指示器
-
-
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
-
-
                 Rectangle {
-
-
                     anchors.fill: parent
-
-
                     color: "transparent"
-
-
                     border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 6) ? 3 : 0
                     radius: 4
@@ -606,63 +643,39 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 输入点选择输入（只读）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 改为 CustomComboBox，选项 AI0.0-AI1.7
+            // 输入点选择输入（下拉框）
             Item {
                 Layout.column: 3
                 Layout.row: 3
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: inputPointField.implicitHeight  // ✅ 引用 CustomReadOnlyField 的 implicitHeight
+                implicitHeight: inputPointField.implicitHeight
 
-                DeviceInfo.CustomReadOnlyField {
+                DeviceInfo.CustomComboBox {
                     id: inputPointField
                     anchors.fill: parent
-                    text: "DI-0"
+                    model: ["AI0.0", "AI0.1", "AI0.2", "AI0.3", "AI0.4", "AI0.5", "AI0.6", "AI0.7",
+                            "AI1.0", "AI1.1", "AI1.2", "AI1.3", "AI1.4", "AI1.5", "AI1.6", "AI1.7"]
+                    currentIndex: 0  // 默认选中 AI0.0
+                    keyboardManager: root.keyboardManager
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
-
-
                 MouseArea {
-
-
                     anchors.fill: parent
-
-
                     onClicked: function(mouse) {
-
-
                         console.log("✅ [CurrentProtectionTab] 鼠标点击输入点选择，发射信号: requestFocusParamIndex(7)")
-
-
                         root.requestFocusParamIndex(7)
-
-
                         mouse.accepted = false
-
-
                     }
-
-
                 }
 
-
-
                 // 焦点指示器
-
-
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
-
-
                 Rectangle {
-
-
                     anchors.fill: parent
-
-
                     color: "transparent"
-
-
                     border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 7) ? 3 : 0
                     radius: 4
@@ -684,63 +697,54 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 过滤干扰延时输入（只读）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 改为 CustomSpinBox，修改单位为 "0.1秒"
+            // 过滤干扰延时输入（可输入，带单位）
             Item {
                 Layout.column: 1
                 Layout.row: 4
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: filterDelayField.implicitHeight  // ✅ 引用 CustomReadOnlyField 的 implicitHeight
+                implicitHeight: filterDelayRow.implicitHeight
 
-                DeviceInfo.CustomReadOnlyField {
-                    id: filterDelayField
-                    anchors.fill: parent
-                    text: "0.5 秒"
+                Row {
+                    id: filterDelayRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: filterDelayField
+                        width: parent.width - 60
+                        height: 60
+                        from: 0
+                        to: 100
+                        value: 5
+                        keyboardManager: root.keyboardManager
+                    }
+
+                    Text {
+                        text: "0.1秒"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
-
-
                 MouseArea {
-
-
                     anchors.fill: parent
-
-
                     onClicked: function(mouse) {
-
-
                         console.log("✅ [CurrentProtectionTab] 鼠标点击过滤干扰延时，发射信号: requestFocusParamIndex(8)")
-
-
                         root.requestFocusParamIndex(8)
-
-
                         mouse.accepted = false
-
-
                     }
-
-
                 }
 
-
-
                 // 焦点指示器
-
-
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
-
-
                 Rectangle {
-
-
                     anchors.fill: parent
-
-
                     color: "transparent"
-
-
                     border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 8) ? 3 : 0
                     radius: 4
