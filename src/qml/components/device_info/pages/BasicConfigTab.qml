@@ -28,6 +28,10 @@ Rectangle {
         console.log("🟢 [BasicConfigTab] focusParamIndex 变化:", focusParamIndex)
     }
 
+    // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 信号 - 请求更新焦点索引
+    // 用于鼠标点击时通知父组件，避免直接赋值打破 Qt.binding
+    signal requestFocusParamIndex(int paramIndex)
+
     // ✅ 2026-01-30 [FIX 100.300.106.3]: 布局模式（两列布局）
     // ✅ 2026-01-30 [FIX 100.300.106.4]: 改为两列布局，参考 AnalogInputPage
     readonly property string layoutMode: "two-column"  // "single-column" 或 "two-column"
@@ -242,24 +246,15 @@ Rectangle {
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 添加详细调试日志
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.5.1]: 修复 mouse 参数声明
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 发射信号而不是直接赋值，避免打破 Qt.binding
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
-                        console.log("========== [BasicConfigTab] 鼠标点击模块地址 ==========")
-                        console.log("  点击前 - root.focusParamIndex:", root.focusParamIndex)
-                        console.log("  点击前 - moduleAddressSpin.focus:", moduleAddressSpin.focus)
-                        console.log("  点击前 - moduleAddressSpin.activeFocus:", moduleAddressSpin.activeFocus)
-                        console.log("  点击前 - root.focus:", root.focus)
-                        console.log("  点击前 - root.activeFocus:", root.activeFocus)
+                        console.log("✅ [BasicConfigTab] 鼠标点击模块地址，发射信号: requestFocusParamIndex(2)")
 
-                        root.focusParamIndex = 2
-
-                        console.log("  点击后 - root.focusParamIndex:", root.focusParamIndex)
-                        console.log("  点击后 - moduleAddressSpin.focus:", moduleAddressSpin.focus)
-                        console.log("  点击后 - moduleAddressSpin.activeFocus:", moduleAddressSpin.activeFocus)
-                        console.log("  点击后 - root.focus:", root.focus)
-                        console.log("  点击后 - root.activeFocus:", root.activeFocus)
-                        console.log("=======================================================")
+                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 发射信号，而不是直接赋值
+                        // 避免打破 Qt.binding
+                        root.requestFocusParamIndex(2)
 
                         mouse.accepted = false  // 让事件继续传递给 SpinBox
                     }
@@ -337,11 +332,12 @@ Rectangle {
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 发射信号而不是直接赋值，避免打破 Qt.binding
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: {
-                        console.log("✅ [BasicConfigTab] 鼠标点击输出通道，同步焦点索引: 3")
-                        root.focusParamIndex = 3
+                    onClicked: function(mouse) {
+                        console.log("✅ [BasicConfigTab] 鼠标点击输出通道，发射信号: requestFocusParamIndex(3)")
+                        root.requestFocusParamIndex(3)
                         mouse.accepted = false  // 让事件继续传递给 SpinBox
                     }
                 }
@@ -393,24 +389,15 @@ Rectangle {
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 添加详细调试日志
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.5.1]: 修复 mouse 参数声明
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 发射信号而不是直接赋值，避免打破 Qt.binding
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
-                        console.log("========== [BasicConfigTab] 鼠标点击反馈通道 ==========")
-                        console.log("  点击前 - root.focusParamIndex:", root.focusParamIndex)
-                        console.log("  点击前 - feedbackChannelSpin.focus:", feedbackChannelSpin.focus)
-                        console.log("  点击前 - feedbackChannelSpin.activeFocus:", feedbackChannelSpin.activeFocus)
-                        console.log("  点击前 - root.focus:", root.focus)
-                        console.log("  点击前 - root.activeFocus:", root.activeFocus)
+                        console.log("✅ [BasicConfigTab] 鼠标点击反馈通道，发射信号: requestFocusParamIndex(4)")
 
-                        root.focusParamIndex = 4
-
-                        console.log("  点击后 - root.focusParamIndex:", root.focusParamIndex)
-                        console.log("  点击后 - feedbackChannelSpin.focus:", feedbackChannelSpin.focus)
-                        console.log("  点击后 - feedbackChannelSpin.activeFocus:", feedbackChannelSpin.activeFocus)
-                        console.log("  点击后 - root.focus:", root.focus)
-                        console.log("  点击后 - root.activeFocus:", root.activeFocus)
-                        console.log("=======================================================")
+                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 发射信号，而不是直接赋值
+                        // 避免打破 Qt.binding
+                        root.requestFocusParamIndex(4)
 
                         mouse.accepted = false  // 让事件继续传递给 SpinBox
                     }

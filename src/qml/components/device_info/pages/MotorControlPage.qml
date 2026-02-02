@@ -265,6 +265,16 @@ Rectangle {
                     item.focusTabIndex = Qt.binding(function() { return root.focusTabIndex })
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                     item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+
+                    // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 连接信号，更新 NavigationManager
+                    item.requestFocusParamIndex.connect(function(paramIndex) {
+                        console.log("✅ [MotorControlPage] 接收信号: requestFocusParamIndex(" + paramIndex + ")")
+                        console.log("  - 更新 NavigationManager.paramIndex:", navigationManager.paramIndex, "→", paramIndex)
+
+                        // 更新 NavigationManager 的 paramIndex
+                        // NavigationManager 会自动触发 focusParamIndex 的更新
+                        navigationManager.paramIndex = paramIndex
+                    })
                 }
             }
         }

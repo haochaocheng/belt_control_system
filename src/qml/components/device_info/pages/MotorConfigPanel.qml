@@ -28,6 +28,10 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property var virtualKeyboard: null  // Qt 虚拟键盘引用
 
+    // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 信号 - 请求更新焦点索引
+    // 从子组件（BasicConfigTab 等）转发到父组件（MotorControlPage）
+    signal requestFocusParamIndex(int paramIndex)
+
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.3]: 移除旧的键盘导航支持
     // 原因：与 NavigationManager 冲突，导致导航逻辑不正确
     // 现在由 MotorControlPage 的 NavigationManager 统一处理键盘事件
@@ -276,6 +280,12 @@ Rectangle {
                         // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+
+                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 连接信号，转发到父组件
+                        item.requestFocusParamIndex.connect(function(paramIndex) {
+                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
+                            root.requestFocusParamIndex(paramIndex)
+                        })
                     }
                 }
             }
