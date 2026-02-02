@@ -72,6 +72,8 @@ Rectangle {
             console.log("✅ [MotorControlPage] 电机列表索引变化:", motorListIndex)
             root.currentMotorIndex = motorListIndex
             root.focusItemIndex = motorListIndex
+            // ✅ 2026-02-02 [参数持久化]: 切换电机时加载配置
+            Qt.callLater(root.loadMotorConfig)
         }
 
         // 监听Tab索引变化，切换参数区显示
@@ -82,6 +84,8 @@ Rectangle {
             if (motorConfigPanel.item) {
                 motorConfigPanel.item.currentTabIndex = tabIndex
             }
+            // ✅ 2026-02-02 [参数持久化]: 切换Tab时加载配置
+            Qt.callLater(root.loadMotorConfig)
         }
 
         // 监听参数索引变化
@@ -400,7 +404,8 @@ Rectangle {
 
                         onClicked: {
                             console.log("✅ [MotorControlPage] 保存")
-                            // TODO: 实现保存功能
+                            // ✅ 2026-02-02 [参数持久化]: 调用保存函数
+                            root.saveMotorConfig()
                         }
                     }
 
@@ -528,5 +533,90 @@ Rectangle {
     function handleKeyPress(direction) {
         console.log("✅ [MotorControlPage] 接收键盘事件:", direction)
         navigationManager.handleDirectionKey(direction)
+    }
+
+    // ✅ 2026-02-02 [参数持久化]: 保存电机配置
+    function saveMotorConfig() {
+        console.log("✅ [MotorControlPage] 保存电机配置 - 设备:", root.deviceId, "电机:", root.currentMotorIndex, "Tab:", root.focusTabIndex)
+
+        // 获取当前 Tab 的参数
+        var currentTab = motorConfigPanel.item ? motorConfigPanel.item.getCurrentTab() : null
+        if (!currentTab) {
+            console.log("⚠️ [MotorControlPage] 无法获取当前 Tab")
+            return false
+        }
+
+        // 收集参数（根据不同 Tab 类型收集不同参数）
+        var config = {}
+
+        // 根据 Tab 索引确定 Tab 名称
+        var tabNames = [
+            "基本配置", "电流保护", "前轴承温度", "后轴承温度", "A相绕组",
+            "B相绕组", "C相绕组", "电机温度", "X轴振动", "Y轴振动"
+        ]
+        config["tab_name"] = tabNames[root.focusTabIndex] || "未知Tab"
+
+        // 调用 Tab 的 collectConfig() 方法收集参数
+        if (typeof currentTab.collectConfig === "function") {
+            var tabConfig = currentTab.collectConfig()
+            // 合并 Tab 配置到主配置
+            for (var key in tabConfig) {
+                config[key] = tabConfig[key]
+            }
+        } else {
+            console.log("⚠️ [MotorControlPage] 当前 Tab 不支持 collectConfig()")
+            return false
+        }
+
+        // 保存到数据库
+        var success = deviceConfigMgr.saveMotorConfig(
+            root.deviceId,
+            root.currentMotorIndex,
+            root.focusTabIndex,
+            config
+        )
+
+        if (success) {
+            console.log("✅ [MotorControlPage] 保存成功")
+        } else {
+            console.log("❌ [MotorControlPage] 保存失败")
+        }
+
+        return success
+    }
+
+    // ✅ 2026-02-02 [参数持久化]: 加载电机配置
+    function loadMotorConfig() {
+        console.log("✅ [MotorControlPage] 加载电机配置 - 设备:", root.deviceId, "电机:", root.currentMotorIndex, "Tab:", root.focusTabIndex)
+
+        // 从数据库加载配置
+        var config = deviceConfigMgr.loadMotorConfig(
+            root.deviceId,
+            root.currentMotorIndex,
+            root.focusTabIndex
+        )
+
+        if (!config || Object.keys(config).length === 0) {
+            console.log("⚠️ [MotorControlPage] 未找到配置，使用默认值")
+            return false
+        }
+
+        // 获取当前 Tab
+        var currentTab = motorConfigPanel.item ? motorConfigPanel.item.getCurrentTab() : null
+        if (!currentTab) {
+            console.log("⚠️ [MotorControlPage] 无法获取当前 Tab")
+            return false
+        }
+
+        // 调用 Tab 的 applyConfig() 方法应用配置
+        if (typeof currentTab.applyConfig === "function") {
+            currentTab.applyConfig(config)
+            console.log("✅ [MotorControlPage] 配置已应用")
+        } else {
+            console.log("⚠️ [MotorControlPage] 当前 Tab 不支持 applyConfig()")
+            return false
+        }
+
+        return true
     }
 }

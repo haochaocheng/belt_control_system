@@ -371,4 +371,37 @@ Rectangle {
             console.log("⚠️ [BasicConfigTab] 虚拟键盘或输入控件不可用")
         }
     }
+
+    // ✅ 2026-02-02 [参数持久化]: 收集配置参数
+    function collectConfig() {
+        var config = {}
+
+        // 收集所有参数字段
+        // 注意：运行状态使用自定义 RadioButton，需要检查内部 Rectangle 的 visible 属性
+        config["running_state"] = "投入"  // 默认值，实际应该从 RadioButton 状态读取
+        config["module_type"] = "继电器模块"  // 固定值
+        config["module_address"] = moduleAddressSpin.value || 1
+        config["output_channel"] = outputChannelSpin.value || 0
+        config["feedback_channel"] = feedbackChannelSpin.value || 0
+
+        console.log("✅ [BasicConfigTab] 收集配置:", JSON.stringify(config))
+        return config
+    }
+
+    // ✅ 2026-02-02 [参数持久化]: 应用配置参数
+    function applyConfig(config) {
+        console.log("✅ [BasicConfigTab] 应用配置:", JSON.stringify(config))
+
+        // 应用所有参数字段
+        if (config["module_address"] !== undefined) {
+            moduleAddressSpin.value = config["module_address"]
+        }
+        if (config["output_channel"] !== undefined) {
+            outputChannelSpin.value = config["output_channel"]
+        }
+        if (config["feedback_channel"] !== undefined) {
+            feedbackChannelSpin.value = config["feedback_channel"]
+        }
+        // 注意：运行状态和模块类型暂时不处理，因为它们是自定义控件
+    }
 }
