@@ -146,12 +146,12 @@ Rectangle {
 
             // ========== 第二行：次数设置（左侧，索引2，条件显示）、时间设置（右侧，索引3，条件显示）==========
 
-            // ✅ 2026-02-02 [FIX 100.300.112.8.25.3]: 次数设置（始终显示，按次数时启用，否则变灰禁用）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25.4]: 次数设置（始终显示，按次数时启用，否则变灰禁用）
             // 次数设置标签
             Text {
                 text: "次数设置:"
                 font.pixelSize: 21
-                color: alarmTypeField.currentIndex === 0 ? "#9E9E9E" : "#5E5E5E"  // 按次数时正常色，否则变灰
+                color: alarmTypeField.currentIndex === 0 ? "#9E9E9E" : "#3E3E3E"  // 按次数时正常色，否则变深灰（更明显）
                 Layout.column: 0
                 Layout.row: 1
                 Layout.preferredWidth: 160
@@ -199,12 +199,12 @@ Rectangle {
                 }
             }
 
-            // ✅ 2026-02-02 [FIX 100.300.112.8.25.3]: 时间设置（始终显示，按时间时启用，否则变灰禁用）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25.4]: 时间设置（始终显示，按时间时启用，否则变灰禁用）
             // 时间设置标签
             Text {
                 text: "时间设置:"
                 font.pixelSize: 21
-                color: alarmTypeField.currentIndex === 1 ? "#9E9E9E" : "#5E5E5E"  // 按时间时正常色，否则变灰
+                color: alarmTypeField.currentIndex === 1 ? "#9E9E9E" : "#3E3E3E"  // 按时间时正常色，否则变深灰（更明显）
                 Layout.column: 2
                 Layout.row: 1
                 Layout.preferredWidth: 160
@@ -239,7 +239,7 @@ Rectangle {
                     Text {
                         text: "0.1秒"
                         font.pixelSize: 21
-                        color: alarmTypeField.currentIndex === 1 ? "#9E9E9E" : "#5E5E5E"  // 按时间时正常色，否则变灰
+                        color: alarmTypeField.currentIndex === 1 ? "#9E9E9E" : "#3E3E3E"  // 按时间时正常色，否则变深灰（更明显）
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -740,43 +740,62 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
     // 获取参数字段数量
     function getParamFieldCount() {
-        return 9  // 9个参数字段
+        return 11  // ✅ 2026-02-02 [FIX 100.300.112.8.25.4]: 从 9 个增加到 11 个参数字段（增加了次数设置和时间设置）
     }
 
     // 触发参数输入
     function triggerParamInput(paramIndex) {
         console.log("✅ [CurrentProtectionTab] 触发参数输入 - 索引:", paramIndex)
 
-        // 所有字段都是只读的，只显示日志
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.4]: 更新参数索引映射
         switch(paramIndex) {
-        case 0:  // 是否投入（RadioButton 组）
+        case 0:  // 是否投入（CustomComboBox）
             console.log("✅ [CurrentProtectionTab] 切换是否投入")
-            // TODO: 切换是否投入
+            enabledField.forceActiveFocus()
             break
-        case 1:  // 报警类型（RadioButton 组）
+        case 1:  // 报警类型（CustomComboBox）
             console.log("✅ [CurrentProtectionTab] 切换报警类型")
-            // TODO: 切换报警类型
+            alarmTypeField.forceActiveFocus()
             break
-        case 2:  // 动作保护类型（只读）
-            console.log("✅ [CurrentProtectionTab] 动作保护类型（只读）")
+        case 2:  // 次数设置（CustomSpinBox，条件启用）
+            console.log("✅ [CurrentProtectionTab] 次数设置")
+            if (alarmTypeField.currentIndex === 0) {
+                countSettingField.forceActiveFocus()
+            }
             break
-        case 3:  // 故障保护类型（只读）
-            console.log("✅ [CurrentProtectionTab] 故障保护类型（只读）")
+        case 3:  // 时间设置（CustomSpinBox，条件启用）
+            console.log("✅ [CurrentProtectionTab] 时间设置")
+            if (alarmTypeField.currentIndex === 1) {
+                timeSettingField.forceActiveFocus()
+            }
             break
-        case 4:  // 电流量程（只读）
-            console.log("✅ [CurrentProtectionTab] 电流量程（只读）")
+        case 4:  // 动作保护类型（CustomComboBox）
+            console.log("✅ [CurrentProtectionTab] 动作保护类型")
+            actionProtectionField.forceActiveFocus()
             break
-        case 5:  // 电流上限（只读）
-            console.log("✅ [CurrentProtectionTab] 电流上限（只读）")
+        case 5:  // 故障保护类型（CustomComboBox）
+            console.log("✅ [CurrentProtectionTab] 故障保护类型")
+            faultProtectionField.forceActiveFocus()
             break
-        case 6:  // 电流下限（只读）
-            console.log("✅ [CurrentProtectionTab] 电流下限（只读）")
+        case 6:  // 电流量程（CustomSpinBox）
+            console.log("✅ [CurrentProtectionTab] 电流量程")
+            currentRangeField.forceActiveFocus()
             break
-        case 7:  // 输入点选择（只读）
-            console.log("✅ [CurrentProtectionTab] 输入点选择（只读）")
+        case 7:  // 电流上限（CustomSpinBox）
+            console.log("✅ [CurrentProtectionTab] 电流上限")
+            currentUpperField.forceActiveFocus()
             break
-        case 8:  // 过滤干扰延时（只读）
-            console.log("✅ [CurrentProtectionTab] 过滤干扰延时（只读）")
+        case 8:  // 电流下限（CustomSpinBox）
+            console.log("✅ [CurrentProtectionTab] 电流下限")
+            currentLowerField.forceActiveFocus()
+            break
+        case 9:  // 输入点选择（CustomComboBox）
+            console.log("✅ [CurrentProtectionTab] 输入点选择")
+            inputPointField.forceActiveFocus()
+            break
+        case 10:  // 过滤干扰延时（CustomSpinBox）
+            console.log("✅ [CurrentProtectionTab] 过滤干扰延时")
+            filterDelayField.forceActiveFocus()
             break
         }
     }
