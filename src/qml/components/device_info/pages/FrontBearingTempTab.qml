@@ -18,6 +18,10 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property var virtualKeyboard: null  // Qt 虚拟键盘引用
 
+    // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 信号 - 请求更新焦点索引
+    // 用于鼠标点击时通知父组件，避免直接赋值打破 Qt.binding
+    signal requestFocusParamIndex(int paramIndex)
+
     // ✅ 2026-01-30 [FIX 100.300.108]: 布局模式（GridLayout）
     readonly property string layoutMode: "grid"  // "grid" 布局
 
@@ -123,14 +127,54 @@ Rectangle {
                     }
                 }
 
-                // 焦点指示器
-                Rectangle {
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+
+
+                MouseArea {
+
+
                     anchors.fill: parent
+
+
+                    onClicked: function(mouse) {
+
+
+                        console.log("✅ [FrontBearingTempTab] 鼠标点击是否投入，发射信号: requestFocusParamIndex(0)")
+
+
+                        root.requestFocusParamIndex(0)
+
+
+                        mouse.accepted = false
+
+
+                    }
+
+
+                }
+
+
+
+                // 焦点指示器
+
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
+
+
+                Rectangle {
+
+
+                    anchors.fill: parent
+
+
                     color: "transparent"
+
+
                     border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 0) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 从 10 增加到 1000
+                    enabled: false
                 }
             }
 
@@ -221,14 +265,54 @@ Rectangle {
                     }
                 }
 
-                // 焦点指示器
-                Rectangle {
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+
+
+                MouseArea {
+
+
                     anchors.fill: parent
+
+
+                    onClicked: function(mouse) {
+
+
+                        console.log("✅ [FrontBearingTempTab] 鼠标点击报警类型，发射信号: requestFocusParamIndex(1)")
+
+
+                        root.requestFocusParamIndex(1)
+
+
+                        mouse.accepted = false
+
+
+                    }
+
+
+                }
+
+
+
+                // 焦点指示器
+
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
+
+
+                Rectangle {
+
+
+                    anchors.fill: parent
+
+
                     color: "transparent"
+
+
                     border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 1) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 从 10 增加到 1000
+                    enabled: false
                 }
             }
 
@@ -259,14 +343,54 @@ Rectangle {
                     text: "立即停机"
                 }
 
-                // 焦点指示器
-                Rectangle {
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+
+
+                MouseArea {
+
+
                     anchors.fill: parent
+
+
+                    onClicked: function(mouse) {
+
+
+                        console.log("✅ [FrontBearingTempTab] 鼠标点击动作保护类型，发射信号: requestFocusParamIndex(2)")
+
+
+                        root.requestFocusParamIndex(2)
+
+
+                        mouse.accepted = false
+
+
+                    }
+
+
+                }
+
+
+
+                // 焦点指示器
+
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
+
+
+                Rectangle {
+
+
+                    anchors.fill: parent
+
+
                     color: "transparent"
+
+
                     border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 2) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 从 10 增加到 1000
+                    enabled: false
                 }
             }
 
@@ -295,14 +419,54 @@ Rectangle {
                     text: "紧急停机"
                 }
 
-                // 焦点指示器
-                Rectangle {
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+
+
+                MouseArea {
+
+
                     anchors.fill: parent
+
+
+                    onClicked: function(mouse) {
+
+
+                        console.log("✅ [FrontBearingTempTab] 鼠标点击故障保护类型，发射信号: requestFocusParamIndex(3)")
+
+
+                        root.requestFocusParamIndex(3)
+
+
+                        mouse.accepted = false
+
+
+                    }
+
+
+                }
+
+
+
+                // 焦点指示器
+
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
+
+
+                Rectangle {
+
+
+                    anchors.fill: parent
+
+
                     color: "transparent"
+
+
                     border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 3) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 从 10 增加到 1000
+                    enabled: false
                 }
             }
 
@@ -333,14 +497,54 @@ Rectangle {
                     text: "-20~100℃"
                 }
 
-                // 焦点指示器
-                Rectangle {
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+
+
+                MouseArea {
+
+
                     anchors.fill: parent
+
+
+                    onClicked: function(mouse) {
+
+
+                        console.log("✅ [FrontBearingTempTab] 鼠标点击温度量程，发射信号: requestFocusParamIndex(4)")
+
+
+                        root.requestFocusParamIndex(4)
+
+
+                        mouse.accepted = false
+
+
+                    }
+
+
+                }
+
+
+
+                // 焦点指示器
+
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
+
+
+                Rectangle {
+
+
+                    anchors.fill: parent
+
+
                     color: "transparent"
+
+
                     border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 4) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 从 10 增加到 1000
+                    enabled: false
                 }
             }
 
@@ -383,14 +587,54 @@ Rectangle {
                     }
                 }
 
-                // 焦点指示器
-                Rectangle {
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+
+
+                MouseArea {
+
+
                     anchors.fill: parent
+
+
+                    onClicked: function(mouse) {
+
+
+                        console.log("✅ [FrontBearingTempTab] 鼠标点击温度上限，发射信号: requestFocusParamIndex(5)")
+
+
+                        root.requestFocusParamIndex(5)
+
+
+                        mouse.accepted = false
+
+
+                    }
+
+
+                }
+
+
+
+                // 焦点指示器
+
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
+
+
+                Rectangle {
+
+
+                    anchors.fill: parent
+
+
                     color: "transparent"
+
+
                     border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 5) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 从 10 增加到 1000
+                    enabled: false
                 }
             }
 
@@ -435,14 +679,54 @@ Rectangle {
                     }
                 }
 
-                // 焦点指示器
-                Rectangle {
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+
+
+                MouseArea {
+
+
                     anchors.fill: parent
+
+
+                    onClicked: function(mouse) {
+
+
+                        console.log("✅ [FrontBearingTempTab] 鼠标点击温度下限，发射信号: requestFocusParamIndex(6)")
+
+
+                        root.requestFocusParamIndex(6)
+
+
+                        mouse.accepted = false
+
+
+                    }
+
+
+                }
+
+
+
+                // 焦点指示器
+
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
+
+
+                Rectangle {
+
+
+                    anchors.fill: parent
+
+
                     color: "transparent"
+
+
                     border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 6) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 从 10 增加到 1000
+                    enabled: false
                 }
             }
 
@@ -471,14 +755,54 @@ Rectangle {
                     text: "AI-0"
                 }
 
-                // 焦点指示器
-                Rectangle {
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+
+
+                MouseArea {
+
+
                     anchors.fill: parent
+
+
+                    onClicked: function(mouse) {
+
+
+                        console.log("✅ [FrontBearingTempTab] 鼠标点击输入点选择，发射信号: requestFocusParamIndex(7)")
+
+
+                        root.requestFocusParamIndex(7)
+
+
+                        mouse.accepted = false
+
+
+                    }
+
+
+                }
+
+
+
+                // 焦点指示器
+
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
+
+
+                Rectangle {
+
+
+                    anchors.fill: parent
+
+
                     color: "transparent"
+
+
                     border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 7) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 从 10 增加到 1000
+                    enabled: false
                 }
             }
 
@@ -509,14 +833,54 @@ Rectangle {
                     text: "0.5 秒"
                 }
 
-                // 焦点指示器
-                Rectangle {
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
+
+
+                MouseArea {
+
+
                     anchors.fill: parent
+
+
+                    onClicked: function(mouse) {
+
+
+                        console.log("✅ [FrontBearingTempTab] 鼠标点击过滤干扰延时，发射信号: requestFocusParamIndex(8)")
+
+
+                        root.requestFocusParamIndex(8)
+
+
+                        mouse.accepted = false
+
+
+                    }
+
+
+                }
+
+
+
+                // 焦点指示器
+
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
+
+
+                Rectangle {
+
+
+                    anchors.fill: parent
+
+
                     color: "transparent"
+
+
                     border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 8) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 1000  // ✅ 从 10 增加到 1000
+                    enabled: false
                 }
             }
         }  // GridLayout 结束
