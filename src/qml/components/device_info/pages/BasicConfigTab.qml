@@ -236,9 +236,10 @@ Rectangle {
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 添加详细调试日志
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5.1]: 修复 mouse 参数声明
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: {
+                    onClicked: function(mouse) {
                         console.log("========== [BasicConfigTab] 鼠标点击模块地址 ==========")
                         console.log("  点击前 - root.focusParamIndex:", root.focusParamIndex)
                         console.log("  点击前 - moduleAddressSpin.focus:", moduleAddressSpin.focus)
@@ -377,9 +378,10 @@ Rectangle {
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 添加详细调试日志
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5.1]: 修复 mouse 参数声明
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: {
+                    onClicked: function(mouse) {
                         console.log("========== [BasicConfigTab] 鼠标点击反馈通道 ==========")
                         console.log("  点击前 - root.focusParamIndex:", root.focusParamIndex)
                         console.log("  点击前 - feedbackChannelSpin.focus:", feedbackChannelSpin.focus)
