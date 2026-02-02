@@ -226,7 +226,96 @@ QtObject {
 
     // ✅ 2026-01-28 [FIX 100.300.66]: 添加 deviceConfigMgr 对象
     // ✅ 2026-01-28 [FIX 100.300.68]: 添加 loadAllDigitalProtections 和 loadAllAnalogProtections 方法
+    // ✅ 2026-02-02 [参数持久化]: 扩展 deviceConfigMgr 对象，支持参数持久化
     property QtObject deviceConfigMgr: QtObject {
+        // ========== 内存存储 ==========
+        // 使用 JavaScript 对象模拟数据库存储
+        property var motorConfigStorage: ({})  // 格式: "deviceId_motorIndex_tabIndex" -> config
+        property var brakeConfigStorage: ({})  // 格式: "deviceId_brakeIndex" -> config
+        property var tensionConfigStorage: ({})  // 格式: "deviceId_tensionIndex" -> config
+
+        // ========== 电机配置方法 ==========
+        function saveMotorConfig(deviceId, motorIndex, tabIndex, config) {
+            var key = deviceId + "_" + motorIndex + "_" + tabIndex
+            console.log("✅ [MockBackend] 保存电机配置:", key, JSON.stringify(config))
+            motorConfigStorage[key] = config
+            return true
+        }
+
+        function loadMotorConfig(deviceId, motorIndex, tabIndex) {
+            var key = deviceId + "_" + motorIndex + "_" + tabIndex
+            var config = motorConfigStorage[key]
+            console.log("✅ [MockBackend] 加载电机配置:", key, config ? "找到" : "未找到")
+            return config || {}
+        }
+
+        function loadAllMotorConfigs(deviceId, motorIndex) {
+            console.log("✅ [MockBackend] 加载电机所有配置:", deviceId, motorIndex)
+            var configs = []
+            for (var i = 0; i < 10; i++) {  // 10个Tab
+                var key = deviceId + "_" + motorIndex + "_" + i
+                if (motorConfigStorage[key]) {
+                    configs.push(motorConfigStorage[key])
+                }
+            }
+            return configs
+        }
+
+        // ========== 制动器配置方法 ==========
+        function saveBrakeConfig(deviceId, brakeIndex, config) {
+            var key = deviceId + "_" + brakeIndex
+            console.log("✅ [MockBackend] 保存制动器配置:", key, JSON.stringify(config))
+            brakeConfigStorage[key] = config
+            return true
+        }
+
+        function loadBrakeConfig(deviceId, brakeIndex) {
+            var key = deviceId + "_" + brakeIndex
+            var config = brakeConfigStorage[key]
+            console.log("✅ [MockBackend] 加载制动器配置:", key, config ? "找到" : "未找到")
+            return config || {}
+        }
+
+        function loadAllBrakeConfigs(deviceId) {
+            console.log("✅ [MockBackend] 加载所有制动器配置:", deviceId)
+            var configs = []
+            for (var i = 0; i < 4; i++) {  // 4个制动器
+                var key = deviceId + "_" + i
+                if (brakeConfigStorage[key]) {
+                    configs.push(brakeConfigStorage[key])
+                }
+            }
+            return configs
+        }
+
+        // ========== 张紧控制配置方法 ==========
+        function saveTensionConfig(deviceId, tensionIndex, config) {
+            var key = deviceId + "_" + tensionIndex
+            console.log("✅ [MockBackend] 保存张紧控制配置:", key, JSON.stringify(config))
+            tensionConfigStorage[key] = config
+            return true
+        }
+
+        function loadTensionConfig(deviceId, tensionIndex) {
+            var key = deviceId + "_" + tensionIndex
+            var config = tensionConfigStorage[key]
+            console.log("✅ [MockBackend] 加载张紧控制配置:", key, config ? "找到" : "未找到")
+            return config || {}
+        }
+
+        function loadAllTensionConfigs(deviceId) {
+            console.log("✅ [MockBackend] 加载所有张紧控制配置:", deviceId)
+            var configs = []
+            for (var i = 0; i < 2; i++) {  // 2个张紧装置
+                var key = deviceId + "_" + i
+                if (tensionConfigStorage[key]) {
+                    configs.push(tensionConfigStorage[key])
+                }
+            }
+            return configs
+        }
+
+        // ========== 原有方法（保持不变）==========
         function loadDeviceConfig(deviceId) {
             console.log("模拟：加载设备配置", deviceId)
             return {}
