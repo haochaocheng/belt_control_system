@@ -88,7 +88,7 @@ qt_add_qml_module(qml_module
         components/device_info/pages/SwitchInputPage.qml
         components/device_info/pages/AnalogInputPage.qml
         components/device_info/pages/MotorControlPage.qml
-        components/device_info/pages/MotorListPanel.qml
+        components/device_info/pages/MyMotorListPanel.qml  # ✅ 2026-02-02 [FIX 100.300.112.8.21]: 修正文件名（原为MotorListPanel.qml）
         components/device_info/pages/MotorConfigPanel.qml
         components/device_info/pages/BrakeControlPage.qml
         components/device_info/pages/BrakeListPanel.qml
