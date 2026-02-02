@@ -263,32 +263,41 @@ Rectangle {
                 // 焦点指示器
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 移除测试背景色，添加渲染状态日志
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5.2]: 移除无效的 onBorderColorChanged，改用 Connections
                 Rectangle {
                     id: moduleAddressFocusIndicator
                     anchors.fill: parent
-                    color: "transparent"  // ✅ 移除测试背景色
+                    color: "transparent"
                     border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 2) ? 3 : 0
                     radius: 4
-                    z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
-                    enabled: false  // ✅ 不拦截鼠标事件
-
-                    // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听属性变化
-                    onBorderColorChanged: {
-                        console.log("🔵 [模块地址焦点指示器] border.color 变化:", border.color)
-                        console.log("  - root.focusParamIndex:", root.focusParamIndex)
-                        console.log("  - border.width:", border.width)
-                        console.log("  - visible:", visible)
-                        console.log("  - opacity:", opacity)
-                        console.log("  - z:", z)
-                        console.log("  - width:", width, "height:", height)
-                        console.log("  - x:", x, "y:", y)
-                    }
+                    z: 1000
+                    enabled: false
 
                     Component.onCompleted: {
                         console.log("🔵 [模块地址焦点指示器] 组件加载完成")
                         console.log("  - 初始 border.color:", border.color)
                         console.log("  - 初始 root.focusParamIndex:", root.focusParamIndex)
+                        console.log("  - 初始 width:", width, "height:", height)
+                        console.log("  - 初始 x:", x, "y:", y)
+                        console.log("  - 初始 z:", z)
+                    }
+
+                    // ✅ 使用 Connections 监听 focusParamIndex 变化
+                    Connections {
+                        target: root
+                        function onFocusParamIndexChanged() {
+                            if (root.focusParamIndex === 2) {
+                                console.log("🔵 [模块地址焦点指示器] 获得焦点")
+                                console.log("  - border.color:", moduleAddressFocusIndicator.border.color)
+                                console.log("  - border.width:", moduleAddressFocusIndicator.border.width)
+                                console.log("  - visible:", moduleAddressFocusIndicator.visible)
+                                console.log("  - opacity:", moduleAddressFocusIndicator.opacity)
+                                console.log("  - z:", moduleAddressFocusIndicator.z)
+                                console.log("  - width:", moduleAddressFocusIndicator.width, "height:", moduleAddressFocusIndicator.height)
+                                console.log("  - x:", moduleAddressFocusIndicator.x, "y:", moduleAddressFocusIndicator.y)
+                            }
+                        }
                     }
                 }
             }
@@ -405,32 +414,41 @@ Rectangle {
                 // 焦点指示器
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 移除测试背景色，添加渲染状态日志
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5.2]: 移除无效的 onBorderColorChanged，改用 Connections
                 Rectangle {
                     id: feedbackChannelFocusIndicator
                     anchors.fill: parent
-                    color: "transparent"  // ✅ 移除测试背景色
+                    color: "transparent"
                     border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 4) ? 3 : 0
                     radius: 4
-                    z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
-                    enabled: false  // ✅ 不拦截鼠标事件
-
-                    // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听属性变化
-                    onBorderColorChanged: {
-                        console.log("🔵 [反馈通道焦点指示器] border.color 变化:", border.color)
-                        console.log("  - root.focusParamIndex:", root.focusParamIndex)
-                        console.log("  - border.width:", border.width)
-                        console.log("  - visible:", visible)
-                        console.log("  - opacity:", opacity)
-                        console.log("  - z:", z)
-                        console.log("  - width:", width, "height:", height)
-                        console.log("  - x:", x, "y:", y)
-                    }
+                    z: 1000
+                    enabled: false
 
                     Component.onCompleted: {
                         console.log("🔵 [反馈通道焦点指示器] 组件加载完成")
                         console.log("  - 初始 border.color:", border.color)
                         console.log("  - 初始 root.focusParamIndex:", root.focusParamIndex)
+                        console.log("  - 初始 width:", width, "height:", height)
+                        console.log("  - 初始 x:", x, "y:", y)
+                        console.log("  - 初始 z:", z)
+                    }
+
+                    // ✅ 使用 Connections 监听 focusParamIndex 变化
+                    Connections {
+                        target: root
+                        function onFocusParamIndexChanged() {
+                            if (root.focusParamIndex === 4) {
+                                console.log("🔵 [反馈通道焦点指示器] 获得焦点")
+                                console.log("  - border.color:", feedbackChannelFocusIndicator.border.color)
+                                console.log("  - border.width:", feedbackChannelFocusIndicator.border.width)
+                                console.log("  - visible:", feedbackChannelFocusIndicator.visible)
+                                console.log("  - opacity:", feedbackChannelFocusIndicator.opacity)
+                                console.log("  - z:", feedbackChannelFocusIndicator.z)
+                                console.log("  - width:", feedbackChannelFocusIndicator.width, "height:", feedbackChannelFocusIndicator.height)
+                                console.log("  - x:", feedbackChannelFocusIndicator.x, "y:", feedbackChannelFocusIndicator.y)
+                            }
+                        }
                     }
                 }
             }
