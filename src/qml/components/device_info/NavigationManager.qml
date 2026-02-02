@@ -16,7 +16,7 @@ QtObject {
     property string currentArea: areaMotorList     // 当前焦点区域
     property int motorListIndex: 0                 // 区域A：电机列表索引（0-7）
     property int tabIndex: 0                       // 区域B：Tab索引（0-9，共10个Tab）
-    property int paramIndex: 0                     // 区域C：参数索引（0-8）
+    property int paramIndex: 0                     // 区域C：参数索引（动态范围，取决于当前Tab）
     property int buttonIndex: 0                    // 区域D：按钮索引（0-4，共5个按钮）
 
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听 paramIndex 变化
@@ -27,22 +27,19 @@ QtObject {
     }
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3]: 当前Tab的最后一个参数索引
-    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.1]: 修正基本配置参数数量为5个
-    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.2]: 初始化时根据tabIndex设置lastParamIndex
+    // ✅ 2026-02-02 [FIX 100.300.112.8.25.5]: 改为动态更新，不再硬编码
     // 不同Tab有不同的参数数量：
     // - 基本配置（Tab 0）：5个参数（0-4），最后索引=4
-    // - 其他Tab（Tab 1-9）：9个参数（0-8），最后索引=8
+    // - 电流保护（Tab 1）：11个参数（0-10），最后索引=10
+    // - 其他Tab（Tab 2-9）：9个参数（0-8），最后索引=8
     property int lastParamIndex: 4  // 默认为4（初始Tab 0是基本配置）
 
-    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.2]: 初始化时设置正确的lastParamIndex
-    Component.onCompleted: {
-        // 根据初始tabIndex设置lastParamIndex
-        if (tabIndex === 0) {
-            lastParamIndex = 4  // 基本配置
-        } else {
-            lastParamIndex = 8  // 其他Tab
+    // ✅ 2026-02-02 [FIX 100.300.112.8.25.5]: 添加函数来更新lastParamIndex
+    function updateLastParamIndex(count) {
+        if (count > 0) {
+            lastParamIndex = count - 1  // 参数数量-1 = 最后一个参数的索引
+            console.log("✅ [NavigationManager] 更新 lastParamIndex:", lastParamIndex, "（参数数量:", count, "）")
         }
-        console.log("✅ [NavigationManager] 初始化 - tabIndex:", tabIndex, "lastParamIndex:", lastParamIndex)
     }
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除重复的信号定义
@@ -142,16 +139,9 @@ QtObject {
 
         if (newIndex !== tabIndex) {
             tabIndex = newIndex
-            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3]: 根据Tab索引更新最后一个参数索引
-            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.1]: 修正基本配置参数数量为5个
-            // 基本配置（Tab 0）有5个参数（0-4），其他Tab有9个参数（0-8）
-            if (newIndex === 0) {
-                lastParamIndex = 4  // 基本配置：最后参数索引=4（5个参数：运行状态、模块类型、模块地址、输出通道、反馈通道）
-            } else {
-                lastParamIndex = 8  // 其他Tab：最后参数索引=8
-            }
-            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
-            console.log("✅ [NavigationManager] Tab索引:", newIndex, "（参数区自动切换显示）lastParamIndex:", lastParamIndex)
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25.5]: 移除硬编码的lastParamIndex更新
+            // lastParamIndex 现在由 MotorControlPage 在 Tab 切换后动态更新
+            console.log("✅ [NavigationManager] Tab索引:", newIndex, "（参数区自动切换显示）")
         }
     }
 
@@ -208,10 +198,11 @@ QtObject {
 
         case "Right":
             // 向右移动（同行）
-            if (paramIndex % 2 === 0 && paramIndex < 8) {
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25.5]: 使用 lastParamIndex 而不是硬编码的8
+            if (paramIndex % 2 === 0 && paramIndex < lastParamIndex) {
                 newIndex = paramIndex + 1
             }
-            // 在右列或第5行，保持不变
+            // 在右列或最后一行，保持不变
             break
         }
 

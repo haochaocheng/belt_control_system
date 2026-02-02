@@ -78,6 +78,14 @@ Rectangle {
             root.focusTabIndex = 0
             root.focusParamIndex = 0
             console.log("✅ [MotorControlPage] 初始状态已同步 - focusItemIndex:", root.focusItemIndex)
+
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25.5]: 初始化时更新 lastParamIndex
+            Qt.callLater(function() {
+                var paramCount = root.getParamFieldCount()
+                if (paramCount > 0) {
+                    navigationManager.updateLastParamIndex(paramCount)
+                }
+            })
         }
 
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.5]: 修复信号处理器参数问题
@@ -100,6 +108,15 @@ Rectangle {
             if (motorConfigPanel.item) {
                 motorConfigPanel.item.currentTabIndex = tabIndex
             }
+
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25.5]: 更新 NavigationManager 的 lastParamIndex
+            Qt.callLater(function() {
+                var paramCount = root.getParamFieldCount()
+                if (paramCount > 0) {
+                    navigationManager.updateLastParamIndex(paramCount)
+                }
+            })
+
             // ✅ 2026-02-02 [参数持久化]: 切换Tab时加载配置
             Qt.callLater(root.loadMotorConfig)
         }
