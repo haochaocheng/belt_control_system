@@ -146,17 +146,16 @@ Rectangle {
 
             // ========== 第二行：次数设置（左侧，索引2，条件显示）、时间设置（右侧，索引3，条件显示）==========
 
-            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 次数设置（当报警类型为"按次数"时显示）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25.3]: 次数设置（始终显示，按次数时启用，否则变灰禁用）
             // 次数设置标签
             Text {
                 text: "次数设置:"
                 font.pixelSize: 21
-                color: "#9E9E9E"
+                color: alarmTypeField.currentIndex === 0 ? "#9E9E9E" : "#5E5E5E"  // 按次数时正常色，否则变灰
                 Layout.column: 0
                 Layout.row: 1
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
-                visible: alarmTypeField.currentIndex === 0  // 当选择"按次数"时显示
             }
 
             // 次数设置输入
@@ -166,7 +165,6 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: countSettingField.implicitHeight
-                visible: alarmTypeField.currentIndex === 0  // 当选择"按次数"时显示
 
                 DeviceInfo.CustomSpinBox {
                     id: countSettingField
@@ -174,12 +172,14 @@ Rectangle {
                     from: 1
                     to: 100
                     value: 3
+                    enabled: alarmTypeField.currentIndex === 0  // 按次数时启用，否则禁用
                     keyboardManager: root.keyboardManager
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
                 MouseArea {
                     anchors.fill: parent
+                    enabled: alarmTypeField.currentIndex === 0  // 按次数时启用，否则禁用
                     onClicked: function(mouse) {
                         console.log("✅ [CurrentProtectionTab] 鼠标点击次数设置，发射信号: requestFocusParamIndex(2)")
                         root.requestFocusParamIndex(2)
@@ -191,25 +191,24 @@ Rectangle {
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
-                    border.color: (root.focusParamIndex === 10) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 10) ? 3 : 0
+                    border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 2) ? 3 : 0
                     radius: 4
                     z: 1000
                     enabled: false
                 }
             }
 
-            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 时间设置（当报警类型为"按时间"时显示）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25.3]: 时间设置（始终显示，按时间时启用，否则变灰禁用）
             // 时间设置标签
             Text {
                 text: "时间设置:"
                 font.pixelSize: 21
-                color: "#9E9E9E"
+                color: alarmTypeField.currentIndex === 1 ? "#9E9E9E" : "#5E5E5E"  // 按时间时正常色，否则变灰
                 Layout.column: 2
                 Layout.row: 1
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
-                visible: alarmTypeField.currentIndex === 1  // 当选择"按时间"时显示
             }
 
             // 时间设置输入（带单位 0.1秒）
@@ -219,7 +218,6 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: timeSettingRow.implicitHeight
-                visible: alarmTypeField.currentIndex === 1  // 当选择"按时间"时显示
 
                 Row {
                     id: timeSettingRow
@@ -234,13 +232,14 @@ Rectangle {
                         from: 1
                         to: 1000
                         value: 10
+                        enabled: alarmTypeField.currentIndex === 1  // 按时间时启用，否则禁用
                         keyboardManager: root.keyboardManager
                     }
 
                     Text {
                         text: "0.1秒"
                         font.pixelSize: 21
-                        color: "#9E9E9E"
+                        color: alarmTypeField.currentIndex === 1 ? "#9E9E9E" : "#5E5E5E"  // 按时间时正常色，否则变灰
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -248,6 +247,7 @@ Rectangle {
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
                 MouseArea {
                     anchors.fill: parent
+                    enabled: alarmTypeField.currentIndex === 1  // 按时间时启用，否则禁用
                     onClicked: function(mouse) {
                         console.log("✅ [CurrentProtectionTab] 鼠标点击时间设置，发射信号: requestFocusParamIndex(3)")
                         root.requestFocusParamIndex(3)
@@ -260,7 +260,7 @@ Rectangle {
                     anchors.fill: parent
                     color: "transparent"
                     border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 9) ? 3 : 0
+                    border.width: (root.focusParamIndex === 3) ? 3 : 0
                     radius: 4
                     z: 1000
                     enabled: false
