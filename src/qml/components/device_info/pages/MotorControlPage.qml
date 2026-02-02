@@ -31,11 +31,18 @@ Rectangle {
     property int focusButtonIndex: 0  // 按钮区域焦点索引 (0-4)
 
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听 focusParamIndex 变化
+    // ✅ 2026-02-02 [FIX 100.300.112.8.24.6]: 双向同步 - focusParamIndex 变化时也要更新 NavigationManager
     onFocusParamIndexChanged: {
         console.log("🔶 [MotorControlPage] focusParamIndex 变化:", focusParamIndex)
         console.log("  - focusSubArea:", focusSubArea)
         console.log("  - navigationManager.paramIndex:", navigationManager.paramIndex)
         console.log("  - navigationManager.currentArea:", navigationManager.currentArea)
+
+        // ✅ 双向同步：当 focusParamIndex 变化时，同步更新 NavigationManager 的 paramIndex
+        if (focusSubArea === 2 && navigationManager.currentArea === "C" && navigationManager.paramIndex !== focusParamIndex) {
+            console.log("🔶 [MotorControlPage] 同步 NavigationManager.paramIndex:", navigationManager.paramIndex, "→", focusParamIndex)
+            navigationManager.paramIndex = focusParamIndex
+        }
     }
 
     // ✅ 2026-01-30 [FIX 100.300.106]: Qt 虚拟键盘引用
