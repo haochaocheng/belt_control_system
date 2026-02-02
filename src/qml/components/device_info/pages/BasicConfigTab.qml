@@ -251,7 +251,7 @@ Rectangle {
                     border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 2) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 100  // ✅ 2026-02-02 [FIX 100.300.112.8.24.1]: 提高 z 值，确保焦点指示器在最上层
                 }
             }
 
@@ -301,7 +301,7 @@ Rectangle {
                     border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 3) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 100  // ✅ 2026-02-02 [FIX 100.300.112.8.24.1]: 提高 z 值，确保焦点指示器在最上层
                 }
             }
 
@@ -353,7 +353,7 @@ Rectangle {
                     border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 4) ? 3 : 0
                     radius: 4
-                    z: 10
+                    z: 100  // ✅ 2026-02-02 [FIX 100.300.112.8.24.1]: 提高 z 值，确保焦点指示器在最上层
                 }
             }
         }  // GridLayout 结束
