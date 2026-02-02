@@ -246,14 +246,17 @@ Rectangle {
 
                 // 焦点指示器
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.4]: 添加测试背景色
                 Rectangle {
                     anchors.fill: parent
-                    color: "transparent"
+                    anchors.margins: -2  // ✅ 向外扩展2px，确保不被裁剪
+                    color: (root.focusParamIndex === 2) ? "rgba(33, 150, 243, 0.1)" : "transparent"  // ✅ 添加半透明背景
                     border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 2) ? 3 : 0
                     radius: 4
                     z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
                     enabled: false  // ✅ 不拦截鼠标事件
+                    visible: true  // ✅ 强制可见
                 }
             }
 
@@ -352,14 +355,17 @@ Rectangle {
 
                 // 焦点指示器
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.4]: 添加测试背景色
                 Rectangle {
                     anchors.fill: parent
-                    color: "transparent"
+                    anchors.margins: -2  // ✅ 向外扩展2px，确保不被裁剪
+                    color: (root.focusParamIndex === 4) ? "rgba(33, 150, 243, 0.1)" : "transparent"  // ✅ 添加半透明背景
                     border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 4) ? 3 : 0
                     radius: 4
                     z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
                     enabled: false  // ✅ 不拦截鼠标事件
+                    visible: true  // ✅ 强制可见
                 }
             }
         }  // GridLayout 结束
