@@ -302,6 +302,12 @@ Rectangle {
                         // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+
+                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 连接信号
+                        item.requestFocusParamIndex.connect(function(paramIndex) {
+                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
+                            root.requestFocusParamIndex(paramIndex)
+                        })
                     }
                 }
             }
