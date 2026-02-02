@@ -53,80 +53,21 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 是否投入输入（RadioButton 组）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 改为 CustomComboBox，支持回车键切换
+            // 是否投入输入（下拉框）
             Item {
                 Layout.column: 1
                 Layout.row: 0
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: enabledRow.implicitHeight  // ✅ 引用 Row 的 implicitHeight
+                implicitHeight: enabledField.implicitHeight
 
-                Row {
-                    id: enabledRow
+                DeviceInfo.CustomComboBox {
+                    id: enabledField
                     anchors.fill: parent
-                    spacing: 30
-
-                    // 投入选项
-                    Row {
-                        spacing: 8
-
-                        Rectangle {
-                            width: 20
-                            height: 20
-                            radius: 10
-                            border.color: "#2196F3"
-                            border.width: 2
-                            color: "transparent"
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: "#2196F3"
-                                anchors.centerIn: parent
-                                visible: true  // 默认选中
-                            }
-                        }
-
-                        Text {
-                            text: "投入"
-                            font.pixelSize: 21
-                            color: "#E0E0E0"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    // 禁用选项
-                    Row {
-                        spacing: 8
-
-                        Rectangle {
-                            width: 20
-                            height: 20
-                            radius: 10
-                            border.color: "#2196F3"
-                            border.width: 2
-                            color: "transparent"
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: "#2196F3"
-                                anchors.centerIn: parent
-                                visible: false  // 默认不选中
-                            }
-                        }
-
-                        Text {
-                            text: "禁用"
-                            font.pixelSize: 21
-                            color: "#E0E0E0"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
+                    model: ["投入", "禁用"]
+                    currentIndex: 0  // 默认选中"投入"
+                    keyboardManager: root.keyboardManager
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
@@ -275,18 +216,21 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 动作保护类型输入（只读）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 改为 CustomComboBox，支持下拉选择
+            // 动作保护类型输入（下拉框）
             Item {
                 Layout.column: 1
                 Layout.row: 1
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: actionProtectionField.implicitHeight  // ✅ 引用 CustomReadOnlyField 的 implicitHeight
+                implicitHeight: actionProtectionField.implicitHeight
 
-                DeviceInfo.CustomReadOnlyField {
+                DeviceInfo.CustomComboBox {
                     id: actionProtectionField
                     anchors.fill: parent
-                    text: "立即停机"
+                    model: ["预警停机", "预警不停机", "立即停机"]
+                    currentIndex: 2  // 默认选中"立即停机"
+                    keyboardManager: root.keyboardManager
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
@@ -299,23 +243,11 @@ Rectangle {
                     }
                 }
 
-
-
                 // 焦点指示器
-
-
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
-
-
                 Rectangle {
-
-
                     anchors.fill: parent
-
-
                     color: "transparent"
-
-
                     border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 2) ? 3 : 0
                     radius: 4
@@ -335,18 +267,21 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 故障保护类型输入（只读）
+            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 改为 CustomComboBox，支持下拉选择
+            // 故障保护类型输入（下拉框）
             Item {
                 Layout.column: 3
                 Layout.row: 1
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: faultProtectionField.implicitHeight  // ✅ 引用 CustomReadOnlyField 的 implicitHeight
+                implicitHeight: faultProtectionField.implicitHeight
 
-                DeviceInfo.CustomReadOnlyField {
+                DeviceInfo.CustomComboBox {
                     id: faultProtectionField
                     anchors.fill: parent
-                    text: "紧急停机"
+                    model: ["预警停机", "预警不停机", "立即停机"]
+                    currentIndex: 2  // 默认选中"立即停机"
+                    keyboardManager: root.keyboardManager
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
