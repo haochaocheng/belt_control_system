@@ -23,6 +23,11 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property var virtualKeyboard: null  // Qt 虚拟键盘引用
 
+    // ✅ 2026-02-02 [FIX 100.300.112.8.24.7]: 监听 focusParamIndex 变化，确认属性传递
+    onFocusParamIndexChanged: {
+        console.log("🟢 [BasicConfigTab] focusParamIndex 变化:", focusParamIndex)
+    }
+
     // ✅ 2026-01-30 [FIX 100.300.106.3]: 布局模式（两列布局）
     // ✅ 2026-01-30 [FIX 100.300.106.4]: 改为两列布局，参考 AnalogInputPage
     readonly property string layoutMode: "two-column"  // "single-column" 或 "two-column"
