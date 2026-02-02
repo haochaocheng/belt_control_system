@@ -19,6 +19,13 @@ QtObject {
     property int paramIndex: 0                     // 区域C：参数索引（0-8）
     property int buttonIndex: 0                    // 区域D：按钮索引（0-4，共5个按钮）
 
+    // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听 paramIndex 变化
+    onParamIndexChanged: {
+        console.log("🔷 [NavigationManager] paramIndex 变化:", paramIndex)
+        console.log("  - currentArea:", currentArea)
+        console.log("  - lastParamIndex:", lastParamIndex)
+    }
+
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3]: 当前Tab的最后一个参数索引
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.1]: 修正基本配置参数数量为5个
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.2]: 初始化时根据tabIndex设置lastParamIndex

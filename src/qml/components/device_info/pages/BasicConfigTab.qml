@@ -235,28 +235,60 @@ Rectangle {
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 添加详细调试日志
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        console.log("✅ [BasicConfigTab] 鼠标点击模块地址，同步焦点索引: 2")
+                        console.log("========== [BasicConfigTab] 鼠标点击模块地址 ==========")
+                        console.log("  点击前 - root.focusParamIndex:", root.focusParamIndex)
+                        console.log("  点击前 - moduleAddressSpin.focus:", moduleAddressSpin.focus)
+                        console.log("  点击前 - moduleAddressSpin.activeFocus:", moduleAddressSpin.activeFocus)
+                        console.log("  点击前 - root.focus:", root.focus)
+                        console.log("  点击前 - root.activeFocus:", root.activeFocus)
+
                         root.focusParamIndex = 2
+
+                        console.log("  点击后 - root.focusParamIndex:", root.focusParamIndex)
+                        console.log("  点击后 - moduleAddressSpin.focus:", moduleAddressSpin.focus)
+                        console.log("  点击后 - moduleAddressSpin.activeFocus:", moduleAddressSpin.activeFocus)
+                        console.log("  点击后 - root.focus:", root.focus)
+                        console.log("  点击后 - root.activeFocus:", root.activeFocus)
+                        console.log("=======================================================")
+
                         mouse.accepted = false  // 让事件继续传递给 SpinBox
                     }
                 }
 
                 // 焦点指示器
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.4]: 添加测试背景色
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 移除测试背景色，添加渲染状态日志
                 Rectangle {
+                    id: moduleAddressFocusIndicator
                     anchors.fill: parent
-                    anchors.margins: -2  // ✅ 向外扩展2px，确保不被裁剪
-                    color: (root.focusParamIndex === 2) ? "rgba(33, 150, 243, 0.1)" : "transparent"  // ✅ 添加半透明背景
+                    color: "transparent"  // ✅ 移除测试背景色
                     border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 2) ? 3 : 0
                     radius: 4
                     z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
                     enabled: false  // ✅ 不拦截鼠标事件
-                    visible: true  // ✅ 强制可见
+
+                    // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听属性变化
+                    onBorderColorChanged: {
+                        console.log("🔵 [模块地址焦点指示器] border.color 变化:", border.color)
+                        console.log("  - root.focusParamIndex:", root.focusParamIndex)
+                        console.log("  - border.width:", border.width)
+                        console.log("  - visible:", visible)
+                        console.log("  - opacity:", opacity)
+                        console.log("  - z:", z)
+                        console.log("  - width:", width, "height:", height)
+                        console.log("  - x:", x, "y:", y)
+                    }
+
+                    Component.onCompleted: {
+                        console.log("🔵 [模块地址焦点指示器] 组件加载完成")
+                        console.log("  - 初始 border.color:", border.color)
+                        console.log("  - 初始 root.focusParamIndex:", root.focusParamIndex)
+                    }
                 }
             }
 
@@ -344,28 +376,60 @@ Rectangle {
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 添加详细调试日志
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        console.log("✅ [BasicConfigTab] 鼠标点击反馈通道，同步焦点索引: 4")
+                        console.log("========== [BasicConfigTab] 鼠标点击反馈通道 ==========")
+                        console.log("  点击前 - root.focusParamIndex:", root.focusParamIndex)
+                        console.log("  点击前 - feedbackChannelSpin.focus:", feedbackChannelSpin.focus)
+                        console.log("  点击前 - feedbackChannelSpin.activeFocus:", feedbackChannelSpin.activeFocus)
+                        console.log("  点击前 - root.focus:", root.focus)
+                        console.log("  点击前 - root.activeFocus:", root.activeFocus)
+
                         root.focusParamIndex = 4
+
+                        console.log("  点击后 - root.focusParamIndex:", root.focusParamIndex)
+                        console.log("  点击后 - feedbackChannelSpin.focus:", feedbackChannelSpin.focus)
+                        console.log("  点击后 - feedbackChannelSpin.activeFocus:", feedbackChannelSpin.activeFocus)
+                        console.log("  点击后 - root.focus:", root.focus)
+                        console.log("  点击后 - root.activeFocus:", root.activeFocus)
+                        console.log("=======================================================")
+
                         mouse.accepted = false  // 让事件继续传递给 SpinBox
                     }
                 }
 
                 // 焦点指示器
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.4]: 添加测试背景色
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 移除测试背景色，添加渲染状态日志
                 Rectangle {
+                    id: feedbackChannelFocusIndicator
                     anchors.fill: parent
-                    anchors.margins: -2  // ✅ 向外扩展2px，确保不被裁剪
-                    color: (root.focusParamIndex === 4) ? "rgba(33, 150, 243, 0.1)" : "transparent"  // ✅ 添加半透明背景
+                    color: "transparent"  // ✅ 移除测试背景色
                     border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 4) ? 3 : 0
                     radius: 4
                     z: 1000  // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 从 10 增加到 1000
                     enabled: false  // ✅ 不拦截鼠标事件
-                    visible: true  // ✅ 强制可见
+
+                    // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听属性变化
+                    onBorderColorChanged: {
+                        console.log("🔵 [反馈通道焦点指示器] border.color 变化:", border.color)
+                        console.log("  - root.focusParamIndex:", root.focusParamIndex)
+                        console.log("  - border.width:", border.width)
+                        console.log("  - visible:", visible)
+                        console.log("  - opacity:", opacity)
+                        console.log("  - z:", z)
+                        console.log("  - width:", width, "height:", height)
+                        console.log("  - x:", x, "y:", y)
+                    }
+
+                    Component.onCompleted: {
+                        console.log("🔵 [反馈通道焦点指示器] 组件加载完成")
+                        console.log("  - 初始 border.color:", border.color)
+                        console.log("  - 初始 root.focusParamIndex:", root.focusParamIndex)
+                    }
                 }
             }
         }  // GridLayout 结束

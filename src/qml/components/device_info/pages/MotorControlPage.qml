@@ -23,11 +23,20 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引
     // ✅ 2026-01-30 [FIX 100.300.106.2]: 修正 focusSubArea 定义
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11]: 添加 focusButtonIndex
+    // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 添加 focusParamIndex 变化监听
     property int focusItemIndex: -1  // -1 表示无焦点
     property int focusSubArea: 0  // 0:电机列表区域 1:Tab区域 2:参数区域 3:按钮区域
     property int focusTabIndex: 0  // Tab区域焦点索引
     property int focusParamIndex: 0  // 参数区域焦点索引
     property int focusButtonIndex: 0  // 按钮区域焦点索引 (0-4)
+
+    // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听 focusParamIndex 变化
+    onFocusParamIndexChanged: {
+        console.log("🔶 [MotorControlPage] focusParamIndex 变化:", focusParamIndex)
+        console.log("  - focusSubArea:", focusSubArea)
+        console.log("  - navigationManager.paramIndex:", navigationManager.paramIndex)
+        console.log("  - navigationManager.currentArea:", navigationManager.currentArea)
+    }
 
     // ✅ 2026-01-30 [FIX 100.300.106]: Qt 虚拟键盘引用
     property var virtualKeyboard: null
