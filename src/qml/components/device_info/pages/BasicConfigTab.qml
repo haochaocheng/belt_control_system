@@ -234,6 +234,16 @@ Rectangle {
                     keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
                 }
 
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        console.log("✅ [BasicConfigTab] 鼠标点击模块地址，同步焦点索引: 2")
+                        root.focusParamIndex = 2
+                        mouse.accepted = false  // 让事件继续传递给 SpinBox
+                    }
+                }
+
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent
@@ -272,6 +282,16 @@ Rectangle {
                     value: root.motorIndex
                     editable: true
                     keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
+                }
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        console.log("✅ [BasicConfigTab] 鼠标点击输出通道，同步焦点索引: 3")
+                        root.focusParamIndex = 3
+                        mouse.accepted = false  // 让事件继续传递给 SpinBox
+                    }
                 }
 
                 // 焦点指示器
@@ -314,6 +334,16 @@ Rectangle {
                     value: root.motorIndex
                     editable: true
                     keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
+                }
+
+                // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        console.log("✅ [BasicConfigTab] 鼠标点击反馈通道，同步焦点索引: 4")
+                        root.focusParamIndex = 4
+                        mouse.accepted = false  // 让事件继续传递给 SpinBox
+                    }
                 }
 
                 // 焦点指示器
