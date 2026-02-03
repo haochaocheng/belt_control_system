@@ -14,6 +14,10 @@ ApplicationWindow {
     height: Screen.height > 0 ? Screen.height : 1080
     title: "Belt Control System"
 
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.15]: 添加虚拟键盘高度属性
+    // 原因：CustomSpinBox 需要这个属性来计算准确的滚动距离
+    property real virtualKeyboardHeight: 600  // 固定高度，与 InputPanel 的 height 一致
+
     // ✅ Windows platform: Prevent window from being maximized
     minimumWidth: Qt.platform.os === "windows" ? 1920 : 0
     minimumHeight: Qt.platform.os === "windows" ? 1080 : 0
@@ -316,6 +320,17 @@ ApplicationWindow {
 
                     onEnabledChanged: {
                         console.log("⌨️ [InputPanel] Enabled changed:", enabled)
+                    }
+
+                    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.15]: 添加 ESC 键处理
+                    // 原因：用户按 ESC 键时，虚拟键盘应该关闭
+                    Shortcut {
+                        sequence: "Escape"
+                        enabled: Qt.inputMethod.visible
+                        onActivated: {
+                            console.log("⌨️ [InputPanel] ESC 键按下，关闭虚拟键盘")
+                            Qt.inputMethod.hide()
+                        }
                     }
                 }
             }
