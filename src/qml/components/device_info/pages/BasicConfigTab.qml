@@ -454,11 +454,12 @@ Rectangle {
     }
 
     // 触发参数输入
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.14]: 使用 CustomSpinBox 的 activateVirtualKeyboard()
+    // 原因：CustomSpinBox 已经内置了虚拟键盘自动滚动功能，不需要手动调用 virtualKeyboard.openForField
     function triggerParamInput(paramIndex) {
         console.log("✅ [BasicConfigTab] 触发参数输入 - 索引:", paramIndex)
 
         var inputField = null
-        var inputMode = "numeric"  // 默认数字模式
 
         switch(paramIndex) {
         case 0:  // 运行状态（RadioButton 组）
@@ -469,27 +470,30 @@ Rectangle {
             console.log("✅ [BasicConfigTab] 模块类型（只读）")
             break
         case 2:  // 模块地址
+            console.log("✅ [BasicConfigTab] 模块地址")
             inputField = moduleAddressSpin
-            inputMode = "numeric"
             break
         case 3:  // 输出通道
+            console.log("✅ [BasicConfigTab] 输出通道")
             inputField = outputChannelSpin
-            inputMode = "numeric"
             break
         case 4:  // 反馈通道
+            console.log("✅ [BasicConfigTab] 反馈通道")
             inputField = feedbackChannelSpin
-            inputMode = "numeric"
             break
         }
 
-        // 打开虚拟键盘
-        if (virtualKeyboard && inputField) {
-            console.log("✅ [BasicConfigTab] 打开 Qt 虚拟键盘 - 控件:", inputField, "模式:", inputMode)
-            virtualKeyboard.openForField(inputField, function(newValue) {
-                console.log("✅ [BasicConfigTab] 虚拟键盘输入完成:", newValue)
-            }, inputMode, root)
-        } else {
-            console.log("⚠️ [BasicConfigTab] 虚拟键盘或输入控件不可用")
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.14]: 使用 CustomSpinBox 的 activateVirtualKeyboard()
+        // CustomSpinBox 会自动处理虚拟键盘显示和 ScrollView 滚动
+        if (inputField) {
+            console.log("✅ [BasicConfigTab] 激活虚拟键盘 - 控件:", inputField)
+            // 如果控件有 activateVirtualKeyboard 函数，调用它（CustomSpinBox）
+            if (inputField.activateVirtualKeyboard) {
+                inputField.activateVirtualKeyboard()
+            } else {
+                // 否则直接设置焦点
+                inputField.forceActiveFocus()
+            }
         }
     }
 
