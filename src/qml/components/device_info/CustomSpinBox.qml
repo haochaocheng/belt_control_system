@@ -65,24 +65,14 @@ SpinBox {
         verticalAlignment: Qt.AlignVCenter
         readOnly: !root.editable
         validator: root.validator
-        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.2]: 改为 Qt.ImhDigitsOnly，Qt会自动显示纯数字键盘
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.6]: 改为 Qt.ImhDigitsOnly，Qt会自动显示纯数字键盘
         inputMethodHints: Qt.ImhDigitsOnly
         selectByMouse: true  // 允许鼠标选择文本
         selectedTextColor: "#FFFFFF"
         selectionColor: "#2196F3"
 
-        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.3]: Qt会自动显示虚拟键盘，需要给 TextInput 设置焦点
-        MouseArea {
-            anchors.fill: parent
-            enabled: root.editable && root.enabled
-            onClicked: {
-                // ✅ 关键：必须给 TextInput 设置焦点，而不是 SpinBox
-                textInput.forceActiveFocus()
-                console.log("✅ [CustomSpinBox] TextInput 获得焦点，Qt会自动显示虚拟键盘")
-            }
-            // 允许文本选择
-            onPressed: mouse.accepted = false
-        }
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.6]: 移除 MouseArea，让 TextInput 直接接收事件
+        // MouseArea 会拦截事件，导致 Qt.inputMethod 无法正常工作
     }
 
     // ========== 上下按钮样式 ==========
