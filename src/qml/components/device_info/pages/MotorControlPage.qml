@@ -203,6 +203,14 @@ Rectangle {
     focus: true
     activeFocusOnTab: true
 
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.20]: 添加焦点变化监听
+    onActiveFocusChanged: {
+        console.log("🔍 [DEBUG] MotorControlPage 焦点变化:", activeFocus)
+        if (!activeFocus) {
+            console.log("⚠️ [DEBUG] MotorControlPage 失去焦点！")
+        }
+    }
+
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2]: 使用 NavigationManager 处理键盘事件
     // ✅ 平面导航逻辑：只用方向键，不用Enter/Esc/Tab
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加详细调试日志
@@ -271,20 +279,32 @@ Rectangle {
                     item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.17]: 鼠标点击时同步更新 focusItemIndex 和 NavigationManager
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加详细调试日志和 currentArea 检查
+                    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.20]: 添加强制恢复焦点
                     item.motorSelected.connect(function(motorIndex) {
                         console.log("🔍 [DEBUG] 鼠标点击电机:", motorIndex)
                         console.log("  - 点击前 currentArea:", navigationManager.currentArea)
                         console.log("  - 点击前 motorListIndex:", navigationManager.motorListIndex)
+                        console.log("  - 点击前 MotorControlPage.activeFocus:", root.activeFocus)
+
                         root.currentMotorIndex = motorIndex
                         root.focusItemIndex = motorIndex  // 同步更新焦点索引（蓝色边框）
                         navigationManager.motorListIndex = motorIndex  // 同步更新 NavigationManager
+
                         // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 确保 currentArea 是 areaMotorList
                         if (navigationManager.currentArea !== navigationManager.areaMotorList) {
                             console.log("🔍 [DEBUG] 切换 currentArea 到 areaMotorList")
                             navigationManager.currentArea = navigationManager.areaMotorList
                         }
+
+                        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.20]: 强制恢复焦点到 MotorControlPage
+                        if (!root.activeFocus) {
+                            console.log("🔍 [DEBUG] 强制恢复焦点到 MotorControlPage")
+                            root.forceActiveFocus()
+                        }
+
                         console.log("  - 点击后 currentArea:", navigationManager.currentArea)
                         console.log("  - 点击后 motorListIndex:", navigationManager.motorListIndex)
+                        console.log("  - 点击后 MotorControlPage.activeFocus:", root.activeFocus)
                         console.log("✅ [MotorControlPage] 选中电机:", motorIndex + 1, "- 已同步 focusItemIndex 和 NavigationManager")
                     })
                 }
