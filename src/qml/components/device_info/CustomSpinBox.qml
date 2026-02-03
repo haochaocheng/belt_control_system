@@ -65,20 +65,19 @@ SpinBox {
         verticalAlignment: Qt.AlignVCenter
         readOnly: !root.editable
         validator: root.validator
-        inputMethodHints: Qt.ImhFormattedNumbersOnly
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.2]: 改为 Qt.ImhDigitsOnly，Qt会自动显示纯数字键盘
+        inputMethodHints: Qt.ImhDigitsOnly
         selectByMouse: true  // 允许鼠标选择文本
         selectedTextColor: "#FFFFFF"
         selectionColor: "#2196F3"
 
-        // ✅ 2026-01-28 [触摸屏支持]: 点击文本区域时弹出键盘
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.2]: Qt会自动显示虚拟键盘，只需要设置焦点
         MouseArea {
             anchors.fill: parent
             enabled: root.editable && root.enabled
             onClicked: {
-                root.forceActiveFocus()
-                if (keyboardManager) {
-                    keyboardManager.openKeyboardForField(root, true)  // true = 触摸模式
-                }
+                root.forceActiveFocus()  // Qt会自动显示虚拟键盘
+                // ❌ 2026-02-02 [移除]: 不再需要手动调用 keyboardManager.openKeyboardForField
             }
             // 允许文本选择
             onPressed: mouse.accepted = false
@@ -130,17 +129,7 @@ SpinBox {
         }
     }
 
-    // ✅ 2026-01-28 [键盘导航]: Enter/Space 键弹出虚拟键盘
-    Keys.onReturnPressed: {
-        if (keyboardManager && root.editable && root.enabled) {
-            keyboardManager.openKeyboardForField(root, false)  // false = 键盘导航模式
-        }
-    }
-
-    Keys.onSpacePressed: {
-        if (keyboardManager && root.editable && root.enabled) {
-            keyboardManager.openKeyboardForField(root, false)  // false = 键盘导航模式
-            event.accepted = true  // 阻止默认行为
-        }
-    }
+    // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.2]: Qt会自动显示虚拟键盘，移除手动调用
+    // ❌ 2026-02-02 [移除]: Keys.onReturnPressed 和 Keys.onSpacePressed 不再需要
+    // Qt会在TextField获得焦点时自动显示虚拟键盘
 }

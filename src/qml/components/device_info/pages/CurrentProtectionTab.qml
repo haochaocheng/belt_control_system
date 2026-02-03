@@ -747,9 +747,8 @@ Rectangle {
     function triggerParamInput(paramIndex) {
         console.log("✅ [CurrentProtectionTab] 触发参数输入 - 索引:", paramIndex)
 
-        // ✅ 2026-02-02 [FIX 100.300.112.8.25.6]: 改为打开虚拟键盘，与 BasicConfigTab 保持一致
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.2]: Qt会自动显示虚拟键盘，只需要设置焦点
         var inputField = null
-        var inputMode = "numeric"  // 默认数字模式
 
         switch(paramIndex) {
         case 0:  // 是否投入（CustomComboBox）
@@ -766,14 +765,12 @@ Rectangle {
             console.log("✅ [CurrentProtectionTab] 次数设置")
             if (alarmTypeField.currentIndex === 0) {
                 inputField = countSettingField
-                inputMode = "numeric"
             }
             break
         case 3:  // 时间设置（CustomSpinBox，条件启用）
             console.log("✅ [CurrentProtectionTab] 时间设置")
             if (alarmTypeField.currentIndex === 1) {
                 inputField = timeSettingField
-                inputMode = "numeric"
             }
             break
         case 4:  // 动作保护类型（CustomComboBox）
@@ -789,17 +786,14 @@ Rectangle {
         case 6:  // 电流量程（CustomSpinBox）
             console.log("✅ [CurrentProtectionTab] 电流量程")
             inputField = currentRangeField
-            inputMode = "numeric"
             break
         case 7:  // 电流上限（CustomSpinBox）
             console.log("✅ [CurrentProtectionTab] 电流上限")
             inputField = currentUpperField
-            inputMode = "numeric"
             break
         case 8:  // 电流下限（CustomSpinBox）
             console.log("✅ [CurrentProtectionTab] 电流下限")
             inputField = currentLowerField
-            inputMode = "numeric"
             break
         case 9:  // 输入点选择（CustomComboBox）
             console.log("✅ [CurrentProtectionTab] 输入点选择")
@@ -809,18 +803,13 @@ Rectangle {
         case 10:  // 过滤干扰延时（CustomSpinBox）
             console.log("✅ [CurrentProtectionTab] 过滤干扰延时")
             inputField = filterDelayField
-            inputMode = "numeric"
             break
         }
 
-        // 打开虚拟键盘
-        if (virtualKeyboard && inputField) {
-            console.log("✅ [CurrentProtectionTab] 打开 Qt 虚拟键盘 - 控件:", inputField, "模式:", inputMode)
-            virtualKeyboard.openForField(inputField, function(newValue) {
-                console.log("✅ [CurrentProtectionTab] 虚拟键盘输入完成:", newValue)
-            }, inputMode, root)
-        } else if (inputField) {
-            console.log("⚠️ [CurrentProtectionTab] 虚拟键盘不可用，使用 forceActiveFocus")
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.2]: Qt会自动显示虚拟键盘
+        // 只需要设置焦点，Qt会根据 inputMethodHints 自动显示纯数字键盘
+        if (inputField) {
+            console.log("✅ [CurrentProtectionTab] 设置焦点，Qt会自动显示虚拟键盘")
             inputField.forceActiveFocus()
         }
     }
