@@ -655,7 +655,13 @@ Rectangle {
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 公开键盘事件处理函数
     // 供DeviceSettingsDialog调用，转发键盘事件给NavigationManager
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.3]: 添加标志位检查，防止恶性循环
     function handleKeyPress(direction) {
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.3]: 防止恶性循环
+        if (isReturningToCategory) {
+            console.log("⚠️ [DEBUG] 正在返回大类，忽略键盘事件:", direction)
+            return
+        }
         console.log("✅ [MotorControlPage] 接收键盘事件:", direction)
         navigationManager.handleDirectionKey(direction)
     }
