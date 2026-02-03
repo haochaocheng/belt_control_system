@@ -103,33 +103,21 @@ Rectangle {
             }
 
             // ✅ 2026-01-26 [FIX 100.300.25.5]: 添加背景图片
+            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.21]: 改用直接绑定替代 State
             Image {
                 id: backgroundImage
                 anchors.fill: parent
                 fillMode: Image.Stretch
                 z: -1  // 放在最底层
 
+                // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.21]: 直接绑定 source，不使用 State
                 // 使用相对路径，便于QDS预览（向上三级到qml目录）
-                source: "../../../images/bhNameBK.png"
+                source: root.currentMotorIndex === index ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
 
-                states: [
-                    State {
-                        name: "selected"
-                        when: root.currentMotorIndex === index
-                        PropertyChanges {
-                            target: backgroundImage
-                            source: "../../../images/bhNameBK1.png"
-                        }
-                    },
-                    State {
-                        name: "normal"
-                        when: root.currentMotorIndex !== index
-                        PropertyChanges {
-                            target: backgroundImage
-                            source: "../../../images/bhNameBK.png"
-                        }
-                    }
-                ]
+                // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.21]: 添加调试日志
+                onSourceChanged: {
+                    console.log("🔍 [DEBUG] 背景图片切换 - 电机", index + 1, "source:", source)
+                }
             }
 
             // ✅ 左侧激活指示条
