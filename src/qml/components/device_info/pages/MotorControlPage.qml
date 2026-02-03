@@ -136,10 +136,12 @@ Rectangle {
         // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 设置标志，防止恶性循环
         onReturnToCategory: {
             console.log("✅ [MotorControlPage] 接收到 returnToCategory 信号，释放焦点")
-            // 设置标志，防止后续键盘事件被处理
+            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 设置标志，防止后续键盘事件被处理
             root.isReturningToCategory = true
             // 释放焦点，让 DeviceSettingsDialog 接管键盘事件
             root.focus = false
+            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.4]: 启动定时器，延迟重置标志
+            resetFlagTimer.start()
         }
 
         // 监听按钮索引变化
@@ -217,13 +219,25 @@ Rectangle {
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 防止 returnToCategory 恶性循环
     property bool isReturningToCategory: false
 
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.4]: 使用定时器延迟重置标志
+    Timer {
+        id: resetFlagTimer
+        interval: 100  // 100ms 后重置标志
+        repeat: false
+        onTriggered: {
+            console.log("⏰ [DEBUG] 定时器触发，重置 isReturningToCategory 标志")
+            root.isReturningToCategory = false
+        }
+    }
+
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.20]: 添加焦点变化监听
     onActiveFocusChanged: {
         console.log("🔍 [DEBUG] MotorControlPage 焦点变化:", activeFocus)
         if (!activeFocus) {
             console.log("⚠️ [DEBUG] MotorControlPage 失去焦点！")
+            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.4]: 不再立即重置标志，由定时器延迟重置
             // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 焦点丢失后，重置标志
-            isReturningToCategory = false
+            // isReturningToCategory = false  // ❌ 移除立即重置，改用定时器
         }
     }
 
