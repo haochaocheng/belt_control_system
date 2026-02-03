@@ -18,6 +18,11 @@ Rectangle {
     // ========== 公开属性 ==========
     property int currentMotorIndex: 0  // 当前选中的电机索引 (0-7)
 
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加调试日志
+    onCurrentMotorIndexChanged: {
+        console.log("🔍 [DEBUG] MyMotorListPanel.currentMotorIndex 变化:", currentMotorIndex)
+    }
+
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引（从父页面传递）
     property int focusItemIndex: -1  // -1 表示无焦点
 

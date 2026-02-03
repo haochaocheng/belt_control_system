@@ -92,10 +92,15 @@ Rectangle {
         // QML 自动生成的属性变化信号不传递参数，直接使用属性值
 
         // 监听电机列表索引变化
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加详细调试日志
         onMotorListIndexChanged: {
-            console.log("✅ [MotorControlPage] 电机列表索引变化:", motorListIndex)
+            console.log("🔍 [DEBUG] NavigationManager.motorListIndex 变化:", motorListIndex)
+            console.log("  - 更新前 currentMotorIndex:", root.currentMotorIndex)
+            console.log("  - 更新前 focusItemIndex:", root.focusItemIndex)
             root.currentMotorIndex = motorListIndex
             root.focusItemIndex = motorListIndex
+            console.log("  - 更新后 currentMotorIndex:", root.currentMotorIndex)
+            console.log("  - 更新后 focusItemIndex:", root.focusItemIndex)
             // ✅ 2026-02-02 [参数持久化]: 切换电机时加载配置
             Qt.callLater(root.loadMotorConfig)
         }
@@ -200,12 +205,23 @@ Rectangle {
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2]: 使用 NavigationManager 处理键盘事件
     // ✅ 平面导航逻辑：只用方向键，不用Enter/Esc/Tab
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加详细调试日志
     Keys.onUpPressed: {
+        console.log("🔍 [DEBUG] MotorControlPage 接收到 Up 键")
+        console.log("  - currentArea:", navigationManager.currentArea)
+        console.log("  - motorListIndex:", navigationManager.motorListIndex)
+        console.log("  - currentMotorIndex:", root.currentMotorIndex)
+        console.log("  - focusItemIndex:", root.focusItemIndex)
         navigationManager.handleDirectionKey("Up")
         event.accepted = true
     }
 
     Keys.onDownPressed: {
+        console.log("🔍 [DEBUG] MotorControlPage 接收到 Down 键")
+        console.log("  - currentArea:", navigationManager.currentArea)
+        console.log("  - motorListIndex:", navigationManager.motorListIndex)
+        console.log("  - currentMotorIndex:", root.currentMotorIndex)
+        console.log("  - focusItemIndex:", root.focusItemIndex)
         navigationManager.handleDirectionKey("Down")
         event.accepted = true
     }
@@ -254,10 +270,21 @@ Rectangle {
                     // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引
                     item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.17]: 鼠标点击时同步更新 focusItemIndex 和 NavigationManager
+                    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加详细调试日志和 currentArea 检查
                     item.motorSelected.connect(function(motorIndex) {
+                        console.log("🔍 [DEBUG] 鼠标点击电机:", motorIndex)
+                        console.log("  - 点击前 currentArea:", navigationManager.currentArea)
+                        console.log("  - 点击前 motorListIndex:", navigationManager.motorListIndex)
                         root.currentMotorIndex = motorIndex
                         root.focusItemIndex = motorIndex  // 同步更新焦点索引（蓝色边框）
                         navigationManager.motorListIndex = motorIndex  // 同步更新 NavigationManager
+                        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 确保 currentArea 是 areaMotorList
+                        if (navigationManager.currentArea !== navigationManager.areaMotorList) {
+                            console.log("🔍 [DEBUG] 切换 currentArea 到 areaMotorList")
+                            navigationManager.currentArea = navigationManager.areaMotorList
+                        }
+                        console.log("  - 点击后 currentArea:", navigationManager.currentArea)
+                        console.log("  - 点击后 motorListIndex:", navigationManager.motorListIndex)
                         console.log("✅ [MotorControlPage] 选中电机:", motorIndex + 1, "- 已同步 focusItemIndex 和 NavigationManager")
                     })
                 }
