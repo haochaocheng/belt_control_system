@@ -99,11 +99,12 @@ Item {
             currentContentItemIndex = 0
         }
 
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.7]: 移除重新启用逻辑，改为在焦点恢复时启用
         // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.6]: 重新启用电机控制页面的键盘事件
-        if (currentCategory === 3 && motorControlPageLoader.item) {
-            console.log("✅ [DeviceSettingsDialog] 重新启用 MotorControlPage 键盘事件")
-            motorControlPageLoader.item.keysEnabled = true
-        }
+        // if (currentCategory === 3 && motorControlPageLoader.item) {
+        //     console.log("✅ [DeviceSettingsDialog] 重新启用 MotorControlPage 键盘事件")
+        //     motorControlPageLoader.item.keysEnabled = true
+        // }
     }
 
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听内容索引变化，保存到对应类别
