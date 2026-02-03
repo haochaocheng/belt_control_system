@@ -1365,9 +1365,19 @@ Item {
                             }
 
                             // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.8]: 监听返回到类别信号
+                            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.3]: 重置 NavigationManager 状态
+                            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.6]: 添加详细日志诊断
+                            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.7]: 移除重置逻辑，由 onCurrentFocusAreaChanged 处理
+                            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.8]: 添加焦点转移，确保焦点离开 MotorControlPage
                             item.requestReturnToCategory.connect(function() {
                                 console.log("✅ [DeviceSettingsDialog] 接收到返回类别请求")
+                                // ❌ 不在这里重置 NavigationManager.currentArea
+                                // 因为用户可能在大类列表按右键，此时会直接进入内容区域
+                                // 应该在 onCurrentFocusAreaChanged 中重置，确保进入内容区域时才重置
                                 root.currentFocusArea = 1  // 切换到左侧类别区域
+                                // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.8]: 强制转移焦点到 DeviceSettingsDialog
+                                console.log("✅ [DeviceSettingsDialog] 强制转移焦点到 DeviceSettingsDialog")
+                                root.forceActiveFocus()
                             })
 
                             // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.5]: 监听请求焦点信号
@@ -1393,6 +1403,11 @@ Item {
                     function onCurrentFocusAreaChanged() {
                         if (motorControlPageLoader.item && root.currentCategory === 3) {
                             if (root.currentFocusArea === 2) {
+                                // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.5]: 焦点进入内容区域，重置 NavigationManager 到电机列表区域
+                                console.log("✅ [DeviceSettingsDialog] 焦点进入电机控制内容区域，重置 NavigationManager.currentArea 到电机列表")
+                                if (motorControlPageLoader.item.navigationManager) {
+                                    motorControlPageLoader.item.navigationManager.currentArea = motorControlPageLoader.item.navigationManager.areaMotorList
+                                }
                                 // 焦点进入内容区域，默认在电机列表区域
                                 motorControlPageLoader.item.focusSubArea = 0
                                 motorControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
