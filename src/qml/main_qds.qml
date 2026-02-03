@@ -235,14 +235,36 @@ ApplicationWindow {
         console.log("========================================")
     }
 
-    // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.4]: 添加 Qt Virtual Keyboard
+    // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.7]: 使用 inputPanel.active（参考Qt官方示例）
+    // Qt官方示例绑定到 inputPanel.active，不是 Qt.inputMethod.visible
     InputPanel {
         id: virtualKeyboard
         z: 99
         x: 0
-        y: root.height - height
         width: root.width
-        visible: Qt.inputMethod.visible
+
+        property real yPositionWhenHidden: root.height
+        y: yPositionWhenHidden
+
+        states: State {
+            name: "visible"
+            when: virtualKeyboard.active  // ✅ 绑定到 active（Qt官方方式）
+            PropertyChanges {
+                target: virtualKeyboard
+                y: root.height - virtualKeyboard.height
+            }
+        }
+
+        transitions: Transition {
+            from: ""
+            to: "visible"
+            reversible: true
+            NumberAnimation {
+                properties: "y"
+                duration: 250
+                easing.type: Easing.InOutQuad
+            }
+        }
 
         Component.onCompleted: {
             console.log("========================================")
@@ -250,16 +272,12 @@ ApplicationWindow {
             console.log("   - Width:", width)
             console.log("   - Height:", height)
             console.log("   - Z-index:", z)
+            console.log("   - 绑定方式: inputPanel.active（Qt官方方式）")
             console.log("========================================")
         }
 
-        onVisibleChanged: {
-            console.log("⌨️ [QDS InputPanel] Visibility changed:", visible)
-            console.log("   - Qt.inputMethod.visible:", Qt.inputMethod.visible)
-        }
-
-        onEnabledChanged: {
-            console.log("⌨️ [QDS InputPanel] Enabled changed:", enabled)
+        onActiveChanged: {
+            console.log("⌨️ [QDS InputPanel] Active changed:", active)
         }
     }
 }

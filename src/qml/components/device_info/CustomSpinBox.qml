@@ -112,10 +112,14 @@ SpinBox {
         }
     }
 
-    // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.3]: 添加激活虚拟键盘的函数
+    // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.7]: 添加激活虚拟键盘的函数
+    // 键盘导航需要手动调用 Qt.inputMethod.show()
     function activateVirtualKeyboard() {
         textInput.forceActiveFocus()
-        console.log("✅ [CustomSpinBox] activateVirtualKeyboard() 调用，TextInput 获得焦点")
+        Qt.inputMethod.show()  // ✅ 手动显示虚拟键盘（键盘导航必需）
+        console.log("✅ [CustomSpinBox] activateVirtualKeyboard() 调用")
+        console.log("   - TextInput 获得焦点")
+        console.log("   - 手动调用 Qt.inputMethod.show()")
     }
 
     // ✅ 2026-01-28 [虚拟键盘集成]: 自动注册到键盘管理器
