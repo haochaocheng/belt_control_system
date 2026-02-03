@@ -224,14 +224,6 @@ ApplicationWindow {
                     console.log("   - virtualKeyboard.active:", virtualKeyboard.active)
                     console.log("========================================")
                 }
-
-                onPressed: {
-                    console.log("🔍 [测试TextField] Pressed")
-                }
-
-                onClicked: {
-                    console.log("🔍 [测试TextField] Clicked")
-                }
             }
         }
     }
