@@ -133,8 +133,11 @@ Rectangle {
         }
 
         // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24]: 监听 returnToCategory 信号，释放焦点
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 设置标志，防止恶性循环
         onReturnToCategory: {
             console.log("✅ [MotorControlPage] 接收到 returnToCategory 信号，释放焦点")
+            // 设置标志，防止后续键盘事件被处理
+            root.isReturningToCategory = true
             // 释放焦点，让 DeviceSettingsDialog 接管键盘事件
             root.focus = false
         }
@@ -211,18 +214,29 @@ Rectangle {
     focus: true
     activeFocusOnTab: true
 
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 防止 returnToCategory 恶性循环
+    property bool isReturningToCategory: false
+
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.20]: 添加焦点变化监听
     onActiveFocusChanged: {
         console.log("🔍 [DEBUG] MotorControlPage 焦点变化:", activeFocus)
         if (!activeFocus) {
             console.log("⚠️ [DEBUG] MotorControlPage 失去焦点！")
+            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 焦点丢失后，重置标志
+            isReturningToCategory = false
         }
     }
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2]: 使用 NavigationManager 处理键盘事件
     // ✅ 平面导航逻辑：只用方向键，不用Enter/Esc/Tab
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加详细调试日志
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 防止 returnToCategory 恶性循环
     Keys.onUpPressed: {
+        if (isReturningToCategory) {
+            console.log("⚠️ [DEBUG] 正在返回大类，忽略 Up 键")
+            event.accepted = true
+            return
+        }
         console.log("🔍 [DEBUG] MotorControlPage 接收到 Up 键")
         console.log("  - currentArea:", navigationManager.currentArea)
         console.log("  - motorListIndex:", navigationManager.motorListIndex)
@@ -233,6 +247,11 @@ Rectangle {
     }
 
     Keys.onDownPressed: {
+        if (isReturningToCategory) {
+            console.log("⚠️ [DEBUG] 正在返回大类，忽略 Down 键")
+            event.accepted = true
+            return
+        }
         console.log("🔍 [DEBUG] MotorControlPage 接收到 Down 键")
         console.log("  - currentArea:", navigationManager.currentArea)
         console.log("  - motorListIndex:", navigationManager.motorListIndex)
@@ -243,6 +262,11 @@ Rectangle {
     }
 
     Keys.onLeftPressed: {
+        if (isReturningToCategory) {
+            console.log("⚠️ [DEBUG] 正在返回大类，忽略 Left 键")
+            event.accepted = true
+            return
+        }
         navigationManager.handleDirectionKey("Left")
         event.accepted = true
     }
