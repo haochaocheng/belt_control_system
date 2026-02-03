@@ -1,5 +1,6 @@
 import QtQuick 6.5
 import QtQuick.Controls 6.5
+import QtQuick.VirtualKeyboard 6.5  // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.4]: 添加虚拟键盘支持
 
 // ✅ 2026-01-25 [QDS专用入口] 简化版 main.qml，用于 QDS 运行
 // 用途：在 QDS 中运行应用程序，不依赖 C++ 后端
@@ -232,5 +233,33 @@ ApplicationWindow {
         console.log("   - 模拟后端已加载")
         console.log("   - 使用左右键切换页面")
         console.log("========================================")
+    }
+
+    // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.4]: 添加 Qt Virtual Keyboard
+    InputPanel {
+        id: virtualKeyboard
+        z: 99
+        x: 0
+        y: root.height - height
+        width: root.width
+        visible: Qt.inputMethod.visible
+
+        Component.onCompleted: {
+            console.log("========================================")
+            console.log("⌨️ [QDS InputPanel] Virtual keyboard initialized")
+            console.log("   - Width:", width)
+            console.log("   - Height:", height)
+            console.log("   - Z-index:", z)
+            console.log("========================================")
+        }
+
+        onVisibleChanged: {
+            console.log("⌨️ [QDS InputPanel] Visibility changed:", visible)
+            console.log("   - Qt.inputMethod.visible:", Qt.inputMethod.visible)
+        }
+
+        onEnabledChanged: {
+            console.log("⌨️ [QDS InputPanel] Enabled changed:", enabled)
+        }
     }
 }
