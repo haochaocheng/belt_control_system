@@ -58,6 +58,9 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.5]: 请求 DeviceSettingsDialog 获取焦点
+    signal requestDialogFocus()
+
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2]: NavigationManager 实例
     DeviceInfo.NavigationManager {
         id: navigationManager
@@ -138,6 +141,8 @@ Rectangle {
             console.log("✅ [MotorControlPage] 接收到 returnToCategory 信号，释放焦点")
             // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 设置标志，防止后续键盘事件被处理
             root.isReturningToCategory = true
+            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.5]: 主动通知 DeviceSettingsDialog 获取焦点
+            root.requestDialogFocus()
             // 释放焦点，让 DeviceSettingsDialog 接管键盘事件
             root.focus = false
             // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.4]: 启动定时器，延迟重置标志

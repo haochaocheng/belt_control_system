@@ -737,6 +737,13 @@ Item {
     }
 
     Keys.onEscapePressed: {
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.10]: 检查虚拟键盘是否激活
+        // 如果虚拟键盘激活，不关闭对话框（让 InputPanel 的 Shortcut 处理）
+        if (Qt.inputMethod.visible) {
+            console.log("⌨️ [DeviceSettingsDialog] 虚拟键盘激活中，忽略 ESC 键")
+            return
+        }
+
         // Escape 键：关闭弹窗
         console.log("🔍 [DeviceSettingsDialog] ========== ESC 键关闭对话框 ==========")
         console.log("🔍 [DeviceSettingsDialog] 关闭前 - modalContainer.visible:", modalContainer.visible)
@@ -1354,6 +1361,12 @@ Item {
                             item.requestReturnToCategory.connect(function() {
                                 console.log("✅ [DeviceSettingsDialog] 接收到返回类别请求")
                                 root.currentFocusArea = 1  // 切换到左侧类别区域
+                            })
+
+                            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.5]: 监听请求焦点信号
+                            item.requestDialogFocus.connect(function() {
+                                console.log("✅ [DeviceSettingsDialog] 接收到 requestDialogFocus 信号，获取焦点")
+                                root.forceActiveFocus()
                             })
                         }
                     }
