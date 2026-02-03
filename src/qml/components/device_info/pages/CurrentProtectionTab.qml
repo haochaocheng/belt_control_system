@@ -39,6 +39,10 @@ Rectangle {
             columns: 4  // 4列：标签1、输入框1、标签2、输入框2
             columnSpacing: 10
             rowSpacing: 12
+            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.12.3]: 设置最小高度，确保可以滚动
+            // ScrollView.height = 513，设置为 800 确保内容超出可见区域，允许滚动
+            // 原因：当 contentHeight < height 时，maxScrollY = 0，无法滚动
+            Layout.minimumHeight: 800
 
             // ========== 第一行：是否投入（左侧，索引0）、报警类型（右侧，索引1）==========
 

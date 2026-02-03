@@ -28,6 +28,10 @@ ApplicationWindow {
     property alias runtimeTracker: mockBackend.runtimeTracker
     property alias deviceConfigMgr: mockBackend.deviceConfigMgr
 
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.12.3]: 暴露虚拟键盘高度为全局属性
+    // 让CustomSpinBox可以获取实际的虚拟键盘高度，而不是估算
+    property real virtualKeyboardHeight: virtualKeyboard.height
+
     // ========== 主界面 ==========
     Rectangle {
         anchors.fill: parent
@@ -299,6 +303,15 @@ ApplicationWindow {
 
         onActiveChanged: {
             console.log("⌨️ [QDS InputPanel] Active changed:", active)
+            if (active) {
+                console.log("   - 虚拟键盘高度:", height)
+                console.log("   - 虚拟键盘Y位置:", y)
+                console.log("   - 屏幕高度:", root.height)
+            }
+        }
+
+        onHeightChanged: {
+            console.log("⌨️ [QDS InputPanel] Height changed:", height)
         }
 
         // ✅ 2026-02-03 [FIX]: 添加ESC键处理，只关闭虚拟键盘，不关闭对话框
