@@ -806,16 +806,13 @@ Rectangle {
             break
         }
 
-        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.3]: Qt会自动显示虚拟键盘
-        // 调用 CustomSpinBox 的 activateVirtualKeyboard() 函数，给 TextInput 设置焦点
-        if (inputField) {
-            console.log("✅ [CurrentProtectionTab] 调用 activateVirtualKeyboard()，Qt会自动显示虚拟键盘")
-            if (inputField.activateVirtualKeyboard) {
-                inputField.activateVirtualKeyboard()
-            } else {
-                // 如果没有 activateVirtualKeyboard 函数，直接设置焦点
-                inputField.forceActiveFocus()
-            }
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.5]: 使用自定义虚拟键盘（与 BasicConfigTab 一致）
+        // Qt官方的 InputPanel 在 QDS 预览模式下不会自动弹出
+        if (virtualKeyboard && inputField) {
+            console.log("✅ [CurrentProtectionTab] 打开虚拟键盘 - 控件:", inputField)
+            virtualKeyboard.openForField(inputField, function(newValue) {
+                console.log("✅ [CurrentProtectionTab] 虚拟键盘输入完成:", newValue)
+            }, "numeric", root)
         }
     }
 }
