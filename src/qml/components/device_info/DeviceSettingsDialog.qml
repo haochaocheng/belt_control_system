@@ -1263,6 +1263,24 @@ Item {
                         }
                     }
 
+                    // ✅ 2026-02-03 [FIX 100.300.112.8.25.11]: SwitchInputPage 反向焦点同步（从 Page 到 Dialog）
+                    // 当用户在开关量列表中导航或鼠标点击时，同步更新 Dialog 的 currentContentItemIndex
+                    Connections {
+                        target: switchInputPageLoader.item
+                        enabled: switchInputPageLoader.item !== null
+
+                        function onFocusItemIndexChanged() {
+                            if (root.currentCategory === 1 &&
+                                root.currentFocusArea === 2 &&
+                                switchInputPageLoader.item.focusSubArea === 0 &&
+                                switchInputPageLoader.item.focusItemIndex >= 0) {
+                                // 只在焦点在列表区域时同步
+                                console.log("✅ [DeviceSettingsDialog] 同步开关量列表焦点:", switchInputPageLoader.item.focusItemIndex)
+                                root.currentContentItemIndex = switchInputPageLoader.item.focusItemIndex
+                            }
+                        }
+                    }
+
                     onStatusChanged: {
                         if (switchInputPageLoader.status === Loader.Error) {
                             console.error("❌ [DeviceSettingsDialog] SwitchInputPage 加载失败")
@@ -1352,6 +1370,24 @@ Item {
                             root.currentCategory === 2) {
                             // 在模拟量列表中导航
                             analogInputPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                        }
+                    }
+                }
+
+                // ✅ 2026-02-03 [FIX 100.300.112.8.25.12]: AnalogInputPage 反向焦点同步（从 Page 到 Dialog）
+                // 当用户在模拟量列表中导航或鼠标点击时，同步更新 Dialog 的 currentContentItemIndex
+                Connections {
+                    target: analogInputPageLoader.item
+                    enabled: analogInputPageLoader.item !== null
+
+                    function onFocusItemIndexChanged() {
+                        if (root.currentCategory === 2 &&
+                            root.currentFocusArea === 2 &&
+                            analogInputPageLoader.item.focusSubArea === 0 &&
+                            analogInputPageLoader.item.focusItemIndex >= 0) {
+                            // 只在焦点在列表区域时同步
+                            console.log("✅ [DeviceSettingsDialog] 同步模拟量列表焦点:", analogInputPageLoader.item.focusItemIndex)
+                            root.currentContentItemIndex = analogInputPageLoader.item.focusItemIndex
                         }
                     }
                 }
