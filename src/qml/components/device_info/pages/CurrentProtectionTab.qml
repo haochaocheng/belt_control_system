@@ -747,56 +747,81 @@ Rectangle {
     function triggerParamInput(paramIndex) {
         console.log("✅ [CurrentProtectionTab] 触发参数输入 - 索引:", paramIndex)
 
-        // ✅ 2026-02-02 [FIX 100.300.112.8.25.4]: 更新参数索引映射
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.6]: 改为打开虚拟键盘，与 BasicConfigTab 保持一致
+        var inputField = null
+        var inputMode = "numeric"  // 默认数字模式
+
         switch(paramIndex) {
         case 0:  // 是否投入（CustomComboBox）
             console.log("✅ [CurrentProtectionTab] 切换是否投入")
-            enabledField.forceActiveFocus()
+            // ComboBox 不需要虚拟键盘，直接切换选项
+            enabledField.currentIndex = (enabledField.currentIndex + 1) % enabledField.model.length
             break
         case 1:  // 报警类型（CustomComboBox）
             console.log("✅ [CurrentProtectionTab] 切换报警类型")
-            alarmTypeField.forceActiveFocus()
+            // ComboBox 不需要虚拟键盘，直接切换选项
+            alarmTypeField.currentIndex = (alarmTypeField.currentIndex + 1) % alarmTypeField.model.length
             break
         case 2:  // 次数设置（CustomSpinBox，条件启用）
             console.log("✅ [CurrentProtectionTab] 次数设置")
             if (alarmTypeField.currentIndex === 0) {
-                countSettingField.forceActiveFocus()
+                inputField = countSettingField
+                inputMode = "numeric"
             }
             break
         case 3:  // 时间设置（CustomSpinBox，条件启用）
             console.log("✅ [CurrentProtectionTab] 时间设置")
             if (alarmTypeField.currentIndex === 1) {
-                timeSettingField.forceActiveFocus()
+                inputField = timeSettingField
+                inputMode = "numeric"
             }
             break
         case 4:  // 动作保护类型（CustomComboBox）
             console.log("✅ [CurrentProtectionTab] 动作保护类型")
-            actionProtectionField.forceActiveFocus()
+            // ComboBox 不需要虚拟键盘，直接切换选项
+            actionProtectionField.currentIndex = (actionProtectionField.currentIndex + 1) % actionProtectionField.model.length
             break
         case 5:  // 故障保护类型（CustomComboBox）
             console.log("✅ [CurrentProtectionTab] 故障保护类型")
-            faultProtectionField.forceActiveFocus()
+            // ComboBox 不需要虚拟键盘，直接切换选项
+            faultProtectionField.currentIndex = (faultProtectionField.currentIndex + 1) % faultProtectionField.model.length
             break
         case 6:  // 电流量程（CustomSpinBox）
             console.log("✅ [CurrentProtectionTab] 电流量程")
-            currentRangeField.forceActiveFocus()
+            inputField = currentRangeField
+            inputMode = "numeric"
             break
         case 7:  // 电流上限（CustomSpinBox）
             console.log("✅ [CurrentProtectionTab] 电流上限")
-            currentUpperField.forceActiveFocus()
+            inputField = currentUpperField
+            inputMode = "numeric"
             break
         case 8:  // 电流下限（CustomSpinBox）
             console.log("✅ [CurrentProtectionTab] 电流下限")
-            currentLowerField.forceActiveFocus()
+            inputField = currentLowerField
+            inputMode = "numeric"
             break
         case 9:  // 输入点选择（CustomComboBox）
             console.log("✅ [CurrentProtectionTab] 输入点选择")
-            inputPointField.forceActiveFocus()
+            // ComboBox 不需要虚拟键盘，直接切换选项
+            inputPointField.currentIndex = (inputPointField.currentIndex + 1) % inputPointField.model.length
             break
         case 10:  // 过滤干扰延时（CustomSpinBox）
             console.log("✅ [CurrentProtectionTab] 过滤干扰延时")
-            filterDelayField.forceActiveFocus()
+            inputField = filterDelayField
+            inputMode = "numeric"
             break
+        }
+
+        // 打开虚拟键盘
+        if (virtualKeyboard && inputField) {
+            console.log("✅ [CurrentProtectionTab] 打开 Qt 虚拟键盘 - 控件:", inputField, "模式:", inputMode)
+            virtualKeyboard.openForField(inputField, function(newValue) {
+                console.log("✅ [CurrentProtectionTab] 虚拟键盘输入完成:", newValue)
+            }, inputMode, root)
+        } else if (inputField) {
+            console.log("⚠️ [CurrentProtectionTab] 虚拟键盘不可用，使用 forceActiveFocus")
+            inputField.forceActiveFocus()
         }
     }
 }
