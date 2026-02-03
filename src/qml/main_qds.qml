@@ -197,12 +197,41 @@ ApplicationWindow {
             }
 
             Text {
-                anchors.right: parent.right
+                anchors.right: testField.left
                 anchors.rightMargin: 20
                 anchors.verticalCenter: parent.verticalCenter
                 text: "QDS 预览模式"
                 font.pixelSize: 12
                 color: "#2196F3"
+            }
+
+            // ✅ 2026-02-02 [调试]: 添加测试TextField，验证鼠标点击是否能触发虚拟键盘
+            TextField {
+                id: testField
+                anchors.right: parent.right
+                anchors.rightMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+                width: 150
+                height: 30
+                placeholderText: "测试虚拟键盘"
+                inputMethodHints: Qt.ImhDigitsOnly
+                font.pixelSize: 12
+
+                onActiveFocusChanged: {
+                    console.log("========================================")
+                    console.log("🔍 [测试TextField] activeFocus changed:", activeFocus)
+                    console.log("   - Qt.inputMethod.visible:", Qt.inputMethod.visible)
+                    console.log("   - virtualKeyboard.active:", virtualKeyboard.active)
+                    console.log("========================================")
+                }
+
+                onPressed: {
+                    console.log("🔍 [测试TextField] Pressed")
+                }
+
+                onClicked: {
+                    console.log("🔍 [测试TextField] Clicked")
+                }
             }
         }
     }
