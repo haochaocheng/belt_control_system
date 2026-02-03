@@ -84,6 +84,9 @@ Rectangle {
         currentIndex: root.currentMotorIndex
 
         delegate: Rectangle {
+            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.22]: 添加必需的属性声明
+            required property int index  // ListView 自动提供的索引
+
             width: listView.width
             // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
             height: 45  // 从 60 改为 45（一级标题是 40）
@@ -104,6 +107,7 @@ Rectangle {
 
             // ✅ 2026-01-26 [FIX 100.300.25.5]: 添加背景图片
             // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.21]: 改用直接绑定替代 State
+            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.22]: 添加更详细的调试信息
             Image {
                 id: backgroundImage
                 anchors.fill: parent
@@ -114,9 +118,21 @@ Rectangle {
                 // 使用相对路径，便于QDS预览（向上三级到qml目录）
                 source: root.currentMotorIndex === index ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
 
-                // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.21]: 添加调试日志
+                // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.22]: 添加详细调试日志
+                Component.onCompleted: {
+                    console.log("🔍 [DEBUG] 背景图片组件创建 - 电机", index + 1, "初始 source:", source)
+                }
+
                 onSourceChanged: {
-                    console.log("🔍 [DEBUG] 背景图片切换 - 电机", index + 1, "source:", source)
+                    console.log("🔍 [DEBUG] 背景图片切换 - 电机", index + 1, "source:", source, "currentMotorIndex:", root.currentMotorIndex)
+                }
+
+                // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.22]: 监听 currentMotorIndex 变化
+                Connections {
+                    target: root
+                    function onCurrentMotorIndexChanged() {
+                        console.log("🔍 [DEBUG] Connections 监听到 currentMotorIndex 变化 - 电机", index + 1, "新值:", root.currentMotorIndex, "当前 source:", backgroundImage.source)
+                    }
                 }
             }
 
