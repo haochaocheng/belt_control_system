@@ -125,6 +125,7 @@ SpinBox {
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.11]: 监听虚拟键盘关闭，恢复焦点到父容器
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.11.1]: 修复焦点恢复到GridLayout而不是Tab
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.12]: 添加自动滚动功能，避免虚拟键盘遮挡
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.12.4]: 简化滚动计算，使用用户提出的Y1 vs Y2方案
     Connections {
         target: Qt.inputMethod
 
@@ -142,89 +143,62 @@ SpinBox {
                     return
                 }
 
+                // 获取Flickable（ScrollView的内部实现）
+                var flickable = scrollView.contentItem
+                if (!flickable) {
+                    console.log("⚠️ [CustomSpinBox] 未找到Flickable")
+                    return
+                }
+
                 console.log("   📊 ScrollView信息:")
                 console.log("      - height:", scrollView.height)
-                console.log("      - contentHeight:", scrollView.contentHeight)
+                console.log("      - contentHeight:", flickable.contentHeight)
 
                 // 保存当前滚动位置
-                savedScrollY = scrollView.ScrollBar.vertical.position
+                savedScrollY = flickable.contentY
                 console.log("   💾 保存滚动位置:", savedScrollY)
 
-                // 计算输入框在ScrollView内容中的Y坐标（相对于ScrollView的contentItem）
-                var inputYInContent = getYInScrollView(root, scrollView)
-                console.log("   📍 输入框在ScrollView内容中的Y:", inputYInContent)
-                console.log("   📏 输入框高度:", root.height)
-
-                // 计算当前滚动偏移
-                var currentScrollY = scrollView.ScrollBar.vertical.position * scrollView.contentHeight
-                console.log("   📜 当前滚动偏移:", currentScrollY)
-
-                // 计算输入框在ScrollView可见区域中的Y坐标
-                var inputYInViewport = inputYInContent - currentScrollY
-                console.log("   👁️  输入框在可见区域中的Y:", inputYInViewport)
-
-                // 计算输入框在屏幕坐标系中的Y坐标
-                // 需要加上ScrollView在屏幕中的Y坐标
-                var scrollViewScreenY = getScreenY(scrollView)
-                var inputScreenY = scrollViewScreenY + inputYInViewport
+                // ========== 简化的滚动计算（用户方案）==========
+                // 1. 获取输入框在屏幕中的Y坐标（Y1）
+                var inputScreenY = getScreenY(root)
                 var inputScreenBottom = inputScreenY + root.height
-                console.log("   🌍 屏幕坐标:")
-                console.log("      - ScrollView屏幕Y:", scrollViewScreenY)
-                console.log("      - 输入框屏幕Y:", inputScreenY)
-                console.log("      - 输入框屏幕底部:", inputScreenBottom)
+                console.log("   📍 输入框屏幕坐标:")
+                console.log("      - Y1 (顶部):", inputScreenY)
+                console.log("      - Y1 + 高度 (底部):", inputScreenBottom)
 
-                // 获取虚拟键盘的实际高度和位置
-                // 虚拟键盘在屏幕底部，y = root.height - keyboard.height
-                // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.12.3]: 使用实际的虚拟键盘高度
+                // 2. 获取虚拟键盘顶部Y坐标（Y2）
                 var screenHeight = scrollView.Window.window ? scrollView.Window.window.height : 1080
-
-                // 尝试获取实际的虚拟键盘高度
                 var keyboardHeight = 0
                 if (scrollView.Window.window && scrollView.Window.window.virtualKeyboardHeight) {
                     keyboardHeight = scrollView.Window.window.virtualKeyboardHeight
                     console.log("   ⌨️  使用实际虚拟键盘高度:", keyboardHeight)
                 } else {
-                    // 回退到估算（屏幕高度的40%）
                     keyboardHeight = screenHeight * 0.4
-                    console.log("   ⌨️  使用估算虚拟键盘高度:", keyboardHeight, "(40% of", screenHeight, ")")
+                    console.log("   ⌨️  使用估算虚拟键盘高度:", keyboardHeight)
                 }
-
                 var keyboardTop = screenHeight - keyboardHeight
-                console.log("   ⌨️  虚拟键盘信息:")
-                console.log("      - 屏幕高度:", screenHeight)
-                console.log("      - 键盘高度:", keyboardHeight)
-                console.log("      - 键盘顶部Y:", keyboardTop)
+                console.log("   ⌨️  Y2 (键盘顶部):", keyboardTop)
 
-                // 判断输入框是否被虚拟键盘遮挡
+                // 3. 判断是否被遮挡：Y1 + 高度 > Y2
                 var gap = 20  // 期望的间距
-                var targetBottom = keyboardTop - gap
-                console.log("   🎯 目标位置:")
-                console.log("      - 目标底部Y（键盘顶部-间距）:", targetBottom)
-
-                if (inputScreenBottom > targetBottom) {
+                if (inputScreenBottom > keyboardTop - gap) {
                     // 输入框被遮挡，需要滚动
-                    var overlap = inputScreenBottom - targetBottom
-                    console.log("   ⚠️  输入框被遮挡，重叠:", overlap, "px")
+                    // 滚动距离 = (Y1 + 高度) - Y2
+                    var scrollDistance = inputScreenBottom - (keyboardTop - gap)
+                    console.log("   ⚠️  输入框被遮挡")
+                    console.log("      - 需要滚动距离:", scrollDistance, "px")
 
-                    // 计算需要滚动的距离（在ScrollView内容坐标系中）
-                    var targetScrollY = currentScrollY + overlap
+                    // 4. 滚动到目标位置（直接设置contentY）
+                    var targetContentY = savedScrollY + scrollDistance
+                    var maxContentY = Math.max(0, flickable.contentHeight - flickable.height)
+                    targetContentY = Math.max(0, Math.min(targetContentY, maxContentY))
+
                     console.log("   📐 滚动计算:")
-                    console.log("      - 当前滚动Y:", currentScrollY)
-                    console.log("      - 需要额外滚动:", overlap)
-                    console.log("      - 目标滚动Y:", targetScrollY)
+                    console.log("      - 当前contentY:", savedScrollY)
+                    console.log("      - 目标contentY:", targetContentY)
+                    console.log("      - 最大contentY:", maxContentY)
 
-                    // 限制滚动范围
-                    var maxScrollY = Math.max(0, scrollView.contentHeight - scrollView.height)
-                    targetScrollY = Math.max(0, Math.min(targetScrollY, maxScrollY))
-                    console.log("      - 最大滚动Y:", maxScrollY)
-                    console.log("      - 最终滚动Y:", targetScrollY)
-
-                    // 转换为position（0.0-1.0）
-                    var targetPosition = targetScrollY / scrollView.contentHeight
-                    console.log("   🎚️  目标position:", targetPosition)
-
-                    // 平滑滚动到目标位置
-                    scrollView.ScrollBar.vertical.position = targetPosition
+                    flickable.contentY = targetContentY
                     console.log("   ✅ 滚动完成")
                 } else {
                     console.log("   ✅ 输入框未被遮挡，无需滚动")
@@ -235,9 +209,9 @@ SpinBox {
 
                 // 恢复滚动位置
                 var scrollView = findScrollView(root.parent)
-                if (scrollView && savedScrollY !== undefined) {
-                    console.log("   - 恢复滚动位置:", savedScrollY)
-                    scrollView.ScrollBar.vertical.position = savedScrollY
+                if (scrollView && scrollView.contentItem && savedScrollY !== undefined) {
+                    console.log("   - 恢复contentY:", savedScrollY)
+                    scrollView.contentItem.contentY = savedScrollY
                 }
 
                 // 恢复焦点到参数区域（Tab），而不是GridLayout
@@ -289,21 +263,8 @@ SpinBox {
             return null
         }
 
-        // 辅助函数：计算元素在ScrollView中的Y坐标
-        function getYInScrollView(item, scrollView) {
-            var y = 0
-            var current = item
-            var depth = 0
-            console.log("   - 开始计算Y坐标，从:", item)
-            while (current && current !== scrollView && depth < 20) {
-                console.log("     层级", depth, "Y:", current.y, "累计:", y, "对象:", current)
-                y += current.y
-                current = current.parent
-                depth++
-            }
-            console.log("   - Y坐标计算完成，总计:", y)
-            return y
-        }
+        // ❌ 2026-02-03 [FIX 100.300.112.8.25.7.12.4]: 移除getYInScrollView，不再需要
+        // 原因：简化滚动计算，直接使用getScreenY获取输入框在屏幕中的Y坐标
 
         // 辅助函数：计算元素在屏幕坐标系中的Y坐标
         function getScreenY(item) {
