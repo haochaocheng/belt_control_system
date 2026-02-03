@@ -347,7 +347,11 @@ Rectangle {
                 // ✅ 2026-01-31 [FIX 100.300.112.8]: 传递焦点子区域
                 item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
                 item.controlSelected.connect(function(controlIndex) {
+                    // ✅ 2026-02-03 [FIX 100.300.112.8.25.16]: 鼠标点击时同步所有焦点状态
+                    console.log("🔍 [TensionControlPage] 鼠标点击控制:", controlIndex)
                     root.currentControlIndex = controlIndex
+                    root.focusItemIndex = controlIndex
+                    root.focusSubArea = 0  // 确保在列表区域
                     navigationManager.controlListIndex = controlIndex
                     console.log("选中控制:", controlIndex === 0 ? "张力传感器" : "独立张紧控制")
                 })

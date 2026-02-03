@@ -385,7 +385,11 @@ Rectangle {
                 // ✅ 2026-01-31 [FIX 100.300.112.6]: 传递焦点子区域
                 item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
                 item.brakeSelected.connect(function(brakeIndex) {
+                    // ✅ 2026-02-03 [FIX 100.300.112.8.25.15]: 鼠标点击时同步所有焦点状态
+                    console.log("🔍 [BrakeControlPage] 鼠标点击制动器:", brakeIndex)
                     root.currentBrakeIndex = brakeIndex
+                    root.focusItemIndex = brakeIndex
+                    root.focusSubArea = 0  // 确保在列表区域
                     navigationManager.brakeListIndex = brakeIndex
                     console.log("选中制动器:", brakeIndex + 1)
                 })
