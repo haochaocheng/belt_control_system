@@ -252,21 +252,34 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.13]: 启用虚拟键盘导航
+        // 允许使用方向键在虚拟键盘上导航（适合电视遥控器）
+        Qt.application.setEnvironmentVariable("QT_VIRTUALKEYBOARD_DESKTOP_DISABLE", "0")
+
+        // 可选：使用Retro样式（专为TV遥控器设计，大按键、高对比度）
+        // Qt.application.setEnvironmentVariable("QT_VIRTUALKEYBOARD_STYLE", "retro")
+
         console.log("========================================")
         console.log("✅ QDS 预览模式已启动")
         console.log("   - 窗口大小:", width, "x", height)
         console.log("   - 模拟后端已加载")
         console.log("   - 使用左右键切换页面")
+        console.log("   - 虚拟键盘导航已启用（Tab键/方向键）")
         console.log("========================================")
     }
 
     // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.7]: 使用 inputPanel.active（参考Qt官方示例）
     // Qt官方示例绑定到 inputPanel.active，不是 Qt.inputMethod.visible
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.13]: 启用Tab键导航
     InputPanel {
         id: virtualKeyboard
         z: 99
         x: 0
         width: root.width
+
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.13]: 启用Tab键导航
+        // 允许使用Tab键在虚拟键盘按键之间导航
+        activeFocusOnTab: true
 
         property real yPositionWhenHidden: root.height
         y: yPositionWhenHidden

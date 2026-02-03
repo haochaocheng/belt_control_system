@@ -267,25 +267,40 @@ SpinBox {
         // ❌ 2026-02-03 [FIX 100.300.112.8.25.7.12.4]: 移除getYInScrollView，不再需要
         // 原因：简化滚动计算，直接使用getScreenY获取输入框在屏幕中的Y坐标
 
-        // 辅助函数：计算元素在屏幕坐标系中的Y坐标
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.12.4.2]: 使用mapToItem()计算屏幕Y坐标
+        // 原因：之前的累加方式没有考虑ScrollView的contentY偏移
+        // mapToItem()会自动处理所有坐标转换，包括滚动偏移
         function getScreenY(item) {
-            var y = 0
-            var current = item
-            var depth = 0
-            console.log("   - 开始计算屏幕Y坐标，从:", item)
-            while (current && depth < 20) {
-                console.log("     层级", depth, "Y:", current.y, "累计:", y, "对象:", current)
-                y += current.y
-                current = current.parent
-                depth++
-                // 如果到达Window，停止
-                if (current && current.toString().indexOf("Window") !== -1) {
-                    console.log("     到达Window，停止")
-                    break
+            console.log("   📍 开始计算屏幕Y坐标，从:", item)
+
+            // 获取Window的contentItem
+            var windowItem = item.Window.window ? item.Window.window.contentItem : null
+            if (!windowItem) {
+                console.log("   ⚠️ 无法获取Window.contentItem，回退到累加方式")
+                // 回退到累加方式（虽然不准确，但总比没有好）
+                var y = 0
+                var current = item
+                var depth = 0
+                while (current && depth < 20) {
+                    y += current.y
+                    current = current.parent
+                    depth++
+                    if (current && current.toString().indexOf("Window") !== -1) {
+                        break
+                    }
                 }
+                console.log("   📍 屏幕Y坐标（累加方式）:", y)
+                return y
             }
-            console.log("   - 屏幕Y坐标计算完成，总计:", y)
-            return y
+
+            // 使用mapToItem将item的坐标(0,0)映射到Window.contentItem
+            var mappedPos = item.mapToItem(windowItem, 0, 0)
+            console.log("   📍 屏幕Y坐标（mapToItem）:", mappedPos.y)
+            console.log("      - 输入框对象:", item)
+            console.log("      - Window.contentItem:", windowItem)
+            console.log("      - 映射后坐标: (", mappedPos.x, ",", mappedPos.y, ")")
+
+            return mappedPos.y
         }
     }
 
