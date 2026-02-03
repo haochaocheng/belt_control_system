@@ -141,6 +141,8 @@ Rectangle {
             console.log("✅ [MotorControlPage] 接收到 returnToCategory 信号，释放焦点")
             // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 设置标志，防止后续键盘事件被处理
             root.isReturningToCategory = true
+            // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.6]: 禁用键盘事件接收
+            root.keysEnabled = false
             // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.5]: 主动通知 DeviceSettingsDialog 获取焦点
             root.requestDialogFocus()
             // 释放焦点，让 DeviceSettingsDialog 接管键盘事件
@@ -224,6 +226,9 @@ Rectangle {
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 防止 returnToCategory 恶性循环
     property bool isReturningToCategory: false
 
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.6]: 控制是否接收键盘事件
+    property bool keysEnabled: true
+
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.4]: 使用定时器延迟重置标志
     Timer {
         id: resetFlagTimer
@@ -250,7 +255,13 @@ Rectangle {
     // ✅ 平面导航逻辑：只用方向键，不用Enter/Esc/Tab
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加详细调试日志
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.2]: 防止 returnToCategory 恶性循环
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.6]: 检查是否启用键盘事件
     Keys.onUpPressed: {
+        if (!keysEnabled) {
+            console.log("⚠️ [DEBUG] 键盘事件已禁用，忽略 Up 键")
+            event.accepted = true
+            return
+        }
         if (isReturningToCategory) {
             console.log("⚠️ [DEBUG] 正在返回大类，忽略 Up 键")
             event.accepted = true
@@ -266,6 +277,11 @@ Rectangle {
     }
 
     Keys.onDownPressed: {
+        if (!keysEnabled) {
+            console.log("⚠️ [DEBUG] 键盘事件已禁用，忽略 Down 键")
+            event.accepted = true
+            return
+        }
         if (isReturningToCategory) {
             console.log("⚠️ [DEBUG] 正在返回大类，忽略 Down 键")
             event.accepted = true
@@ -281,6 +297,11 @@ Rectangle {
     }
 
     Keys.onLeftPressed: {
+        if (!keysEnabled) {
+            console.log("⚠️ [DEBUG] 键盘事件已禁用，忽略 Left 键")
+            event.accepted = true
+            return
+        }
         if (isReturningToCategory) {
             console.log("⚠️ [DEBUG] 正在返回大类，忽略 Left 键")
             event.accepted = true
@@ -291,6 +312,16 @@ Rectangle {
     }
 
     Keys.onRightPressed: {
+        if (!keysEnabled) {
+            console.log("⚠️ [DEBUG] 键盘事件已禁用，忽略 Right 键")
+            event.accepted = true
+            return
+        }
+        if (isReturningToCategory) {
+            console.log("⚠️ [DEBUG] 正在返回大类，忽略 Right 键")
+            event.accepted = true
+            return
+        }
         navigationManager.handleDirectionKey("Right")
         event.accepted = true
     }
@@ -675,7 +706,13 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 公开键盘事件处理函数
     // 供DeviceSettingsDialog调用，转发键盘事件给NavigationManager
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.3]: 添加标志位检查，防止恶性循环
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.6]: 检查是否启用键盘事件
     function handleKeyPress(direction) {
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.6]: 检查是否启用键盘事件
+        if (!keysEnabled) {
+            console.log("⚠️ [DEBUG] 键盘事件已禁用，忽略键盘事件:", direction)
+            return
+        }
         // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.3]: 防止恶性循环
         if (isReturningToCategory) {
             console.log("⚠️ [DEBUG] 正在返回大类，忽略键盘事件:", direction)
