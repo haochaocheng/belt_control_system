@@ -301,17 +301,9 @@ Rectangle {
     }
 
     Keys.onLeftPressed: {
-        if (!keysEnabled) {
-            console.log("⚠️ [DEBUG] 键盘事件已禁用，忽略 Left 键")
-            event.accepted = true
-            return
-        }
-        if (isReturningToCategory) {
-            console.log("⚠️ [DEBUG] 正在返回大类，忽略 Left 键")
-            event.accepted = true
-            return
-        }
-        navigationManager.handleDirectionKey("Left")
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25]: 简化为直接发出信号
+        console.log("✅ [MotorControlPage] 按左键，请求返回到左侧类别")
+        root.requestReturnToCategory()
         event.accepted = true
     }
 
