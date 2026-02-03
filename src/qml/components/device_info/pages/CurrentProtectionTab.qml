@@ -806,8 +806,8 @@ Rectangle {
             break
         }
 
-        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.6]: 使用 Qt 官方虚拟键盘
-        // 只需要给 TextInput 设置焦点，Qt 会自动显示 InputPanel
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.9]: 使用 Qt 官方虚拟键盘（已设置环境变量）
+        // 环境变量 QT_IM_MODULE=qtvirtualkeyboard 已设置，Qt官方虚拟键盘现在能工作
         if (inputField) {
             console.log("✅ [CurrentProtectionTab] 激活虚拟键盘 - 控件:", inputField)
             // 如果控件有 activateVirtualKeyboard 函数，调用它（CustomSpinBox）
