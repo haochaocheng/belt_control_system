@@ -25,21 +25,24 @@ Rectangle {
     signal motorSelected(int motorIndex)  // 电机被选中时发出信号
 
     // ========== 键盘导航支持 ==========
-    focus: true
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.18]: 注释掉旧的键盘事件处理器
+    // 导航现在由 NavigationManager 统一管理，不需要在这里处理键盘事件
+    // 保留这些代码会与 NavigationManager 冲突，导致背景图片和蓝色边框不同步
+    // focus: true
 
-    Keys.onUpPressed: {
-        if (root.currentMotorIndex > 0) {
-            root.currentMotorIndex--
-            motorSelected(root.currentMotorIndex)
-        }
-    }
+    // Keys.onUpPressed: {
+    //     if (root.currentMotorIndex > 0) {
+    //         root.currentMotorIndex--
+    //         motorSelected(root.currentMotorIndex)
+    //     }
+    // }
 
-    Keys.onDownPressed: {
-        if (root.currentMotorIndex < 7) {
-            root.currentMotorIndex++
-            motorSelected(root.currentMotorIndex)
-        }
-    }
+    // Keys.onDownPressed: {
+    //     if (root.currentMotorIndex < 7) {
+    //         root.currentMotorIndex++
+    //         motorSelected(root.currentMotorIndex)
+    //     }
+    // }
 
     // ========== 标题 ==========
     Rectangle {
