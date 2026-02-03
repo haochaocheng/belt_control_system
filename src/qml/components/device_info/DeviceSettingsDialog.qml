@@ -465,6 +465,9 @@ Item {
                         // 在列表区域：左键返回到左侧类别区域
                         console.log("✅ [导航] BrakeControlPage 列表区域左键返回类别")
                         currentFocusArea = 1  // 切换到左侧类别
+                        // ✅ 2026-02-03 [FIX 100.300.112.8.25.13]: 强制转移焦点到 DeviceSettingsDialog
+                        console.log("✅ [DeviceSettingsDialog] 强制转移焦点到 DeviceSettingsDialog")
+                        root.forceActiveFocus()
                         return
                     }
                 }
@@ -489,6 +492,9 @@ Item {
                         // 在列表区域：左键返回到左侧类别区域
                         console.log("✅ [导航] TensionControlPage 列表区域左键返回类别")
                         currentFocusArea = 1  // 切换到左侧类别
+                        // ✅ 2026-02-03 [FIX 100.300.112.8.25.14]: 强制转移焦点到 DeviceSettingsDialog
+                        console.log("✅ [DeviceSettingsDialog] 强制转移焦点到 DeviceSettingsDialog")
+                        root.forceActiveFocus()
                         return
                     }
                 }
