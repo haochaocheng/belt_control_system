@@ -253,9 +253,12 @@ Rectangle {
                     item.currentMotorIndex = Qt.binding(function() { return root.currentMotorIndex })
                     // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引
                     item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
+                    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.17]: 鼠标点击时同步更新 focusItemIndex 和 NavigationManager
                     item.motorSelected.connect(function(motorIndex) {
                         root.currentMotorIndex = motorIndex
-                        console.log("选中电机:", motorIndex + 1)
+                        root.focusItemIndex = motorIndex  // 同步更新焦点索引（蓝色边框）
+                        navigationManager.motorListIndex = motorIndex  // 同步更新 NavigationManager
+                        console.log("✅ [MotorControlPage] 选中电机:", motorIndex + 1, "- 已同步 focusItemIndex 和 NavigationManager")
                     })
                 }
             }
