@@ -179,7 +179,10 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
+                    // ✅ 2026-02-03 [FIX 100.300.112.8.25.16.1]: 鼠标点击时同步更新所有焦点状态
+                    console.log("🔍 [TensionControlListPanel] 鼠标点击控制:", index)
                     root.currentControlIndex = index
+                    root.focusItemIndex = index  // ← 添加这一行，确保焦点索引同步
                     root.controlSelected(index)
                     root.focus = true  // 获取焦点以支持键盘操作
                 }
