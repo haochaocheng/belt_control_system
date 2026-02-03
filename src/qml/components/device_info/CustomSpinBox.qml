@@ -189,17 +189,18 @@ SpinBox {
                     console.log("      - 需要滚动距离:", scrollDistance, "px")
 
                     // 4. 滚动到目标位置（直接设置contentY）
+                    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.12.4.1]: 不限制targetContentY
+                    // 原因：即使contentHeight < height，Flickable也可以滚动
+                    // 让Flickable自己处理边界，不要人为限制
                     var targetContentY = savedScrollY + scrollDistance
-                    var maxContentY = Math.max(0, flickable.contentHeight - flickable.height)
-                    targetContentY = Math.max(0, Math.min(targetContentY, maxContentY))
 
                     console.log("   📐 滚动计算:")
                     console.log("      - 当前contentY:", savedScrollY)
+                    console.log("      - 滚动距离:", scrollDistance)
                     console.log("      - 目标contentY:", targetContentY)
-                    console.log("      - 最大contentY:", maxContentY)
 
                     flickable.contentY = targetContentY
-                    console.log("   ✅ 滚动完成")
+                    console.log("   ✅ 滚动完成，实际contentY:", flickable.contentY)
                 } else {
                     console.log("   ✅ 输入框未被遮挡，无需滚动")
                 }
