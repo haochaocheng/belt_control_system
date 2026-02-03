@@ -4,7 +4,7 @@ import QtQuick.Layouts 6.5
 import QtQuick.VirtualKeyboard 6.5
 
 // ✅ 2026-01-29 [Qt 虚拟键盘]: Qt Official Virtual Keyboard Integration
-// ✅ 2026-01-29 [QDS 兼容]: 移除 KeyboardStyle 以支持 QDS 预览
+// ✅ 2026-02-02 [FIX]: 使用自定义 NumericKeyboard 替代 InputPanel 的数字模式
 Popup {
     id: root
     width: parent.width
@@ -27,17 +27,27 @@ Popup {
         inputMode = mode || "numeric"
         parentPage = parentPageRef || null
 
-        // Set input method hints based on mode
-        if (textField) {
-            if (mode === "numeric") {
-                textField.inputMethodHints = Qt.ImhDigitsOnly
-            } else if (mode === "english") {
-                textField.inputMethodHints = Qt.ImhNoPredictiveText | Qt.ImhPreferLowercase
-            } else if (mode === "chinese") {
-                textField.inputMethodHints = Qt.ImhNone
-            }
+        // ✅ 2026-02-02 [FIX]: 根据模式显示不同的键盘
+        if (mode === "numeric") {
+            // 数字模式：使用自定义 NumericKeyboard
+            numericKeyboard.visible = true
+            inputPanel.visible = false
+            numericKeyboard.targetInput = textField
+        } else {
+            // 其他模式：使用 Qt InputPanel
+            numericKeyboard.visible = false
+            inputPanel.visible = true
 
-            textField.forceActiveFocus()
+            // Set input method hints based on mode
+            if (textField) {
+                if (mode === "english") {
+                    textField.inputMethodHints = Qt.ImhNoPredictiveText | Qt.ImhPreferLowercase
+                } else if (mode === "chinese") {
+                    textField.inputMethodHints = Qt.ImhNone
+                }
+
+                textField.forceActiveFocus()
+            }
         }
 
         root.open()
@@ -49,13 +59,27 @@ Popup {
         border.width: 2
     }
 
-    contentItem: InputPanel {
-        id: inputPanel
-        z: 99
+    contentItem: Item {
         anchors.fill: parent
 
-        // ✅ 2026-01-29 [QDS 兼容]: 移除 KeyboardStyle，使用默认样式
-        // style: KeyboardStyle { }
+        // ✅ 2026-02-02 [FIX]: 自定义数字键盘（纯数字输入）
+        NumericKeyboard {
+            id: numericKeyboard
+            anchors.fill: parent
+            anchors.margins: 10
+            visible: false  // 默认隐藏，根据 inputMode 显示
+        }
+
+        // Qt 官方虚拟键盘（英文/中文输入）
+        InputPanel {
+            id: inputPanel
+            z: 99
+            anchors.fill: parent
+            visible: false  // 默认隐藏，根据 inputMode 显示
+
+            // ✅ 2026-01-29 [QDS 兼容]: 移除 KeyboardStyle，使用默认样式
+            // style: KeyboardStyle { }
+        }
     }
 
     // ✅ 2026-01-30 [修复]: 虚拟键盘关闭时恢复焦点
