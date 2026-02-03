@@ -189,11 +189,12 @@ Rectangle {
         }
 
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.8]: 监听返回到类别信号
-        onReturnToCategory: {
-            console.log("✅ [MotorControlPage] 返回到左侧类别")
-            // 发出信号通知 DeviceSettingsDialog 返回到左侧类别
-            root.requestReturnToCategory()
-        }
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24]: 移除旧的处理器，已在 Line 136 重新实现
+        // onReturnToCategory: {
+        //     console.log("✅ [MotorControlPage] 返回到左侧类别")
+        //     // 发出信号通知 DeviceSettingsDialog 返回到左侧类别
+        //     root.requestReturnToCategory()
+        // }
     }
 
     // ========== 背景装饰图片（预留位置，可在QDS中替换）==========
