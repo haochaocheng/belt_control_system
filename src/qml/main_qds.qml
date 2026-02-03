@@ -300,5 +300,15 @@ ApplicationWindow {
         onActiveChanged: {
             console.log("⌨️ [QDS InputPanel] Active changed:", active)
         }
+
+        // ✅ 2026-02-03 [FIX]: 添加ESC键处理，只关闭虚拟键盘，不关闭对话框
+        Shortcut {
+            enabled: virtualKeyboard.active
+            sequence: "Esc"
+            onActivated: {
+                console.log("⌨️ [QDS InputPanel] ESC键被按下，关闭虚拟键盘")
+                Qt.inputMethod.hide()
+            }
+        }
     }
 }
