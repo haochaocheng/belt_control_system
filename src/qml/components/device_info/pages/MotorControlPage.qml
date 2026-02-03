@@ -132,6 +132,13 @@ Rectangle {
             root.focusParamIndex = paramIndex
         }
 
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24]: 监听 returnToCategory 信号，释放焦点
+        onReturnToCategory: {
+            console.log("✅ [MotorControlPage] 接收到 returnToCategory 信号，释放焦点")
+            // 释放焦点，让 DeviceSettingsDialog 接管键盘事件
+            root.focus = false
+        }
+
         // 监听按钮索引变化
         onButtonIndexChanged: {
             console.log("✅ [MotorControlPage] 按钮索引变化:", buttonIndex)
