@@ -24,6 +24,15 @@ Rectangle {
     // ✅ 2026-01-31 [FIX 100.300.112.6]: 导航子区域（从父页面传递）
     property int focusSubArea: 0  // 0:列表区域 1:参数区域 2:按钮区域
 
+    // ✅ 2026-02-03 [DEBUG]: 添加调试日志
+    onCurrentBrakeIndexChanged: {
+        console.log("🔍 [BrakeListPanel] currentBrakeIndex 变化:", currentBrakeIndex)
+    }
+
+    onFocusItemIndexChanged: {
+        console.log("🔍 [BrakeListPanel] focusItemIndex 变化:", focusItemIndex)
+    }
+
     // ========== 信号 ==========
     signal brakeSelected(int brakeIndex)  // 制动器被选中时发出信号
 
