@@ -17,6 +17,9 @@ Rectangle {
     focus: true
     activeFocusOnTab: true
 
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.9]: 添加返回类别信号
+    signal requestReturnToCategory()
+
     // ========== 公开属性 ==========
     property int deviceId: 1
     property string deviceName: "1号皮带"
@@ -41,6 +44,16 @@ Rectangle {
             console.log("✅ [SwitchInputPage] focusItemIndex 变化:", focusItemIndex, "→ 更新 currentProtectionIndex")
             currentProtectionIndex = focusItemIndex
             loadProtectionData(focusItemIndex)
+        }
+    }
+
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.9]: 添加左键返回类别处理
+    Keys.onLeftPressed: function(event) {
+        if (focusSubArea === 0) {
+            // 在列表区域，按左键返回到左侧类别
+            console.log("✅ [SwitchInputPage] 列表区域按左键，请求返回到左侧类别")
+            root.requestReturnToCategory()
+            event.accepted = true
         }
     }
 
@@ -227,7 +240,11 @@ Rectangle {
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
+                                // ✅ 2026-02-03 [FIX 100.300.112.8.25.9]: 鼠标点击时同步焦点状态
+                                console.log("🔍 [SwitchInputPage] 鼠标点击列表项:", index)
                                 root.currentProtectionIndex = index
+                                root.focusItemIndex = index
+                                root.focusSubArea = 0  // 确保在列表区域
                                 loadProtectionData(index)
                             }
                         }

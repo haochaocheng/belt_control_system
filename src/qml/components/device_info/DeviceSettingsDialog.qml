@@ -1204,6 +1204,15 @@ Item {
                                 item.focusSubArea = 0  // 默认焦点在列表区域
                                 item.focusItemIndex = root.currentContentItemIndex
                             }
+
+                            // ✅ 2026-02-03 [FIX 100.300.112.8.25.9]: 监听返回类别信号
+                            item.requestReturnToCategory.connect(function() {
+                                console.log("✅ [DeviceSettingsDialog] 接收到开关量输入返回类别请求")
+                                root.currentFocusArea = 1  // 切换到左侧类别区域
+                                // ✅ 强制转移焦点到 DeviceSettingsDialog
+                                console.log("✅ [DeviceSettingsDialog] 强制转移焦点到 DeviceSettingsDialog")
+                                root.forceActiveFocus()
+                            })
                         }
                         Qt.callLater(function() {
                             console.log("✅ [DEBUG] Qt.callLater 回调执行 - 事件循环正常")
@@ -1287,6 +1296,15 @@ Item {
                                 item.focusSubArea = 0  // 默认焦点在列表区域
                                 item.focusItemIndex = root.currentContentItemIndex
                             }
+
+                            // ✅ 2026-02-03 [FIX 100.300.112.8.25.10]: 监听返回类别信号
+                            item.requestReturnToCategory.connect(function() {
+                                console.log("✅ [DeviceSettingsDialog] 接收到模拟量输入返回类别请求")
+                                root.currentFocusArea = 1  // 切换到左侧类别区域
+                                // ✅ 强制转移焦点到 DeviceSettingsDialog
+                                console.log("✅ [DeviceSettingsDialog] 强制转移焦点到 DeviceSettingsDialog")
+                                root.forceActiveFocus()
+                            })
                         }
                     }
 
