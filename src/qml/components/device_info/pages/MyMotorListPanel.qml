@@ -181,9 +181,10 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    root.currentMotorIndex = index
-                    root.motorSelected(index)
-                    root.focus = true  // 获取焦点以支持键盘操作
+                    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.23]: 移除直接赋值，避免破坏 Qt.binding()
+                    // root.currentMotorIndex = index  // ❌ 这会破坏 Qt.binding()，导致后续导航键操作时绑定失效
+                    root.motorSelected(index)  // ✅ 只发送信号，让父组件通过绑定更新
+                    // root.focus = true  // ❌ 不需要，焦点由父组件管理
                 }
             }
         }
