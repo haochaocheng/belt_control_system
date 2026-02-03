@@ -701,19 +701,16 @@ Rectangle {
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 公开键盘事件处理函数
     // 供DeviceSettingsDialog调用，转发键盘事件给NavigationManager
-    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.3]: 添加标志位检查，防止恶性循环
-    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.6]: 检查是否启用键盘事件
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25]: 简化为直接处理
     function handleKeyPress(direction) {
-        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.6]: 检查是否启用键盘事件
-        if (!keysEnabled) {
-            console.log("⚠️ [DEBUG] 键盘事件已禁用，忽略键盘事件:", direction)
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25]: 左键直接发出信号
+        if (direction === "Left") {
+            console.log("✅ [MotorControlPage] handleKeyPress 接收 Left 键，请求返回到左侧类别")
+            root.requestReturnToCategory()
             return
         }
-        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.24.3]: 防止恶性循环
-        if (isReturningToCategory) {
-            console.log("⚠️ [DEBUG] 正在返回大类，忽略键盘事件:", direction)
-            return
-        }
+
+        // 其他方向键正常处理
         console.log("✅ [MotorControlPage] 接收键盘事件:", direction)
         navigationManager.handleDirectionKey(direction)
     }
