@@ -71,13 +71,14 @@ SpinBox {
         selectedTextColor: "#FFFFFF"
         selectionColor: "#2196F3"
 
-        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.2]: Qt会自动显示虚拟键盘，只需要设置焦点
+        // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.3]: Qt会自动显示虚拟键盘，需要给 TextInput 设置焦点
         MouseArea {
             anchors.fill: parent
             enabled: root.editable && root.enabled
             onClicked: {
-                root.forceActiveFocus()  // Qt会自动显示虚拟键盘
-                // ❌ 2026-02-02 [移除]: 不再需要手动调用 keyboardManager.openKeyboardForField
+                // ✅ 关键：必须给 TextInput 设置焦点，而不是 SpinBox
+                textInput.forceActiveFocus()
+                console.log("✅ [CustomSpinBox] TextInput 获得焦点，Qt会自动显示虚拟键盘")
             }
             // 允许文本选择
             onPressed: mouse.accepted = false
@@ -119,6 +120,12 @@ SpinBox {
             color: "#E0E0E0"
             anchors.centerIn: parent
         }
+    }
+
+    // ✅ 2026-02-02 [FIX 100.300.112.8.25.7.3]: 添加激活虚拟键盘的函数
+    function activateVirtualKeyboard() {
+        textInput.forceActiveFocus()
+        console.log("✅ [CustomSpinBox] activateVirtualKeyboard() 调用，TextInput 获得焦点")
     }
 
     // ✅ 2026-01-28 [虚拟键盘集成]: 自动注册到键盘管理器
