@@ -52,48 +52,45 @@ Rectangle {
             }
         }
 
-        // ========== 2. 发送区（占位符）==========
-        Rectangle {
+        // ========== 2. 发送区 ==========
+        Loader {
+            id: sendSection
             Layout.fillWidth: true
             Layout.preferredHeight: 120
-            color: "#2c3e50"
-            radius: 8
+            source: "SerialPortSendSection.qml"
 
-            Text {
-                text: "发送区（Phase 3 实现）"
-                font.pixelSize: 14
-                color: "#9E9E9E"
-                anchors.centerIn: parent
+            onLoaded: {
+                console.log("✅ [SerialPortConfigPanel] SerialPortSendSection 加载成功")
+                // 传递当前串口信息
+                item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
             }
         }
 
-        // ========== 3. 接收区（占位符）==========
-        Rectangle {
+        // ========== 3. 接收区 ==========
+        Loader {
+            id: receiveSection
             Layout.fillWidth: true
             Layout.preferredHeight: 200
-            color: "#2c3e50"
-            radius: 8
+            source: "SerialPortReceiveSection.qml"
 
-            Text {
-                text: "接收区（Phase 3 实现）"
-                font.pixelSize: 14
-                color: "#9E9E9E"
-                anchors.centerIn: parent
+            onLoaded: {
+                console.log("✅ [SerialPortConfigPanel] SerialPortReceiveSection 加载成功")
+                // 传递当前串口信息
+                item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
             }
         }
 
-        // ========== 4. MODBUS寄存器操作（占位符）==========
-        Rectangle {
+        // ========== 4. MODBUS寄存器操作 ==========
+        Loader {
+            id: modbusSection
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: "#2c3e50"
-            radius: 8
+            source: "ModbusRegisterSection.qml"
 
-            Text {
-                text: "MODBUS 寄存器操作（Phase 4 实现）"
-                font.pixelSize: 14
-                color: "#9E9E9E"
-                anchors.centerIn: parent
+            onLoaded: {
+                console.log("✅ [SerialPortConfigPanel] ModbusRegisterSection 加载成功")
+                // 传递当前串口信息
+                item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
             }
         }
     }
