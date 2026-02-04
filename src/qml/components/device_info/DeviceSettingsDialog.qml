@@ -55,15 +55,6 @@ Item {
         focus: true  // FocusScope 获取焦点
         z: 1000  // 在遮罩上方
 
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.4]: 监听焦点变化
-        onActiveFocusItemChanged: {
-            console.log("🔍 [FocusScope] activeFocusItem 变化:", activeFocusItem)
-            if (activeFocusItem) {
-                console.log("   - objectName:", activeFocusItem.objectName)
-                console.log("   - toString:", activeFocusItem.toString())
-            }
-        }
-
         Rectangle {
             id: root
             objectName: "deviceSettingsDialog"  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 添加 objectName 供 CustomComboBox 查找
@@ -144,6 +135,31 @@ Item {
         dialogFocusScope.forceActiveFocus()
         root.forceActiveFocus()
         console.log("✅ [DeviceSettingsDialog] 对话框已获取焦点")
+
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.4]: 添加焦点追踪
+        // 使用 Qt.application.focusObject 追踪全局焦点变化
+        focusTracker.start()
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.4]: 焦点追踪 Timer
+    Timer {
+        id: focusTracker
+        interval: 100  // 每100ms检查一次
+        running: false
+        repeat: true
+        property var lastFocusObject: null
+
+        onTriggered: {
+            var currentFocus = root.Window.activeFocusItem
+            if (currentFocus !== lastFocusObject) {
+                console.log("🔍 [焦点追踪] Window.activeFocusItem 变化:", currentFocus)
+                if (currentFocus) {
+                    console.log("   - objectName:", currentFocus.objectName)
+                    console.log("   - toString:", currentFocus.toString())
+                }
+                lastFocusObject = currentFocus
+            }
+        }
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 导航处理函数，供 CustomComboBox 直接调用
