@@ -16,7 +16,8 @@ Rectangle {
     // ========== 公开属性 ==========
     property int currentSerialIndex: 0  // 当前选中的串口索引 (0-5)
     property int focusItemIndex: -1     // 导航焦点索引
-    property int focusSubArea: 0        // 焦点子区域 (0:列表 1:参数 2:按钮)
+    property int focusSubArea: 0        // 焦点子区域 (0:列表 1:Tab栏 2:参数 3:按钮)
+    property int focusTabIndex: -1      // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: Tab 焦点索引
     property int focusParamIndex: 0     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: 参数焦点索引
     property int focusButtonIndex: 0    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: 按钮焦点索引
 
@@ -30,20 +31,41 @@ Rectangle {
     signal requestReturnToCategory()  // ✅ 请求返回到左侧类别
 
     // ========== 函数 ==========
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 修改 getParamFieldCount 函数
-    // 返回参数区域的可导航元素数量（参考 SwitchInputPage）
-    // 布局：2列4行 + 2按钮，索引连续 0-9
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 修改 getParamFieldCount 函数
+    // 返回当前 Tab 的参数数量（动态获取）
     function getParamFieldCount() {
-        return 10  // 10个可导航元素（索引0-9）
+        if (!serialConfigPanel.item) {
+            console.warn("⚠️ [SerialPortControlPage] SerialPortConfigPanel 未加载")
+            return 0
+        }
+
+        var currentTab = serialConfigPanel.item.getCurrentTab()
+        if (!currentTab) {
+            console.warn("⚠️ [SerialPortControlPage] 当前 Tab 未加载")
+            return 0
+        }
+
+        if (typeof currentTab.getParamFieldCount === "function") {
+            return currentTab.getParamFieldCount()
+        }
+
+        // 默认参数数量（根据 Tab 索引）
+        switch(root.focusTabIndex) {
+        case 0:  // 参数配置
+            return 10
+        case 1:  // 发送区
+            return 5
+        case 2:  // 接收区
+            return 5
+        case 3:  // MODBUS寄存器
+            return 8
+        default:
+            return 0
+        }
     }
 
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 重新规划导航索引（参考 SwitchInputPage）
-    // 布局：2列4行 + 2按钮，索引连续 0-9
-    // Row 0: [0]串口名称(只读)  [1]波特率(可编辑)
-    // Row 1: [2]设备路径(只读)  [3]数据位(可编辑)
-    // Row 2: [4]串口类型(只读)  [5]停止位(可编辑)
-    // Row 3: [6]校验位(可编辑)  [7]状态(只读)
-    // Row 4: [8]打开串口(按钮)  [9]关闭串口(按钮)
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 修改 triggerParamInput 函数
+    // 调用当前 Tab 的 triggerParamInput 方法
     function triggerParamInput(index) {
         console.log("✅ [SerialPortControlPage] triggerParamInput - 参数索引:", index)
 
@@ -52,48 +74,17 @@ Rectangle {
             return
         }
 
-        if (!serialConfigPanel.item.paramsSection.item) {
-            console.error("❌ [SerialPortControlPage] SerialPortParamsSection 未加载")
+        var currentTab = serialConfigPanel.item.getCurrentTab()
+        if (!currentTab) {
+            console.error("❌ [SerialPortControlPage] 当前 Tab 未加载")
             return
         }
 
-        var paramsSection = serialConfigPanel.item.paramsSection.item
-
-        // 根据索引触发对应的输入控件
-        switch(index) {
-        case 0:  // 串口名称（只读，但可以有焦点）
-            paramsSection.focusSerialName()
-            break
-        case 1:  // 波特率 (ComboBox)
-            paramsSection.focusBaudRate()
-            break
-        case 2:  // 设备路径（只读，但可以有焦点）
-            paramsSection.focusDevicePath()
-            break
-        case 3:  // 数据位 (ComboBox)
-            paramsSection.focusDataBits()
-            break
-        case 4:  // 串口类型（只读，但可以有焦点）
-            paramsSection.focusSerialType()
-            break
-        case 5:  // 停止位 (ComboBox)
-            paramsSection.focusStopBits()
-            break
-        case 6:  // 校验位 (ComboBox)
-            paramsSection.focusParity()
-            break
-        case 7:  // 状态（只读，但可以有焦点）
-            paramsSection.focusStatus()
-            break
-        case 8:  // 打开串口按钮
-            paramsSection.focusOpenButton()
-            break
-        case 9:  // 关闭串口按钮
-            paramsSection.focusCloseButton()
-            break
-        default:
-            console.warn("⚠️ [SerialPortControlPage] 未知的参数索引:", index)
-            break
+        // 调用当前 Tab 的 triggerParamInput 方法
+        if (typeof currentTab.triggerParamInput === "function") {
+            currentTab.triggerParamInput(index)
+        } else {
+            console.warn("⚠️ [SerialPortControlPage] 当前 Tab 没有 triggerParamInput 方法")
         }
     }
 
@@ -133,18 +124,20 @@ Rectangle {
 
         // 初始化：从串口列表区开始
         Component.onCompleted: {
-            currentArea = areaMotorList  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.10]: 使用 areaMotorList（通用列表区域）
-            motorListIndex = 0  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.9]: 使用 motorListIndex（通用列表索引）
-            paramIndex = 0  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 初始参数索引改为0（串口名称）
+            currentArea = areaMotorList  // ✅ 使用 areaMotorList（通用列表区域）
+            motorListIndex = 0  // ✅ 使用 motorListIndex（通用列表索引）
+            tabIndex = 0  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 初始 Tab 索引
+            paramIndex = 0  // ✅ 初始参数索引
             buttonIndex = 0
-            skipTabArea = true  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.12]: 串口控制页面没有Tab区域
+            skipTabArea = false  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 支持 Tab 导航
 
-            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 设置 lastParamIndex
-            // 串口参数区域有10个参数（索引0-9）：
-            // 0=串口名称, 1=波特率, 2=设备路径, 3=数据位, 4=串口类型, 5=停止位,
-            // 6=校验位, 7=状态, 8=打开串口按钮, 9=关闭串口按钮
-            // 最大索引是9
-            updateLastParamIndex(10)  // 参数数量=10，最大索引=9
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 动态更新 lastParamIndex
+            // 根据当前 Tab 的参数数量更新
+            Qt.callLater(function() {
+                var paramCount = root.getParamFieldCount()
+                updateLastParamIndex(paramCount)
+                console.log("✅ [SerialPortControlPage] 初始参数数量:", paramCount)
+            })
 
             console.log("✅ [SerialPortControlPage] NavigationManager 初始化完成")
 
@@ -152,22 +145,35 @@ Rectangle {
             root.currentSerialIndex = 0
             root.focusItemIndex = 0
             root.focusSubArea = 0
+            root.focusTabIndex = 0
             root.focusParamIndex = 0
             root.focusButtonIndex = 0
         }
 
         // 监听串口列表索引变化
-        onMotorListIndexChanged: {  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.9]: 使用 motorListIndex（通用列表索引）
+        onMotorListIndexChanged: {
             console.log("✅ [SerialPortControlPage] 串口列表索引变化:", motorListIndex)
             root.currentSerialIndex = motorListIndex
             root.focusItemIndex = motorListIndex
+        }
+
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 监听 Tab 索引变化
+        onTabIndexChanged: {
+            console.log("✅ [SerialPortControlPage] Tab 索引变化:", tabIndex)
+            root.focusTabIndex = tabIndex
+            // 更新 lastParamIndex
+            Qt.callLater(function() {
+                var paramCount = root.getParamFieldCount()
+                updateLastParamIndex(paramCount)
+                console.log("✅ [SerialPortControlPage] Tab 切换后参数数量:", paramCount)
+            })
         }
 
         // 监听参数索引变化
         onParamIndexChanged: {
             console.log("✅ [SerialPortControlPage] 参数索引变化:", paramIndex)
             root.focusParamIndex = paramIndex
-            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.11]: 调用 triggerParamInput 设置焦点
+            // ✅ 调用 triggerParamInput 设置焦点
             root.triggerParamInput(paramIndex)
         }
 
@@ -181,24 +187,34 @@ Rectangle {
         onAreaChanged: function(newArea) {
             console.log("✅ [SerialPortControlPage] 区域变化:", newArea)
             switch(newArea) {
-            case areaMotorList:  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.10]: 使用 areaMotorList（通用列表区域）
+            case areaMotorList:  // 列表区域
                 root.focusSubArea = 0
-                root.focusItemIndex = motorListIndex  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.9]: 使用 motorListIndex
+                root.focusItemIndex = motorListIndex
+                root.focusTabIndex = -1
                 root.focusParamIndex = -1
                 root.focusButtonIndex = -1
                 break
-            case areaParams:
+            case areaTabBar:  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: Tab 栏区域
                 root.focusSubArea = 1
+                root.focusTabIndex = tabIndex
+                root.focusItemIndex = -1
+                root.focusParamIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaParams:  // 参数区域
+                root.focusSubArea = 2
                 root.focusParamIndex = paramIndex
                 root.focusItemIndex = -1
+                root.focusTabIndex = -1
                 root.focusButtonIndex = -1
-                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.13]: 强制触发焦点设置
+                // ✅ 强制触发焦点设置
                 root.triggerParamInput(paramIndex)
                 break
-            case areaButtons:
-                root.focusSubArea = 2
+            case areaButtons:  // 按钮区域
+                root.focusSubArea = 3
                 root.focusButtonIndex = buttonIndex
                 root.focusItemIndex = -1
+                root.focusTabIndex = -1
                 root.focusParamIndex = -1
                 break
             }
@@ -242,74 +258,341 @@ Rectangle {
     }
 
     // ========== 主布局 ==========
-    RowLayout {
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 5]: 改为 ColumnLayout，添加底部按钮区域
+    ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        // ========== 左侧：串口列表 ==========
-        Loader {
-            id: serialListPanel
-            Layout.preferredWidth: 240
-            Layout.fillHeight: true
-            source: "SerialPortListPanel.qml"
-
-            onLoaded: {
-                console.log("✅ [SerialPortControlPage] SerialPortListPanel 加载成功")
-
-                // 传递属性
-                item.serialPorts = Qt.binding(function() { return root.serialPorts })
-                item.currentSerialIndex = Qt.binding(function() { return root.currentSerialIndex })
-                item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
-                item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
-
-                // ✅ 连接信号：鼠标点击时同步焦点
-                item.serialPortSelected.connect(function(index) {
-                    console.log("✅ [SerialPortControlPage] 串口选中:", index)
-                    root.currentSerialIndex = index
-                    root.focusItemIndex = index  // ✅ 同步焦点索引
-                    root.focusSubArea = 0  // ✅ 确保在列表区域
-                    root.serialPortSelected(index)
-                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.4]: 移除 forceActiveFocus()
-                    // 原因：不应该让 SerialPortControlPage 获得焦点，焦点应该由 DeviceSettingsDialog 管理
-                })
-            }
-        }
-
-        // ========== 分隔线 ==========
-        Rectangle {
-            Layout.preferredWidth: 2
-            Layout.fillHeight: true
-            color: "#3d4556"
-        }
-
-        // ========== 右侧：串口配置和操作区域 ==========
-        Loader {
-            id: serialConfigPanel
+        // ========== 上部：列表和配置区域 ==========
+        RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            source: "SerialPortConfigPanel.qml"
+            spacing: 0
 
-            // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.9]: 监听 Loader 状态
-            onStatusChanged: {
-                console.log("🔍 [SerialPortControlPage] serialConfigPanel Loader 状态变化:", status)
-                if (status === Loader.Error) {
-                    console.error("❌ [SerialPortControlPage] serialConfigPanel Loader 加载失败")
-                } else if (status === Loader.Ready) {
-                    console.log("✅ [SerialPortControlPage] serialConfigPanel Loader 加载完成")
-                } else if (status === Loader.Loading) {
-                    console.log("🔄 [SerialPortControlPage] serialConfigPanel Loader 加载中...")
-                } else if (status === Loader.Null) {
-                    console.log("⚠️ [SerialPortControlPage] serialConfigPanel Loader 状态为 Null")
+            // ========== 左侧：串口列表 ==========
+            Loader {
+                id: serialListPanel
+                Layout.preferredWidth: 240
+                Layout.fillHeight: true
+                source: "SerialPortListPanel.qml"
+
+                onLoaded: {
+                    console.log("✅ [SerialPortControlPage] SerialPortListPanel 加载成功")
+
+                    // 传递属性
+                    item.serialPorts = Qt.binding(function() { return root.serialPorts })
+                    item.currentSerialIndex = Qt.binding(function() { return root.currentSerialIndex })
+                    item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
+                    item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+
+                    // ✅ 连接信号：鼠标点击时同步焦点
+                    item.serialPortSelected.connect(function(index) {
+                        console.log("✅ [SerialPortControlPage] 串口选中:", index)
+                        root.currentSerialIndex = index
+                        root.focusItemIndex = index  // ✅ 同步焦点索引
+                        root.focusSubArea = 0  // ✅ 确保在列表区域
+                        root.serialPortSelected(index)
+                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.4]: 移除 forceActiveFocus()
+                        // 原因：不应该让 SerialPortControlPage 获得焦点，焦点应该由 DeviceSettingsDialog 管理
+                    })
                 }
             }
 
-            onLoaded: {
-                console.log("✅ [SerialPortControlPage] SerialPortConfigPanel 加载成功")
+            // ========== 分隔线 ==========
+            Rectangle {
+                Layout.preferredWidth: 2
+                Layout.fillHeight: true
+                color: "#3d4556"
+            }
 
-                // 传递属性
-                item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
-                // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.4]: 传递 focusSubArea
-                item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+            // ========== 右侧：串口配置和操作区域 ==========
+            Loader {
+                id: serialConfigPanel
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                source: "SerialPortConfigPanel.qml"
+
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.9]: 监听 Loader 状态
+                onStatusChanged: {
+                    console.log("🔍 [SerialPortControlPage] serialConfigPanel Loader 状态变化:", status)
+                    if (status === Loader.Error) {
+                        console.error("❌ [SerialPortControlPage] serialConfigPanel Loader 加载失败")
+                    } else if (status === Loader.Ready) {
+                        console.log("✅ [SerialPortControlPage] serialConfigPanel Loader 加载完成")
+                    } else if (status === Loader.Loading) {
+                        console.log("🔄 [SerialPortControlPage] serialConfigPanel Loader 加载中...")
+                    } else if (status === Loader.Null) {
+                        console.log("⚠️ [SerialPortControlPage] serialConfigPanel Loader 状态为 Null")
+                    }
+                }
+
+                onLoaded: {
+                    console.log("✅ [SerialPortControlPage] SerialPortConfigPanel 加载成功")
+
+                    // 传递属性
+                    item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 传递焦点管理属性
+                    item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+                    item.focusTabIndex = Qt.binding(function() { return root.focusTabIndex })
+                    item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 传递虚拟键盘引用
+                    item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 连接信号，转发焦点更新
+                    item.requestFocusParamIndex.connect(function(paramIndex) {
+                        console.log("✅ [SerialPortControlPage] 收到焦点请求:", paramIndex)
+                        root.focusParamIndex = paramIndex
+                        navigationManager.paramIndex = paramIndex
+                    })
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 监听 currentTabIndex 变化
+                    item.onCurrentTabIndexChanged.connect(function() {
+                        console.log("✅ [SerialPortControlPage] Tab 切换:", item.currentTabIndex)
+                        navigationManager.tabIndex = item.currentTabIndex
+                    })
+                }
+            }
+        }
+
+        // ========== 底部：按钮区域 ==========
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 5]: 添加底部按钮区域
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 90  // 两行按钮，每行35高度 + 间距
+            color: "#1a1f2e"
+
+            // 装饰边框
+            Rectangle {
+                anchors.top: parent.top
+                width: parent.width
+                height: 2
+                color: "#00d4ff"
+                opacity: 0.3
+            }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 10
+
+                // 第一行：打开串口、关闭串口
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Button {
+                        id: openSerialButton
+                        text: "打开串口"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 5]: 焦点指示器
+                            // 焦点时背景色更亮
+                            color: {
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 0) {
+                                    return "#2ecc71"  // 焦点时：亮绿色
+                                } else if (parent.pressed) {
+                                    return "#27ae60"
+                                } else if (parent.hovered) {
+                                    return "#2ecc71"
+                                } else {
+                                    return "#27ae60"
+                                }
+                            }
+                            radius: 4
+                            // 增加边框宽度：5px
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? 5 : 0
+                            border.color: "#2196F3"
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            console.log("✅ [SerialPortControlPage] 打开串口")
+                            // TODO: 实现打开串口功能
+                        }
+                    }
+
+                    Button {
+                        id: closeSerialButton
+                        text: "关闭串口"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 5]: 焦点指示器
+                            // 焦点时背景色更亮
+                            color: {
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 1) {
+                                    return "#e74c3c"  // 焦点时：亮红色
+                                } else if (parent.pressed) {
+                                    return "#c0392b"
+                                } else if (parent.hovered) {
+                                    return "#e74c3c"
+                                } else {
+                                    return "#c0392b"
+                                }
+                            }
+                            radius: 4
+                            // 增加边框宽度：5px
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 1 ? 5 : 0
+                            border.color: "#2196F3"
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            console.log("✅ [SerialPortControlPage] 关闭串口")
+                            // TODO: 实现关闭串口功能
+                        }
+                    }
+                }
+
+                // 第二行：保存、删除、重置
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Button {
+                        id: saveButton
+                        text: "保存"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 5]: 焦点指示器
+                            // 焦点时背景色更亮
+                            color: {
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 2) {
+                                    return "#2ecc71"  // 焦点时：亮绿色
+                                } else if (parent.pressed) {
+                                    return "#27ae60"
+                                } else if (parent.hovered) {
+                                    return "#2ecc71"
+                                } else {
+                                    return "#27ae60"
+                                }
+                            }
+                            radius: 4
+                            // 增加边框宽度：5px
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? 5 : 0
+                            border.color: "#2196F3"
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            console.log("✅ [SerialPortControlPage] 保存")
+                            // TODO: 实现保存功能
+                        }
+                    }
+
+                    Button {
+                        id: deleteButton
+                        text: "删除"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 5]: 焦点指示器
+                            // 焦点时背景色更亮
+                            color: {
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 3) {
+                                    return "#e74c3c"  // 焦点时：亮红色
+                                } else if (parent.pressed) {
+                                    return "#c0392b"
+                                } else if (parent.hovered) {
+                                    return "#e74c3c"
+                                } else {
+                                    return "#d35400"
+                                }
+                            }
+                            radius: 4
+                            // 增加边框宽度：5px
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 3 ? 5 : 0
+                            border.color: "#2196F3"
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            console.log("✅ [SerialPortControlPage] 删除")
+                            // TODO: 实现删除功能
+                        }
+                    }
+
+                    Button {
+                        id: resetButton
+                        text: "重置"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 5]: 焦点指示器
+                            // 焦点时背景色更亮
+                            color: {
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 4) {
+                                    return "#3498db"  // 焦点时：亮蓝色
+                                } else if (parent.pressed) {
+                                    return "#2980b9"
+                                } else if (parent.hovered) {
+                                    return "#3498db"
+                                } else {
+                                    return "#2980b9"
+                                }
+                            }
+                            radius: 4
+                            // 增加边框宽度：5px
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 4 ? 5 : 0
+                            border.color: "#2196F3"
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            console.log("✅ [SerialPortControlPage] 重置")
+                            // TODO: 实现重置功能
+                        }
+                    }
+                }
             }
         }
     }

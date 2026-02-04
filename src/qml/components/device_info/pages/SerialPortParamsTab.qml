@@ -1,0 +1,689 @@
+// SerialPortParamsTab.qml
+// 串口参数配置 Tab
+// ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 2]: 从 SerialPortParamsSection.qml 重命名
+// 原因：采用 Tab 架构，每个 Tab 内部独立管理滚动
+// 创建日期: 2026-02-04
+
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import ".." as DeviceInfo
+
+Rectangle {
+    id: root
+    color: "transparent"
+
+    // ========== 公开属性 ==========
+    property var currentSerialPort: null  // 当前串口信息
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 2]: 新增属性
+    property int focusParamIndex: 0  // 参数焦点索引
+    property var virtualKeyboard: null  // 虚拟键盘引用
+
+    // ========== 信号 ==========
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 2]: 添加焦点请求信号
+    signal requestFocusParamIndex(int paramIndex)
+
+    // ========== 焦点函数（10个参数）==========
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 添加所有焦点函数（参考 SwitchInputPage）
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36]: 简化焦点函数，移除 ScrollView 控制
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 2]: ScrollView 只包裹单个 Tab，不会触发自动滚动
+
+    // 索引 0: 串口名称（只读）
+    function focusSerialName() {
+        console.log("✅ [SerialPortParamsTab] 串口名称获得焦点")
+        serialNameText.forceActiveFocus()
+    }
+
+    // 索引 1: 波特率（可编辑）
+    function focusBaudRate() {
+        console.log("✅ [SerialPortParamsTab] 波特率获得焦点")
+        baudRateCombo.forceActiveFocus()
+    }
+
+    // 索引 2: 设备路径（只读）
+    function focusDevicePath() {
+        console.log("✅ [SerialPortParamsTab] 设备路径获得焦点")
+        devicePathText.forceActiveFocus()
+    }
+
+    // 索引 3: 数据位（可编辑）
+    function focusDataBits() {
+        console.log("✅ [SerialPortParamsTab] 数据位获得焦点")
+        dataBitsCombo.forceActiveFocus()
+    }
+
+    // 索引 4: 串口类型（只读）
+    function focusSerialType() {
+        console.log("✅ [SerialPortParamsTab] 串口类型获得焦点")
+        serialTypeText.forceActiveFocus()
+    }
+
+    // 索引 5: 停止位（可编辑）
+    function focusStopBits() {
+        console.log("✅ [SerialPortParamsTab] 停止位获得焦点")
+        stopBitsCombo.forceActiveFocus()
+    }
+
+    // 索引 6: 校验位（可编辑）
+    function focusParity() {
+        console.log("✅ [SerialPortParamsTab] 校验位获得焦点")
+        parityCombo.forceActiveFocus()
+    }
+
+    // 索引 7: 状态（只读）
+    function focusStatus() {
+        console.log("✅ [SerialPortParamsTab] 状态获得焦点")
+        statusText.forceActiveFocus()
+    }
+
+    // 索引 8: 打开串口按钮
+    function focusOpenButton() {
+        console.log("✅ [SerialPortParamsTab] 打开串口按钮获得焦点")
+        openButton.forceActiveFocus()
+    }
+
+    // 索引 9: 关闭串口按钮
+    function focusCloseButton() {
+        console.log("✅ [SerialPortParamsTab] 关闭串口按钮获得焦点")
+        closeButton.forceActiveFocus()
+    }
+
+    // ========== 新增函数 ==========
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 2]: 添加 triggerParamInput() 函数
+    function triggerParamInput(paramIndex) {
+        console.log("✅ [SerialPortParamsTab] 触发参数输入 - 索引:", paramIndex)
+
+        var inputField = null
+
+        switch(paramIndex) {
+        case 0:  // 串口名称（只读）
+            // 不需要输入
+            break
+        case 1:  // 波特率
+            inputField = baudRateCombo
+            break
+        case 2:  // 设备路径（只读）
+            // 不需要输入
+            break
+        case 3:  // 数据位
+            inputField = dataBitsCombo
+            break
+        case 4:  // 串口类型（只读）
+            // 不需要输入
+            break
+        case 5:  // 停止位
+            inputField = stopBitsCombo
+            break
+        case 6:  // 校验位
+            inputField = parityCombo
+            break
+        case 7:  // 状态（只读）
+            // 不需要输入
+            break
+        case 8:  // 打开串口按钮
+            inputField = openButton
+            break
+        case 9:  // 关闭串口按钮
+            inputField = closeButton
+            break
+        }
+
+        // 激活虚拟键盘
+        if (inputField) {
+            if (inputField.activateVirtualKeyboard) {
+                inputField.activateVirtualKeyboard()
+            } else {
+                inputField.forceActiveFocus()
+            }
+        }
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 2]: 添加 getParamFieldCount() 函数
+    function getParamFieldCount() {
+        return 10  // 10个参数
+    }
+
+    // ========== 组件加载完成 ==========
+    Component.onCompleted: {
+        console.log("✅ [SerialPortParamsTab] Component.onCompleted 开始")
+        if (currentSerialPort) {
+            console.log("✅ [SerialPortParamsTab] 当前串口:", currentSerialPort.name)
+        }
+        console.log("✅ [SerialPortParamsTab] Component.onCompleted 完成")
+    }
+
+    // ========== 监听串口变化 ==========
+    onCurrentSerialPortChanged: {
+        if (currentSerialPort) {
+            console.log("✅ [SerialPortParamsTab] 串口切换:", currentSerialPort.name)
+            // 更新显示
+            serialNameText.text = currentSerialPort.name
+            devicePathText.text = currentSerialPort.path
+            serialTypeText.text = currentSerialPort.type
+        }
+    }
+
+    // ========== 主布局 ==========
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 2]: 添加 ScrollView 包裹参数区域
+    // 原因：每个 Tab 内部独立管理滚动，不会触发 Qt 的 ensureVisible() 导致焦点丢失
+    ScrollView {
+        id: paramScrollView
+        anchors.fill: parent
+        clip: true
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+        GridLayout {
+            width: paramScrollView.width * 0.9  // 90% 宽度
+            anchors.horizontalCenter: parent.horizontalCenter
+            columns: 4
+            columnSpacing: 16
+            rowSpacing: 12
+
+            // ========== 第1行：串口名称 | 波特率 ==========
+
+            // 串口名称标签
+            Text {
+                text: "串口名称:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 0
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 串口名称值（只读）
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36]: 改为 TextField（readOnly: true）
+            // 原因：Text 元素不是设计用于接收焦点的，会触发 Qt 的自动滚动导致焦点丢失
+            // 参考：电机配置界面使用 TextField，焦点正常工作
+            Item {
+                Layout.column: 1
+                Layout.row: 0
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                Layout.preferredHeight: 40
+
+                TextField {
+                    id: serialNameText
+                    anchors.fill: parent
+                    text: currentSerialPort ? currentSerialPort.name : ""
+                    font.pixelSize: 21
+                    color: "#E0E0E0"
+                    verticalAlignment: Text.AlignVCenter
+
+                    // ✅ 设置为只读
+                    readOnly: true
+
+                    // ✅ 允许接收焦点
+                    focus: true
+                    activeFocusOnTab: true
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.1]: 禁用输入法，防止触发滚动
+                    inputMethodHints: Qt.ImhNone
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.2]: 禁用 TextField 的自动滚动
+                    autoScroll: false
+
+                    // ✅ 透明背景，模拟 Text 外观
+                    background: Rectangle {
+                        color: "transparent"
+                        border.width: 0
+                    }
+
+                    // ✅ 焦点指示器
+                    Rectangle {
+                        id: serialNameFocusIndicator
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        color: "transparent"
+                        border.color: parent.activeFocus ? "#2196F3" : "transparent"
+                        border.width: parent.activeFocus ? 3 : 0
+                        radius: 4
+                        z: 10
+                    }
+                }
+            }
+
+            // 波特率标签
+            Text {
+                text: "波特率:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 0
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 波特率下拉框
+            Item {
+                Layout.column: 3
+                Layout.row: 0
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: baudRateCombo.implicitHeight
+
+                DeviceInfo.CustomComboBox {
+                    id: baudRateCombo
+                    anchors.fill: parent
+                    model: ["1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"]
+                    currentIndex: 3  // 默认9600
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 设置父组件引用
+                    Component.onCompleted: {
+                        // 向上查找 DeviceSettingsDialog
+                        var parent = baudRateCombo.parent
+                        while (parent) {
+                            if (parent.objectName === "deviceSettingsDialog") {
+                                baudRateCombo.parentDialog = parent
+                                console.log("✅ [CustomComboBox] 找到 DeviceSettingsDialog，设置 parentDialog")
+                                break
+                            }
+                            parent = parent.parent
+                        }
+
+                        if (!baudRateCombo.parentDialog) {
+                            console.log("⚠️ [CustomComboBox] 未找到 DeviceSettingsDialog")
+                        }
+                    }
+                }
+
+                // ✅ 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: baudRateCombo.activeFocus ? "#2196F3" : "transparent"
+                    border.width: baudRateCombo.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
+            }
+
+            // ========== 第2行：设备路径 | 数据位 ==========
+
+            // 设备路径标签
+            Text {
+                text: "设备路径:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 1
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 设备路径值（只读）
+            Item {
+                Layout.column: 1
+                Layout.row: 1
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                Layout.preferredHeight: 40
+
+                TextField {
+                    id: devicePathText
+                    anchors.fill: parent
+                    text: currentSerialPort ? currentSerialPort.path : ""
+                    font.pixelSize: 21
+                    color: "#9E9E9E"
+                    verticalAlignment: Text.AlignVCenter
+
+                    readOnly: true
+                    focus: true
+                    activeFocusOnTab: true
+                    autoScroll: false
+
+                    background: Rectangle {
+                        color: "transparent"
+                        border.width: 0
+                    }
+
+                    // ✅ 焦点指示器
+                    Rectangle {
+                        id: devicePathFocusIndicator
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        color: "transparent"
+                        border.color: parent.activeFocus ? "#2196F3" : "transparent"
+                        border.width: parent.activeFocus ? 3 : 0
+                        radius: 4
+                        z: 10
+                    }
+                }
+            }
+
+            // 数据位标签
+            Text {
+                text: "数据位:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 1
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 数据位下拉框
+            Item {
+                Layout.column: 3
+                Layout.row: 1
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: dataBitsCombo.implicitHeight
+
+                DeviceInfo.CustomComboBox {
+                    id: dataBitsCombo
+                    anchors.fill: parent
+                    model: ["5", "6", "7", "8"]
+                    currentIndex: 3  // 默认8
+
+                    Component.onCompleted: {
+                        var parent = dataBitsCombo.parent
+                        while (parent) {
+                            if (parent.objectName === "deviceSettingsDialog") {
+                                dataBitsCombo.parentDialog = parent
+                                console.log("✅ [CustomComboBox] dataBitsCombo 找到 DeviceSettingsDialog")
+                                break
+                            }
+                            parent = parent.parent
+                        }
+                    }
+                }
+
+                // ✅ 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: dataBitsCombo.activeFocus ? "#2196F3" : "transparent"
+                    border.width: dataBitsCombo.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
+            }
+
+            // ========== 第3行：串口类型 | 停止位 ==========
+
+            // 串口类型标签
+            Text {
+                text: "串口类型:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 2
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 串口类型值（只读）
+            Item {
+                Layout.column: 1
+                Layout.row: 2
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                Layout.preferredHeight: 40
+
+                TextField {
+                    id: serialTypeText
+                    anchors.fill: parent
+                    text: currentSerialPort ? currentSerialPort.type : ""
+                    font.pixelSize: 21
+                    color: "#E0E0E0"
+                    verticalAlignment: Text.AlignVCenter
+
+                    readOnly: true
+                    focus: true
+                    activeFocusOnTab: true
+                    autoScroll: false
+
+                    background: Rectangle {
+                        color: "transparent"
+                        border.width: 0
+                    }
+
+                    // ✅ 焦点指示器
+                    Rectangle {
+                        id: serialTypeFocusIndicator
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        color: "transparent"
+                        border.color: parent.activeFocus ? "#2196F3" : "transparent"
+                        border.width: parent.activeFocus ? 3 : 0
+                        radius: 4
+                        z: 10
+                    }
+                }
+            }
+
+            // 停止位标签
+            Text {
+                text: "停止位:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 2
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 停止位下拉框
+            Item {
+                Layout.column: 3
+                Layout.row: 2
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: stopBitsCombo.implicitHeight
+
+                DeviceInfo.CustomComboBox {
+                    id: stopBitsCombo
+                    anchors.fill: parent
+                    model: ["1", "1.5", "2"]
+                    currentIndex: 0  // 默认1
+
+                    Component.onCompleted: {
+                        var parent = stopBitsCombo.parent
+                        while (parent) {
+                            if (parent.objectName === "deviceSettingsDialog") {
+                                stopBitsCombo.parentDialog = parent
+                                console.log("✅ [CustomComboBox] stopBitsCombo 找到 DeviceSettingsDialog")
+                                break
+                            }
+                            parent = parent.parent
+                        }
+                    }
+                }
+
+                // ✅ 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: stopBitsCombo.activeFocus ? "#2196F3" : "transparent"
+                    border.width: stopBitsCombo.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
+            }
+
+            // ========== 第4行：校验位 | 状态 ==========
+
+            // 校验位标签
+            Text {
+                text: "校验位:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 3
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 校验位下拉框
+            Item {
+                Layout.column: 1
+                Layout.row: 3
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: parityCombo.implicitHeight
+
+                DeviceInfo.CustomComboBox {
+                    id: parityCombo
+                    anchors.fill: parent
+                    model: ["None", "Odd", "Even", "Mark", "Space"]
+                    currentIndex: 0  // 默认None
+
+                    Component.onCompleted: {
+                        var parent = parityCombo.parent
+                        while (parent) {
+                            if (parent.objectName === "deviceSettingsDialog") {
+                                parityCombo.parentDialog = parent
+                                console.log("✅ [CustomComboBox] parityCombo 找到 DeviceSettingsDialog")
+                                break
+                            }
+                            parent = parent.parent
+                        }
+                    }
+                }
+
+                // ✅ 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: parityCombo.activeFocus ? "#2196F3" : "transparent"
+                    border.width: parityCombo.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
+            }
+
+            // 状态标签
+            Text {
+                text: "状态:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 3
+                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 状态指示器
+            Item {
+                Layout.column: 3
+                Layout.row: 3
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                Layout.preferredHeight: 40
+
+                Row {
+                    id: statusText
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    focus: true
+                    activeFocusOnTab: true
+
+                    Rectangle {
+                        width: 12
+                        height: 12
+                        radius: 6
+                        color: "#9E9E9E"  // 默认关闭状态
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        text: "已关闭"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                // ✅ 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    color: "transparent"
+                    border.color: statusText.activeFocus ? "#2196F3" : "transparent"
+                    border.width: statusText.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
+            }
+
+            // ========== 第5行：操作按钮 ==========
+
+            // 空白占位（左侧两列）
+            Item {
+                Layout.column: 0
+                Layout.row: 4
+                Layout.columnSpan: 2
+            }
+
+            // 打开串口按钮
+            Item {
+                Layout.column: 2
+                Layout.row: 4
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: openButton.implicitHeight
+                z: 100
+
+                Button {
+                    id: openButton
+                    anchors.fill: parent
+                    text: "打开串口"
+                    font.pixelSize: 21
+                    enabled: true  // Phase 2 实现后连接到后端
+                    onClicked: {
+                        console.log("✅ [SerialPortParamsTab] 打开串口:", currentSerialPort.name)
+                        // TODO: Phase 2 - 调用后端打开串口
+                    }
+                }
+
+                // ✅ 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    color: "transparent"
+                    border.color: openButton.activeFocus ? "#2196F3" : "transparent"
+                    border.width: openButton.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 200
+                }
+            }
+
+            // 关闭串口按钮
+            Item {
+                Layout.column: 3
+                Layout.row: 4
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: closeButton.implicitHeight
+                z: 100
+
+                Button {
+                    id: closeButton
+                    anchors.fill: parent
+                    text: "关闭串口"
+                    font.pixelSize: 21
+                    enabled: false  // Phase 2 实现后连接到后端
+                    onClicked: {
+                        console.log("✅ [SerialPortParamsTab] 关闭串口:", currentSerialPort.name)
+                        // TODO: Phase 2 - 调用后端关闭串口
+                    }
+                }
+
+                // ✅ 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    color: "transparent"
+                    border.color: closeButton.activeFocus ? "#2196F3" : "transparent"
+                    border.width: closeButton.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 200
+                }
+            }
+        }
+    }
+}
