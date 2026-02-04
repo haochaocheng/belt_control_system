@@ -143,26 +143,19 @@ ComboBox {
         }
     }
 
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.14]: 键盘导航修复
-    // 问题：ComboBox 默认拦截上下键用于选择选项，导致导航失效
-    // 解决：禁用默认键盘行为，只有回车键才打开下拉列表
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.16]: 使用 Qt 6 推荐的函数语法
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.17]: 键盘导航修复（最终方案）
+    // 根本原因：Qt ComboBox 的键盘处理发生在 C++ 层面，在 QML 的 Keys.onUpPressed 之前
+    // 解决方案：在 Keys.onPressed 中提前拦截方向键，阻止 ComboBox 处理
 
-    // 禁用默认的上下键行为
-    Keys.onUpPressed: function(event) {
-        event.accepted = false  // 不处理，让父组件处理导航
-    }
-
-    Keys.onDownPressed: function(event) {
-        event.accepted = false  // 不处理，让父组件处理导航
-    }
-
-    Keys.onLeftPressed: function(event) {
-        event.accepted = false  // 不处理，让父组件处理导航
-    }
-
-    Keys.onRightPressed: function(event) {
-        event.accepted = false  // 不处理，让父组件处理导航
+    // ⚠️ 关键：必须在 Keys.onPressed 中拦截，设置 event.accepted = true
+    // 这样可以阻止 ComboBox 的内部状态改变
+    Keys.onPressed: function(event) {
+        // 拦截方向键，不让 ComboBox 处理
+        if (event.key === Qt.Key_Up || event.key === Qt.Key_Down ||
+            event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
+            event.accepted = true  // ✅ 拦截事件，阻止 ComboBox 处理
+            console.log("✅ [CustomComboBox] 拦截方向键:", event.key)
+        }
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.15]: 回车键循环切换参数值
