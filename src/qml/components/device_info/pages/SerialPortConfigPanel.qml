@@ -50,40 +50,35 @@ Rectangle {
         clip: true
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.34]: 禁用水平滚动条
 
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 监听 contentY 变化
-        onContentYChanged: {
-            console.log("🔍 [ScrollView] contentY 变化:", contentY)
-        }
-
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 监听滚动开始
-        onFlickStarted: {
-            console.log("🔍 [ScrollView] 滚动开始 (flickStarted)")
-            console.log("   - contentY:", contentY)
-        }
-
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 监听滚动结束
-        onFlickEnded: {
-            console.log("🔍 [ScrollView] 滚动结束 (flickEnded)")
-            console.log("   - contentY:", contentY)
-        }
-
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 监听移动开始
-        onMovementStarted: {
-            console.log("🔍 [ScrollView] 移动开始 (movementStarted)")
-            console.log("   - contentY:", contentY)
-        }
-
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 监听移动结束
-        onMovementEnded: {
-            console.log("🔍 [ScrollView] 移动结束 (movementEnded)")
-            console.log("   - contentY:", contentY)
-        }
-
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8.1]: 移除 onInteractiveChanged
-        // ScrollView 没有 interactive 属性，这是 Flickable 的属性
-        // 改用 Connections 监听 interactive 变化
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8.2]: 使用 Connections 监听 Flickable 的所有事件
+        // ScrollView 本身没有这些信号，需要监听 contentItem (Flickable)
         Connections {
             target: scrollView.contentItem  // ScrollView 的 contentItem 是 Flickable
+
+            function onContentYChanged() {
+                console.log("🔍 [ScrollView] contentY 变化:", scrollView.contentItem.contentY)
+            }
+
+            function onFlickStarted() {
+                console.log("🔍 [ScrollView] 滚动开始 (flickStarted)")
+                console.log("   - contentY:", scrollView.contentItem.contentY)
+            }
+
+            function onFlickEnded() {
+                console.log("🔍 [ScrollView] 滚动结束 (flickEnded)")
+                console.log("   - contentY:", scrollView.contentItem.contentY)
+            }
+
+            function onMovementStarted() {
+                console.log("🔍 [ScrollView] 移动开始 (movementStarted)")
+                console.log("   - contentY:", scrollView.contentItem.contentY)
+            }
+
+            function onMovementEnded() {
+                console.log("🔍 [ScrollView] 移动结束 (movementEnded)")
+                console.log("   - contentY:", scrollView.contentItem.contentY)
+            }
+
             function onInteractiveChanged() {
                 console.log("🔍 [ScrollView] interactive 变化:", scrollView.contentItem.interactive)
             }
