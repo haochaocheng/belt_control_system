@@ -179,6 +179,7 @@ ComboBox {
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.16]: 使用 Qt 6 推荐的函数语法
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.22]: 设置 isUserAction 标志
     Keys.onReturnPressed: function(event) {
+        console.log("🔍 [CustomComboBox] 回车键按下 - editable:", root.editable, "enabled:", root.enabled)
         if (root.editable) {
             // 可编辑：打开虚拟键盘
             if (keyboardManager && root.enabled) {
@@ -195,6 +196,33 @@ ComboBox {
                 event.accepted = true
             }
         }
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.27]: 添加方向键处理，让事件传播到父组件
+    // 问题：ComboBox 拦截了方向键，但是我们恢复了索引，导致事件被消耗但焦点没有移动
+    // 解决方案：显式设置 event.accepted = false，让事件传播到父组件处理导航
+    Keys.onUpPressed: function(event) {
+        console.log("🔍 [CustomComboBox] 上键按下 - activeFocus:", root.activeFocus, "currentIndex:", root.currentIndex)
+        event.accepted = false  // 不处理，让父组件处理导航
+        console.log("✅ [CustomComboBox] 上键事件传播到父组件")
+    }
+
+    Keys.onDownPressed: function(event) {
+        console.log("🔍 [CustomComboBox] 下键按下 - activeFocus:", root.activeFocus, "currentIndex:", root.currentIndex)
+        event.accepted = false  // 不处理，让父组件处理导航
+        console.log("✅ [CustomComboBox] 下键事件传播到父组件")
+    }
+
+    Keys.onLeftPressed: function(event) {
+        console.log("🔍 [CustomComboBox] 左键按下 - activeFocus:", root.activeFocus, "currentIndex:", root.currentIndex)
+        event.accepted = false  // 不处理，让父组件处理导航
+        console.log("✅ [CustomComboBox] 左键事件传播到父组件")
+    }
+
+    Keys.onRightPressed: function(event) {
+        console.log("🔍 [CustomComboBox] 右键按下 - activeFocus:", root.activeFocus, "currentIndex:", root.currentIndex)
+        event.accepted = false  // 不处理，让父组件处理导航
+        console.log("✅ [CustomComboBox] 右键事件传播到父组件")
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.15]: Space 键与回车键相同行为
