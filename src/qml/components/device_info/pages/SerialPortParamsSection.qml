@@ -207,6 +207,19 @@ Rectangle {
                     anchors.fill: parent
                     model: ["5", "6", "7", "8"]
                     currentIndex: 3  // 默认8
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 设置父组件引用
+                    Component.onCompleted: {
+                        var parent = dataBitsCombo.parent
+                        while (parent) {
+                            if (parent.objectName === "deviceSettingsDialog") {
+                                dataBitsCombo.parentDialog = parent
+                                console.log("✅ [CustomComboBox] dataBitsCombo 找到 DeviceSettingsDialog")
+                                break
+                            }
+                            parent = parent.parent
+                        }
+                    }
                 }
 
                 // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.1]: 焦点指示器
@@ -273,6 +286,19 @@ Rectangle {
                     anchors.fill: parent
                     model: ["1", "1.5", "2"]
                     currentIndex: 0  // 默认1
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 设置父组件引用
+                    Component.onCompleted: {
+                        var parent = stopBitsCombo.parent
+                        while (parent) {
+                            if (parent.objectName === "deviceSettingsDialog") {
+                                stopBitsCombo.parentDialog = parent
+                                console.log("✅ [CustomComboBox] stopBitsCombo 找到 DeviceSettingsDialog")
+                                break
+                            }
+                            parent = parent.parent
+                        }
+                    }
                 }
 
                 // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.1]: 焦点指示器
@@ -312,6 +338,19 @@ Rectangle {
                     anchors.fill: parent
                     model: ["None", "Odd", "Even", "Mark", "Space"]
                     currentIndex: 0  // 默认None
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 设置父组件引用
+                    Component.onCompleted: {
+                        var parent = parityCombo.parent
+                        while (parent) {
+                            if (parent.objectName === "deviceSettingsDialog") {
+                                parityCombo.parentDialog = parent
+                                console.log("✅ [CustomComboBox] parityCombo 找到 DeviceSettingsDialog")
+                                break
+                            }
+                            parent = parent.parent
+                        }
+                    }
                 }
 
                 // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.1]: 焦点指示器
