@@ -208,6 +208,12 @@ Rectangle {
                     focus: true
                     activeFocusOnTab: true
 
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.10]: 禁用输入法支持
+                    // Text 是只读元素，不需要虚拟键盘
+                    // 禁用输入法可以防止 Qt 虚拟键盘系统触发滚动
+                    Keys.enabled: false
+                    inputMethodHints: Qt.ImhNone
+
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加焦点变化调试
                     onActiveFocusChanged: {
                         console.log("🔍 [串口名称] activeFocus 变化:", activeFocus)
