@@ -208,11 +208,10 @@ Rectangle {
                     focus: true
                     activeFocusOnTab: true
 
-                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.10]: 禁用输入法支持
-                    // Text 是只读元素，不需要虚拟键盘
-                    // 禁用输入法可以防止 Qt 虚拟键盘系统触发滚动
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.10.1]: 移除 inputMethodHints
+                    // Text 元素没有 inputMethodHints 属性（只有 TextInput/TextEdit 才有）
+                    // 只保留 Keys.enabled: false 来禁用键盘事件
                     Keys.enabled: false
-                    inputMethodHints: Qt.ImhNone
 
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加焦点变化调试
                     onActiveFocusChanged: {
