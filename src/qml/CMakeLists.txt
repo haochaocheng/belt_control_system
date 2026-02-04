@@ -100,6 +100,7 @@ qt_add_qml_module(qml_module
         components/device_info/pages/SerialPortControlPage.qml
         components/device_info/pages/SerialPortListPanel.qml
         components/device_info/pages/SerialPortConfigPanel.qml
+        components/device_info/pages/SerialPortParamsSection.qml
         components/device_info/pages/CurrentProtectionTab.qml
         components/device_info/pages/MotorTempTab.qml
         components/device_info/pages/FrontBearingTempTab.qml
