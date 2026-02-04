@@ -146,28 +146,30 @@ ComboBox {
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.14]: 键盘导航修复
     // 问题：ComboBox 默认拦截上下键用于选择选项，导致导航失效
     // 解决：禁用默认键盘行为，只有回车键才打开下拉列表
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.16]: 使用 Qt 6 推荐的函数语法
 
     // 禁用默认的上下键行为
-    Keys.onUpPressed: {
+    Keys.onUpPressed: function(event) {
         event.accepted = false  // 不处理，让父组件处理导航
     }
 
-    Keys.onDownPressed: {
+    Keys.onDownPressed: function(event) {
         event.accepted = false  // 不处理，让父组件处理导航
     }
 
-    Keys.onLeftPressed: {
+    Keys.onLeftPressed: function(event) {
         event.accepted = false  // 不处理，让父组件处理导航
     }
 
-    Keys.onRightPressed: {
+    Keys.onRightPressed: function(event) {
         event.accepted = false  // 不处理，让父组件处理导航
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.15]: 回车键循环切换参数值
     // 用户反馈：直接按回车键切换参数，不需要下拉列表
     // 参考：开关量输入页面的行为
-    Keys.onReturnPressed: {
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.16]: 使用 Qt 6 推荐的函数语法
+    Keys.onReturnPressed: function(event) {
         if (root.editable) {
             // 可编辑：打开虚拟键盘
             if (keyboardManager && root.enabled) {
@@ -185,7 +187,8 @@ ComboBox {
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.15]: Space 键与回车键相同行为
-    Keys.onSpacePressed: {
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.16]: 使用 Qt 6 推荐的函数语法
+    Keys.onSpacePressed: function(event) {
         if (root.editable) {
             // 可编辑：打开虚拟键盘
             if (keyboardManager && root.enabled) {
