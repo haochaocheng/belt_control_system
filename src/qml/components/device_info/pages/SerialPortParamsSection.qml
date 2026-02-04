@@ -15,6 +15,27 @@ Rectangle {
     // ========== 公开属性 ==========
     property var currentSerialPort: null  // 当前串口信息
 
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.1]: 添加焦点函数
+    function focusBaudRate() {
+        baudRateCombo.forceActiveFocus()
+        console.log("✅ [SerialPortParamsSection] 波特率获得焦点")
+    }
+
+    function focusDataBits() {
+        dataBitsCombo.forceActiveFocus()
+        console.log("✅ [SerialPortParamsSection] 数据位获得焦点")
+    }
+
+    function focusStopBits() {
+        stopBitsCombo.forceActiveFocus()
+        console.log("✅ [SerialPortParamsSection] 停止位获得焦点")
+    }
+
+    function focusParity() {
+        parityCombo.forceActiveFocus()
+        console.log("✅ [SerialPortParamsSection] 校验位获得焦点")
+    }
+
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
         console.log("✅ [SerialPortParamsSection] Component.onCompleted 开始")
@@ -104,6 +125,16 @@ Rectangle {
                     model: ["1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"]
                     currentIndex: 3  // 默认9600
                 }
+
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.1]: 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: baudRateCombo.activeFocus ? "#2196F3" : "transparent"
+                    border.width: baudRateCombo.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
             }
 
             // ========== 第2行：设备路径 | 数据位 ==========
@@ -162,6 +193,16 @@ Rectangle {
                     model: ["5", "6", "7", "8"]
                     currentIndex: 3  // 默认8
                 }
+
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.1]: 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: dataBitsCombo.activeFocus ? "#2196F3" : "transparent"
+                    border.width: dataBitsCombo.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
             }
 
             // ========== 第3行：串口类型 | 停止位 ==========
@@ -218,6 +259,16 @@ Rectangle {
                     model: ["1", "1.5", "2"]
                     currentIndex: 0  // 默认1
                 }
+
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.1]: 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: stopBitsCombo.activeFocus ? "#2196F3" : "transparent"
+                    border.width: stopBitsCombo.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
+                }
             }
 
             // ========== 第4行：校验位 | 状态 ==========
@@ -246,6 +297,16 @@ Rectangle {
                     anchors.fill: parent
                     model: ["None", "Odd", "Even", "Mark", "Space"]
                     currentIndex: 0  // 默认None
+                }
+
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.1]: 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: parityCombo.activeFocus ? "#2196F3" : "transparent"
+                    border.width: parityCombo.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
                 }
             }
 
