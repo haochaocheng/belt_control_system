@@ -164,7 +164,9 @@ ComboBox {
         event.accepted = false  // 不处理，让父组件处理导航
     }
 
-    // 回车键：打开下拉列表（不可编辑）或虚拟键盘（可编辑）
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.15]: 回车键循环切换参数值
+    // 用户反馈：直接按回车键切换参数，不需要下拉列表
+    // 参考：开关量输入页面的行为
     Keys.onReturnPressed: {
         if (root.editable) {
             // 可编辑：打开虚拟键盘
@@ -173,15 +175,16 @@ ComboBox {
                 event.accepted = true
             }
         } else {
-            // 不可编辑：打开下拉列表
-            if (root.enabled && !root.popup.visible) {
-                root.popup.open()
+            // 不可编辑：循环切换参数值（0 → 1 → 2 → ... → count-1 → 0）
+            if (root.enabled && root.count > 0) {
+                root.currentIndex = (root.currentIndex + 1) % root.count
+                console.log("✅ [CustomComboBox] 回车键切换参数:", root.currentIndex, "/", root.count)
                 event.accepted = true
             }
         }
     }
 
-    // Space 键：与回车键相同行为
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.15]: Space 键与回车键相同行为
     Keys.onSpacePressed: {
         if (root.editable) {
             // 可编辑：打开虚拟键盘
@@ -190,9 +193,10 @@ ComboBox {
                 event.accepted = true
             }
         } else {
-            // 不可编辑：打开下拉列表
-            if (root.enabled && !root.popup.visible) {
-                root.popup.open()
+            // 不可编辑：循环切换参数值
+            if (root.enabled && root.count > 0) {
+                root.currentIndex = (root.currentIndex + 1) % root.count
+                console.log("✅ [CustomComboBox] Space键切换参数:", root.currentIndex, "/", root.count)
                 event.accepted = true
             }
         }
