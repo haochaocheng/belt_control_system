@@ -1942,7 +1942,9 @@ Item {
             return 9  // 9个输入组件
         case 5:  // 张紧控制
             return 14  // 14个输入组件
-        case 6:  // 逻辑控制
+        case 6:  // 串口控制
+            return 6  // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.3]: 6个串口（COM1-COM6）
+        case 7:  // 逻辑控制
             return 0  // 待实现
         default:
             return 0
