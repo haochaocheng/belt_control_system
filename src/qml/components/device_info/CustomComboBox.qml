@@ -135,39 +135,41 @@ ComboBox {
         highlighted: root.highlightedIndex === index
     }
 
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.22]: 键盘导航修复（最终方案 v3）
+    // 问题：Phase 7.18 的方法覆盖不生效（Qt 警告：Final member down is overridden）
+    // 解决方案：监听 currentIndex 变化，如果是键盘导航引起的，立即恢复原值
+
+    property int savedIndex: currentIndex  // 保存上一次有效的索引
+    property bool isUserAction: false  // 标记是否是用户主动操作（回车键）
+
+    // 监听 currentIndex 变化
+    onCurrentIndexChanged: {
+        if (!isUserAction && root.activeFocus) {
+            // 如果不是用户主动操作（回车键），且有焦点，说明是键盘导航引起的
+            // 立即恢复原值
+            console.log("⚠️ [CustomComboBox] 检测到键盘导航修改索引:", currentIndex, "→ 恢复为:", savedIndex)
+            root.currentIndex = savedIndex
+        } else {
+            // 用户主动操作，更新保存的索引
+            savedIndex = currentIndex
+        }
+    }
+
     // ✅ 2026-01-28 [虚拟键盘集成]: 自动注册到键盘管理器（仅可编辑时）
     Component.onCompleted: {
         if (keyboardManager && root.editable) {
             keyboardManager.registerInputField(root)
             console.log("✅ [CustomComboBox] 已注册到键盘管理器:", root.objectName || "unnamed")
         }
+        // 初始化保存的索引
+        savedIndex = currentIndex
     }
-
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.18]: 键盘导航修复（最终方案 v2）
-    // 问题：Phase 7.17 拦截了事件，但导致焦点不移动
-    // 解决方案：覆盖 ComboBox 的 up() 和 down() 方法，让它们什么都不做
-
-    // 覆盖 up() 方法，阻止 ComboBox 修改 currentIndex
-    function up() {
-        // 什么都不做，阻止 ComboBox 的默认行为
-        console.log("✅ [CustomComboBox] up() 被调用，已阻止")
-    }
-
-    // 覆盖 down() 方法，阻止 ComboBox 修改 currentIndex
-    function down() {
-        // 什么都不做，阻止 ComboBox 的默认行为
-        console.log("✅ [CustomComboBox] down() 被调用，已阻止")
-    }
-
-    // 删除 Keys.onPressed 拦截，让事件正常传播
-    // Keys.onPressed: function(event) {
-    //     // 已删除，让事件正常传播到父组件
-    // }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.15]: 回车键循环切换参数值
     // 用户反馈：直接按回车键切换参数，不需要下拉列表
     // 参考：开关量输入页面的行为
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.16]: 使用 Qt 6 推荐的函数语法
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.22]: 设置 isUserAction 标志
     Keys.onReturnPressed: function(event) {
         if (root.editable) {
             // 可编辑：打开虚拟键盘
@@ -178,8 +180,10 @@ ComboBox {
         } else {
             // 不可编辑：循环切换参数值（0 → 1 → 2 → ... → count-1 → 0）
             if (root.enabled && root.count > 0) {
+                isUserAction = true  // 标记为用户主动操作
                 root.currentIndex = (root.currentIndex + 1) % root.count
                 console.log("✅ [CustomComboBox] 回车键切换参数:", root.currentIndex, "/", root.count)
+                isUserAction = false  // 重置标志
                 event.accepted = true
             }
         }
@@ -187,6 +191,7 @@ ComboBox {
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.15]: Space 键与回车键相同行为
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.16]: 使用 Qt 6 推荐的函数语法
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.22]: 设置 isUserAction 标志
     Keys.onSpacePressed: function(event) {
         if (root.editable) {
             // 可编辑：打开虚拟键盘
@@ -197,8 +202,10 @@ ComboBox {
         } else {
             // 不可编辑：循环切换参数值
             if (root.enabled && root.count > 0) {
+                isUserAction = true  // 标记为用户主动操作
                 root.currentIndex = (root.currentIndex + 1) % root.count
                 console.log("✅ [CustomComboBox] Space键切换参数:", root.currentIndex, "/", root.count)
+                isUserAction = false  // 重置标志
                 event.accepted = true
             }
         }

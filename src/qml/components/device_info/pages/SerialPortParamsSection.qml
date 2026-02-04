@@ -363,6 +363,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: openButton.implicitHeight
+                z: 100  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.23]: 提高 z-index 避免被遮挡
 
                 Button {
                     id: openButton
@@ -384,6 +385,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 implicitHeight: closeButton.implicitHeight
+                z: 100  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.23]: 提高 z-index 避免被遮挡
 
                 Button {
                     id: closeButton
