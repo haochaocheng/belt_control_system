@@ -20,6 +20,18 @@ Rectangle {
     function focusSerialName() {
         console.log("🔍 [SerialPortParamsSection] focusSerialName 开始")
         console.log("   - serialNameText.activeFocus (调用前):", serialNameText.activeFocus)
+
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.5]: 先禁用 DeviceSettingsDialog root 的 focus
+        // 防止 root 抢夺焦点
+        var dialog = serialNameText
+        while (dialog && dialog.objectName !== "deviceSettingsDialog") {
+            dialog = dialog.parent
+        }
+        if (dialog) {
+            console.log("🔍 [SerialPortParamsSection] 找到 DeviceSettingsDialog，禁用 root.focus")
+            dialog.focus = false
+        }
+
         serialNameText.forceActiveFocus()
         console.log("   - serialNameText.activeFocus (调用后):", serialNameText.activeFocus)
         console.log("✅ [SerialPortParamsSection] 串口名称获得焦点")
