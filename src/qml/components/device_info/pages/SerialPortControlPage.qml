@@ -205,6 +205,8 @@ Rectangle {
                 root.focusParamIndex = paramIndex
                 root.focusItemIndex = -1
                 root.focusButtonIndex = -1
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.13]: 强制触发焦点设置
+                root.triggerParamInput(paramIndex)
                 break
             case areaButtons:
                 root.focusSubArea = 2
