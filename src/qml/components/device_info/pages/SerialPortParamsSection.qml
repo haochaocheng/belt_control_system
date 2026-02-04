@@ -139,8 +139,17 @@ Rectangle {
                     focus: true
                     activeFocusOnTab: true
 
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加焦点变化调试
+                    onActiveFocusChanged: {
+                        console.log("🔍 [串口名称] activeFocus 变化:", activeFocus)
+                        console.log("   - Text 宽度:", width, "高度:", height)
+                        console.log("   - Text 颜色:", color)
+                        console.log("   - 焦点指示器应该显示:", activeFocus ? "是" : "否")
+                    }
+
                     // ✅ 焦点指示器
                     Rectangle {
+                        id: serialNameFocusIndicator
                         anchors.fill: parent
                         anchors.margins: -4
                         color: "transparent"
@@ -148,6 +157,25 @@ Rectangle {
                         border.width: parent.activeFocus ? 3 : 0
                         radius: 4
                         z: 10  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35]: 改为10，确保边框在Text上面
+
+                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加边框调试
+                        Component.onCompleted: {
+                            console.log("🔍 [串口名称焦点指示器] 初始化")
+                            console.log("   - z值:", z)
+                            console.log("   - 宽度:", width, "高度:", height)
+                            console.log("   - margins:", anchors.margins)
+                            console.log("   - color:", color)
+                            console.log("   - border.color:", border.color)
+                            console.log("   - border.width:", border.width)
+                        }
+
+                        onBorderColorChanged: {
+                            console.log("🔍 [串口名称焦点指示器] border.color 变化:", border.color)
+                        }
+
+                        onBorderWidthChanged: {
+                            console.log("🔍 [串口名称焦点指示器] border.width 变化:", border.width)
+                        }
                     }
                 }
             }
@@ -240,8 +268,17 @@ Rectangle {
                     focus: true
                     activeFocusOnTab: true
 
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加焦点变化调试
+                    onActiveFocusChanged: {
+                        console.log("🔍 [设备路径] activeFocus 变化:", activeFocus)
+                        console.log("   - Text 宽度:", width, "高度:", height)
+                        console.log("   - Text 颜色:", color)
+                        console.log("   - 焦点指示器应该显示:", activeFocus ? "是" : "否")
+                    }
+
                     // ✅ 焦点指示器
                     Rectangle {
+                        id: devicePathFocusIndicator
                         anchors.fill: parent
                         anchors.margins: -4
                         color: "transparent"
@@ -249,6 +286,25 @@ Rectangle {
                         border.width: parent.activeFocus ? 3 : 0
                         radius: 4
                         z: 10  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35]: 改为10，确保边框在Text上面
+
+                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加边框调试
+                        Component.onCompleted: {
+                            console.log("🔍 [设备路径焦点指示器] 初始化")
+                            console.log("   - z值:", z)
+                            console.log("   - 宽度:", width, "高度:", height)
+                            console.log("   - margins:", anchors.margins)
+                            console.log("   - color:", color)
+                            console.log("   - border.color:", border.color)
+                            console.log("   - border.width:", border.width)
+                        }
+
+                        onBorderColorChanged: {
+                            console.log("🔍 [设备路径焦点指示器] border.color 变化:", border.color)
+                        }
+
+                        onBorderWidthChanged: {
+                            console.log("🔍 [设备路径焦点指示器] border.width 变化:", border.width)
+                        }
                     }
                 }
             }
@@ -337,8 +393,17 @@ Rectangle {
                     focus: true
                     activeFocusOnTab: true
 
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加焦点变化调试
+                    onActiveFocusChanged: {
+                        console.log("🔍 [串口类型] activeFocus 变化:", activeFocus)
+                        console.log("   - Text 宽度:", width, "高度:", height)
+                        console.log("   - Text 颜色:", color)
+                        console.log("   - 焦点指示器应该显示:", activeFocus ? "是" : "否")
+                    }
+
                     // ✅ 焦点指示器
                     Rectangle {
+                        id: serialTypeFocusIndicator
                         anchors.fill: parent
                         anchors.margins: -4
                         color: "transparent"
@@ -346,6 +411,25 @@ Rectangle {
                         border.width: parent.activeFocus ? 3 : 0
                         radius: 4
                         z: 10  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35]: 改为10，确保边框在Text上面
+
+                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加边框调试
+                        Component.onCompleted: {
+                            console.log("🔍 [串口类型焦点指示器] 初始化")
+                            console.log("   - z值:", z)
+                            console.log("   - 宽度:", width, "高度:", height)
+                            console.log("   - margins:", anchors.margins)
+                            console.log("   - color:", color)
+                            console.log("   - border.color:", border.color)
+                            console.log("   - border.width:", border.width)
+                        }
+
+                        onBorderColorChanged: {
+                            console.log("🔍 [串口类型焦点指示器] border.color 变化:", border.color)
+                        }
+
+                        onBorderWidthChanged: {
+                            console.log("🔍 [串口类型焦点指示器] border.width 变化:", border.width)
+                        }
                     }
                 }
             }
