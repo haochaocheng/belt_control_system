@@ -19,6 +19,9 @@ QtObject {
     property int paramIndex: 0                     // 区域C：参数索引（动态范围，取决于当前Tab）
     property int buttonIndex: 0                    // 区域D：按钮索引（0-4，共5个按钮）
 
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.12]: 是否跳过Tab区域（串口控制页面没有Tab）
+    property bool skipTabArea: false               // 默认false（电机控制有Tab），串口控制设置为true
+
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听 paramIndex 变化
     onParamIndexChanged: {
         console.log("🔷 [NavigationManager] paramIndex 变化:", paramIndex)
@@ -83,8 +86,16 @@ QtObject {
             break
 
         case "Right":
-            // 向右跳转到Tab导航区
-            switchToArea(areaTabBar)
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.12]: 根据 skipTabArea 决定跳转目标
+            if (skipTabArea) {
+                // 串口控制页面：直接跳转到参数区域
+                switchToArea(areaParams)
+                paramIndex = 0  // 从第一个参数开始
+                console.log("✅ [NavigationManager] 从列表跳转到参数区域（跳过Tab）")
+            } else {
+                // 电机控制页面：跳转到Tab导航区
+                switchToArea(areaTabBar)
+            }
             return
 
         case "Left":

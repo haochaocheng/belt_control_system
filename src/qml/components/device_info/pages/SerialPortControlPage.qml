@@ -158,6 +158,7 @@ Rectangle {
             motorListIndex = 0  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.9]: 使用 motorListIndex（通用列表索引）
             paramIndex = 0
             buttonIndex = 0
+            skipTabArea = true  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.12]: 串口控制页面没有Tab区域
             console.log("✅ [SerialPortControlPage] NavigationManager 初始化完成")
 
             // 同步初始状态到root

@@ -221,7 +221,7 @@ Item {
                         // 串口控制页面：使用 NavigationManager
                         var serialPage = serialPortControlPageLoader.item
                         if (serialPage && serialPage.navigationManager) {
-                            serialPage.navigationManager.moveUp()
+                            serialPage.navigationManager.handleDirectionKey("Up")  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.10]: 使用 handleDirectionKey
                             event.accepted = true
                             return
                         }
@@ -385,7 +385,7 @@ Item {
                         // 串口控制页面：使用 NavigationManager
                         var serialPage = serialPortControlPageLoader.item
                         if (serialPage && serialPage.navigationManager) {
-                            serialPage.navigationManager.moveDown()
+                            serialPage.navigationManager.handleDirectionKey("Down")  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.10]: 使用 handleDirectionKey
                             event.accepted = true
                             return
                         }
@@ -709,25 +709,16 @@ Item {
                     return
                 }
 
-                // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.1]: 串口控制页面特殊处理
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.12]: 串口控制页面使用 NavigationManager
                 var isSerialPortControlPage = (currentCategory === 6)  // 串口控制类别
                 console.log("🔍 [串口控制导航] isSerialPortControlPage:", isSerialPortControlPage)
 
                 if (isSerialPortControlPage) {
-                    // ✅ SerialPortControlPage 2区域模式：0=列表 1=参数
-                    console.log("🔍 [串口控制导航] 右键 - focusSubArea:", currentPage.focusSubArea, "focusItemIndex:", currentPage.focusItemIndex)
-                    if (currentPage.focusSubArea === 0) {
-                        // 从串口列表进入参数区域
-                        console.log("🔍 [串口控制导航] 设置 focusSubArea = 1")
-                        currentPage.focusSubArea = 1
-                        currentPage.focusItemIndex = -1  // 清除列表焦点
-                        console.log("✅ [导航] 串口控制：从列表进入参数区域")
-                        console.log("🔍 [串口控制导航] 右键后 - focusSubArea:", currentPage.focusSubArea, "focusItemIndex:", currentPage.focusItemIndex)
-                        event.accepted = true
-                        return
-                    } else if (currentPage.focusSubArea === 1) {
-                        // 已在参数区域，右键无动作
-                        console.log("⚠️ [导航] 串口控制：已在参数区域最右侧")
+                    // ✅ SerialPortControlPage 使用 NavigationManager 处理导航
+                    var serialPage = serialPortControlPageLoader.item
+                    if (serialPage && serialPage.navigationManager) {
+                        console.log("🔍 [串口控制导航] 右键 - 调用 NavigationManager.handleDirectionKey")
+                        serialPage.navigationManager.handleDirectionKey("Right")
                         event.accepted = true
                         return
                     }
