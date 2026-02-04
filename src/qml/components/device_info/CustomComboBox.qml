@@ -10,6 +10,9 @@ ComboBox {
     // ✅ 2026-01-28 [虚拟键盘支持]: 键盘管理器属性
     property var keyboardManager: null
 
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 父组件引用，用于直接调用导航
+    property var parentDialog: null  // DeviceSettingsDialog 引用
+
     // ========== 默认样式 ==========
     // ✅ 高度与 CustomSpinBox 一致（60px）
     implicitHeight: 60
@@ -198,31 +201,59 @@ ComboBox {
         }
     }
 
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.27]: 添加方向键处理，让事件传播到父组件
-    // 问题：ComboBox 拦截了方向键，但是我们恢复了索引，导致事件被消耗但焦点没有移动
-    // 解决方案：显式设置 event.accepted = false，让事件传播到父组件处理导航
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 直接调用父组件导航，不依赖事件传播
+    // 原因：Qt ComboBox 的 C++ 层面已经消耗了事件，event.accepted = false 不起作用
+    // 解决方案：直接调用 parentDialog.handleNavigationKey()，绕过事件系统
     Keys.onUpPressed: function(event) {
         console.log("🔍 [CustomComboBox] 上键按下 - activeFocus:", root.activeFocus, "currentIndex:", root.currentIndex)
-        event.accepted = false  // 不处理，让父组件处理导航
-        console.log("✅ [CustomComboBox] 上键事件传播到父组件")
+
+        if (parentDialog) {
+            console.log("✅ [CustomComboBox] 直接调用父组件导航处理上键")
+            event.accepted = true  // 阻止 ComboBox 默认行为
+            parentDialog.handleNavigationKey(Qt.Key_Up, event)
+        } else {
+            console.log("⚠️ [CustomComboBox] parentDialog 未设置，无法处理导航")
+            event.accepted = false
+        }
     }
 
     Keys.onDownPressed: function(event) {
         console.log("🔍 [CustomComboBox] 下键按下 - activeFocus:", root.activeFocus, "currentIndex:", root.currentIndex)
-        event.accepted = false  // 不处理，让父组件处理导航
-        console.log("✅ [CustomComboBox] 下键事件传播到父组件")
+
+        if (parentDialog) {
+            console.log("✅ [CustomComboBox] 直接调用父组件导航处理下键")
+            event.accepted = true  // 阻止 ComboBox 默认行为
+            parentDialog.handleNavigationKey(Qt.Key_Down, event)
+        } else {
+            console.log("⚠️ [CustomComboBox] parentDialog 未设置，无法处理导航")
+            event.accepted = false
+        }
     }
 
     Keys.onLeftPressed: function(event) {
         console.log("🔍 [CustomComboBox] 左键按下 - activeFocus:", root.activeFocus, "currentIndex:", root.currentIndex)
-        event.accepted = false  // 不处理，让父组件处理导航
-        console.log("✅ [CustomComboBox] 左键事件传播到父组件")
+
+        if (parentDialog) {
+            console.log("✅ [CustomComboBox] 直接调用父组件导航处理左键")
+            event.accepted = true  // 阻止 ComboBox 默认行为
+            parentDialog.handleNavigationKey(Qt.Key_Left, event)
+        } else {
+            console.log("⚠️ [CustomComboBox] parentDialog 未设置，无法处理导航")
+            event.accepted = false
+        }
     }
 
     Keys.onRightPressed: function(event) {
         console.log("🔍 [CustomComboBox] 右键按下 - activeFocus:", root.activeFocus, "currentIndex:", root.currentIndex)
-        event.accepted = false  // 不处理，让父组件处理导航
-        console.log("✅ [CustomComboBox] 右键事件传播到父组件")
+
+        if (parentDialog) {
+            console.log("✅ [CustomComboBox] 直接调用父组件导航处理右键")
+            event.accepted = true  // 阻止 ComboBox 默认行为
+            parentDialog.handleNavigationKey(Qt.Key_Right, event)
+        } else {
+            console.log("⚠️ [CustomComboBox] parentDialog 未设置，无法处理导航")
+            event.accepted = false
+        }
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.15]: Space 键与回车键相同行为

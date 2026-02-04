@@ -57,6 +57,7 @@ Item {
 
         Rectangle {
             id: root
+            objectName: "deviceSettingsDialog"  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 添加 objectName 供 CustomComboBox 查找
             anchors.fill: parent
             color: "#ec1e1e1e"
     // ✅ 2026-01-25: 使用主题背景色
@@ -134,6 +135,122 @@ Item {
         dialogFocusScope.forceActiveFocus()
         root.forceActiveFocus()
         console.log("✅ [DeviceSettingsDialog] 对话框已获取焦点")
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 导航处理函数，供 CustomComboBox 直接调用
+    function handleNavigationKey(key, event) {
+        console.log("✅ [DeviceSettingsDialog] handleNavigationKey 被调用 - key:", key)
+
+        // 根据按键类型调用对应的处理器
+        if (key === Qt.Key_Up) {
+            console.log("✅ [导航] 上键 - 当前区域:", currentFocusArea, "当前类别:", currentCategory)
+            handleUpKey(event)
+        } else if (key === Qt.Key_Down) {
+            console.log("✅ [导航] 下键 - 当前区域:", currentFocusArea, "当前类别:", currentCategory)
+            handleDownKey(event)
+        } else if (key === Qt.Key_Left) {
+            console.log("✅ [导航] 左键 - 当前区域:", currentFocusArea, "当前类别:", currentCategory)
+            handleLeftKey(event)
+        } else if (key === Qt.Key_Right) {
+            console.log("✅ [导航] 右键 - 当前区域:", currentFocusArea, "当前类别:", currentCategory)
+            handleRightKey(event)
+        }
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 提取上键处理逻辑
+    function handleUpKey(event) {
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 临时实现 - 直接调用串口控制的 NavigationManager
+        // TODO: 后续需要将完整的 Keys.onUpPressed 逻辑移到这里
+        console.log("✅ [handleUpKey] 被调用 - currentCategory:", currentCategory, "currentFocusArea:", currentFocusArea)
+
+        // 串口控制页面特殊处理
+        if (currentCategory === 6 && currentFocusArea === 2) {
+            var currentPage = getCurrentPage(currentCategory)
+            if (currentPage && typeof currentPage.focusSubArea !== "undefined" && currentPage.focusSubArea === 1) {
+                var serialPage = serialPortControlPageLoader.item
+                if (serialPage && serialPage.navigationManager) {
+                    console.log("✅ [handleUpKey] 调用 NavigationManager.handleDirectionKey(Up)")
+                    serialPage.navigationManager.handleDirectionKey("Up")
+                    event.accepted = true
+                    return
+                }
+            }
+        }
+
+        // 其他情况：暂时不处理
+        console.log("⚠️ [handleUpKey] 未处理的情况")
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 提取下键处理逻辑
+    function handleDownKey(event) {
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 临时实现 - 直接调用串口控制的 NavigationManager
+        // TODO: 后续需要将完整的 Keys.onDownPressed 逻辑移到这里
+        console.log("✅ [handleDownKey] 被调用 - currentCategory:", currentCategory, "currentFocusArea:", currentFocusArea)
+
+        // 串口控制页面特殊处理
+        if (currentCategory === 6 && currentFocusArea === 2) {
+            var currentPage = getCurrentPage(currentCategory)
+            if (currentPage && typeof currentPage.focusSubArea !== "undefined" && currentPage.focusSubArea === 1) {
+                var serialPage = serialPortControlPageLoader.item
+                if (serialPage && serialPage.navigationManager) {
+                    console.log("✅ [handleDownKey] 调用 NavigationManager.handleDirectionKey(Down)")
+                    serialPage.navigationManager.handleDirectionKey("Down")
+                    event.accepted = true
+                    return
+                }
+            }
+        }
+
+        // 其他情况：暂时不处理
+        console.log("⚠️ [handleDownKey] 未处理的情况")
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 提取左键处理逻辑
+    function handleLeftKey(event) {
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 临时实现 - 直接调用串口控制的 NavigationManager
+        // TODO: 后续需要将完整的 Keys.onLeftPressed 逻辑移到这里
+        console.log("✅ [handleLeftKey] 被调用 - currentCategory:", currentCategory, "currentFocusArea:", currentFocusArea)
+
+        // 串口控制页面特殊处理
+        if (currentCategory === 6 && currentFocusArea === 2) {
+            var currentPage = getCurrentPage(currentCategory)
+            if (currentPage && typeof currentPage.focusSubArea !== "undefined" && currentPage.focusSubArea === 1) {
+                var serialPage = serialPortControlPageLoader.item
+                if (serialPage && serialPage.navigationManager) {
+                    console.log("✅ [handleLeftKey] 调用 NavigationManager.handleDirectionKey(Left)")
+                    serialPage.navigationManager.handleDirectionKey("Left")
+                    event.accepted = true
+                    return
+                }
+            }
+        }
+
+        // 其他情况：暂时不处理
+        console.log("⚠️ [handleLeftKey] 未处理的情况")
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 提取右键处理逻辑
+    function handleRightKey(event) {
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 临时实现 - 直接调用串口控制的 NavigationManager
+        // TODO: 后续需要将完整的 Keys.onRightPressed 逻辑移到这里
+        console.log("✅ [handleRightKey] 被调用 - currentCategory:", currentCategory, "currentFocusArea:", currentFocusArea)
+
+        // 串口控制页面特殊处理
+        if (currentCategory === 6 && currentFocusArea === 2) {
+            var currentPage = getCurrentPage(currentCategory)
+            if (currentPage && typeof currentPage.focusSubArea !== "undefined" && currentPage.focusSubArea === 1) {
+                var serialPage = serialPortControlPageLoader.item
+                if (serialPage && serialPage.navigationManager) {
+                    console.log("✅ [handleRightKey] 调用 NavigationManager.handleDirectionKey(Right)")
+                    serialPage.navigationManager.handleDirectionKey("Right")
+                    event.accepted = true
+                    return
+                }
+            }
+        }
+
+        // 其他情况：暂时不处理
+        console.log("⚠️ [handleRightKey] 未处理的情况")
     }
 
     // ✅ 2026-01-24 [FIX]: 键盘导航支持
@@ -217,13 +334,22 @@ Item {
                     }
                 } else if (currentPage.focusSubArea === 1) {
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.7]: 串口控制使用 NavigationManager
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.28]: 添加详细调试信息
+                    console.log("🔍 [串口控制导航] 上键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
                         // 串口控制页面：使用 NavigationManager
                         var serialPage = serialPortControlPageLoader.item
+                        console.log("🔍 [串口控制导航] serialPage:", serialPage ? "存在" : "null")
+                        if (serialPage) {
+                            console.log("🔍 [串口控制导航] navigationManager:", serialPage.navigationManager ? "存在" : "null")
+                        }
                         if (serialPage && serialPage.navigationManager) {
+                            console.log("🔍 [串口控制导航] 上键 - 调用 NavigationManager.handleDirectionKey")
                             serialPage.navigationManager.handleDirectionKey("Up")  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.10]: 使用 handleDirectionKey
                             event.accepted = true
                             return
+                        } else {
+                            console.log("⚠️ [串口控制导航] 上键 - NavigationManager 不可用")
                         }
                     }
 
@@ -381,13 +507,22 @@ Item {
                     }
                 } else if (currentPage.focusSubArea === 1) {
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.7]: 串口控制使用 NavigationManager
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.28]: 添加详细调试信息
+                    console.log("🔍 [串口控制导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
                         // 串口控制页面：使用 NavigationManager
                         var serialPage = serialPortControlPageLoader.item
+                        console.log("🔍 [串口控制导航] serialPage:", serialPage ? "存在" : "null")
+                        if (serialPage) {
+                            console.log("🔍 [串口控制导航] navigationManager:", serialPage.navigationManager ? "存在" : "null")
+                        }
                         if (serialPage && serialPage.navigationManager) {
+                            console.log("🔍 [串口控制导航] 下键 - 调用 NavigationManager.handleDirectionKey")
                             serialPage.navigationManager.handleDirectionKey("Down")  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.10]: 使用 handleDirectionKey
                             event.accepted = true
                             return
+                        } else {
+                            console.log("⚠️ [串口控制导航] 下键 - NavigationManager 不可用")
                         }
                     }
 

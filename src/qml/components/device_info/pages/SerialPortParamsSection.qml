@@ -121,6 +121,24 @@ Rectangle {
                     anchors.fill: parent
                     model: ["1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"]
                     currentIndex: 3  // 默认9600
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 设置父组件引用
+                    Component.onCompleted: {
+                        // 向上查找 DeviceSettingsDialog
+                        var parent = baudRateCombo.parent
+                        while (parent) {
+                            if (parent.objectName === "deviceSettingsDialog") {
+                                baudRateCombo.parentDialog = parent
+                                console.log("✅ [CustomComboBox] 找到 DeviceSettingsDialog，设置 parentDialog")
+                                break
+                            }
+                            parent = parent.parent
+                        }
+
+                        if (!baudRateCombo.parentDialog) {
+                            console.log("⚠️ [CustomComboBox] 未找到 DeviceSettingsDialog")
+                        }
+                    }
                 }
 
                 // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.1]: 焦点指示器
