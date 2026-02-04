@@ -155,7 +155,7 @@ Rectangle {
         // 初始化：从串口列表区开始
         Component.onCompleted: {
             currentArea = areaSerialList
-            serialListIndex = 0
+            motorListIndex = 0  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.9]: 使用 motorListIndex（通用列表索引）
             paramIndex = 0
             buttonIndex = 0
             console.log("✅ [SerialPortControlPage] NavigationManager 初始化完成")
@@ -169,10 +169,10 @@ Rectangle {
         }
 
         // 监听串口列表索引变化
-        onSerialListIndexChanged: {
-            console.log("✅ [SerialPortControlPage] 串口列表索引变化:", serialListIndex)
-            root.currentSerialIndex = serialListIndex
-            root.focusItemIndex = serialListIndex
+        onMotorListIndexChanged: {  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.9]: 使用 motorListIndex（通用列表索引）
+            console.log("✅ [SerialPortControlPage] 串口列表索引变化:", motorListIndex)
+            root.currentSerialIndex = motorListIndex
+            root.focusItemIndex = motorListIndex
         }
 
         // 监听参数索引变化
@@ -193,7 +193,7 @@ Rectangle {
             switch(newArea) {
             case areaSerialList:
                 root.focusSubArea = 0
-                root.focusItemIndex = serialListIndex
+                root.focusItemIndex = motorListIndex  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.9]: 使用 motorListIndex
                 root.focusParamIndex = -1
                 root.focusButtonIndex = -1
                 break
