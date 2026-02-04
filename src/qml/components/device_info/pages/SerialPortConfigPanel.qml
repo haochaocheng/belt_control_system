@@ -79,9 +79,14 @@ Rectangle {
             console.log("   - contentY:", contentY)
         }
 
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 监听 interactive 变化
-        onInteractiveChanged: {
-            console.log("🔍 [ScrollView] interactive 变化:", interactive)
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8.1]: 移除 onInteractiveChanged
+        // ScrollView 没有 interactive 属性，这是 Flickable 的属性
+        // 改用 Connections 监听 interactive 变化
+        Connections {
+            target: scrollView.contentItem  // ScrollView 的 contentItem 是 Flickable
+            function onInteractiveChanged() {
+                console.log("🔍 [ScrollView] interactive 变化:", scrollView.contentItem.interactive)
+            }
         }
 
         ColumnLayout {

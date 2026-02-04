@@ -31,12 +31,13 @@ Rectangle {
             console.log("   - ScrollView.contentY (设置焦点前):", scrollView.contentY)
             console.log("   - ScrollView.contentHeight:", scrollView.contentHeight)
             console.log("   - ScrollView.height:", scrollView.height)
-            console.log("   - ScrollView.interactive:", scrollView.interactive)
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8.1]: 访问 contentItem.interactive
+            console.log("   - ScrollView.contentItem.interactive:", scrollView.contentItem.interactive)
 
             // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 暂时禁用 ScrollView 交互
             // 防止自动滚动抢夺焦点
             console.log("🔍 [SerialPortParamsSection] 禁用 ScrollView 交互")
-            scrollView.interactive = false
+            scrollView.contentItem.interactive = false
         }
 
         // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.5]: 先禁用 DeviceSettingsDialog root 的 focus
@@ -79,7 +80,7 @@ Rectangle {
             // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 重新启用 ScrollView 交互
             if (scrollView) {
                 console.log("🔍 [SerialPortParamsSection] 重新启用 ScrollView 交互")
-                scrollView.interactive = true
+                scrollView.contentItem.interactive = true
                 console.log("   - ScrollView.contentY (最终):", scrollView.contentY)
             }
         })
