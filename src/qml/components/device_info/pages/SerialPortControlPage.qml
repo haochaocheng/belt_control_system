@@ -20,6 +20,13 @@ Rectangle {
     // ========== 信号 ==========
     signal requestReturnToCategory()  // ✅ 请求返回到左侧类别
 
+    // ========== 函数 ==========
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.10]: 添加 getParamFieldCount 函数
+    // 串口控制页面不支持参数区域内的逐个导航，返回 0
+    function getParamFieldCount() {
+        return 0  // 不支持参数区域内的逐个导航
+    }
+
     // ========== 串口数据 ==========
     property var serialPorts: [
         { name: "COM1", path: "/dev/ttyS0", type: "RS422" },
