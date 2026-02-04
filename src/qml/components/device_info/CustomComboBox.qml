@@ -143,18 +143,58 @@ ComboBox {
         }
     }
 
-    // ✅ 2026-01-28 [键盘导航]: Enter/Space 键弹出虚拟键盘（仅可编辑时）
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.14]: 键盘导航修复
+    // 问题：ComboBox 默认拦截上下键用于选择选项，导致导航失效
+    // 解决：禁用默认键盘行为，只有回车键才打开下拉列表
+
+    // 禁用默认的上下键行为
+    Keys.onUpPressed: {
+        event.accepted = false  // 不处理，让父组件处理导航
+    }
+
+    Keys.onDownPressed: {
+        event.accepted = false  // 不处理，让父组件处理导航
+    }
+
+    Keys.onLeftPressed: {
+        event.accepted = false  // 不处理，让父组件处理导航
+    }
+
+    Keys.onRightPressed: {
+        event.accepted = false  // 不处理，让父组件处理导航
+    }
+
+    // 回车键：打开下拉列表（不可编辑）或虚拟键盘（可编辑）
     Keys.onReturnPressed: {
-        if (keyboardManager && root.editable && root.enabled) {
-            keyboardManager.openKeyboardForField(root, false)  // false = 键盘导航模式
-            event.accepted = true
+        if (root.editable) {
+            // 可编辑：打开虚拟键盘
+            if (keyboardManager && root.enabled) {
+                keyboardManager.openKeyboardForField(root, false)
+                event.accepted = true
+            }
+        } else {
+            // 不可编辑：打开下拉列表
+            if (root.enabled && !root.popup.visible) {
+                root.popup.open()
+                event.accepted = true
+            }
         }
     }
 
+    // Space 键：与回车键相同行为
     Keys.onSpacePressed: {
-        if (keyboardManager && root.editable && root.enabled) {
-            keyboardManager.openKeyboardForField(root, false)  // false = 键盘导航模式
-            event.accepted = true
+        if (root.editable) {
+            // 可编辑：打开虚拟键盘
+            if (keyboardManager && root.enabled) {
+                keyboardManager.openKeyboardForField(root, false)
+                event.accepted = true
+            }
+        } else {
+            // 不可编辑：打开下拉列表
+            if (root.enabled && !root.popup.visible) {
+                root.popup.open()
+                event.accepted = true
+            }
         }
     }
 }
