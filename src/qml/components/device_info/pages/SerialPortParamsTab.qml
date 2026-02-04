@@ -504,14 +504,23 @@ Rectangle {
                 }
             }
 
-            // ========== 第4行：校验位 | 状态 ==========
+            // ========== 第4行：空白 | 校验位 ==========
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37.1]: 修复校验位位置
+            // 原因：校验位应该在右侧（与停止位对齐），不应该在左侧
+
+            // 空白占位（左侧）
+            Item {
+                Layout.column: 0
+                Layout.row: 3
+                Layout.columnSpan: 2
+            }
 
             // 校验位标签
             Text {
                 text: "校验位:"
                 font.pixelSize: 21
                 color: "#9E9E9E"
-                Layout.column: 0
+                Layout.column: 2
                 Layout.row: 3
                 Layout.preferredWidth: 120
                 horizontalAlignment: Text.AlignRight
@@ -519,7 +528,7 @@ Rectangle {
 
             // 校验位下拉框
             Item {
-                Layout.column: 1
+                Layout.column: 3
                 Layout.row: 3
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
@@ -555,21 +564,24 @@ Rectangle {
                 }
             }
 
+            // ========== 第5行：状态 | 操作按钮 ==========
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37.1]: 调整状态位置到第5行左侧
+
             // 状态标签
             Text {
                 text: "状态:"
                 font.pixelSize: 21
                 color: "#9E9E9E"
-                Layout.column: 2
-                Layout.row: 3
+                Layout.column: 0
+                Layout.row: 4
                 Layout.preferredWidth: 120
                 horizontalAlignment: Text.AlignRight
             }
 
             // 状态指示器
             Item {
-                Layout.column: 3
-                Layout.row: 3
+                Layout.column: 1
+                Layout.row: 4
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
                 Layout.preferredHeight: 40
@@ -608,15 +620,6 @@ Rectangle {
                     radius: 4
                     z: 10
                 }
-            }
-
-            // ========== 第5行：操作按钮 ==========
-
-            // 空白占位（左侧两列）
-            Item {
-                Layout.column: 0
-                Layout.row: 4
-                Layout.columnSpan: 2
             }
 
             // 打开串口按钮
