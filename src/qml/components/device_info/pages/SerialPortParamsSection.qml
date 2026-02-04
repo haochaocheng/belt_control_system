@@ -57,17 +57,14 @@ Rectangle {
     }
 
     // ========== 主布局 ==========
-    ScrollView {
-        id: paramScrollView
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.19]: 移除 ScrollView，直接使用 GridLayout
+    // 原因：用户反馈波特率界面有滑动窗口，不需要
+    GridLayout {
         anchors.fill: parent
         anchors.margins: 16
-        clip: true
-
-        GridLayout {
-            width: paramScrollView.width * 0.9
-            columns: 4
-            columnSpacing: 16
-            rowSpacing: 12
+        columns: 4
+        columnSpacing: 16
+        rowSpacing: 12
 
             // ========== 第1行：串口名称 | 波特率 ==========
 
@@ -402,4 +399,5 @@ Rectangle {
             }
         }
     }
+}
 }
