@@ -55,6 +55,15 @@ Item {
         focus: true  // FocusScope 获取焦点
         z: 1000  // 在遮罩上方
 
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.4]: 监听焦点变化
+        onActiveFocusItemChanged: {
+            console.log("🔍 [FocusScope] activeFocusItem 变化:", activeFocusItem)
+            if (activeFocusItem) {
+                console.log("   - objectName:", activeFocusItem.objectName)
+                console.log("   - toString:", activeFocusItem.toString())
+            }
+        }
+
         Rectangle {
             id: root
             objectName: "deviceSettingsDialog"  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.29]: 添加 objectName 供 CustomComboBox 查找
@@ -256,6 +265,11 @@ Item {
     // ✅ 2026-01-24 [FIX]: 键盘导航支持
     // ✅ 2026-01-28 [FIX 100.300.100]: FocusScope 内的 Rectangle 需要 focus
     focus: true
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.4]: 监听焦点变化
+    onActiveFocusChanged: {
+        console.log("🔍 [DeviceSettingsDialog root] activeFocus 变化:", activeFocus)
+    }
 
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统 - 上下键区域内导航
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
