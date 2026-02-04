@@ -854,6 +854,10 @@ Item {
                     if (serialPage && serialPage.navigationManager) {
                         console.log("🔍 [串口控制导航] 右键 - 调用 NavigationManager.handleDirectionKey")
                         serialPage.navigationManager.handleDirectionKey("Right")
+                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.3]: 添加返回后调试
+                        console.log("🔍 [串口控制导航] NavigationManager.handleDirectionKey 返回")
+                        console.log("   - currentPage.focusSubArea:", currentPage.focusSubArea)
+                        console.log("   - currentPage.focusParamIndex:", currentPage.focusParamIndex)
                         event.accepted = true
                         return
                     }

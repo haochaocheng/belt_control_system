@@ -18,7 +18,10 @@ Rectangle {
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 添加所有焦点函数（参考 SwitchInputPage）
     // 索引 0: 串口名称（只读）
     function focusSerialName() {
+        console.log("🔍 [SerialPortParamsSection] focusSerialName 开始")
+        console.log("   - serialNameText.activeFocus (调用前):", serialNameText.activeFocus)
         serialNameText.forceActiveFocus()
+        console.log("   - serialNameText.activeFocus (调用后):", serialNameText.activeFocus)
         console.log("✅ [SerialPortParamsSection] 串口名称获得焦点")
     }
 
