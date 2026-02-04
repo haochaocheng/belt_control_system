@@ -176,7 +176,21 @@ Item {
         }
 
         // 上键：在当前区域内向上导航
-        console.log("✅ [导航] 上键 - 当前区域:", currentFocusArea)
+        console.log("✅ [导航] 上键 - 当前区域:", currentFocusArea, "当前类别:", currentCategory)
+
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.2]: 添加串口控制详细日志
+        if (currentCategory === 6) {
+            console.log("🔍 [串口控制调试] 上键 - currentFocusArea:", currentFocusArea)
+            console.log("🔍 [串口控制调试] currentContentItemIndex:", currentContentItemIndex)
+            var serialPage = serialPortControlPageLoader.item
+            if (serialPage) {
+                console.log("🔍 [串口控制调试] focusSubArea:", serialPage.focusSubArea)
+                console.log("🔍 [串口控制调试] focusItemIndex:", serialPage.focusItemIndex)
+                console.log("🔍 [串口控制调试] currentSerialIndex:", serialPage.currentSerialIndex)
+            } else {
+                console.log("⚠️ [串口控制调试] serialPage 为 null")
+            }
+        }
 
         switch(currentFocusArea) {
         case 0:  // 顶部按钮
@@ -194,8 +208,12 @@ Item {
             if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
                 if (currentPage.focusSubArea === 0) {
                     // 列表区域：使用 currentContentItemIndex
+                    console.log("✅ [导航] 列表区域上移 - 当前索引:", currentContentItemIndex)
                     if (currentContentItemIndex > 0) {
                         currentContentItemIndex--
+                        console.log("✅ [导航] 列表区域上移后 - 新索引:", currentContentItemIndex)
+                    } else {
+                        console.log("⚠️ [导航] 已到达列表第一项")
                     }
                 } else if (currentPage.focusSubArea === 1) {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
@@ -314,7 +332,21 @@ Item {
         }
 
         // 下键：在当前区域内向下导航
-        console.log("✅ [导航] 下键 - 当前区域:", currentFocusArea)
+        console.log("✅ [导航] 下键 - 当前区域:", currentFocusArea, "当前类别:", currentCategory)
+
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.2]: 添加串口控制详细日志
+        if (currentCategory === 6) {
+            console.log("🔍 [串口控制调试] 下键 - currentFocusArea:", currentFocusArea)
+            console.log("🔍 [串口控制调试] currentContentItemIndex:", currentContentItemIndex)
+            var serialPage = serialPortControlPageLoader.item
+            if (serialPage) {
+                console.log("🔍 [串口控制调试] focusSubArea:", serialPage.focusSubArea)
+                console.log("🔍 [串口控制调试] focusItemIndex:", serialPage.focusItemIndex)
+                console.log("🔍 [串口控制调试] currentSerialIndex:", serialPage.currentSerialIndex)
+            } else {
+                console.log("⚠️ [串口控制调试] serialPage 为 null")
+            }
+        }
 
         switch(currentFocusArea) {
         case 0:  // 顶部按钮（3个按钮：关闭、保存、重置）
@@ -1725,38 +1757,48 @@ Item {
                         enabled: serialPortControlPageLoader.item !== null
 
                         function onCurrentFocusAreaChanged() {
+                            console.log("🔍 [串口控制同步] onCurrentFocusAreaChanged - currentFocusArea:", root.currentFocusArea, "currentCategory:", root.currentCategory)
                             if (serialPortControlPageLoader.item && root.currentCategory === 6) {
                                 if (root.currentFocusArea === 2) {
                                     // 焦点进入内容区域，默认在列表区域
+                                    console.log("✅ [串口控制同步] 焦点进入内容区域 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
                                     serialPortControlPageLoader.item.focusSubArea = 0
                                     serialPortControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
                                 } else {
                                     // 焦点离开内容区域，清除焦点
+                                    console.log("✅ [串口控制同步] 焦点离开内容区域 - 清除 focusItemIndex")
                                     serialPortControlPageLoader.item.focusItemIndex = -1
                                 }
                             }
                         }
 
                         function onCurrentCategoryChanged() {
+                            console.log("🔍 [串口控制同步] onCurrentCategoryChanged - currentCategory:", root.currentCategory, "currentFocusArea:", root.currentFocusArea)
                             if (serialPortControlPageLoader.item) {
                                 if (root.currentFocusArea === 2 && root.currentCategory === 6) {
                                     // 切换到串口控制类别，设置焦点
+                                    console.log("✅ [串口控制同步] 切换到串口控制 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
                                     serialPortControlPageLoader.item.focusSubArea = 0
                                     serialPortControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
                                 } else {
                                     // 切换到其他类别，清除焦点
+                                    console.log("✅ [串口控制同步] 切换到其他类别 - 清除 focusItemIndex")
                                     serialPortControlPageLoader.item.focusItemIndex = -1
                                 }
                             }
                         }
 
                         function onCurrentContentItemIndexChanged() {
+                            console.log("🔍 [串口控制同步] onCurrentContentItemIndexChanged - currentContentItemIndex:", root.currentContentItemIndex)
                             if (serialPortControlPageLoader.item &&
                                 root.currentFocusArea === 2 &&
                                 root.currentCategory === 6 &&
                                 serialPortControlPageLoader.item.focusSubArea === 0) {
                                 // 只在焦点在列表区域时同步
+                                console.log("✅ [串口控制同步] 同步 focusItemIndex:", root.currentContentItemIndex)
                                 serialPortControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                console.log("⚠️ [串口控制同步] 不满足同步条件 - focusArea:", root.currentFocusArea, "category:", root.currentCategory, "focusSubArea:", serialPortControlPageLoader.item ? serialPortControlPageLoader.item.focusSubArea : "null")
                             }
                         }
                     }
