@@ -70,6 +70,12 @@ Rectangle {
         console.log("✅ [SerialPortControlPage] Component.onCompleted 开始")
         console.log("✅ [SerialPortControlPage] 串口数量:", serialPorts.length)
 
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.9]: 检查 Loader 状态
+        console.log("🔍 [SerialPortControlPage] serialListPanel.status:", serialListPanel.status)
+        console.log("🔍 [SerialPortControlPage] serialListPanel.item:", serialListPanel.item)
+        console.log("🔍 [SerialPortControlPage] serialConfigPanel.status:", serialConfigPanel.status)
+        console.log("🔍 [SerialPortControlPage] serialConfigPanel.item:", serialConfigPanel.item)
+
         // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.4]: 移除 forceActiveFocus()
         // 原因：不应该让 SerialPortControlPage 获得焦点，焦点应该由 DeviceSettingsDialog 管理
         // 初始化焦点状态
@@ -127,6 +133,20 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             source: "SerialPortConfigPanel.qml"
+
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.9]: 监听 Loader 状态
+            onStatusChanged: {
+                console.log("🔍 [SerialPortControlPage] serialConfigPanel Loader 状态变化:", status)
+                if (status === Loader.Error) {
+                    console.error("❌ [SerialPortControlPage] serialConfigPanel Loader 加载失败")
+                } else if (status === Loader.Ready) {
+                    console.log("✅ [SerialPortControlPage] serialConfigPanel Loader 加载完成")
+                } else if (status === Loader.Loading) {
+                    console.log("🔄 [SerialPortControlPage] serialConfigPanel Loader 加载中...")
+                } else if (status === Loader.Null) {
+                    console.log("⚠️ [SerialPortControlPage] serialConfigPanel Loader 状态为 Null")
+                }
+            }
 
             onLoaded: {
                 console.log("✅ [SerialPortControlPage] SerialPortConfigPanel 加载成功")
