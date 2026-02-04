@@ -16,7 +16,18 @@ Rectangle {
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
         console.log("✅ [SerialPortConfigPanel] Component.onCompleted 开始")
+        console.log("✅ [SerialPortConfigPanel] currentSerialPort:", currentSerialPort)
         console.log("✅ [SerialPortConfigPanel] Component.onCompleted 完成")
+    }
+
+    // ========== 监听串口变化 ==========
+    onCurrentSerialPortChanged: {
+        console.log("✅ [SerialPortConfigPanel] currentSerialPort 变化:", currentSerialPort)
+        if (currentSerialPort) {
+            console.log("   - 串口名称:", currentSerialPort.name)
+            console.log("   - 设备路径:", currentSerialPort.path)
+            console.log("   - 串口类型:", currentSerialPort.type)
+        }
     }
 
     // ========== 主布局 ==========
@@ -34,8 +45,10 @@ Rectangle {
 
             onLoaded: {
                 console.log("✅ [SerialPortConfigPanel] SerialPortParamsSection 加载成功")
+                console.log("✅ [SerialPortConfigPanel] 传递 currentSerialPort:", root.currentSerialPort)
                 // 传递当前串口信息
                 item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
+                console.log("✅ [SerialPortConfigPanel] 绑定完成，item.currentSerialPort:", item.currentSerialPort)
             }
         }
 
