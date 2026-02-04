@@ -216,6 +216,17 @@ Item {
                         console.log("⚠️ [导航] 已到达列表第一项")
                     }
                 } else if (currentPage.focusSubArea === 1) {
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.7]: 串口控制使用 NavigationManager
+                    if (currentCategory === 6) {
+                        // 串口控制页面：使用 NavigationManager
+                        var serialPage = serialPortControlPageLoader.item
+                        if (serialPage && serialPage.navigationManager) {
+                            serialPage.navigationManager.moveUp()
+                            event.accepted = true
+                            return
+                        }
+                    }
+
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
                     var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
                     var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
@@ -369,6 +380,17 @@ Item {
                         currentContentItemIndex++
                     }
                 } else if (currentPage.focusSubArea === 1) {
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.7]: 串口控制使用 NavigationManager
+                    if (currentCategory === 6) {
+                        // 串口控制页面：使用 NavigationManager
+                        var serialPage = serialPortControlPageLoader.item
+                        if (serialPage && serialPage.navigationManager) {
+                            serialPage.navigationManager.moveDown()
+                            event.accepted = true
+                            return
+                        }
+                    }
+
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
                     var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
                     var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
