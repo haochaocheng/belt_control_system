@@ -119,9 +119,9 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    // ✅ 2026-02-04: 只发射信号，不直接修改属性（避免破坏绑定）
+                    console.log("🔍 [SerialPortListPanel] 鼠标点击串口:", index)
+                    // ✅ 2026-02-04: 发射信号，由父组件处理
                     root.serialPortSelected(index)
-                    root.focus = true  // 获取焦点以支持键盘操作
                 }
             }
         }
