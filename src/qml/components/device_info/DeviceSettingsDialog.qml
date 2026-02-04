@@ -136,9 +136,9 @@ Item {
         root.forceActiveFocus()
         console.log("✅ [DeviceSettingsDialog] 对话框已获取焦点")
 
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.4]: 添加焦点追踪
-        // 使用 Qt.application.focusObject 追踪全局焦点变化
-        focusTracker.start()
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.7]: 暂时禁用焦点追踪 Timer
+        // 测试 Timer 是否导致焦点丢失
+        // focusTracker.start()
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.4]: 焦点追踪 Timer
