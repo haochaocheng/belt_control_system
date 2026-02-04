@@ -40,7 +40,7 @@ Rectangle {
         Loader {
             id: paramsSection
             Layout.fillWidth: true
-            Layout.preferredHeight: 280
+            Layout.preferredHeight: 300
             source: "SerialPortParamsSection.qml"
 
             onLoaded: {
@@ -56,7 +56,7 @@ Rectangle {
         Loader {
             id: sendSection
             Layout.fillWidth: true
-            Layout.preferredHeight: 120
+            Layout.preferredHeight: 180
             source: "SerialPortSendSection.qml"
 
             onLoaded: {
@@ -70,7 +70,7 @@ Rectangle {
         Loader {
             id: receiveSection
             Layout.fillWidth: true
-            Layout.preferredHeight: 200
+            Layout.preferredHeight: 220
             source: "SerialPortReceiveSection.qml"
 
             onLoaded: {
@@ -84,6 +84,7 @@ Rectangle {
         Loader {
             id: modbusSection
             Layout.fillWidth: true
+            Layout.minimumHeight: 400
             Layout.fillHeight: true
             source: "ModbusRegisterSection.qml"
 

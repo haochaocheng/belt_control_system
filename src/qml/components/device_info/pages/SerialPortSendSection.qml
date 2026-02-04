@@ -2,6 +2,7 @@
 // 串口发送区域
 // 创建日期: 2026-02-04
 // ✅ 2026-02-04: Phase 3 - 实现发送区功能
+// ✅ 2026-02-04: 使用 TextArea 替代 CustomTextField，增加高度
 
 import QtQuick
 import QtQuick.Controls
@@ -28,38 +29,66 @@ Rectangle {
         anchors.margins: 16
         spacing: 12
 
-        // ========== 标题 ==========
-        Text {
-            text: "发送区"
-            font.pixelSize: 18
-            font.weight: Font.Bold
-            color: "#E0E0E0"
-            Layout.fillWidth: true
-        }
-
-        // ========== 发送数据输入和格式选择 ==========
+        // ========== 标题和格式选择 ==========
         RowLayout {
             Layout.fillWidth: true
             spacing: 12
 
-            // 发送数据输入框
-            DeviceInfo.CustomTextField {
-                id: sendInput
-                Layout.fillWidth: true
-                placeholderText: "输入要发送的数据..."
+            Text {
+                text: "发送区"
+                font.pixelSize: 18
+                font.weight: Font.Bold
+                color: "#E0E0E0"
+            }
 
-                // 回车键发送
-                Keys.onReturnPressed: {
-                    sendButton.clicked()
-                }
+            Item {
+                Layout.fillWidth: true
             }
 
             // HEX/ASCII 格式选择
+            Text {
+                text: "格式:"
+                font.pixelSize: 14
+                color: "#9E9E9E"
+            }
+
             DeviceInfo.CustomComboBox {
                 id: sendFormat
-                Layout.preferredWidth: 120
+                Layout.preferredWidth: 100
                 model: ["HEX", "ASCII"]
                 currentIndex: 0
+            }
+        }
+
+        // ========== 发送数据输入框 ==========
+        ScrollView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+
+            TextArea {
+                id: sendInput
+                wrapMode: TextArea.Wrap
+                font.family: "Consolas"
+                font.pixelSize: 14
+                color: "#E0E0E0"
+                placeholderText: "输入要发送的数据..."
+                placeholderTextColor: "#5E6E7E"
+                background: Rectangle {
+                    color: "#1e2838"
+                    border.color: sendInput.activeFocus ? "#2196F3" : "#3d4556"
+                    border.width: sendInput.activeFocus ? 2 : 1
+                    radius: 4
+                }
+
+                // Ctrl+Enter 发送
+                Keys.onPressed: function(event) {
+                    if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) &&
+                        (event.modifiers & Qt.ControlModifier)) {
+                        sendButton.clicked()
+                        event.accepted = true
+                    }
+                }
             }
         }
 
@@ -70,8 +99,8 @@ Rectangle {
 
             Button {
                 id: sendButton
-                text: "发送"
-                Layout.preferredWidth: 100
+                text: "发送 (Ctrl+Enter)"
+                Layout.preferredWidth: 150
                 enabled: sendInput.text.length > 0
 
                 onClicked: {
