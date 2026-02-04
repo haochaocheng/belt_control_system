@@ -98,12 +98,11 @@ Rectangle {
                 Layout.maximumWidth: 300
                 implicitHeight: baudRateCombo.implicitHeight
 
-                ComboBox {
+                DeviceInfo.CustomComboBox {
                     id: baudRateCombo
                     anchors.fill: parent
                     model: ["1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"]
                     currentIndex: 3  // 默认9600
-                    font.pixelSize: 21
                 }
             }
 
@@ -157,12 +156,11 @@ Rectangle {
                 Layout.maximumWidth: 300
                 implicitHeight: dataBitsCombo.implicitHeight
 
-                ComboBox {
+                DeviceInfo.CustomComboBox {
                     id: dataBitsCombo
                     anchors.fill: parent
                     model: ["5", "6", "7", "8"]
                     currentIndex: 3  // 默认8
-                    font.pixelSize: 21
                 }
             }
 
@@ -214,12 +212,11 @@ Rectangle {
                 Layout.maximumWidth: 300
                 implicitHeight: stopBitsCombo.implicitHeight
 
-                ComboBox {
+                DeviceInfo.CustomComboBox {
                     id: stopBitsCombo
                     anchors.fill: parent
                     model: ["1", "1.5", "2"]
                     currentIndex: 0  // 默认1
-                    font.pixelSize: 21
                 }
             }
 
@@ -244,12 +241,11 @@ Rectangle {
                 Layout.maximumWidth: 300
                 implicitHeight: parityCombo.implicitHeight
 
-                ComboBox {
+                DeviceInfo.CustomComboBox {
                     id: parityCombo
                     anchors.fill: parent
                     model: ["None", "Odd", "Even", "Mark", "Space"]
                     currentIndex: 0  // 默认None
-                    font.pixelSize: 21
                 }
             }
 
