@@ -182,6 +182,13 @@ Rectangle {
         onTabIndexChanged: {
             console.log("✅ [SerialPortControlPage] Tab 索引变化:", tabIndex)
             root.focusTabIndex = tabIndex
+
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37.2]: 同步更新 SerialPortConfigPanel 的 currentTabIndex
+            if (serialConfigPanel.item) {
+                serialConfigPanel.item.currentTabIndex = tabIndex
+                console.log("✅ [SerialPortControlPage] 已同步 currentTabIndex 到 SerialPortConfigPanel:", tabIndex)
+            }
+
             // 更新 lastParamIndex
             Qt.callLater(function() {
                 var paramCount = root.getParamFieldCount()
