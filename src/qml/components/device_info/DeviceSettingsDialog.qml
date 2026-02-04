@@ -533,6 +533,24 @@ Item {
                     }
                 }
 
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.2]: 串口控制页面特殊处理
+                var isSerialPortControlPage = (currentCategory === 6)  // 串口控制类别
+
+                if (isSerialPortControlPage) {
+                    // ✅ SerialPortControlPage 2区域模式：0=列表 1=参数
+                    console.log("🔍 [串口控制导航] 左键 - focusSubArea:", currentPage.focusSubArea, "focusItemIndex:", currentPage.focusItemIndex, "currentSerialIndex:", currentPage.currentSerialIndex)
+                    if (currentPage.focusSubArea === 1) {
+                        // 从参数区域返回串口列表
+                        currentPage.focusSubArea = 0
+                        currentPage.focusItemIndex = currentPage.currentSerialIndex  // 恢复列表焦点
+                        console.log("✅ [导航] 串口控制：从参数区域返回列表")
+                        console.log("🔍 [串口控制导航] 左键后 - focusSubArea:", currentPage.focusSubArea, "focusItemIndex:", currentPage.focusItemIndex)
+                        event.accepted = true
+                        return
+                    }
+                    // 如果在列表区域（focusSubArea === 0），继续默认处理（返回类别）
+                }
+
                 if (currentPage.focusSubArea === 1) {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
                     var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
@@ -657,6 +675,28 @@ Item {
                     // 右键由 BrakeControlPage 内部的 NavigationManager 处理，不在这里处理
                     console.log("✅ [导航] BrakeControlPage 右键由内部 NavigationManager 处理")
                     return
+                }
+
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.1]: 串口控制页面特殊处理
+                var isSerialPortControlPage = (currentCategory === 6)  // 串口控制类别
+
+                if (isSerialPortControlPage) {
+                    // ✅ SerialPortControlPage 2区域模式：0=列表 1=参数
+                    console.log("🔍 [串口控制导航] 右键 - focusSubArea:", currentPage.focusSubArea, "focusItemIndex:", currentPage.focusItemIndex)
+                    if (currentPage.focusSubArea === 0) {
+                        // 从串口列表进入参数区域
+                        currentPage.focusSubArea = 1
+                        currentPage.focusItemIndex = -1  // 清除列表焦点
+                        console.log("✅ [导航] 串口控制：从列表进入参数区域")
+                        console.log("🔍 [串口控制导航] 右键后 - focusSubArea:", currentPage.focusSubArea, "focusItemIndex:", currentPage.focusItemIndex)
+                        event.accepted = true
+                        return
+                    } else if (currentPage.focusSubArea === 1) {
+                        // 已在参数区域，右键无动作
+                        console.log("⚠️ [导航] 串口控制：已在参数区域最右侧")
+                        event.accepted = true
+                        return
+                    }
                 }
 
                 // 如果当前在列表区域，切换到参数区域

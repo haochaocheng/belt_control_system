@@ -127,6 +127,8 @@ Rectangle {
 
                 // 传递属性
                 item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.4]: 传递 focusSubArea
+                item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
             }
         }
     }

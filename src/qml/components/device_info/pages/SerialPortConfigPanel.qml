@@ -12,6 +12,17 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property var currentSerialPort: null  // 当前串口信息
+    property int focusSubArea: 0  // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.3]: 接收焦点状态（0=列表 1=参数）
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.3]: 焦点指示器
+    Rectangle {
+        anchors.fill: parent
+        color: "transparent"
+        border.color: (focusSubArea === 1) ? "#2196F3" : "transparent"
+        border.width: (focusSubArea === 1) ? 2 : 0
+        radius: 4
+        z: -1  // 放在最底层
+    }
 
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
