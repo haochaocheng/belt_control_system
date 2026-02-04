@@ -62,7 +62,7 @@ Rectangle {
             Loader {
                 id: sendSection
                 Layout.fillWidth: true
-                Layout.preferredHeight: 230  // ✅ 调整高度：250 → 230（移除内部ScrollView后）
+                Layout.preferredHeight: 305  // ✅ 增加高度 1.5 倍：230 → 305（225 + 80）
                 source: "SerialPortSendSection.qml"
 
                 onLoaded: {
@@ -76,7 +76,7 @@ Rectangle {
             Loader {
                 id: receiveSection
                 Layout.fillWidth: true
-                Layout.preferredHeight: 260  // ✅ 调整高度：280 → 260（移除内部ScrollView后）
+                Layout.preferredHeight: 350  // ✅ 增加高度 1.5 倍：260 → 350（270 + 80）
                 source: "SerialPortReceiveSection.qml"
 
                 onLoaded: {

@@ -62,10 +62,11 @@ Rectangle {
 
         // ========== 发送数据输入框 ==========
         // ✅ 2026-02-04: 移除内部 ScrollView，使用固定高度的 TextArea
+        // ✅ 2026-02-04: 增加高度 1.5 倍：150 → 225
         TextArea {
             id: sendInput
             Layout.fillWidth: true
-            Layout.preferredHeight: 150  // 固定高度
+            Layout.preferredHeight: 225  // 固定高度（150 * 1.5）
             wrapMode: TextArea.Wrap
             font.family: "Consolas"
             font.pixelSize: 14

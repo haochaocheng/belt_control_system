@@ -40,10 +40,11 @@ Rectangle {
 
         // ========== 接收数据显示区 ==========
         // ✅ 2026-02-04: 移除内部 ScrollView，使用固定高度的 TextArea
+        // ✅ 2026-02-04: 增加高度 1.5 倍：180 → 270
         TextArea {
             id: receiveArea
             Layout.fillWidth: true
-            Layout.preferredHeight: 180  // 固定高度
+            Layout.preferredHeight: 270  // 固定高度（180 * 1.5）
             readOnly: true
             wrapMode: TextArea.Wrap
             font.family: "Consolas"
