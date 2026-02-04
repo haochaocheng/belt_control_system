@@ -665,8 +665,18 @@ Item {
             // currentContentItemIndex = 0  // ❌ 不应该重置，会导致焦点和选中状态不同步
             break
         case 2:  // 右侧内容 → 检查当前页面是否支持子区域导航
+            console.log("🔍 [串口控制导航] case 2 开始 - currentCategory:", currentCategory)
             var currentPage = getCurrentPage(currentCategory)
+            console.log("🔍 [串口控制导航] getCurrentPage 返回:", currentPage ? "有效对象" : "null")
+
+            if (currentPage) {
+                console.log("🔍 [串口控制导航] currentPage.focusSubArea 类型:", typeof currentPage.focusSubArea)
+                console.log("🔍 [串口控制导航] currentPage.focusSubArea 值:", currentPage.focusSubArea)
+            }
+
             if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
+                console.log("🔍 [串口控制导航] 进入子区域导航处理")
+
                 // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 检查是否是 BrakeControlPage（4区域模式）
                 var isBrakeControlPage = (currentCategory === 4)  // 制动器控制类别
 
@@ -679,12 +689,14 @@ Item {
 
                 // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.1]: 串口控制页面特殊处理
                 var isSerialPortControlPage = (currentCategory === 6)  // 串口控制类别
+                console.log("🔍 [串口控制导航] isSerialPortControlPage:", isSerialPortControlPage)
 
                 if (isSerialPortControlPage) {
                     // ✅ SerialPortControlPage 2区域模式：0=列表 1=参数
                     console.log("🔍 [串口控制导航] 右键 - focusSubArea:", currentPage.focusSubArea, "focusItemIndex:", currentPage.focusItemIndex)
                     if (currentPage.focusSubArea === 0) {
                         // 从串口列表进入参数区域
+                        console.log("🔍 [串口控制导航] 设置 focusSubArea = 1")
                         currentPage.focusSubArea = 1
                         currentPage.focusItemIndex = -1  // 清除列表焦点
                         console.log("✅ [导航] 串口控制：从列表进入参数区域")
@@ -698,6 +710,9 @@ Item {
                         return
                     }
                 }
+            } else {
+                console.log("🔍 [串口控制导航] currentPage 为 null 或没有 focusSubArea 属性")
+            }
 
                 // 如果当前在列表区域，切换到参数区域
                 if (currentPage.focusSubArea === 0) {

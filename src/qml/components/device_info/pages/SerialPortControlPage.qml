@@ -44,6 +44,12 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.6]: 监听 focusSubArea 变化
+    onFocusSubAreaChanged: {
+        console.log("🔍 [SerialPortControlPage] focusSubArea 变化:", focusSubArea)
+        console.log("🔍 [SerialPortControlPage] 当前状态 - focusItemIndex:", focusItemIndex, "currentSerialIndex:", currentSerialIndex)
+    }
+
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.4]: 移除 Keys.onUpPressed/onDownPressed/onRightPressed
     // 原因：这些处理器会在鼠标点击后拦截导航键事件，导致 DeviceSettingsDialog 的导航逻辑被绕过
     // 解决方案：完全依赖 DeviceSettingsDialog 的默认处理 + Connections 同步
