@@ -39,17 +39,30 @@ Rectangle {
     // ========== 键盘导航支持 ==========
     focus: true
 
+    // ✅ 2026-02-04 [FIX 100.300.112.8.25.17]: 移除直接赋值，避免破坏 Qt.binding()
+    // 注意：这些键盘事件处理已经不再使用，因为 BrakeControlPage 使用 NavigationManager
+    // 但为了保险起见，也修复它们
     Keys.onUpPressed: {
+        // 旧代码：
+        // if (root.currentBrakeIndex > 0) {
+        //     root.currentBrakeIndex--  // ❌ 这会破坏绑定！
+        //     brakeSelected(root.currentBrakeIndex)
+        // }
+        // 新方案：只发射信号，不直接修改 currentBrakeIndex
         if (root.currentBrakeIndex > 0) {
-            root.currentBrakeIndex--
-            brakeSelected(root.currentBrakeIndex)
+            brakeSelected(root.currentBrakeIndex - 1)
         }
     }
 
     Keys.onDownPressed: {
+        // 旧代码：
+        // if (root.currentBrakeIndex < 7) {
+        //     root.currentBrakeIndex++  // ❌ 这会破坏绑定！
+        //     brakeSelected(root.currentBrakeIndex)
+        // }
+        // 新方案：只发射信号，不直接修改 currentBrakeIndex
         if (root.currentBrakeIndex < 7) {
-            root.currentBrakeIndex++
-            brakeSelected(root.currentBrakeIndex)
+            brakeSelected(root.currentBrakeIndex + 1)
         }
     }
 
@@ -184,7 +197,10 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    root.currentBrakeIndex = index
+                    // ✅ 2026-02-04 [FIX 100.300.112.8.25.17]: 移除直接赋值，避免破坏 Qt.binding()
+                    // 旧代码：root.currentBrakeIndex = index  // ❌ 这会破坏绑定！
+                    // 新方案：只发射信号，让 BrakeControlPage 更新 navigationManager.brakeListIndex
+                    //        然后通过绑定自动更新 currentBrakeIndex
                     root.brakeSelected(index)
                     root.focus = true  // 获取焦点以支持键盘操作
                 }

@@ -30,17 +30,30 @@ Rectangle {
     // ========== 键盘导航支持 ==========
     focus: true
 
+    // ✅ 2026-02-04 [FIX 100.300.112.8.25.18]: 移除直接赋值，避免破坏 Qt.binding()
+    // 注意：这些键盘事件处理已经不再使用，因为 TensionControlPage 使用 NavigationManager
+    // 但为了保险起见，也修复它们
     Keys.onUpPressed: {
+        // 旧代码：
+        // if (root.currentControlIndex > 0) {
+        //     root.currentControlIndex--  // ❌ 这会破坏绑定！
+        //     controlSelected(root.currentControlIndex)
+        // }
+        // 新方案：只发射信号，不直接修改 currentControlIndex
         if (root.currentControlIndex > 0) {
-            root.currentControlIndex--
-            controlSelected(root.currentControlIndex)
+            controlSelected(root.currentControlIndex - 1)
         }
     }
 
     Keys.onDownPressed: {
+        // 旧代码：
+        // if (root.currentControlIndex < 1) {  // 只有2个选项
+        //     root.currentControlIndex++  // ❌ 这会破坏绑定！
+        //     controlSelected(root.currentControlIndex)
+        // }
+        // 新方案：只发射信号，不直接修改 currentControlIndex
         if (root.currentControlIndex < 1) {  // 只有2个选项
-            root.currentControlIndex++
-            controlSelected(root.currentControlIndex)
+            controlSelected(root.currentControlIndex + 1)
         }
     }
 
@@ -179,7 +192,10 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    root.currentControlIndex = index
+                    // ✅ 2026-02-04 [FIX 100.300.112.8.25.18]: 移除直接赋值，避免破坏 Qt.binding()
+                    // 旧代码：root.currentControlIndex = index  // ❌ 这会破坏绑定！
+                    // 新方案：只发射信号，让 TensionControlPage 更新 navigationManager.controlListIndex
+                    //        然后通过绑定自动更新 currentControlIndex
                     root.controlSelected(index)
                     root.focus = true  // 获取焦点以支持键盘操作
                 }
