@@ -21,6 +21,24 @@ Rectangle {
         console.log("🔍 [SerialPortParamsSection] focusSerialName 开始")
         console.log("   - serialNameText.activeFocus (调用前):", serialNameText.activeFocus)
 
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 找到 ScrollView 并记录滚动状态
+        var scrollView = serialNameText
+        while (scrollView && scrollView.toString().indexOf("ScrollView") === -1) {
+            scrollView = scrollView.parent
+        }
+        if (scrollView) {
+            console.log("🔍 [SerialPortParamsSection] 找到 ScrollView")
+            console.log("   - ScrollView.contentY (设置焦点前):", scrollView.contentY)
+            console.log("   - ScrollView.contentHeight:", scrollView.contentHeight)
+            console.log("   - ScrollView.height:", scrollView.height)
+            console.log("   - ScrollView.interactive:", scrollView.interactive)
+
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 暂时禁用 ScrollView 交互
+            // 防止自动滚动抢夺焦点
+            console.log("🔍 [SerialPortParamsSection] 禁用 ScrollView 交互")
+            scrollView.interactive = false
+        }
+
         // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.5]: 先禁用 DeviceSettingsDialog root 的 focus
         // 防止 root 抢夺焦点
         var dialog = serialNameText
@@ -36,15 +54,33 @@ Rectangle {
         console.log("   - serialNameText.activeFocus (调用后):", serialNameText.activeFocus)
         console.log("✅ [SerialPortParamsSection] 串口名称获得焦点")
 
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 记录 ScrollView 滚动状态（设置焦点后）
+        if (scrollView) {
+            console.log("🔍 [SerialPortParamsSection] ScrollView.contentY (设置焦点后):", scrollView.contentY)
+        }
+
         // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.6]: 使用 Qt.callLater 延迟检查焦点
         // 如果焦点丢失，重新设置焦点
         Qt.callLater(function() {
             console.log("🔍 [SerialPortParamsSection] Qt.callLater 检查焦点")
             console.log("   - serialNameText.activeFocus:", serialNameText.activeFocus)
+
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 记录 ScrollView 滚动状态（Qt.callLater）
+            if (scrollView) {
+                console.log("   - ScrollView.contentY (Qt.callLater):", scrollView.contentY)
+            }
+
             if (!serialNameText.activeFocus) {
                 console.log("⚠️ [SerialPortParamsSection] 焦点丢失，重新设置焦点")
                 serialNameText.forceActiveFocus()
                 console.log("   - serialNameText.activeFocus (重新设置后):", serialNameText.activeFocus)
+            }
+
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 重新启用 ScrollView 交互
+            if (scrollView) {
+                console.log("🔍 [SerialPortParamsSection] 重新启用 ScrollView 交互")
+                scrollView.interactive = true
+                console.log("   - ScrollView.contentY (最终):", scrollView.contentY)
             }
         })
     }
