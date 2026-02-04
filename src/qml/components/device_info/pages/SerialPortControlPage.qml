@@ -21,6 +21,10 @@ Rectangle {
     property int focusParamIndex: 0     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: 参数焦点索引
     property int focusButtonIndex: 0    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: 按钮焦点索引
 
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37.1]: 添加导航控制标志
+    property bool isReturningToCategory: false  // 是否正在返回类别（防止事件循环）
+    property bool keysEnabled: true             // 键盘事件是否启用
+
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: 暴露 navigationManager 供外部访问
     property alias navigationManager: navigationManager
 
@@ -103,6 +107,23 @@ Rectangle {
 
     // ========== 信号 ==========
     signal serialPortSelected(int index)
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37.1]: 标志重置定时器
+    Timer {
+        id: resetFlagTimer
+        interval: 100
+        repeat: false
+        onTriggered: {
+            root.isReturningToCategory = false
+        }
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37.1]: 监听焦点变化，启用键盘事件
+    onActiveFocusChanged: {
+        if (activeFocus) {
+            keysEnabled = true
+        }
+    }
 
     // ========== 监听焦点变化，同步更新 currentSerialIndex ==========
     onFocusItemIndexChanged: {
@@ -221,19 +242,60 @@ Rectangle {
         }
     }
 
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.4]: 移除 Keys.onUpPressed/onDownPressed/onRightPressed
-    // 原因：这些处理器会在鼠标点击后拦截导航键事件，导致 DeviceSettingsDialog 的导航逻辑被绕过
-    // 解决方案：完全依赖 DeviceSettingsDialog 的默认处理 + Connections 同步
-    // 参考：SwitchInputPage 和 AnalogInputPage 的实现
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37.1]: 恢复完整的键盘事件处理器
+    // 参考 MotorControlPage.qml 的实现，添加上下左右键处理
 
-    // ✅ 左键：从列表区返回类别（保留此功能）
+    // 上键：向上导航
+    Keys.onUpPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        console.log("✅ [SerialPortControlPage] 按上键")
+        navigationManager.handleDirectionKey("Up")
+        event.accepted = true
+    }
+
+    // 下键：向下导航
+    Keys.onDownPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        console.log("✅ [SerialPortControlPage] 按下键")
+        navigationManager.handleDirectionKey("Down")
+        event.accepted = true
+    }
+
+    // 左键：向左导航或返回类别
     Keys.onLeftPressed: function(event) {
-        if (focusSubArea === 0) {
+        if (isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        if (navigationManager.currentArea === navigationManager.areaMotorList) {
             // 在列表区域，按左键返回到左侧类别
             console.log("✅ [SerialPortControlPage] 列表区域按左键，请求返回到左侧类别")
+            root.isReturningToCategory = true
             root.requestReturnToCategory()
+            resetFlagTimer.start()
+            event.accepted = true
+        } else {
+            console.log("✅ [SerialPortControlPage] 按左键")
+            navigationManager.handleDirectionKey("Left")
             event.accepted = true
         }
+    }
+
+    // 右键：向右导航
+    Keys.onRightPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        console.log("✅ [SerialPortControlPage] 按右键")
+        navigationManager.handleDirectionKey("Right")
+        event.accepted = true
     }
 
     // ========== 组件加载完成 ==========
