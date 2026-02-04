@@ -1718,6 +1718,72 @@ Item {
                             console.error("❌ [DeviceSettingsDialog] SerialPortControlPage 加载失败")
                         }
                     }
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 5]: 添加焦点连接
+                    Connections {
+                        target: root
+                        enabled: serialPortControlPageLoader.item !== null
+
+                        function onCurrentFocusAreaChanged() {
+                            if (serialPortControlPageLoader.item && root.currentCategory === 6) {
+                                if (root.currentFocusArea === 2) {
+                                    // 焦点进入内容区域，默认在列表区域
+                                    serialPortControlPageLoader.item.focusSubArea = 0
+                                    serialPortControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    // 焦点离开内容区域，清除焦点
+                                    serialPortControlPageLoader.item.focusItemIndex = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentCategoryChanged() {
+                            if (serialPortControlPageLoader.item) {
+                                if (root.currentFocusArea === 2 && root.currentCategory === 6) {
+                                    // 切换到串口控制类别，设置焦点
+                                    serialPortControlPageLoader.item.focusSubArea = 0
+                                    serialPortControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    // 切换到其他类别，清除焦点
+                                    serialPortControlPageLoader.item.focusItemIndex = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentContentItemIndexChanged() {
+                            if (serialPortControlPageLoader.item &&
+                                root.currentFocusArea === 2 &&
+                                root.currentCategory === 6 &&
+                                serialPortControlPageLoader.item.focusSubArea === 0) {
+                                // 只在焦点在列表区域时同步
+                                serialPortControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            }
+                        }
+                    }
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 5]: 监听串口控制页面焦点变化
+                    Connections {
+                        target: serialPortControlPageLoader.item
+                        enabled: serialPortControlPageLoader.item !== null
+
+                        function onFocusItemIndexChanged() {
+                            if (serialPortControlPageLoader.item &&
+                                root.currentCategory === 6 &&
+                                root.currentFocusArea === 2 &&
+                                serialPortControlPageLoader.item.focusSubArea === 0 &&
+                                serialPortControlPageLoader.item.focusItemIndex >= 0) {
+                                // 只在焦点在列表区域时同步
+                                console.log("✅ [DeviceSettingsDialog] 同步串口控制列表焦点:", serialPortControlPageLoader.item.focusItemIndex)
+                                root.currentContentItemIndex = serialPortControlPageLoader.item.focusItemIndex
+                            }
+                        }
+
+                        function onRequestReturnToCategory() {
+                            // 串口控制页面请求返回到左侧类别
+                            console.log("✅ [DeviceSettingsDialog] 串口控制请求返回类别")
+                            root.currentFocusArea = 1  // 切换到左侧类别区域
+                        }
+                    }
                 }
 
                 // 7: 逻辑控制
