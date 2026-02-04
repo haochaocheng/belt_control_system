@@ -74,6 +74,7 @@ Item {
 
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 为每个类别保存独立的内容索引
     // 避免切换类别时焦点位置丢失
+    // ✅ 2026-02-04 [FIX 100.300.113]: 添加串口控制类别
     property var categoryContentIndexMap: ({
         0: 0,  // 基本配置
         1: 0,  // 开关量输入
@@ -81,7 +82,8 @@ Item {
         3: 0,  // 电机控制
         4: 0,  // 制动器控制
         5: 0,  // 张紧控制
-        6: 0   // 逻辑控制
+        6: 0,  // 串口控制
+        7: 0   // 逻辑控制
     })
 
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听类别切换，保存和恢复内容索引
@@ -1009,7 +1011,7 @@ Item {
                 spacing: 10
 
                 Repeater {
-                    model: ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "逻辑控制"]
+                    model: ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "逻辑控制"]
 
                     Button {
                         width: parent.width - 20
@@ -1702,7 +1704,23 @@ Item {
                     }
                 }
 
-                // 6: 逻辑控制
+                // ✅ 2026-02-04 [FIX 100.300.113]: 6: 串口控制
+                Loader {
+                    id: serialPortControlPageLoader
+                    source: "pages/SerialPortControlPage.qml"
+
+                    onLoaded: {
+                        console.log("✅ [DeviceSettingsDialog] SerialPortControlPage 加载成功")
+                    }
+
+                    onStatusChanged: {
+                        if (status === Loader.Error) {
+                            console.error("❌ [DeviceSettingsDialog] SerialPortControlPage 加载失败")
+                        }
+                    }
+                }
+
+                // 7: 逻辑控制
                 Rectangle {
                     color: "transparent"
                     Text {
@@ -1771,7 +1789,7 @@ Item {
 
     // ========== 辅助函数 ==========
     function getCategoryName(index) {
-        var names = ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "逻辑控制"]
+        var names = ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "逻辑控制"]
         return names[index] || "未知类别"
     }
 
@@ -1792,7 +1810,9 @@ Item {
             return ["制动测试", "释放测试", "参数校验"]
         case 5: // 张紧控制
             return ["张紧测试", "释放测试", "参数校验"]
-        case 6: // 逻辑控制
+        case 6: // 串口控制
+            return []  // ✅ 2026-02-04 [FIX 100.300.113]: 串口控制暂无底部按钮
+        case 7: // 逻辑控制
             return ["添加逻辑", "删除逻辑", "测试逻辑"]
         default:
             return []

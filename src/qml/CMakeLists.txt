@@ -96,6 +96,10 @@ qt_add_qml_module(qml_module
         components/device_info/pages/TensionControlPage.qml
         components/device_info/pages/TensionControlListPanel.qml
         components/device_info/pages/TensionControlConfigPanel.qml
+        # ✅ 2026-02-04 [FIX 100.300.113]: 串口控制页面组件
+        components/device_info/pages/SerialPortControlPage.qml
+        components/device_info/pages/SerialPortListPanel.qml
+        components/device_info/pages/SerialPortConfigPanel.qml
         components/device_info/pages/CurrentProtectionTab.qml
         components/device_info/pages/MotorTempTab.qml
         components/device_info/pages/FrontBearingTempTab.qml
