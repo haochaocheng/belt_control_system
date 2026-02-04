@@ -710,9 +710,6 @@ Item {
                         return
                     }
                 }
-            } else {
-                console.log("🔍 [串口控制导航] currentPage 为 null 或没有 focusSubArea 属性")
-            }
 
                 // 如果当前在列表区域，切换到参数区域
                 if (currentPage.focusSubArea === 0) {
@@ -774,6 +771,8 @@ Item {
                         return
                     }
                 }
+            } else {
+                console.log("🔍 [串口控制导航] currentPage 为 null 或没有 focusSubArea 属性")
             }
             // 否则切换到底部按钮
             currentFocusArea = 3
