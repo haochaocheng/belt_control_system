@@ -154,7 +154,7 @@ Rectangle {
 
         // 初始化：从串口列表区开始
         Component.onCompleted: {
-            currentArea = areaSerialList
+            currentArea = areaMotorList  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.10]: 使用 areaMotorList（通用列表区域）
             motorListIndex = 0  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.9]: 使用 motorListIndex（通用列表索引）
             paramIndex = 0
             buttonIndex = 0
@@ -179,6 +179,8 @@ Rectangle {
         onParamIndexChanged: {
             console.log("✅ [SerialPortControlPage] 参数索引变化:", paramIndex)
             root.focusParamIndex = paramIndex
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.11]: 调用 triggerParamInput 设置焦点
+            root.triggerParamInput(paramIndex)
         }
 
         // 监听按钮索引变化
@@ -191,7 +193,7 @@ Rectangle {
         onAreaChanged: function(newArea) {
             console.log("✅ [SerialPortControlPage] 区域变化:", newArea)
             switch(newArea) {
-            case areaSerialList:
+            case areaMotorList:  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.10]: 使用 areaMotorList（通用列表区域）
                 root.focusSubArea = 0
                 root.focusItemIndex = motorListIndex  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.9]: 使用 motorListIndex
                 root.focusParamIndex = -1
