@@ -17,6 +17,12 @@ Rectangle {
     property var currentSerialPort: null  // 当前串口信息
     property bool isPaused: false         // 是否暂停接收
 
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.3]: 添加焦点函数
+    function focusReceiveFormat() {
+        receiveFormat.forceActiveFocus()
+        console.log("✅ [SerialPortReceiveSection] 接收格式获得焦点")
+    }
+
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
         console.log("✅ [SerialPortReceiveSection] Component.onCompleted 开始")
@@ -98,15 +104,30 @@ Rectangle {
             }
 
             // HEX/ASCII 格式选择
-            DeviceInfo.CustomComboBox {
-                id: receiveFormat
+            Item {
                 Layout.preferredWidth: 120
-                model: ["HEX", "ASCII"]
-                currentIndex: 0
+                implicitHeight: receiveFormat.implicitHeight
 
-                onCurrentIndexChanged: {
-                    console.log("✅ [SerialPortReceiveSection] 显示格式切换:", currentText)
-                    // TODO: Phase 2 - 切换显示格式
+                DeviceInfo.CustomComboBox {
+                    id: receiveFormat
+                    anchors.fill: parent
+                    model: ["HEX", "ASCII"]
+                    currentIndex: 0
+
+                    onCurrentIndexChanged: {
+                        console.log("✅ [SerialPortReceiveSection] 显示格式切换:", currentText)
+                        // TODO: Phase 2 - 切换显示格式
+                    }
+                }
+
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.3]: 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: receiveFormat.activeFocus ? "#2196F3" : "transparent"
+                    border.width: receiveFormat.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
                 }
             }
 
