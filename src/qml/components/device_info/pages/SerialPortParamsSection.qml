@@ -35,6 +35,18 @@ Rectangle {
         serialNameText.forceActiveFocus()
         console.log("   - serialNameText.activeFocus (调用后):", serialNameText.activeFocus)
         console.log("✅ [SerialPortParamsSection] 串口名称获得焦点")
+
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.6]: 使用 Qt.callLater 延迟检查焦点
+        // 如果焦点丢失，重新设置焦点
+        Qt.callLater(function() {
+            console.log("🔍 [SerialPortParamsSection] Qt.callLater 检查焦点")
+            console.log("   - serialNameText.activeFocus:", serialNameText.activeFocus)
+            if (!serialNameText.activeFocus) {
+                console.log("⚠️ [SerialPortParamsSection] 焦点丢失，重新设置焦点")
+                serialNameText.forceActiveFocus()
+                console.log("   - serialNameText.activeFocus (重新设置后):", serialNameText.activeFocus)
+            }
+        })
     }
 
     // 索引 1: 波特率（可编辑）
