@@ -12,25 +12,18 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property var currentSerialPort: null  // 当前串口信息
-    property int focusSubArea: 0  // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.3]: 接收焦点状态（0=列表 1=参数）
+    property int focusSubArea: 0  // 0=列表 1=参数 2=按钮
+    property int focusParamIndex: -1  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.5]: 参数焦点索引
 
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.6]: 监听 focusSubArea 变化
-    onFocusSubAreaChanged: {
-        console.log("🔍 [SerialPortConfigPanel] focusSubArea 变化:", focusSubArea)
-        console.log("🔍 [SerialPortConfigPanel] 焦点指示器状态 - border.color:", (focusSubArea === 1) ? "#2196F3" : "transparent")
-        console.log("🔍 [SerialPortConfigPanel] 焦点指示器状态 - border.width:", (focusSubArea === 1) ? 2 : 0)
-    }
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.5]: 暴露子区域的 Loader，供 triggerParamInput 访问
+    property alias paramsSection: paramsSection
+    property alias sendSection: sendSection
+    property alias receiveSection: receiveSection
+    property alias modbusSection: modbusSection
 
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.3]: 焦点指示器
-    Rectangle {
-        id: focusIndicator
-        anchors.fill: parent
-        color: "transparent"
-        border.color: (focusSubArea === 1) ? "#2196F3" : "transparent"
-        border.width: (focusSubArea === 1) ? 2 : 0
-        radius: 4
-        z: -1  // 放在最底层
-    }
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.5]: 移除整体焦点指示器（改为每个输入控件单独显示）
+    // 2026-02-04 [FIX 100.300.113 Phase 6.3]: 焦点指示器已移除，改为每个输入控件单独显示焦点
+    // Rectangle { id: focusIndicator ... }  // 已删除
 
     // ========== 组件加载完成 ==========
     Component.onCompleted: {

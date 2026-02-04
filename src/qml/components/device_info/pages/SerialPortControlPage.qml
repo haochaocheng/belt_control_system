@@ -6,6 +6,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../" as DeviceInfo  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: 导入 NavigationManager
 
 Rectangle {
     id: root
@@ -15,16 +16,106 @@ Rectangle {
     // ========== 公开属性 ==========
     property int currentSerialIndex: 0  // 当前选中的串口索引 (0-5)
     property int focusItemIndex: -1     // 导航焦点索引
-    property int focusSubArea: 0        // 焦点子区域 (0:列表 1:参数)
+    property int focusSubArea: 0        // 焦点子区域 (0:列表 1:参数 2:按钮)
+    property int focusParamIndex: 0     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: 参数焦点索引
+    property int focusButtonIndex: 0    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: 按钮焦点索引
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: 暴露 navigationManager 供外部访问
+    property alias navigationManager: navigationManager
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: Qt 虚拟键盘引用
+    property var virtualKeyboard: null
 
     // ========== 信号 ==========
     signal requestReturnToCategory()  // ✅ 请求返回到左侧类别
 
     // ========== 函数 ==========
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.10]: 添加 getParamFieldCount 函数
-    // 串口控制页面不支持参数区域内的逐个导航，返回 0
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.3]: 修改 getParamFieldCount 函数
+    // 返回参数区域的可导航元素数量（方案C）
     function getParamFieldCount() {
-        return 0  // 不支持参数区域内的逐个导航
+        return 13  // 13个可导航元素（索引0-12）
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.4]: 添加 triggerParamInput 函数
+    function triggerParamInput(index) {
+        console.log("✅ [SerialPortControlPage] triggerParamInput - 参数索引:", index)
+
+        if (!serialConfigPanel.item) {
+            console.error("❌ [SerialPortControlPage] SerialPortConfigPanel 未加载")
+            return
+        }
+
+        // 根据索引触发对应的输入控件
+        switch(index) {
+        case 0:  // 波特率 (ComboBox)
+            if (serialConfigPanel.item.paramsSection.item) {
+                serialConfigPanel.item.paramsSection.item.focusBaudRate()
+            }
+            break
+        case 1:  // 数据位 (ComboBox)
+            if (serialConfigPanel.item.paramsSection.item) {
+                serialConfigPanel.item.paramsSection.item.focusDataBits()
+            }
+            break
+        case 2:  // 停止位 (ComboBox)
+            if (serialConfigPanel.item.paramsSection.item) {
+                serialConfigPanel.item.paramsSection.item.focusStopBits()
+            }
+            break
+        case 3:  // 校验位 (ComboBox)
+            if (serialConfigPanel.item.paramsSection.item) {
+                serialConfigPanel.item.paramsSection.item.focusParity()
+            }
+            break
+        case 4:  // 发送数据 (TextArea)
+            if (serialConfigPanel.item.sendSection.item) {
+                serialConfigPanel.item.sendSection.item.focusSendData()
+            }
+            break
+        case 5:  // 发送格式 (ComboBox)
+            if (serialConfigPanel.item.sendSection.item) {
+                serialConfigPanel.item.sendSection.item.focusSendFormat()
+            }
+            break
+        case 6:  // 接收格式 (ComboBox)
+            if (serialConfigPanel.item.receiveSection.item) {
+                serialConfigPanel.item.receiveSection.item.focusReceiveFormat()
+            }
+            break
+        case 7:  // 从站地址 (TextField)
+            if (serialConfigPanel.item.modbusSection.item) {
+                serialConfigPanel.item.modbusSection.item.focusSlaveAddress()
+            }
+            break
+        case 8:  // 功能码 (ComboBox)
+            if (serialConfigPanel.item.modbusSection.item) {
+                serialConfigPanel.item.modbusSection.item.focusFunctionCode()
+            }
+            break
+        case 9:  // 起始地址 (TextField)
+            if (serialConfigPanel.item.modbusSection.item) {
+                serialConfigPanel.item.modbusSection.item.focusStartAddress()
+            }
+            break
+        case 10:  // 数量 (SpinBox)
+            if (serialConfigPanel.item.modbusSection.item) {
+                serialConfigPanel.item.modbusSection.item.focusQuantity()
+            }
+            break
+        case 11:  // 写入值 (TextField)
+            if (serialConfigPanel.item.modbusSection.item) {
+                serialConfigPanel.item.modbusSection.item.focusWriteValue()
+            }
+            break
+        case 12:  // 寄存器列表 (ListView)
+            if (serialConfigPanel.item.modbusSection.item) {
+                serialConfigPanel.item.modbusSection.item.focusRegisterList()
+            }
+            break
+        default:
+            console.warn("⚠️ [SerialPortControlPage] 未知的参数索引:", index)
+            break
+        }
     }
 
     // ========== 串口数据 ==========
@@ -55,6 +146,71 @@ Rectangle {
     onFocusSubAreaChanged: {
         console.log("🔍 [SerialPortControlPage] focusSubArea 变化:", focusSubArea)
         console.log("🔍 [SerialPortControlPage] 当前状态 - focusItemIndex:", focusItemIndex, "currentSerialIndex:", currentSerialIndex)
+    }
+
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: NavigationManager 实例
+    DeviceInfo.NavigationManager {
+        id: navigationManager
+
+        // 初始化：从串口列表区开始
+        Component.onCompleted: {
+            currentArea = areaSerialList
+            serialListIndex = 0
+            paramIndex = 0
+            buttonIndex = 0
+            console.log("✅ [SerialPortControlPage] NavigationManager 初始化完成")
+
+            // 同步初始状态到root
+            root.currentSerialIndex = 0
+            root.focusItemIndex = 0
+            root.focusSubArea = 0
+            root.focusParamIndex = 0
+            root.focusButtonIndex = 0
+        }
+
+        // 监听串口列表索引变化
+        onSerialListIndexChanged: {
+            console.log("✅ [SerialPortControlPage] 串口列表索引变化:", serialListIndex)
+            root.currentSerialIndex = serialListIndex
+            root.focusItemIndex = serialListIndex
+        }
+
+        // 监听参数索引变化
+        onParamIndexChanged: {
+            console.log("✅ [SerialPortControlPage] 参数索引变化:", paramIndex)
+            root.focusParamIndex = paramIndex
+        }
+
+        // 监听按钮索引变化
+        onButtonIndexChanged: {
+            console.log("✅ [SerialPortControlPage] 按钮索引变化:", buttonIndex)
+            root.focusButtonIndex = buttonIndex
+        }
+
+        // 监听区域变化
+        onAreaChanged: function(newArea) {
+            console.log("✅ [SerialPortControlPage] 区域变化:", newArea)
+            switch(newArea) {
+            case areaSerialList:
+                root.focusSubArea = 0
+                root.focusItemIndex = serialListIndex
+                root.focusParamIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaParams:
+                root.focusSubArea = 1
+                root.focusParamIndex = paramIndex
+                root.focusItemIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaButtons:
+                root.focusSubArea = 2
+                root.focusButtonIndex = buttonIndex
+                root.focusItemIndex = -1
+                root.focusParamIndex = -1
+                break
+            }
+        }
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.4]: 移除 Keys.onUpPressed/onDownPressed/onRightPressed
