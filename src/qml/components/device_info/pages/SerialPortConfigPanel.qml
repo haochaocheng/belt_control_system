@@ -30,15 +30,6 @@ Rectangle {
         border.width: (focusSubArea === 1) ? 2 : 0
         radius: 4
         z: -1  // 放在最底层
-
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.6]: 监听边框颜色变化
-        onBorderColorChanged: {
-            console.log("🔍 [SerialPortConfigPanel] 焦点指示器 border.color 变化:", border.color)
-        }
-
-        onBorderWidthChanged: {
-            console.log("🔍 [SerialPortConfigPanel] 焦点指示器 border.width 变化:", border.width)
-        }
     }
 
     // ========== 组件加载完成 ==========
