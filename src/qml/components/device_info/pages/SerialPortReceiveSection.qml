@@ -39,38 +39,35 @@ Rectangle {
         }
 
         // ========== 接收数据显示区 ==========
-        ScrollView {
+        // ✅ 2026-02-04: 移除内部 ScrollView，使用固定高度的 TextArea
+        TextArea {
+            id: receiveArea
             Layout.fillWidth: true
-            Layout.fillHeight: true
-            clip: true
-
-            TextArea {
-                id: receiveArea
-                readOnly: true
-                wrapMode: TextArea.Wrap
-                font.family: "Consolas"
-                font.pixelSize: 14
-                color: "#E0E0E0"
-                background: Rectangle {
-                    color: "#1e2838"
-                    border.color: "#3d4556"
-                    border.width: 1
-                    radius: 4
-                }
-
-                // 模拟接收数据（Phase 2 后端实现后替换）
-                text: "等待接收数据...\n"
-
-                // TODO: Phase 2 - 连接后端接收数据
-                // Connections {
-                //     target: serialPortController
-                //     function onDataReceived(data) {
-                //         if (!root.isPaused) {
-                //             receiveArea.append(data)
-                //         }
-                //     }
-                // }
+            Layout.preferredHeight: 180  // 固定高度
+            readOnly: true
+            wrapMode: TextArea.Wrap
+            font.family: "Consolas"
+            font.pixelSize: 14
+            color: "#E0E0E0"
+            background: Rectangle {
+                color: "#1e2838"
+                border.color: "#3d4556"
+                border.width: 1
+                radius: 4
             }
+
+            // 模拟接收数据（Phase 2 后端实现后替换）
+            text: "等待接收数据...\n"
+
+            // TODO: Phase 2 - 连接后端接收数据
+            // Connections {
+            //     target: serialPortController
+            //     function onDataReceived(data) {
+            //         if (!root.isPaused) {
+            //             receiveArea.append(data)
+            //         }
+            //     }
+            // }
         }
 
         // ========== 操作按钮 ==========

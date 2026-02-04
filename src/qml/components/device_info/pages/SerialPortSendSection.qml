@@ -61,33 +61,30 @@ Rectangle {
         }
 
         // ========== 发送数据输入框 ==========
-        ScrollView {
+        // ✅ 2026-02-04: 移除内部 ScrollView，使用固定高度的 TextArea
+        TextArea {
+            id: sendInput
             Layout.fillWidth: true
-            Layout.fillHeight: true
-            clip: true
+            Layout.preferredHeight: 150  // 固定高度
+            wrapMode: TextArea.Wrap
+            font.family: "Consolas"
+            font.pixelSize: 14
+            color: "#E0E0E0"
+            placeholderText: "输入要发送的数据..."
+            placeholderTextColor: "#5E6E7E"
+            background: Rectangle {
+                color: "#1e2838"
+                border.color: sendInput.activeFocus ? "#2196F3" : "#3d4556"
+                border.width: sendInput.activeFocus ? 2 : 1
+                radius: 4
+            }
 
-            TextArea {
-                id: sendInput
-                wrapMode: TextArea.Wrap
-                font.family: "Consolas"
-                font.pixelSize: 14
-                color: "#E0E0E0"
-                placeholderText: "输入要发送的数据..."
-                placeholderTextColor: "#5E6E7E"
-                background: Rectangle {
-                    color: "#1e2838"
-                    border.color: sendInput.activeFocus ? "#2196F3" : "#3d4556"
-                    border.width: sendInput.activeFocus ? 2 : 1
-                    radius: 4
-                }
-
-                // Ctrl+Enter 发送
-                Keys.onPressed: function(event) {
-                    if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) &&
-                        (event.modifiers & Qt.ControlModifier)) {
-                        sendButton.clicked()
-                        event.accepted = true
-                    }
+            // Ctrl+Enter 发送
+            Keys.onPressed: function(event) {
+                if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) &&
+                    (event.modifiers & Qt.ControlModifier)) {
+                    sendButton.clicked()
+                    event.accepted = true
                 }
             }
         }
