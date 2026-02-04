@@ -42,74 +42,69 @@ Rectangle {
         }
     }
 
-    // ========== 主布局（使用 ScrollView 包裹所有区域）==========
-    // ✅ 2026-02-04: 添加 ScrollView 使所有区域可滚动查看
-    ScrollView {
+    // ========== 主布局 ==========
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.26]: 移除 ScrollView，直接使用 ColumnLayout
+    // 原因：用户反馈不准使用 ScrollView
+    ColumnLayout {
         anchors.fill: parent
         anchors.margins: 16
-        clip: true
-        contentWidth: availableWidth  // 防止水平滚动
+        spacing: 16
 
-        ColumnLayout {
-            width: parent.width
-            spacing: 16
+        // ========== 1. 串口参数配置区 ==========
+        Loader {
+            id: paramsSection
+            Layout.fillWidth: true
+            Layout.preferredHeight: 400  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.25]: 修正高度 300 → 400（5行参数 + 按钮 + 边距）
+            source: "SerialPortParamsSection.qml"
 
-            // ========== 1. 串口参数配置区 ==========
-            Loader {
-                id: paramsSection
-                Layout.fillWidth: true
-                Layout.preferredHeight: 300
-                source: "SerialPortParamsSection.qml"
-
-                onLoaded: {
-                    console.log("✅ [SerialPortConfigPanel] SerialPortParamsSection 加载成功")
-                    console.log("✅ [SerialPortConfigPanel] 传递 currentSerialPort:", root.currentSerialPort)
-                    // 传递当前串口信息
-                    item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
-                    console.log("✅ [SerialPortConfigPanel] 绑定完成，item.currentSerialPort:", item.currentSerialPort)
-                }
+            onLoaded: {
+                console.log("✅ [SerialPortConfigPanel] SerialPortParamsSection 加载成功")
+                console.log("✅ [SerialPortConfigPanel] 传递 currentSerialPort:", root.currentSerialPort)
+                // 传递当前串口信息
+                item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
+                console.log("✅ [SerialPortConfigPanel] 绑定完成，item.currentSerialPort:", item.currentSerialPort)
             }
+        }
 
-            // ========== 2. 发送区 ==========
-            Loader {
-                id: sendSection
-                Layout.fillWidth: true
-                Layout.preferredHeight: 380  // ✅ 修正高度：305 → 380（标题40 + TextArea225 + 按钮50 + 边距65）
-                source: "SerialPortSendSection.qml"
+        // ========== 2. 发送区 ==========
+        Loader {
+            id: sendSection
+            Layout.fillWidth: true
+            Layout.preferredHeight: 380  // ✅ 修正高度：305 → 380（标题40 + TextArea225 + 按钮50 + 边距65）
+            source: "SerialPortSendSection.qml"
 
-                onLoaded: {
-                    console.log("✅ [SerialPortConfigPanel] SerialPortSendSection 加载成功")
-                    // 传递当前串口信息
-                    item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
-                }
+            onLoaded: {
+                console.log("✅ [SerialPortConfigPanel] SerialPortSendSection 加载成功")
+                // 传递当前串口信息
+                item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
             }
+        }
 
-            // ========== 3. 接收区 ==========
-            Loader {
-                id: receiveSection
-                Layout.fillWidth: true
-                Layout.preferredHeight: 425  // ✅ 修正高度：350 → 425（标题40 + TextArea270 + 按钮50 + 边距65）
-                source: "SerialPortReceiveSection.qml"
+        // ========== 3. 接收区 ==========
+        Loader {
+            id: receiveSection
+            Layout.fillWidth: true
+            Layout.preferredHeight: 425  // ✅ 修正高度：350 → 425（标题40 + TextArea270 + 按钮50 + 边距65）
+            source: "SerialPortReceiveSection.qml"
 
-                onLoaded: {
-                    console.log("✅ [SerialPortConfigPanel] SerialPortReceiveSection 加载成功")
-                    // 传递当前串口信息
-                    item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
-                }
+            onLoaded: {
+                console.log("✅ [SerialPortConfigPanel] SerialPortReceiveSection 加载成功")
+                // 传递当前串口信息
+                item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
             }
+        }
 
-            // ========== 4. MODBUS寄存器操作 ==========
-            Loader {
-                id: modbusSection
-                Layout.fillWidth: true
-                Layout.preferredHeight: 600  // ✅ 使用固定高度而不是 fillHeight
-                source: "ModbusRegisterSection.qml"
+        // ========== 4. MODBUS寄存器操作 ==========
+        Loader {
+            id: modbusSection
+            Layout.fillWidth: true
+            Layout.preferredHeight: 600  // ✅ 使用固定高度而不是 fillHeight
+            source: "ModbusRegisterSection.qml"
 
-                onLoaded: {
-                    console.log("✅ [SerialPortConfigPanel] ModbusRegisterSection 加载成功")
-                    // 传递当前串口信息
-                    item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
-                }
+            onLoaded: {
+                console.log("✅ [SerialPortConfigPanel] ModbusRegisterSection 加载成功")
+                // 传递当前串口信息
+                item.currentSerialPort = Qt.binding(function() { return root.currentSerialPort })
             }
         }
     }

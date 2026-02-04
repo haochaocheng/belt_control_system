@@ -135,20 +135,28 @@ ComboBox {
         highlighted: root.highlightedIndex === index
     }
 
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.22]: 键盘导航修复（最终方案 v3）
-    // 问题：Phase 7.18 的方法覆盖不生效（Qt 警告：Final member down is overridden）
-    // 解决方案：监听 currentIndex 变化，如果是键盘导航引起的，立即恢复原值
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.24]: 键盘导航修复（最终方案 v4）
+    // 问题：Phase 7.22 导致死循环（onCurrentIndexChanged 修改 currentIndex 又触发 onCurrentIndexChanged）
+    // 解决方案：添加 isRestoring 标志防止递归
 
     property int savedIndex: currentIndex  // 保存上一次有效的索引
     property bool isUserAction: false  // 标记是否是用户主动操作（回车键）
+    property bool isRestoring: false  // 标记是否正在恢复索引（防止递归）
 
     // 监听 currentIndex 变化
     onCurrentIndexChanged: {
+        if (isRestoring) {
+            // 正在恢复索引，不要再次触发
+            return
+        }
+
         if (!isUserAction && root.activeFocus) {
             // 如果不是用户主动操作（回车键），且有焦点，说明是键盘导航引起的
             // 立即恢复原值
             console.log("⚠️ [CustomComboBox] 检测到键盘导航修改索引:", currentIndex, "→ 恢复为:", savedIndex)
+            isRestoring = true  // 设置恢复标志
             root.currentIndex = savedIndex
+            isRestoring = false  // 重置恢复标志
         } else {
             // 用户主动操作，更新保存的索引
             savedIndex = currentIndex
