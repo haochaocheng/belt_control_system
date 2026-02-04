@@ -169,12 +169,16 @@ Rectangle {
                             console.log("   - border.width:", border.width)
                         }
 
-                        onBorderColorChanged: {
-                            console.log("🔍 [串口名称焦点指示器] border.color 变化:", border.color)
-                        }
-
-                        onBorderWidthChanged: {
-                            console.log("🔍 [串口名称焦点指示器] border.width 变化:", border.width)
+                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.2]: 移除无效的信号处理器
+                        // QML Rectangle 没有 onBorderColorChanged 和 onBorderWidthChanged 信号
+                        // 改用 Connections 监听 parent.activeFocus 变化
+                        Connections {
+                            target: serialNameText
+                            function onActiveFocusChanged() {
+                                console.log("🔍 [串口名称焦点指示器] 边框状态变化")
+                                console.log("   - border.color:", serialNameFocusIndicator.border.color)
+                                console.log("   - border.width:", serialNameFocusIndicator.border.width)
+                            }
                         }
                     }
                 }
@@ -298,12 +302,14 @@ Rectangle {
                             console.log("   - border.width:", border.width)
                         }
 
-                        onBorderColorChanged: {
-                            console.log("🔍 [设备路径焦点指示器] border.color 变化:", border.color)
-                        }
-
-                        onBorderWidthChanged: {
-                            console.log("🔍 [设备路径焦点指示器] border.width 变化:", border.width)
+                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.2]: 移除无效的信号处理器
+                        Connections {
+                            target: devicePathText
+                            function onActiveFocusChanged() {
+                                console.log("🔍 [设备路径焦点指示器] 边框状态变化")
+                                console.log("   - border.color:", devicePathFocusIndicator.border.color)
+                                console.log("   - border.width:", devicePathFocusIndicator.border.width)
+                            }
                         }
                     }
                 }
@@ -423,12 +429,14 @@ Rectangle {
                             console.log("   - border.width:", border.width)
                         }
 
-                        onBorderColorChanged: {
-                            console.log("🔍 [串口类型焦点指示器] border.color 变化:", border.color)
-                        }
-
-                        onBorderWidthChanged: {
-                            console.log("🔍 [串口类型焦点指示器] border.width 变化:", border.width)
+                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.2]: 移除无效的信号处理器
+                        Connections {
+                            target: serialTypeText
+                            function onActiveFocusChanged() {
+                                console.log("🔍 [串口类型焦点指示器] 边框状态变化")
+                                console.log("   - border.color:", serialTypeFocusIndicator.border.color)
+                                console.log("   - border.width:", serialTypeFocusIndicator.border.width)
+                            }
                         }
                     }
                 }
