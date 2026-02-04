@@ -15,25 +15,65 @@ Rectangle {
     // ========== 公开属性 ==========
     property var currentSerialPort: null  // 当前串口信息
 
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.1]: 添加焦点函数
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 添加所有焦点函数（参考 SwitchInputPage）
+    // 索引 0: 串口名称（只读）
+    function focusSerialName() {
+        serialNameText.forceActiveFocus()
+        console.log("✅ [SerialPortParamsSection] 串口名称获得焦点")
+    }
+
+    // 索引 1: 波特率（可编辑）
     function focusBaudRate() {
         baudRateCombo.forceActiveFocus()
         console.log("✅ [SerialPortParamsSection] 波特率获得焦点")
     }
 
+    // 索引 2: 设备路径（只读）
+    function focusDevicePath() {
+        devicePathText.forceActiveFocus()
+        console.log("✅ [SerialPortParamsSection] 设备路径获得焦点")
+    }
+
+    // 索引 3: 数据位（可编辑）
     function focusDataBits() {
         dataBitsCombo.forceActiveFocus()
         console.log("✅ [SerialPortParamsSection] 数据位获得焦点")
     }
 
+    // 索引 4: 串口类型（只读）
+    function focusSerialType() {
+        serialTypeText.forceActiveFocus()  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 改为Text
+        console.log("✅ [SerialPortParamsSection] 串口类型获得焦点")
+    }
+
+    // 索引 5: 停止位（可编辑）
     function focusStopBits() {
         stopBitsCombo.forceActiveFocus()
         console.log("✅ [SerialPortParamsSection] 停止位获得焦点")
     }
 
+    // 索引 6: 校验位（可编辑）
     function focusParity() {
         parityCombo.forceActiveFocus()
         console.log("✅ [SerialPortParamsSection] 校验位获得焦点")
+    }
+
+    // 索引 7: 状态（只读）
+    function focusStatus() {
+        statusText.forceActiveFocus()
+        console.log("✅ [SerialPortParamsSection] 状态获得焦点")
+    }
+
+    // 索引 8: 打开串口按钮
+    function focusOpenButton() {
+        openButton.forceActiveFocus()
+        console.log("✅ [SerialPortParamsSection] 打开串口按钮获得焦点")
+    }
+
+    // 索引 9: 关闭串口按钮
+    function focusCloseButton() {
+        closeButton.forceActiveFocus()
+        console.log("✅ [SerialPortParamsSection] 关闭串口按钮获得焦点")
     }
 
     // ========== 组件加载完成 ==========
@@ -52,7 +92,7 @@ Rectangle {
             // 更新显示
             serialNameText.text = currentSerialPort.name
             devicePathText.text = currentSerialPort.path
-            serialTypeField.text = currentSerialPort.type
+            serialTypeText.text = currentSerialPort.type  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 改为Text
         }
     }
 
@@ -85,7 +125,7 @@ Rectangle {
                 Layout.row: 0
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: serialNameText.implicitHeight
+                Layout.preferredHeight: 40  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 使用固定高度
 
                 Text {
                     id: serialNameText
@@ -94,6 +134,21 @@ Rectangle {
                     font.pixelSize: 21
                     color: "#E0E0E0"
                     verticalAlignment: Text.AlignVCenter
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 允许接收焦点（参考 SwitchInputPage）
+                    focus: true
+                    activeFocusOnTab: true
+
+                    // ✅ 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        color: "transparent"
+                        border.color: parent.activeFocus ? "#2196F3" : "transparent"
+                        border.width: parent.activeFocus ? 3 : 0
+                        radius: 4
+                        z: 10  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35]: 改为10，确保边框在Text上面
+                    }
                 }
             }
 
@@ -171,7 +226,7 @@ Rectangle {
                 Layout.row: 1
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: devicePathText.implicitHeight
+                Layout.preferredHeight: 40  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 使用固定高度
 
                 Text {
                     id: devicePathText
@@ -180,6 +235,21 @@ Rectangle {
                     font.pixelSize: 21
                     color: "#9E9E9E"
                     verticalAlignment: Text.AlignVCenter
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 允许接收焦点（参考 SwitchInputPage）
+                    focus: true
+                    activeFocusOnTab: true
+
+                    // ✅ 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        color: "transparent"
+                        border.color: parent.activeFocus ? "#2196F3" : "transparent"
+                        border.width: parent.activeFocus ? 3 : 0
+                        radius: 4
+                        z: 10  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35]: 改为10，确保边框在Text上面
+                    }
                 }
             }
 
@@ -246,19 +316,37 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 串口类型输入框（可编辑）
+            // 串口类型值（只读）
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 改为Text，和串口名称一致
             Item {
                 Layout.column: 1
                 Layout.row: 2
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: serialTypeField.implicitHeight
+                Layout.preferredHeight: 40  // ✅ 使用固定高度
 
-                DeviceInfo.CustomTextField {
-                    id: serialTypeField
+                Text {
+                    id: serialTypeText
                     anchors.fill: parent
                     text: currentSerialPort ? currentSerialPort.type : ""
-                    placeholderText: "如: RS422, RS232, RS485"
+                    font.pixelSize: 21
+                    color: "#E0E0E0"
+                    verticalAlignment: Text.AlignVCenter
+
+                    // ✅ 允许接收焦点
+                    focus: true
+                    activeFocusOnTab: true
+
+                    // ✅ 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        color: "transparent"
+                        border.color: parent.activeFocus ? "#2196F3" : "transparent"
+                        border.width: parent.activeFocus ? 3 : 0
+                        radius: 4
+                        z: 10  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35]: 改为10，确保边框在Text上面
+                    }
                 }
             }
 
@@ -381,11 +469,16 @@ Rectangle {
                 Layout.row: 3
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: 30
+                Layout.preferredHeight: 40  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 使用固定高度
 
                 Row {
+                    id: statusText  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 添加 ID 以支持焦点
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 允许接收焦点
+                    focus: true
+                    activeFocusOnTab: true
 
                     Rectangle {
                         width: 12
@@ -401,6 +494,17 @@ Rectangle {
                         color: "#9E9E9E"
                         anchors.verticalCenter: parent.verticalCenter
                     }
+                }
+
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 焦点指示器（在Item外部，不在Row内部）
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    color: "transparent"
+                    border.color: statusText.activeFocus ? "#2196F3" : "transparent"
+                    border.width: statusText.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 10
                 }
             }
 
@@ -433,6 +537,17 @@ Rectangle {
                         // TODO: Phase 2 - 调用后端打开串口
                     }
                 }
+
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 焦点指示器（在按钮外部）
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -4  // ✅ 边框在按钮外部
+                    color: "transparent"
+                    border.color: openButton.activeFocus ? "#2196F3" : "transparent"
+                    border.width: openButton.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 200  // ✅ 确保边框在最上层
+                }
             }
 
             // 关闭串口按钮
@@ -454,6 +569,17 @@ Rectangle {
                         console.log("✅ [SerialPortParamsSection] 关闭串口:", currentSerialPort.name)
                         // TODO: Phase 2 - 调用后端关闭串口
                     }
+                }
+
+                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 焦点指示器（在按钮外部）
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -4  // ✅ 边框在按钮外部
+                    color: "transparent"
+                    border.color: closeButton.activeFocus ? "#2196F3" : "transparent"
+                    border.width: closeButton.activeFocus ? 3 : 0
+                    radius: 4
+                    z: 200  // ✅ 确保边框在最上层
                 }
             }
     }

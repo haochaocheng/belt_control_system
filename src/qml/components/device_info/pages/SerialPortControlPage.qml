@@ -30,13 +30,20 @@ Rectangle {
     signal requestReturnToCategory()  // ✅ 请求返回到左侧类别
 
     // ========== 函数 ==========
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.3]: 修改 getParamFieldCount 函数
-    // 返回参数区域的可导航元素数量（方案C）
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 修改 getParamFieldCount 函数
+    // 返回参数区域的可导航元素数量（参考 SwitchInputPage）
+    // 布局：2列4行 + 2按钮，索引连续 0-9
     function getParamFieldCount() {
-        return 13  // 13个可导航元素（索引0-12）
+        return 10  // 10个可导航元素（索引0-9）
     }
 
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.4]: 添加 triggerParamInput 函数
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 重新规划导航索引（参考 SwitchInputPage）
+    // 布局：2列4行 + 2按钮，索引连续 0-9
+    // Row 0: [0]串口名称(只读)  [1]波特率(可编辑)
+    // Row 1: [2]设备路径(只读)  [3]数据位(可编辑)
+    // Row 2: [4]串口类型(只读)  [5]停止位(可编辑)
+    // Row 3: [6]校验位(可编辑)  [7]状态(只读)
+    // Row 4: [8]打开串口(按钮)  [9]关闭串口(按钮)
     function triggerParamInput(index) {
         console.log("✅ [SerialPortControlPage] triggerParamInput - 参数索引:", index)
 
@@ -45,78 +52,44 @@ Rectangle {
             return
         }
 
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.30]: 重新编号以匹配两列布局
-        // 两列布局索引规则：
-        // 行0: [0]左列  [1]右列  → 波特率=1
-        // 行1: [2]左列  [3]右列  → 数据位=3
-        // 行2: [4]左列  [5]右列  → 停止位=5
-        // 行3: [6]左列  [7]右列  → 校验位=6
+        if (!serialConfigPanel.item.paramsSection.item) {
+            console.error("❌ [SerialPortControlPage] SerialPortParamsSection 未加载")
+            return
+        }
+
+        var paramsSection = serialConfigPanel.item.paramsSection.item
+
         // 根据索引触发对应的输入控件
         switch(index) {
-        case 1:  // 波特率 (ComboBox) - 右列第0行
-            if (serialConfigPanel.item.paramsSection.item) {
-                serialConfigPanel.item.paramsSection.item.focusBaudRate()
-            }
+        case 0:  // 串口名称（只读，但可以有焦点）
+            paramsSection.focusSerialName()
             break
-        case 3:  // 数据位 (ComboBox) - 右列第1行
-            if (serialConfigPanel.item.paramsSection.item) {
-                serialConfigPanel.item.paramsSection.item.focusDataBits()
-            }
+        case 1:  // 波特率 (ComboBox)
+            paramsSection.focusBaudRate()
             break
-        case 5:  // 停止位 (ComboBox) - 右列第2行
-            if (serialConfigPanel.item.paramsSection.item) {
-                serialConfigPanel.item.paramsSection.item.focusStopBits()
-            }
+        case 2:  // 设备路径（只读，但可以有焦点）
+            paramsSection.focusDevicePath()
             break
-        case 6:  // 校验位 (ComboBox) - 左列第3行
-            if (serialConfigPanel.item.paramsSection.item) {
-                serialConfigPanel.item.paramsSection.item.focusParity()
-            }
+        case 3:  // 数据位 (ComboBox)
+            paramsSection.focusDataBits()
             break
-        case 7:  // 发送数据 (TextArea)
-            if (serialConfigPanel.item.sendSection.item) {
-                serialConfigPanel.item.sendSection.item.focusSendData()
-            }
+        case 4:  // 串口类型（只读，但可以有焦点）
+            paramsSection.focusSerialType()
             break
-        case 8:  // 发送格式 (ComboBox)
-            if (serialConfigPanel.item.sendSection.item) {
-                serialConfigPanel.item.sendSection.item.focusSendFormat()
-            }
+        case 5:  // 停止位 (ComboBox)
+            paramsSection.focusStopBits()
             break
-        case 9:  // 接收格式 (ComboBox)
-            if (serialConfigPanel.item.receiveSection.item) {
-                serialConfigPanel.item.receiveSection.item.focusReceiveFormat()
-            }
+        case 6:  // 校验位 (ComboBox)
+            paramsSection.focusParity()
             break
-        case 10:  // 从站地址 (TextField)
-            if (serialConfigPanel.item.modbusSection.item) {
-                serialConfigPanel.item.modbusSection.item.focusSlaveAddress()
-            }
+        case 7:  // 状态（只读，但可以有焦点）
+            paramsSection.focusStatus()
             break
-        case 11:  // 功能码 (ComboBox)
-            if (serialConfigPanel.item.modbusSection.item) {
-                serialConfigPanel.item.modbusSection.item.focusFunctionCode()
-            }
+        case 8:  // 打开串口按钮
+            paramsSection.focusOpenButton()
             break
-        case 12:  // 起始地址 (TextField)
-            if (serialConfigPanel.item.modbusSection.item) {
-                serialConfigPanel.item.modbusSection.item.focusStartAddress()
-            }
-            break
-        case 13:  // 数量 (SpinBox)
-            if (serialConfigPanel.item.modbusSection.item) {
-                serialConfigPanel.item.modbusSection.item.focusQuantity()
-            }
-            break
-        case 14:  // 写入值 (TextField)
-            if (serialConfigPanel.item.modbusSection.item) {
-                serialConfigPanel.item.modbusSection.item.focusWriteValue()
-            }
-            break
-        case 15:  // 寄存器列表 (ListView)
-            if (serialConfigPanel.item.modbusSection.item) {
-                serialConfigPanel.item.modbusSection.item.focusRegisterList()
-            }
+        case 9:  // 关闭串口按钮
+            paramsSection.focusCloseButton()
             break
         default:
             console.warn("⚠️ [SerialPortControlPage] 未知的参数索引:", index)
@@ -162,14 +135,16 @@ Rectangle {
         Component.onCompleted: {
             currentArea = areaMotorList  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.10]: 使用 areaMotorList（通用列表区域）
             motorListIndex = 0  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.9]: 使用 motorListIndex（通用列表索引）
-            paramIndex = 1  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.30]: 初始参数索引改为1（波特率）
+            paramIndex = 0  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 初始参数索引改为0（串口名称）
             buttonIndex = 0
             skipTabArea = true  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.12]: 串口控制页面没有Tab区域
 
-            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.30]: 设置 lastParamIndex
-            // 串口参数区域有4个参数：波特率(1), 数据位(3), 停止位(5), 校验位(6)
-            // 最大索引是6
-            updateLastParamIndex(7)  // 参数数量=7，最大索引=6
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 设置 lastParamIndex
+            // 串口参数区域有10个参数（索引0-9）：
+            // 0=串口名称, 1=波特率, 2=设备路径, 3=数据位, 4=串口类型, 5=停止位,
+            // 6=校验位, 7=状态, 8=打开串口按钮, 9=关闭串口按钮
+            // 最大索引是9
+            updateLastParamIndex(10)  // 参数数量=10，最大索引=9
 
             console.log("✅ [SerialPortControlPage] NavigationManager 初始化完成")
 
