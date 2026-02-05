@@ -62,16 +62,22 @@ Rectangle {
             return
         }
 
-        // ✅ 2026-02-05: 参考 SerialPortParamsTab，不调用 forceActiveFocus()
-        // 只对可编辑字段调用 activateVirtualKeyboard()
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.3]: 使用和电机控制相同的虚拟键盘激活方法
+        // 参考 CurrentProtectionTab.qml 的实现，直接在控件上调用 activateVirtualKeyboard()
         if (inputField) {
             if (paramIndex === 2) {
                 // 发送数据：激活虚拟键盘
-                if (virtualKeyboard && typeof virtualKeyboard.activateVirtualKeyboard === "function") {
-                    console.log("✅ [SerialPortSendTab] 激活虚拟键盘 - 控件:", inputField)
-                    virtualKeyboard.activateVirtualKeyboard(inputField)
+                console.log("✅ [SerialPortSendTab] 激活虚拟键盘 - 控件:", inputField)
+                console.log("   - inputField.activateVirtualKeyboard 类型:", typeof inputField.activateVirtualKeyboard)
+
+                // 如果控件有 activateVirtualKeyboard 函数，调用它
+                if (inputField.activateVirtualKeyboard) {
+                    console.log("✅ [SerialPortSendTab] 调用 inputField.activateVirtualKeyboard()")
+                    inputField.activateVirtualKeyboard()
                 } else {
-                    console.log("⚠️ [SerialPortSendTab] 虚拟键盘不可用")
+                    // 否则直接设置焦点
+                    console.log("✅ [SerialPortSendTab] 调用 inputField.forceActiveFocus()")
+                    inputField.forceActiveFocus()
                 }
             }
         }
@@ -101,14 +107,22 @@ Rectangle {
             return true  // 表示已处理
 
         case 2:  // 发送数据TextArea
-            // 弹出虚拟键盘
-            if (virtualKeyboard && typeof virtualKeyboard.activateVirtualKeyboard === "function") {
-                console.log("✅ [SerialPortSendTab] 激活虚拟键盘 - 发送数据")
-                virtualKeyboard.activateVirtualKeyboard(sendInput)
+            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.3]: 使用和电机控制相同的虚拟键盘激活方法
+            // 参考 CurrentProtectionTab.qml 的实现，直接在控件上调用 activateVirtualKeyboard()
+            console.log("✅ [SerialPortSendTab] 尝试激活虚拟键盘 - 发送数据")
+            console.log("   - sendInput:", sendInput)
+            console.log("   - sendInput.activateVirtualKeyboard 类型:", typeof sendInput.activateVirtualKeyboard)
+
+            // 如果控件有 activateVirtualKeyboard 函数，调用它
+            if (sendInput.activateVirtualKeyboard) {
+                console.log("✅ [SerialPortSendTab] 调用 sendInput.activateVirtualKeyboard()")
+                sendInput.activateVirtualKeyboard()
                 return true  // 表示已处理
             } else {
-                console.log("⚠️ [SerialPortSendTab] 虚拟键盘不可用")
-                return false
+                // 否则直接设置焦点
+                console.log("✅ [SerialPortSendTab] 调用 sendInput.forceActiveFocus()")
+                sendInput.forceActiveFocus()
+                return true  // 表示已处理
             }
 
         case 3:  // 发送按钮
@@ -196,6 +210,12 @@ Rectangle {
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
         console.log("✅ [SerialPortSendTab] Component.onCompleted 开始")
+        console.log("✅ [SerialPortSendTab] virtualKeyboard:", virtualKeyboard)
+        console.log("✅ [SerialPortSendTab] virtualKeyboard 类型:", typeof virtualKeyboard)
+        if (virtualKeyboard) {
+            console.log("✅ [SerialPortSendTab] virtualKeyboard.activateVirtualKeyboard 类型:",
+                        typeof virtualKeyboard.activateVirtualKeyboard)
+        }
         console.log("✅ [SerialPortSendTab] Component.onCompleted 完成")
     }
 
