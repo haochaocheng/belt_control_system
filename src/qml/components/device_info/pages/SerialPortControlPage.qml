@@ -28,6 +28,9 @@ Rectangle {
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: 暴露 navigationManager 供外部访问
     property alias navigationManager: navigationManager
 
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.11.3]: 暴露 serialConfigPanel 供外部访问
+    property alias serialConfigPanel: serialConfigPanel
+
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: Qt 虚拟键盘引用
     property var virtualKeyboard: null
 
