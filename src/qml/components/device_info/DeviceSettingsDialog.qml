@@ -1099,21 +1099,37 @@ Item {
 
                     // 串口控制页面特殊处理
                     if (currentCategory === 6) {
+                        console.log("✅ [导航] 回车键 - 串口控制页面特殊处理开始")
                         var serialPage = serialPortControlPageLoader.item
+                        console.log("✅ [导航] serialPage:", serialPage ? "存在" : "不存在")
                         if (serialPage && serialPage.serialConfigPanel) {
+                            console.log("✅ [导航] serialConfigPanel:", serialPage.serialConfigPanel ? "存在" : "不存在")
                             var configPanel = serialPage.serialConfigPanel.item
+                            console.log("✅ [导航] configPanel:", configPanel ? "存在" : "不存在")
                             if (configPanel && typeof configPanel.getCurrentTab === "function") {
+                                console.log("✅ [导航] getCurrentTab 函数存在")
                                 var currentTab = configPanel.getCurrentTab()
+                                console.log("✅ [导航] currentTab:", currentTab ? "存在" : "不存在")
                                 if (currentTab && typeof currentTab.handleEnterKey === "function") {
+                                    console.log("✅ [导航] handleEnterKey 函数存在，准备调用")
                                     handled = currentTab.handleEnterKey()
+                                    console.log("✅ [导航] handleEnterKey 返回值:", handled)
                                     if (handled) {
                                         console.log("✅ [导航] 回车键已被Tab处理（串口控制）")
                                         event.accepted = true
                                         return
                                     }
+                                } else {
+                                    console.log("⚠️ [导航] handleEnterKey 函数不存在")
                                 }
+                            } else {
+                                console.log("⚠️ [导航] getCurrentTab 函数不存在")
                             }
+                        } else {
+                            console.log("⚠️ [导航] serialConfigPanel 不存在")
                         }
+                    } else {
+                        console.log("✅ [导航] 回车键 - 不是串口控制页面，currentCategory:", currentCategory)
                     }
 
                     // 如果Tab没有处理，执行默认行为（弹出虚拟键盘）
