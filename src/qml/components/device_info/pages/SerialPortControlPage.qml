@@ -151,6 +151,7 @@ Rectangle {
             paramIndex = 0  // ✅ 初始参数索引
             buttonIndex = 0
             skipTabArea = false  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 支持 Tab 导航
+            lastTabIndex = 3  // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.3]: 串口控制页面有4个Tab（0-3）
 
             // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 动态更新 lastParamIndex
             // 根据当前 Tab 的参数数量更新

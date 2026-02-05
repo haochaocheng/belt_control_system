@@ -15,9 +15,15 @@ QtObject {
     // ========== 当前焦点状态 ==========
     property string currentArea: areaMotorList     // 当前焦点区域
     property int motorListIndex: 0                 // 区域A：电机列表索引（0-7）
-    property int tabIndex: 0                       // 区域B：Tab索引（0-9，共10个Tab）
+    property int tabIndex: 0                       // 区域B：Tab索引（动态范围，取决于页面）
     property int paramIndex: 0                     // 区域C：参数索引（动态范围，取决于当前Tab）
     property int buttonIndex: 0                    // 区域D：按钮索引（0-4，共5个按钮）
+
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.3]: 添加 lastTabIndex 属性
+    // 不同页面有不同的Tab数量：
+    // - 电机控制页面：10个Tab（0-9），lastTabIndex=9
+    // - 串口控制页面：4个Tab（0-3），lastTabIndex=3
+    property int lastTabIndex: 9  // 默认为9（电机控制页面）
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.12]: 是否跳过Tab区域（串口控制页面没有Tab）
     property bool skipTabArea: false               // 默认false（电机控制有Tab），串口控制设置为true
@@ -130,7 +136,7 @@ QtObject {
             break
 
         case "Right":
-            if (tabIndex < 9) {  // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.6]: 修正最大Tab索引为9（共10个Tab）
+            if (tabIndex < lastTabIndex) {  // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.3]: 使用 lastTabIndex 动态限制
                 newIndex = tabIndex + 1
             }
             // 在最后一个Tab，保持不变
