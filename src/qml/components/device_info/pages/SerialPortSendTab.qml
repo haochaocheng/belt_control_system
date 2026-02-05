@@ -118,6 +118,10 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 8
 
+                Item {
+                    Layout.fillWidth: true
+                }
+
                 Text {
                     text: "格式:"
                     font.pixelSize: 14
@@ -125,7 +129,7 @@ Rectangle {
                 }
 
                 Item {
-                    Layout.preferredWidth: 100
+                    Layout.preferredWidth: 120  // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.1]: 增加宽度从100到120
                     implicitHeight: sendFormat.implicitHeight
 
                     DeviceInfo.CustomComboBox {
@@ -148,119 +152,157 @@ Rectangle {
             }
 
             // ========== 行1：发送数据输入框（索引2，跨2列）==========
-            TextArea {
-                id: sendInput
+            Item {
                 Layout.columnSpan: 2
                 Layout.fillWidth: true
-                Layout.preferredHeight: 225  // 固定高度（150 * 1.5）
-                wrapMode: TextArea.Wrap
-                font.family: "Consolas"
-                font.pixelSize: 14
-                color: "#E0E0E0"
-                placeholderText: "输入要发送的数据..."
-                placeholderTextColor: "#5E6E7E"
-                background: Rectangle {
-                    color: "#1e2838"
-                    border.color: (root.focusParamIndex === 2) ? "#2196F3" : "#3d4556"
-                    border.width: (root.focusParamIndex === 2) ? 3 : 1
-                    radius: 4
+                Layout.preferredHeight: 225
+
+                TextArea {
+                    id: sendInput
+                    anchors.fill: parent
+                    wrapMode: TextArea.Wrap
+                    font.family: "Consolas"
+                    font.pixelSize: 14
+                    color: "#E0E0E0"
+                    placeholderText: "输入要发送的数据..."
+                    placeholderTextColor: "#5E6E7E"
+                    background: Rectangle {
+                        color: "#1e2838"
+                        border.color: "#3d4556"
+                        border.width: 1
+                        radius: 4
+                    }
+
+                    // Ctrl+Enter 发送
+                    Keys.onPressed: function(event) {
+                        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) &&
+                            (event.modifiers & Qt.ControlModifier)) {
+                            sendButton.clicked()
+                            event.accepted = true
+                        }
+                    }
                 }
 
-                // Ctrl+Enter 发送
-                Keys.onPressed: function(event) {
-                    if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) &&
-                        (event.modifiers & Qt.ControlModifier)) {
-                        sendButton.clicked()
-                        event.accepted = true
-                    }
+                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.1]: 焦点指示器（外层）
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 2) ? 3 : 0
+                    radius: 4
+                    z: 11
                 }
             }
 
             // ========== 行2：操作按钮 ==========
             // 发送按钮（索引3）
-            Button {
-                id: sendButton
-                text: "发送 (Ctrl+Enter)"
+            Item {
                 Layout.columnSpan: 1
                 Layout.fillWidth: true
                 Layout.preferredHeight: 40
-                enabled: sendInput.text.length > 0
 
-                background: Rectangle {
-                    color: {
-                        if (root.focusParamIndex === 3) {
-                            return "#2ecc71"  // 焦点时：亮绿色
-                        } else if (parent.pressed) {
-                            return "#27ae60"
-                        } else if (parent.hovered) {
-                            return "#2ecc71"
+                Button {
+                    id: sendButton
+                    anchors.fill: parent
+                    text: "发送 (Ctrl+Enter)"
+                    enabled: sendInput.text.length > 0
+
+                    background: Rectangle {
+                        color: {
+                            if (root.focusParamIndex === 3) {
+                                return "#2ecc71"  // 焦点时：亮绿色
+                            } else if (parent.pressed) {
+                                return "#27ae60"
+                            } else if (parent.hovered) {
+                                return "#2ecc71"
+                            } else {
+                                return "#27ae60"
+                            }
+                        }
+                        radius: 4
+                    }
+
+                    contentItem: Text {
+                        text: parent.text
+                        font.pixelSize: 14
+                        color: "#FFFFFF"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onClicked: {
+                        console.log("✅ [SerialPortSendTab] 发送数据")
+                        console.log("   - 格式:", sendFormat.currentText)
+                        console.log("   - 数据:", sendInput.text)
+
+                        // TODO: Phase 2 - 调用后端发送数据
+                        if (sendFormat.currentText === "HEX") {
+                            // serialPortController.sendHex(sendInput.text)
                         } else {
-                            return "#27ae60"
+                            // serialPortController.sendAscii(sendInput.text)
                         }
                     }
+                }
+
+                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.1]: 焦点指示器（外层）
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 3) ? 3 : 0
                     radius: 4
-                    border.width: root.focusParamIndex === 3 ? 3 : 0
-                    border.color: "#2196F3"
-                }
-
-                contentItem: Text {
-                    text: parent.text
-                    font.pixelSize: 14
-                    color: "#FFFFFF"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-
-                onClicked: {
-                    console.log("✅ [SerialPortSendTab] 发送数据")
-                    console.log("   - 格式:", sendFormat.currentText)
-                    console.log("   - 数据:", sendInput.text)
-
-                    // TODO: Phase 2 - 调用后端发送数据
-                    if (sendFormat.currentText === "HEX") {
-                        // serialPortController.sendHex(sendInput.text)
-                    } else {
-                        // serialPortController.sendAscii(sendInput.text)
-                    }
+                    z: 11
                 }
             }
 
             // 清空按钮（索引4）
-            Button {
-                id: clearButton
-                text: "清空"
+            Item {
                 Layout.columnSpan: 1
                 Layout.fillWidth: true
                 Layout.preferredHeight: 40
 
-                background: Rectangle {
-                    color: {
-                        if (root.focusParamIndex === 4) {
-                            return "#e74c3c"  // 焦点时：亮红色
-                        } else if (parent.pressed) {
-                            return "#c0392b"
-                        } else if (parent.hovered) {
-                            return "#e74c3c"
-                        } else {
-                            return "#c0392b"
+                Button {
+                    id: clearButton
+                    anchors.fill: parent
+                    text: "清空"
+
+                    background: Rectangle {
+                        color: {
+                            if (root.focusParamIndex === 4) {
+                                return "#e74c3c"  // 焦点时：亮红色
+                            } else if (parent.pressed) {
+                                return "#c0392b"
+                            } else if (parent.hovered) {
+                                return "#e74c3c"
+                            } else {
+                                return "#c0392b"
+                            }
                         }
+                        radius: 4
                     }
+
+                    contentItem: Text {
+                        text: parent.text
+                        font.pixelSize: 14
+                        color: "#FFFFFF"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onClicked: {
+                        sendInput.text = ""
+                        console.log("✅ [SerialPortSendTab] 清空发送数据")
+                    }
+                }
+
+                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.1]: 焦点指示器（外层）
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 4) ? 3 : 0
                     radius: 4
-                    border.width: root.focusParamIndex === 4 ? 3 : 0
-                    border.color: "#2196F3"
-                }
-
-                contentItem: Text {
-                    text: parent.text
-                    font.pixelSize: 14
-                    color: "#FFFFFF"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-
-                onClicked: {
-                    sendInput.text = ""
-                    console.log("✅ [SerialPortSendTab] 清空发送数据")
+                    z: 11
                 }
             }
         }
