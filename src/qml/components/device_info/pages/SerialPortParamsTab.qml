@@ -181,12 +181,13 @@ Rectangle {
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
         GridLayout {
-            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.2]: 修复GridLayout宽度为0的问题
-            // 原因：width: paramScrollView.width * 0.9 在加载时为0，导致所有子元素宽度为0
-            // 解决：使用Layout.fillWidth让GridLayout自动填充ScrollView宽度
-            Layout.fillWidth: true
-            Layout.leftMargin: 20
-            Layout.rightMargin: 20
+            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.3]: 修复GridLayout宽度问题
+            // 原因：Layout.fillWidth在ScrollView中不起作用（ScrollView不是Layout容器）
+            // 解决：使用anchors.left/right让GridLayout自动填充ScrollView宽度
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: 20
+            anchors.rightMargin: 20
 
             // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8]: 改为2列布局
             // 原因：NavigationManager假设2列布局（下键：paramIndex + 2）
@@ -199,7 +200,8 @@ Rectangle {
                 console.log("✅ [SerialPortParamsTab] GridLayout 加载完成")
                 console.log("   - columns:", columns)
                 console.log("   - width:", width)
-                console.log("   - Layout.fillWidth:", Layout.fillWidth)
+                console.log("   - anchors.leftMargin:", anchors.leftMargin)
+                console.log("   - anchors.rightMargin:", anchors.rightMargin)
                 console.log("   - columnSpacing:", columnSpacing)
                 console.log("   - rowSpacing:", rowSpacing)
             }
