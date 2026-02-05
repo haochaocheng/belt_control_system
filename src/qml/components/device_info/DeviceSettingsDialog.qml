@@ -125,15 +125,36 @@ Item {
         parent: Overlay.overlay  // 显示在最顶层
         z: 2000  // 确保在对话框上方
 
-        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.4.1]: 监听虚拟键盘关闭事件
-        // 当虚拟键盘关闭时，恢复对话框的焦点，以便导航键继续工作
-        // 注意：QtVirtualKeyboardIntegration 是 Popup，使用 onClosed 而不是 onActiveChanged
+        // ❌ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.4.1]: onClosed 不工作
+        // 原因：main_qds.qml 的 InputPanel ESC 处理调用 Qt.inputMethod.hide()
+        // 没有调用 QtVirtualKeyboardIntegration 的 root.close()
+        // 所以 onClosed 信号不会触发
+        /*
         onClosed: {
             console.log("✅ [DeviceSettingsDialog] 虚拟键盘已关闭，恢复对话框焦点")
             Qt.callLater(function() {
                 root.forceActiveFocus()
                 console.log("✅ [DeviceSettingsDialog] 对话框焦点已恢复")
             })
+        }
+        */
+    }
+
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.4.2]: 监听 Qt.inputMethod.visibleChanged
+    // 当虚拟键盘关闭时（visible 变为 false），恢复对话框的焦点
+    // 这样可以确保 ESC 键关闭虚拟键盘后，导航键继续工作
+    Connections {
+        target: Qt.inputMethod
+
+        function onVisibleChanged() {
+            console.log("✅ [DeviceSettingsDialog] Qt.inputMethod.visible 变化:", Qt.inputMethod.visible)
+            if (!Qt.inputMethod.visible) {
+                console.log("✅ [DeviceSettingsDialog] 虚拟键盘已关闭，恢复对话框焦点")
+                Qt.callLater(function() {
+                    root.forceActiveFocus()
+                    console.log("✅ [DeviceSettingsDialog] 对话框焦点已恢复")
+                })
+            }
         }
     }
 
