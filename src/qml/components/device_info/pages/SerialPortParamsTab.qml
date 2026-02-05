@@ -65,39 +65,31 @@ Rectangle {
         stopBitsCombo.forceActiveFocus()
     }
 
-    // 索引 6: 校验位（可编辑）
-    function focusParity() {
-        console.log("✅ [SerialPortParamsTab] 校验位获得焦点")
-        parityCombo.forceActiveFocus()
-    }
-
-    // 索引 7: 状态（只读）
+    // 索引 6: 状态（只读）
     function focusStatus() {
         console.log("✅ [SerialPortParamsTab] 状态获得焦点")
         statusText.forceActiveFocus()
     }
 
-    // 索引 8: 打开串口按钮
-    function focusOpenButton() {
-        console.log("✅ [SerialPortParamsTab] 打开串口按钮获得焦点")
-        openButton.forceActiveFocus()
+    // 索引 7: 校验位（可编辑）
+    function focusParity() {
+        console.log("✅ [SerialPortParamsTab] 校验位获得焦点")
+        parityCombo.forceActiveFocus()
     }
 
-    // 索引 9: 关闭串口按钮
-    function focusCloseButton() {
-        console.log("✅ [SerialPortParamsTab] 关闭串口按钮获得焦点")
-        closeButton.forceActiveFocus()
-    }
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.11]: 移除索引8和9的焦点函数
+    // 原因：打开串口和关闭串口按钮已移除，不再需要这些函数
 
     // ========== 新增函数 ==========
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 2]: 添加 triggerParamInput() 函数
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8]: 更新参数索引映射（2列布局）
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.11]: 移除打开串口和关闭串口按钮
+    // 原因：底部按钮区域已有这两个按钮，参数区域不需要重复
     // 参数索引映射（2列布局）：
     // 行0：[0] 串口名称（只读） [1] 波特率（可编辑）
     // 行1：[2] 设备路径（只读） [3] 数据位（可编辑）
     // 行2：[4] 串口类型（只读） [5] 停止位（可编辑）
     // 行3：[6] 状态（只读）     [7] 校验位（可编辑）
-    // 行4：[8] 打开串口按钮     [9] 关闭串口按钮
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 修复triggerParamInput导致焦点丢失
     // 原因：forceActiveFocus()导致DeviceSettingsDialog失去焦点，Keys事件不再被处理
     // 解决：参考BasicConfigTab，不调用forceActiveFocus()，焦点指示器改为使用focusParamIndex
@@ -135,14 +127,6 @@ Rectangle {
             console.log("✅ [SerialPortParamsTab] 校验位")
             inputField = parityCombo
             break
-        case 8:  // 打开串口按钮
-            console.log("✅ [SerialPortParamsTab] 打开串口按钮")
-            inputField = openButton
-            break
-        case 9:  // 关闭串口按钮
-            console.log("✅ [SerialPortParamsTab] 关闭串口按钮")
-            inputField = closeButton
-            break
         }
 
         // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 参考BasicConfigTab，只对可编辑控件激活虚拟键盘
@@ -157,8 +141,9 @@ Rectangle {
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 2]: 添加 getParamFieldCount() 函数
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.11]: 更新参数数量为8（移除打开串口和关闭串口按钮）
     function getParamFieldCount() {
-        return 10  // 10个参数
+        return 8  // 8个参数（移除了打开串口和关闭串口按钮）
     }
 
     // ========== 组件加载完成 ==========
@@ -699,76 +684,6 @@ Rectangle {
                         radius: 4
                         z: 10
                     }
-                }
-            }
-
-            // ========== 行4：打开串口（左列，索引8） | 关闭串口（右列，索引9） ==========
-            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8]: 调整为2列布局
-            // NavigationManager参数索引：行4 = [8, 9]
-
-            // 索引8：打开串口按钮（左列）
-            Item {
-                Layout.column: 0
-                Layout.row: 4
-                Layout.fillWidth: true
-                implicitHeight: openButton.implicitHeight
-                z: 100
-
-                Button {
-                    id: openButton
-                    anchors.fill: parent
-                    text: "打开串口"
-                    font.pixelSize: 21
-                    enabled: true  // Phase 2 实现后连接到后端
-                    onClicked: {
-                        console.log("✅ [SerialPortParamsTab] 打开串口:", currentSerialPort.name)
-                        // TODO: Phase 2 - 调用后端打开串口
-                    }
-                }
-
-                // ✅ 焦点指示器
-                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: -4
-                    color: "transparent"
-                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 8) ? 3 : 0
-                    radius: 4
-                    z: 200
-                }
-            }
-
-            // 索引9：关闭串口按钮（右列）
-            Item {
-                Layout.column: 1
-                Layout.row: 4
-                Layout.fillWidth: true
-                implicitHeight: closeButton.implicitHeight
-                z: 100
-
-                Button {
-                    id: closeButton
-                    anchors.fill: parent
-                    text: "关闭串口"
-                    font.pixelSize: 21
-                    enabled: false  // Phase 2 实现后连接到后端
-                    onClicked: {
-                        console.log("✅ [SerialPortParamsTab] 关闭串口:", currentSerialPort.name)
-                        // TODO: Phase 2 - 调用后端关闭串口
-                    }
-                }
-
-                // ✅ 焦点指示器
-                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: -4
-                    color: "transparent"
-                    border.color: (root.focusParamIndex === 9) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 9) ? 3 : 0
-                    radius: 4
-                    z: 200
                 }
             }
         }  // GridLayout

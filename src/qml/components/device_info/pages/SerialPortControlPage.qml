@@ -56,7 +56,7 @@ Rectangle {
         // 默认参数数量（根据 Tab 索引）
         switch(root.focusTabIndex) {
         case 0:  // 参数配置
-            return 10
+            return 8  // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.11]: 移除打开串口和关闭串口按钮，从10改为8
         case 1:  // 发送区
             return 5
         case 2:  // 接收区
