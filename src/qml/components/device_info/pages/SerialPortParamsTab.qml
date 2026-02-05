@@ -190,6 +190,14 @@ Rectangle {
             columnSpacing: 16
             rowSpacing: 12
 
+            Component.onCompleted: {
+                console.log("✅ [SerialPortParamsTab] GridLayout 加载完成")
+                console.log("   - columns:", columns)
+                console.log("   - width:", width)
+                console.log("   - columnSpacing:", columnSpacing)
+                console.log("   - rowSpacing:", rowSpacing)
+            }
+
             // ========== 行0：串口名称（左列，索引0） | 波特率（右列，索引1） ==========
             // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8]: 调整为2列布局
             // NavigationManager参数索引：行0 = [0, 1]
@@ -200,6 +208,14 @@ Rectangle {
                 Layout.row: 0
                 Layout.fillWidth: true
                 Layout.preferredHeight: 40
+
+                Component.onCompleted: {
+                    console.log("✅ [SerialPortParamsTab] 索引0（串口名称）Item 加载完成")
+                    console.log("   - Layout.column:", Layout.column)
+                    console.log("   - Layout.row:", Layout.row)
+                    console.log("   - width:", width)
+                    console.log("   - height:", height)
+                }
 
                 RowLayout {
                     anchors.fill: parent
@@ -213,36 +229,47 @@ Rectangle {
                         horizontalAlignment: Text.AlignRight
                     }
 
-                    TextField {
-                        id: serialNameText
+                    Item {
                         Layout.fillWidth: true
                         Layout.maximumWidth: 300
-                        text: currentSerialPort ? currentSerialPort.name : ""
-                        font.pixelSize: 21
-                        color: "#E0E0E0"
-                        verticalAlignment: Text.AlignVCenter
+                        Layout.preferredHeight: 40
 
-                        readOnly: true
-                        focus: true
-                        activeFocusOnTab: true
-                        inputMethodHints: Qt.ImhNone
-                        autoScroll: false
-
-                        background: Rectangle {
-                            color: "transparent"
-                            border.width: 0
-                        }
-
-                        // ✅ 焦点指示器
-                        Rectangle {
-                            id: serialNameFocusIndicator
+                        TextField {
+                            id: serialNameText
                             anchors.fill: parent
-                            anchors.margins: -4
-                            color: "transparent"
-                            border.color: parent.activeFocus ? "#2196F3" : "transparent"
-                            border.width: parent.activeFocus ? 3 : 0
-                            radius: 4
-                            z: 10
+                            text: currentSerialPort ? currentSerialPort.name : ""
+                            font.pixelSize: 21
+                            color: "#E0E0E0"
+                            verticalAlignment: Text.AlignVCenter
+
+                            readOnly: true
+                            focus: true
+                            activeFocusOnTab: true
+                            inputMethodHints: Qt.ImhNone
+                            autoScroll: false
+
+                            background: Rectangle {
+                                color: "transparent"
+                                border.width: 0
+                            }
+
+                            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.1]: 修复焦点指示器布局冲突
+                            // 原因：焦点指示器使用anchors.fill，但父元素在RowLayout中，导致布局冲突
+                            // 解决：将TextField包裹在Item中，焦点指示器使用anchors.fill Item
+                            Rectangle {
+                                id: serialNameFocusIndicator
+                                anchors.fill: parent
+                                anchors.margins: -4
+                                color: "transparent"
+                                border.color: parent.activeFocus ? "#2196F3" : "transparent"
+                                border.width: parent.activeFocus ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+
+                            Component.onCompleted: {
+                                console.log("✅ [SerialPortParamsTab] serialNameText 加载完成 - text:", text)
+                            }
                         }
                     }
                 }
@@ -254,6 +281,14 @@ Rectangle {
                 Layout.row: 0
                 Layout.fillWidth: true
                 implicitHeight: baudRateCombo.implicitHeight
+
+                Component.onCompleted: {
+                    console.log("✅ [SerialPortParamsTab] 索引1（波特率）Item 加载完成")
+                    console.log("   - Layout.column:", Layout.column)
+                    console.log("   - Layout.row:", Layout.row)
+                    console.log("   - width:", width)
+                    console.log("   - height:", height)
+                }
 
                 RowLayout {
                     anchors.fill: parent
