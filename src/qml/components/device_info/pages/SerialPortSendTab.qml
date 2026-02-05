@@ -240,7 +240,7 @@ Rectangle {
                 }
 
                 Item {
-                    Layout.preferredWidth: 120  // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.1]: 增加宽度从100到120
+                    Layout.preferredWidth: 150  // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13]: 增加宽度从120到150，确保ASCII完整显示
                     implicitHeight: sendFormat.implicitHeight
 
                     DeviceInfo.CustomComboBox {
