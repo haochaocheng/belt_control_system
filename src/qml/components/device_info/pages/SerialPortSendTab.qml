@@ -82,6 +82,53 @@ Rectangle {
         return 5  // 5个参数（0-4）
     }
 
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.12]: 添加回车键处理函数
+    // 功能：根据当前焦点控件，执行不同的回车键操作
+    // - 格式ComboBox：切换选项（HEX ↔ ASCII）
+    // - 发送数据TextArea：弹出虚拟键盘
+    // - 发送按钮：执行发送操作
+    // - 清空按钮：执行清空操作
+    function handleEnterKey() {
+        console.log("✅ [SerialPortSendTab] 处理回车键 - 当前焦点索引:", focusParamIndex)
+
+        switch(focusParamIndex) {
+        case 0:  // 格式ComboBox
+            // 切换选项（HEX ↔ ASCII）
+            var oldIndex = sendFormat.currentIndex
+            var nextIndex = (sendFormat.currentIndex + 1) % sendFormat.model.length
+            sendFormat.currentIndex = nextIndex
+            console.log("✅ [SerialPortSendTab] 格式切换:", oldIndex, "→", nextIndex)
+            return true  // 表示已处理
+
+        case 2:  // 发送数据TextArea
+            // 弹出虚拟键盘
+            if (virtualKeyboard && typeof virtualKeyboard.activateVirtualKeyboard === "function") {
+                console.log("✅ [SerialPortSendTab] 激活虚拟键盘 - 发送数据")
+                virtualKeyboard.activateVirtualKeyboard(sendInput)
+                return true  // 表示已处理
+            } else {
+                console.log("⚠️ [SerialPortSendTab] 虚拟键盘不可用")
+                return false
+            }
+
+        case 3:  // 发送按钮
+            // 执行发送操作
+            console.log("✅ [SerialPortSendTab] 执行发送操作")
+            sendButton.clicked()
+            return true  // 表示已处理
+
+        case 4:  // 清空按钮
+            // 执行清空操作
+            console.log("✅ [SerialPortSendTab] 执行清空操作")
+            clearButton.clicked()
+            return true  // 表示已处理
+
+        default:
+            console.log("⚠️ [SerialPortSendTab] 当前焦点不在可处理的控件上")
+            return false
+        }
+    }
+
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.3]: 自定义导航处理
     // 发送区的布局特殊，需要自定义导航逻辑
     // 行0：[0] 格式（右上角）
