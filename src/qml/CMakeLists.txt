@@ -101,8 +101,8 @@ qt_add_qml_module(qml_module
         components/device_info/pages/SerialPortListPanel.qml
         components/device_info/pages/SerialPortConfigPanel.qml
         components/device_info/pages/SerialPortParamsTab.qml  # ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.14]: 修正文件名（原为SerialPortParamsSection.qml）
-        components/device_info/pages/SerialPortSendSection.qml
-        components/device_info/pages/SerialPortReceiveSection.qml
+        components/device_info/pages/SerialPortSendTab.qml  # ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.7]: 修正文件名（原为SerialPortSendSection.qml）
+        components/device_info/pages/SerialPortReceiveTab.qml  # ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.7]: 修正文件名（原为SerialPortReceiveSection.qml）
         components/device_info/pages/ModbusRegisterSection.qml
         components/device_info/pages/CurrentProtectionTab.qml
         components/device_info/pages/MotorTempTab.qml
