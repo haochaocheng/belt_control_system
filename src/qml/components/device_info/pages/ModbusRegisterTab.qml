@@ -33,6 +33,8 @@ Rectangle {
 
     // ========== 焦点管理函数 ==========
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 添加 triggerParamInput() 函数
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.6]: 修改为电流保护Tab的方式
+    // 参考 CurrentProtectionTab 的实现，直接在控件上调用 activateVirtualKeyboard()
     function triggerParamInput(paramIndex) {
         console.log("✅ [ModbusRegisterTab] 触发参数输入 - 索引:", paramIndex)
 
@@ -76,15 +78,21 @@ Rectangle {
             return
         }
 
-        // ✅ 2026-02-05: 参考 SerialPortParamsTab，对可编辑字段调用 activateVirtualKeyboard()
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.6]: 使用电流保护Tab的方式
+        // 参考 CurrentProtectionTab，直接在控件上调用 activateVirtualKeyboard()
+        // 这样虚拟键盘弹出时，ScrollView会自动滚动，确保输入框不被遮挡
         if (inputField) {
-            if (paramIndex === 0 || paramIndex === 2 || paramIndex === 4) {
-                // 从站地址、起始地址、写入值：激活虚拟键盘
-                if (virtualKeyboard && typeof virtualKeyboard.activateVirtualKeyboard === "function") {
-                    console.log("✅ [ModbusRegisterTab] 激活虚拟键盘 - 控件:", inputField)
-                    virtualKeyboard.activateVirtualKeyboard(inputField)
+            if (paramIndex === 0 || paramIndex === 2 || paramIndex === 3 || paramIndex === 4) {
+                // 从站地址、起始地址、数量、写入值：激活虚拟键盘（数字输入）
+                console.log("✅ [ModbusRegisterTab] 激活虚拟键盘 - 控件:", inputField)
+                // 如果控件有 activateVirtualKeyboard 函数，调用它
+                if (inputField.activateVirtualKeyboard) {
+                    console.log("✅ [ModbusRegisterTab] 调用 inputField.activateVirtualKeyboard()")
+                    inputField.activateVirtualKeyboard()
                 } else {
-                    console.log("⚠️ [ModbusRegisterTab] 虚拟键盘不可用")
+                    // 否则直接设置焦点
+                    console.log("✅ [ModbusRegisterTab] 调用 inputField.forceActiveFocus()")
+                    inputField.forceActiveFocus()
                 }
             }
         }
@@ -93,6 +101,95 @@ Rectangle {
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 添加 getParamFieldCount() 函数
     function getParamFieldCount() {
         return 8  // 8个参数（0-7）
+    }
+
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.6]: 添加 handleEnterKey() 函数
+    // 处理回车键，根据当前焦点控件执行不同的操作
+    // 参考 SerialPortSendTab 和 SerialPortReceiveTab 的实现
+    function handleEnterKey() {
+        console.log("✅ [ModbusRegisterTab] 处理回车键 - 当前焦点索引:", focusParamIndex)
+
+        switch(focusParamIndex) {
+        case 0:  // 从站地址（数字输入框）
+            // 弹出虚拟键盘（数字输入）
+            console.log("✅ [ModbusRegisterTab] 尝试激活虚拟键盘 - 从站地址")
+            if (slaveAddress.activateVirtualKeyboard) {
+                console.log("✅ [ModbusRegisterTab] 调用 slaveAddress.activateVirtualKeyboard()")
+                slaveAddress.activateVirtualKeyboard()
+                return true  // 表示已处理
+            } else {
+                console.log("✅ [ModbusRegisterTab] 调用 slaveAddress.forceActiveFocus()")
+                slaveAddress.forceActiveFocus()
+                return true  // 表示已处理
+            }
+
+        case 1:  // 功能码（ComboBox）
+            // 循环切换选项
+            var newIndex = (functionCode.currentIndex + 1) % functionCode.model.length
+            console.log("✅ [ModbusRegisterTab] 功能码切换:", functionCode.currentIndex, "→", newIndex)
+            functionCode.currentIndex = newIndex
+            return true  // 表示已处理
+
+        case 2:  // 起始地址（数字输入框）
+            // 弹出虚拟键盘（数字输入）
+            console.log("✅ [ModbusRegisterTab] 尝试激活虚拟键盘 - 起始地址")
+            if (startAddress.activateVirtualKeyboard) {
+                console.log("✅ [ModbusRegisterTab] 调用 startAddress.activateVirtualKeyboard()")
+                startAddress.activateVirtualKeyboard()
+                return true  // 表示已处理
+            } else {
+                console.log("✅ [ModbusRegisterTab] 调用 startAddress.forceActiveFocus()")
+                startAddress.forceActiveFocus()
+                return true  // 表示已处理
+            }
+
+        case 3:  // 数量（数字输入框）
+            // 弹出虚拟键盘（数字输入）
+            console.log("✅ [ModbusRegisterTab] 尝试激活虚拟键盘 - 数量")
+            if (quantity.activateVirtualKeyboard) {
+                console.log("✅ [ModbusRegisterTab] 调用 quantity.activateVirtualKeyboard()")
+                quantity.activateVirtualKeyboard()
+                return true  // 表示已处理
+            } else {
+                console.log("✅ [ModbusRegisterTab] 调用 quantity.forceActiveFocus()")
+                quantity.forceActiveFocus()
+                return true  // 表示已处理
+            }
+
+        case 4:  // 写入值（数字输入框）
+            // 弹出虚拟键盘（数字输入）
+            console.log("✅ [ModbusRegisterTab] 尝试激活虚拟键盘 - 写入值")
+            if (writeValue.activateVirtualKeyboard) {
+                console.log("✅ [ModbusRegisterTab] 调用 writeValue.activateVirtualKeyboard()")
+                writeValue.activateVirtualKeyboard()
+                return true  // 表示已处理
+            } else {
+                console.log("✅ [ModbusRegisterTab] 调用 writeValue.forceActiveFocus()")
+                writeValue.forceActiveFocus()
+                return true  // 表示已处理
+            }
+
+        case 5:  // 读取按钮
+            // 执行读取操作
+            console.log("✅ [ModbusRegisterTab] 执行读取操作")
+            readButton.clicked()
+            return true  // 表示已处理
+
+        case 6:  // 写入按钮
+            // 执行写入操作
+            console.log("✅ [ModbusRegisterTab] 执行写入操作")
+            writeButton.clicked()
+            return true  // 表示已处理
+
+        case 7:  // 寄存器列表
+            // 寄存器列表不需要处理回车键
+            console.log("⚠️ [ModbusRegisterTab] 寄存器列表不处理回车键")
+            return false
+
+        default:
+            console.log("⚠️ [ModbusRegisterTab] 未知焦点索引:", focusParamIndex)
+            return false
+        }
     }
 
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 自定义导航处理
