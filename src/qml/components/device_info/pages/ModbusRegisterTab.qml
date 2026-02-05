@@ -2,6 +2,7 @@
 // MODBUS 寄存器操作 Tab
 // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 3]: 从 ModbusRegisterSection.qml 重命名
 // 原因：采用 Tab 架构，每个 Tab 内部独立管理滚动
+// ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 重构为 GridLayout 4列布局，添加导航支持
 // 创建日期: 2026-02-04
 
 import QtQuick
@@ -11,381 +12,642 @@ import ".." as DeviceInfo
 
 Rectangle {
     id: root
-    color: "#2c3e50"
-    radius: 8
+    color: "transparent"
 
     // ========== 公开属性 ==========
     property var currentSerialPort: null  // 当前串口信息
+    property int focusParamIndex: 0       // 当前焦点参数索引
+    property var virtualKeyboard: null    // 虚拟键盘引用
 
-    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.4]: 添加焦点函数
-    function focusSlaveAddress() {
-        slaveAddress.forceActiveFocus()
-        console.log("✅ [ModbusRegisterSection] 从站地址获得焦点")
+    // ========== 信号 ==========
+    signal requestFocusParamIndex(int paramIndex)
+
+    // ========== 导航索引映射 ==========
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 参数索引映射（4列布局）
+    // 行0：[0] 从站地址标签  [1] 从站地址输入（80px）  [2] 功能码标签  [3] 功能码下拉（200px）
+    // 行1：[4] 起始地址标签  [5] 起始地址输入（80px）  [6] 数量标签    [7] 数量输入（100px）
+    // 行2：[8] 写入值标签    [9] 写入值输入（80px）    [10] 空         [11] 空
+    // 行3：[12] 读取按钮（跨2列）                      [13] 写入按钮（跨2列）
+    // 寄存器列表：[14] 寄存器列表（焦点指示器）
+    // 参数数量：8个（索引0-7，按钮5-6，列表7）
+
+    // ========== 焦点管理函数 ==========
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 添加 triggerParamInput() 函数
+    function triggerParamInput(paramIndex) {
+        console.log("✅ [ModbusRegisterTab] 触发参数输入 - 索引:", paramIndex)
+
+        var inputField = null
+
+        switch(paramIndex) {
+        case 0:  // 从站地址
+            inputField = slaveAddress
+            console.log("✅ [ModbusRegisterTab] 从站地址")
+            break
+        case 1:  // 功能码
+            inputField = functionCode
+            console.log("✅ [ModbusRegisterTab] 功能码")
+            break
+        case 2:  // 起始地址
+            inputField = startAddress
+            console.log("✅ [ModbusRegisterTab] 起始地址")
+            break
+        case 3:  // 数量
+            inputField = quantity
+            console.log("✅ [ModbusRegisterTab] 数量")
+            break
+        case 4:  // 写入值
+            inputField = writeValue
+            console.log("✅ [ModbusRegisterTab] 写入值")
+            break
+        case 5:  // 读取按钮
+            inputField = readButton
+            console.log("✅ [ModbusRegisterTab] 读取按钮")
+            break
+        case 6:  // 写入按钮
+            inputField = writeButton
+            console.log("✅ [ModbusRegisterTab] 写入按钮")
+            break
+        case 7:  // 寄存器列表
+            inputField = registerListView
+            console.log("✅ [ModbusRegisterTab] 寄存器列表")
+            break
+        default:
+            console.log("⚠️ [ModbusRegisterTab] 未知参数索引:", paramIndex)
+            return
+        }
+
+        // ✅ 2026-02-05: 参考 SerialPortParamsTab，对可编辑字段调用 activateVirtualKeyboard()
+        if (inputField) {
+            if (paramIndex === 0 || paramIndex === 2 || paramIndex === 4) {
+                // 从站地址、起始地址、写入值：激活虚拟键盘
+                if (virtualKeyboard && typeof virtualKeyboard.activateVirtualKeyboard === "function") {
+                    console.log("✅ [ModbusRegisterTab] 激活虚拟键盘 - 控件:", inputField)
+                    virtualKeyboard.activateVirtualKeyboard(inputField)
+                } else {
+                    console.log("⚠️ [ModbusRegisterTab] 虚拟键盘不可用")
+                }
+            }
+        }
     }
 
-    function focusFunctionCode() {
-        functionCode.forceActiveFocus()
-        console.log("✅ [ModbusRegisterSection] 功能码获得焦点")
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 添加 getParamFieldCount() 函数
+    function getParamFieldCount() {
+        return 8  // 8个参数（0-7）
     }
 
-    function focusStartAddress() {
-        startAddress.forceActiveFocus()
-        console.log("✅ [ModbusRegisterSection] 起始地址获得焦点")
-    }
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 自定义导航处理
+    // MODBUS 寄存器操作的布局特殊，需要自定义导航逻辑
+    // 行0：[0] 从站地址  [1] 功能码
+    // 行1：[2] 起始地址  [3] 数量
+    // 行2：[4] 写入值
+    // 行3：[5] 读取按钮  [6] 写入按钮
+    // 行4：[7] 寄存器列表
+    function handleDirectionKey(direction) {
+        console.log("✅ [ModbusRegisterTab] 自定义导航 - 方向:", direction, "当前索引:", focusParamIndex)
 
-    function focusQuantity() {
-        quantity.forceActiveFocus()
-        console.log("✅ [ModbusRegisterSection] 数量获得焦点")
-    }
+        var newIndex = focusParamIndex
 
-    function focusWriteValue() {
-        writeValue.forceActiveFocus()
-        console.log("✅ [ModbusRegisterSection] 写入值获得焦点")
-    }
+        switch(direction) {
+        case "Down":
+            // 下键导航
+            if (focusParamIndex === 0) {
+                // 从站地址 → 起始地址
+                newIndex = 2
+            } else if (focusParamIndex === 1) {
+                // 功能码 → 数量
+                newIndex = 3
+            } else if (focusParamIndex === 2) {
+                // 起始地址 → 写入值
+                newIndex = 4
+            } else if (focusParamIndex === 3) {
+                // 数量 → 写入值
+                newIndex = 4
+            } else if (focusParamIndex === 4) {
+                // 写入值 → 读取按钮
+                newIndex = 5
+            } else if (focusParamIndex === 5 || focusParamIndex === 6) {
+                // 读取按钮或写入按钮 → 寄存器列表
+                newIndex = 7
+            }
+            // 寄存器列表：保持不变（已经在最底部）
+            break
 
-    function focusRegisterList() {
-        registerListView.forceActiveFocus()
-        console.log("✅ [ModbusRegisterSection] 寄存器列表获得焦点")
+        case "Up":
+            // 上键导航
+            if (focusParamIndex === 7) {
+                // 寄存器列表 → 读取按钮
+                newIndex = 5
+            } else if (focusParamIndex === 5 || focusParamIndex === 6) {
+                // 读取按钮或写入按钮 → 写入值
+                newIndex = 4
+            } else if (focusParamIndex === 4) {
+                // 写入值 → 起始地址
+                newIndex = 2
+            } else if (focusParamIndex === 2) {
+                // 起始地址 → 从站地址
+                newIndex = 0
+            } else if (focusParamIndex === 3) {
+                // 数量 → 功能码
+                newIndex = 1
+            }
+            // 从站地址和功能码：保持不变（已经在最顶部）
+            break
+
+        case "Left":
+            // 左键导航
+            if (focusParamIndex === 1) {
+                // 功能码 → 从站地址
+                newIndex = 0
+            } else if (focusParamIndex === 3) {
+                // 数量 → 起始地址
+                newIndex = 2
+            } else if (focusParamIndex === 6) {
+                // 写入按钮 → 读取按钮
+                newIndex = 5
+            }
+            // 其他位置：保持不变
+            break
+
+        case "Right":
+            // 右键导航
+            if (focusParamIndex === 0) {
+                // 从站地址 → 功能码
+                newIndex = 1
+            } else if (focusParamIndex === 2) {
+                // 起始地址 → 数量
+                newIndex = 3
+            } else if (focusParamIndex === 5) {
+                // 读取按钮 → 写入按钮
+                newIndex = 6
+            }
+            // 其他位置：保持不变
+            break
+        }
+
+        if (newIndex !== focusParamIndex) {
+            console.log("✅ [ModbusRegisterTab] 导航索引变化:", focusParamIndex, "→", newIndex)
+            requestFocusParamIndex(newIndex)
+            return true  // 导航成功
+        }
+
+        console.log("⚠️ [ModbusRegisterTab] 导航无变化，返回false")
+        return false  // 导航无变化
     }
 
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
-        console.log("✅ [ModbusRegisterSection] Component.onCompleted 开始")
-        console.log("✅ [ModbusRegisterSection] Component.onCompleted 完成")
+        console.log("✅ [ModbusRegisterTab] Component.onCompleted 开始")
+        console.log("✅ [ModbusRegisterTab] Component.onCompleted 完成")
     }
 
-    // ========== 主布局 ==========
-    ColumnLayout {
+    // ========== 滚动区域 ==========
+    ScrollView {
+        id: modbusScrollView
         anchors.fill: parent
-        anchors.margins: 16
-        spacing: 12
+        clip: true
 
-        // ========== 标题 ==========
-        Text {
-            text: "MODBUS 寄存器操作"
-            font.pixelSize: 18
-            font.weight: Font.Bold
-            color: "#E0E0E0"
-            Layout.fillWidth: true
-        }
-
-        // ========== 参数输入区 ==========
-        GridLayout {
-            Layout.fillWidth: true
-            columns: 4
-            columnSpacing: 12
-            rowSpacing: 12
-
-            // 从站地址
-            Text {
-                text: "从站地址:"
-                font.pixelSize: 14
-                color: "#9E9E9E"
-            }
-
-            Item {
-                Layout.preferredWidth: 80
-                implicitHeight: slaveAddress.implicitHeight
-
-                DeviceInfo.CustomTextField {
-                    id: slaveAddress
-                    anchors.fill: parent
-                    text: "01"
-                    placeholderText: "01-FF"
-                    validator: RegularExpressionValidator {
-                        regularExpression: /[0-9A-Fa-f]{1,2}/
-                    }
-                }
-
-                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.4]: 焦点指示器
-                Rectangle {
-                    anchors.fill: parent
-                    color: "transparent"
-                    border.color: slaveAddress.activeFocus ? "#2196F3" : "transparent"
-                    border.width: slaveAddress.activeFocus ? 3 : 0
-                    radius: 4
-                    z: 10
-                }
-            }
-
-            // 功能码
-            Text {
-                text: "功能码:"
-                font.pixelSize: 14
-                color: "#9E9E9E"
-            }
-
-            Item {
-                Layout.preferredWidth: 200
-                implicitHeight: functionCode.implicitHeight
-
-                DeviceInfo.CustomComboBox {
-                    id: functionCode
-                    anchors.fill: parent
-                    model: ["03-读保持寄存器", "06-写单个寄存器", "10-写多个寄存器"]
-                    currentIndex: 0
-                }
-
-                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.4]: 焦点指示器
-                Rectangle {
-                    anchors.fill: parent
-                    color: "transparent"
-                    border.color: functionCode.activeFocus ? "#2196F3" : "transparent"
-                    border.width: functionCode.activeFocus ? 3 : 0
-                    radius: 4
-                    z: 10
-                }
-            }
-
-            // 起始地址
-            Text {
-                text: "起始地址:"
-                font.pixelSize: 14
-                color: "#9E9E9E"
-            }
-
-            Item {
-                Layout.preferredWidth: 80
-                implicitHeight: startAddress.implicitHeight
-
-                DeviceInfo.CustomTextField {
-                    id: startAddress
-                    anchors.fill: parent
-                    text: "0000"
-                    placeholderText: "0000-FFFF"
-                    validator: RegularExpressionValidator {
-                        regularExpression: /[0-9A-Fa-f]{1,4}/
-                    }
-                }
-
-                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.4]: 焦点指示器
-                Rectangle {
-                    anchors.fill: parent
-                    color: "transparent"
-                    border.color: startAddress.activeFocus ? "#2196F3" : "transparent"
-                    border.width: startAddress.activeFocus ? 3 : 0
-                    radius: 4
-                    z: 10
-                }
-            }
-
-            // 数量
-            Text {
-                text: "数量:"
-                font.pixelSize: 14
-                color: "#9E9E9E"
-            }
-
-            Item {
-                Layout.preferredWidth: 100
-                implicitHeight: quantity.implicitHeight
-
-                DeviceInfo.CustomSpinBox {
-                    id: quantity
-                    anchors.fill: parent
-                    from: 1
-                    to: 125
-                    value: 10
-                }
-
-                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.4]: 焦点指示器
-                Rectangle {
-                    anchors.fill: parent
-                    color: "transparent"
-                    border.color: quantity.activeFocus ? "#2196F3" : "transparent"
-                    border.width: quantity.activeFocus ? 3 : 0
-                    radius: 4
-                    z: 10
-                }
-            }
-
-            // 写入值
-            Text {
-                text: "写入值:"
-                font.pixelSize: 14
-                color: "#9E9E9E"
-            }
-
-            Item {
-                Layout.preferredWidth: 80
-                implicitHeight: writeValue.implicitHeight
-
-                DeviceInfo.CustomTextField {
-                    id: writeValue
-                    anchors.fill: parent
-                    enabled: functionCode.currentIndex > 0
-                    placeholderText: "0000-FFFF"
-                    validator: RegularExpressionValidator {
-                        regularExpression: /[0-9A-Fa-f]{1,4}/
-                    }
-                }
-
-                // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.4]: 焦点指示器
-                Rectangle {
-                    anchors.fill: parent
-                    color: "transparent"
-                    border.color: writeValue.activeFocus ? "#2196F3" : "transparent"
-                    border.width: writeValue.activeFocus ? 3 : 0
-                    radius: 4
-                    z: 10
-                }
-            }
-
-            Item {
-                Layout.columnSpan: 2
-            }
-        }
-
-        // ========== 操作按钮 ==========
-        RowLayout {
-            Layout.fillWidth: true
+        // ========== 主布局 ==========
+        ColumnLayout {
+            width: modbusScrollView.width * 0.9
             spacing: 12
 
-            Button {
-                text: "读取"
-                Layout.preferredWidth: 100
-                enabled: functionCode.currentIndex === 0
+            // ========== 标题 ==========
+            Text {
+                text: "MODBUS 寄存器操作"
+                font.pixelSize: 18
+                font.weight: Font.Bold
+                color: "#E0E0E0"
+                Layout.fillWidth: true
+            }
 
-                onClicked: {
-                    console.log("✅ [ModbusRegisterSection] 读取寄存器")
-                    console.log("   - 从站地址:", slaveAddress.text)
-                    console.log("   - 起始地址:", startAddress.text)
-                    console.log("   - 数量:", quantity.value)
+            // ========== 参数输入区（GridLayout 4列布局）==========
+            GridLayout {
+                Layout.fillWidth: true
+                columns: 4
+                columnSpacing: 12
+                rowSpacing: 12
 
-                    // TODO: Phase 2 - 调用后端读取寄存器
-                    // modbusController.readHoldingRegisters(
-                    //     parseInt(slaveAddress.text, 16),
-                    //     parseInt(startAddress.text, 16),
-                    //     quantity.value
-                    // )
+                // ========== 行0：从站地址（索引0）、功能码（索引1）==========
+
+                // 从站地址标签
+                Text {
+                    text: "从站地址:"
+                    font.pixelSize: 14
+                    color: "#9E9E9E"
+                    Layout.preferredWidth: 160
+                    horizontalAlignment: Text.AlignRight
+                }
+
+                // 从站地址输入（索引0）
+                Item {
+                    Layout.preferredWidth: 80
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: 300
+                    implicitHeight: slaveAddress.implicitHeight
+
+                    DeviceInfo.CustomTextField {
+                        id: slaveAddress
+                        anchors.fill: parent
+                        text: "01"
+                        placeholderText: "01-FF"
+                        validator: RegularExpressionValidator {
+                            regularExpression: /[0-9A-Fa-f]{1,2}/
+                        }
+                    }
+
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 0) ? 3 : 0
+                        radius: 4
+                        z: 11
+                    }
+                }
+
+                // 功能码标签
+                Text {
+                    text: "功能码:"
+                    font.pixelSize: 14
+                    color: "#9E9E9E"
+                    Layout.preferredWidth: 160
+                    horizontalAlignment: Text.AlignRight
+                }
+
+                // 功能码输入（索引1）
+                Item {
+                    Layout.preferredWidth: 200
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: 300
+                    implicitHeight: functionCode.implicitHeight
+
+                    DeviceInfo.CustomComboBox {
+                        id: functionCode
+                        anchors.fill: parent
+                        model: ["03-读保持寄存器", "06-写单个寄存器", "10-写多个寄存器"]
+                        currentIndex: 0
+                    }
+
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 1) ? 3 : 0
+                        radius: 4
+                        z: 11
+                    }
+                }
+
+                // ========== 行1：起始地址（索引2）、数量（索引3）==========
+
+                // 起始地址标签
+                Text {
+                    text: "起始地址:"
+                    font.pixelSize: 14
+                    color: "#9E9E9E"
+                    Layout.preferredWidth: 160
+                    horizontalAlignment: Text.AlignRight
+                }
+
+                // 起始地址输入（索引2）
+                Item {
+                    Layout.preferredWidth: 80
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: 300
+                    implicitHeight: startAddress.implicitHeight
+
+                    DeviceInfo.CustomTextField {
+                        id: startAddress
+                        anchors.fill: parent
+                        text: "0000"
+                        placeholderText: "0000-FFFF"
+                        validator: RegularExpressionValidator {
+                            regularExpression: /[0-9A-Fa-f]{1,4}/
+                        }
+                    }
+
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 2) ? 3 : 0
+                        radius: 4
+                        z: 11
+                    }
+                }
+
+                // 数量标签
+                Text {
+                    text: "数量:"
+                    font.pixelSize: 14
+                    color: "#9E9E9E"
+                    Layout.preferredWidth: 160
+                    horizontalAlignment: Text.AlignRight
+                }
+
+                // 数量输入（索引3）
+                Item {
+                    Layout.preferredWidth: 100
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: 300
+                    implicitHeight: quantity.implicitHeight
+
+                    DeviceInfo.CustomSpinBox {
+                        id: quantity
+                        anchors.fill: parent
+                        from: 1
+                        to: 125
+                        value: 10
+                    }
+
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 3) ? 3 : 0
+                        radius: 4
+                        z: 11
+                    }
+                }
+
+                // ========== 行2：写入值（索引4）==========
+
+                // 写入值标签
+                Text {
+                    text: "写入值:"
+                    font.pixelSize: 14
+                    color: "#9E9E9E"
+                    Layout.preferredWidth: 160
+                    horizontalAlignment: Text.AlignRight
+                }
+
+                // 写入值输入（索引4）
+                Item {
+                    Layout.preferredWidth: 80
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: 300
+                    implicitHeight: writeValue.implicitHeight
+
+                    DeviceInfo.CustomTextField {
+                        id: writeValue
+                        anchors.fill: parent
+                        enabled: functionCode.currentIndex > 0
+                        placeholderText: "0000-FFFF"
+                        validator: RegularExpressionValidator {
+                            regularExpression: /[0-9A-Fa-f]{1,4}/
+                        }
+                    }
+
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 4) ? 3 : 0
+                        radius: 4
+                        z: 11
+                    }
+                }
+
+                // 空占位（索引10）
+                Item {
+                    Layout.columnSpan: 2
                 }
             }
 
-            Button {
-                text: "写入"
-                Layout.preferredWidth: 100
-                enabled: functionCode.currentIndex > 0 && writeValue.text.length > 0
+            // ========== 操作按钮 ==========
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
 
-                onClicked: {
-                    console.log("✅ [ModbusRegisterSection] 写入寄存器")
-                    console.log("   - 从站地址:", slaveAddress.text)
-                    console.log("   - 起始地址:", startAddress.text)
-                    console.log("   - 写入值:", writeValue.text)
+                // 读取按钮（索引5）
+                Item {
+                    Layout.preferredWidth: 100
+                    Layout.preferredHeight: 40
 
-                    // TODO: Phase 2 - 调用后端写入寄存器
-                    if (functionCode.currentIndex === 1) {
-                        // modbusController.writeSingleRegister(
-                        //     parseInt(slaveAddress.text, 16),
-                        //     parseInt(startAddress.text, 16),
-                        //     parseInt(writeValue.text, 16)
-                        // )
-                    } else {
-                        // modbusController.writeMultipleRegisters(
-                        //     parseInt(slaveAddress.text, 16),
-                        //     parseInt(startAddress.text, 16),
-                        //     [parseInt(writeValue.text, 16)]
-                        // )
+                    Button {
+                        id: readButton
+                        anchors.fill: parent
+                        text: "读取"
+                        enabled: functionCode.currentIndex === 0
+
+                        background: Rectangle {
+                            color: {
+                                if (root.focusParamIndex === 5) {
+                                    return "#2ecc71"  // 焦点时：亮绿色
+                                } else if (parent.pressed) {
+                                    return "#27ae60"
+                                } else if (parent.hovered) {
+                                    return "#2ecc71"
+                                } else {
+                                    return "#27ae60"
+                                }
+                            }
+                            radius: 4
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            console.log("✅ [ModbusRegisterTab] 读取寄存器")
+                            console.log("   - 从站地址:", slaveAddress.text)
+                            console.log("   - 起始地址:", startAddress.text)
+                            console.log("   - 数量:", quantity.value)
+
+                            // TODO: Phase 2 - 调用后端读取寄存器
+                            // modbusController.readHoldingRegisters(
+                            //     parseInt(slaveAddress.text, 16),
+                            //     parseInt(startAddress.text, 16),
+                            //     quantity.value
+                            // )
+                        }
+                    }
+
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 5) ? 3 : 0
+                        radius: 4
+                        z: 11
+                    }
+                }
+
+                // 写入按钮（索引6）
+                Item {
+                    Layout.preferredWidth: 100
+                    Layout.preferredHeight: 40
+
+                    Button {
+                        id: writeButton
+                        anchors.fill: parent
+                        text: "写入"
+                        enabled: functionCode.currentIndex > 0 && writeValue.text.length > 0
+
+                        background: Rectangle {
+                            color: {
+                                if (root.focusParamIndex === 6) {
+                                    return "#e74c3c"  // 焦点时：亮红色
+                                } else if (parent.pressed) {
+                                    return "#c0392b"
+                                } else if (parent.hovered) {
+                                    return "#e74c3c"
+                                } else {
+                                    return "#c0392b"
+                                }
+                            }
+                            radius: 4
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            console.log("✅ [ModbusRegisterTab] 写入寄存器")
+                            console.log("   - 从站地址:", slaveAddress.text)
+                            console.log("   - 起始地址:", startAddress.text)
+                            console.log("   - 写入值:", writeValue.text)
+
+                            // TODO: Phase 2 - 调用后端写入寄存器
+                            if (functionCode.currentIndex === 1) {
+                                // modbusController.writeSingleRegister(
+                                //     parseInt(slaveAddress.text, 16),
+                                //     parseInt(startAddress.text, 16),
+                                //     parseInt(writeValue.text, 16)
+                                // )
+                            } else {
+                                // modbusController.writeMultipleRegisters(
+                                //     parseInt(slaveAddress.text, 16),
+                                //     parseInt(startAddress.text, 16),
+                                //     [parseInt(writeValue.text, 16)]
+                                // )
+                            }
+                        }
+                    }
+
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 6) ? 3 : 0
+                        radius: 4
+                        z: 11
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+            }
+
+            // ========== 寄存器列表标题 ==========
+            Text {
+                text: "寄存器列表"
+                font.pixelSize: 16
+                font.weight: Font.Bold
+                color: "#E0E0E0"
+                Layout.fillWidth: true
+                Layout.topMargin: 8
+            }
+
+            // ========== 寄存器列表表头 ==========
+            Rectangle {
+                Layout.fillWidth: true
+                height: 40
+                color: "#1e2838"
+                border.color: "#3d4556"
+                border.width: 1
+                radius: 4
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 0
+
+                    Text {
+                        text: "地址"
+                        font.pixelSize: 14
+                        font.weight: Font.Bold
+                        color: "#E0E0E0"
+                        Layout.preferredWidth: 100
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Rectangle {
+                        width: 1
+                        Layout.fillHeight: true
+                        color: "#3d4556"
+                    }
+
+                    Text {
+                        text: "值(HEX)"
+                        font.pixelSize: 14
+                        font.weight: Font.Bold
+                        color: "#E0E0E0"
+                        Layout.preferredWidth: 100
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Rectangle {
+                        width: 1
+                        Layout.fillHeight: true
+                        color: "#3d4556"
+                    }
+
+                    Text {
+                        text: "值(DEC)"
+                        font.pixelSize: 14
+                        font.weight: Font.Bold
+                        color: "#E0E0E0"
+                        Layout.preferredWidth: 100
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Rectangle {
+                        width: 1
+                        Layout.fillHeight: true
+                        color: "#3d4556"
+                    }
+
+                    Text {
+                        text: "说明"
+                        font.pixelSize: 14
+                        font.weight: Font.Bold
+                        color: "#E0E0E0"
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignLeft
+                        leftPadding: 8
                     }
                 }
             }
 
+            // ========== 寄存器列表内容（索引7）==========
             Item {
                 Layout.fillWidth: true
-            }
-        }
-
-        // ========== 寄存器列表标题 ==========
-        Text {
-            text: "寄存器列表"
-            font.pixelSize: 16
-            font.weight: Font.Bold
-            color: "#E0E0E0"
-            Layout.fillWidth: true
-            Layout.topMargin: 8
-        }
-
-        // ========== 寄存器列表表头 ==========
-        Rectangle {
-            Layout.fillWidth: true
-            height: 40
-            color: "#1e2838"
-            border.color: "#3d4556"
-            border.width: 1
-            radius: 4
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 8
-                spacing: 0
-
-                Text {
-                    text: "地址"
-                    font.pixelSize: 14
-                    font.weight: Font.Bold
-                    color: "#E0E0E0"
-                    Layout.preferredWidth: 100
-                    horizontalAlignment: Text.AlignHCenter
-                }
-
-                Rectangle {
-                    width: 1
-                    Layout.fillHeight: true
-                    color: "#3d4556"
-                }
-
-                Text {
-                    text: "值(HEX)"
-                    font.pixelSize: 14
-                    font.weight: Font.Bold
-                    color: "#E0E0E0"
-                    Layout.preferredWidth: 100
-                    horizontalAlignment: Text.AlignHCenter
-                }
-
-                Rectangle {
-                    width: 1
-                    Layout.fillHeight: true
-                    color: "#3d4556"
-                }
-
-                Text {
-                    text: "值(DEC)"
-                    font.pixelSize: 14
-                    font.weight: Font.Bold
-                    color: "#E0E0E0"
-                    Layout.preferredWidth: 100
-                    horizontalAlignment: Text.AlignHCenter
-                }
-
-                Rectangle {
-                    width: 1
-                    Layout.fillHeight: true
-                    color: "#3d4556"
-                }
-
-                Text {
-                    text: "说明"
-                    font.pixelSize: 14
-                    font.weight: Font.Bold
-                    color: "#E0E0E0"
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignLeft
-                    leftPadding: 8
-                }
-            }
-        }
-
-        // ========== 寄存器列表内容 ==========
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-
-            ScrollView {
-                anchors.fill: parent
-                clip: true
+                Layout.fillHeight: true
+                Layout.minimumHeight: 200
 
                 ListView {
                     id: registerListView
+                    anchors.fill: parent
+                    clip: true
                     model: ListModel {
                         id: registerModel
                         // 模拟数据（Phase 2 后端实现后替换）
@@ -459,16 +721,16 @@ Rectangle {
                         }
                     }
                 }
-            }
 
-            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.6.4]: 焦点指示器
-            Rectangle {
-                anchors.fill: parent
-                color: "transparent"
-                border.color: registerListView.activeFocus ? "#2196F3" : "transparent"
-                border.width: registerListView.activeFocus ? 3 : 0
-                radius: 4
-                z: 10
+                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 焦点指示器（索引14）
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 7) ? 3 : 0
+                    radius: 4
+                    z: 11
+                }
             }
         }
     }
