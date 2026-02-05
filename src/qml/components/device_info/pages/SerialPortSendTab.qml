@@ -82,6 +82,70 @@ Rectangle {
         return 5  // 5个参数（0-4）
     }
 
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.3]: 自定义导航处理
+    // 发送区的布局特殊，需要自定义导航逻辑
+    // 行0：[0] 格式（右上角）
+    // 行1：[2] 发送数据（跨2列）
+    // 行2：[3] 发送按钮    [4] 清空按钮
+    function handleDirectionKey(direction) {
+        console.log("✅ [SerialPortSendTab] 自定义导航 - 方向:", direction, "当前索引:", focusParamIndex)
+
+        var newIndex = focusParamIndex
+
+        switch(direction) {
+        case "Down":
+            // 下键导航
+            if (focusParamIndex === 0) {
+                // 格式 → 发送数据
+                newIndex = 2
+            } else if (focusParamIndex === 2) {
+                // 发送数据 → 发送按钮（左侧按钮）
+                newIndex = 3
+            }
+            // 发送按钮和清空按钮：保持不变（已经在最底部）
+            break
+
+        case "Up":
+            // 上键导航
+            if (focusParamIndex === 3 || focusParamIndex === 4) {
+                // 发送按钮或清空按钮 → 发送数据
+                newIndex = 2
+            } else if (focusParamIndex === 2) {
+                // 发送数据 → 格式
+                newIndex = 0
+            }
+            // 格式：保持不变（已经在最顶部）
+            break
+
+        case "Left":
+            // 左键导航
+            if (focusParamIndex === 4) {
+                // 清空按钮 → 发送按钮
+                newIndex = 3
+            }
+            // 其他位置：保持不变
+            break
+
+        case "Right":
+            // 右键导航
+            if (focusParamIndex === 3) {
+                // 发送按钮 → 清空按钮
+                newIndex = 4
+            }
+            // 其他位置：保持不变
+            break
+        }
+
+        if (newIndex !== focusParamIndex) {
+            console.log("✅ [SerialPortSendTab] 导航索引变化:", focusParamIndex, "→", newIndex)
+            requestFocusParamIndex(newIndex)
+            return true  // 导航成功
+        }
+
+        console.log("⚠️ [SerialPortSendTab] 导航无变化，返回false")
+        return false  // 导航无变化
+    }
+
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
         console.log("✅ [SerialPortSendTab] Component.onCompleted 开始")

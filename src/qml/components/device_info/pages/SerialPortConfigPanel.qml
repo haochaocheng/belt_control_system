@@ -30,6 +30,23 @@ Rectangle {
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37]: 添加焦点请求信号
     signal requestFocusParamIndex(int paramIndex)
 
+    // ========== 辅助函数 ==========
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.3]: 获取当前Tab的item
+    function getCurrentTabItem() {
+        switch(currentTabIndex) {
+        case 0:  // 参数配置
+            return paramsTabLoader.item
+        case 1:  // 发送区
+            return sendTabLoader.item
+        case 2:  // 接收区
+            return receiveTabLoader.item
+        case 3:  // MODBUS寄存器
+            return modbusTabLoader.item
+        default:
+            return null
+        }
+    }
+
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
         console.log("✅ [SerialPortConfigPanel] Component.onCompleted 开始")

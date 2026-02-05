@@ -274,6 +274,23 @@ Rectangle {
             return
         }
         console.log("✅ [SerialPortControlPage] 按上键")
+
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.3]: 发送区Tab使用自定义导航
+        if (navigationManager.currentArea === navigationManager.areaParams) {
+            var configPanel = serialConfigPanel.item
+            if (configPanel && typeof configPanel.getCurrentTabItem === "function") {
+                var currentTab = configPanel.getCurrentTabItem()
+                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                    console.log("✅ [SerialPortControlPage] 调用当前Tab自定义导航")
+                    var handled = currentTab.handleDirectionKey("Up")
+                    if (handled) {
+                        event.accepted = true
+                        return
+                    }
+                }
+            }
+        }
+
         navigationManager.handleDirectionKey("Up")
         event.accepted = true
     }
@@ -285,6 +302,23 @@ Rectangle {
             return
         }
         console.log("✅ [SerialPortControlPage] 按下键")
+
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.3]: 发送区Tab使用自定义导航
+        if (navigationManager.currentArea === navigationManager.areaParams) {
+            var configPanel = serialConfigPanel.item
+            if (configPanel && typeof configPanel.getCurrentTabItem === "function") {
+                var currentTab = configPanel.getCurrentTabItem()
+                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                    console.log("✅ [SerialPortControlPage] 调用当前Tab自定义导航")
+                    var handled = currentTab.handleDirectionKey("Down")
+                    if (handled) {
+                        event.accepted = true
+                        return
+                    }
+                }
+            }
+        }
+
         navigationManager.handleDirectionKey("Down")
         event.accepted = true
     }
@@ -304,6 +338,23 @@ Rectangle {
             event.accepted = true
         } else {
             console.log("✅ [SerialPortControlPage] 按左键")
+
+            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.3]: 发送区Tab使用自定义导航
+            if (navigationManager.currentArea === navigationManager.areaParams) {
+                var configPanel = serialConfigPanel.item
+                if (configPanel && typeof configPanel.getCurrentTabItem === "function") {
+                    var currentTab = configPanel.getCurrentTabItem()
+                    if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                        console.log("✅ [SerialPortControlPage] 调用当前Tab自定义导航")
+                        var handled = currentTab.handleDirectionKey("Left")
+                        if (handled) {
+                            event.accepted = true
+                            return
+                        }
+                    }
+                }
+            }
+
             navigationManager.handleDirectionKey("Left")
             event.accepted = true
         }
@@ -316,6 +367,23 @@ Rectangle {
             return
         }
         console.log("✅ [SerialPortControlPage] 按右键")
+
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.3]: 发送区Tab使用自定义导航
+        if (navigationManager.currentArea === navigationManager.areaParams) {
+            var configPanel = serialConfigPanel.item
+            if (configPanel && typeof configPanel.getCurrentTabItem === "function") {
+                var currentTab = configPanel.getCurrentTabItem()
+                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                    console.log("✅ [SerialPortControlPage] 调用当前Tab自定义导航")
+                    var handled = currentTab.handleDirectionKey("Right")
+                    if (handled) {
+                        event.accepted = true
+                        return
+                    }
+                }
+            }
+        }
+
         navigationManager.handleDirectionKey("Right")
         event.accepted = true
     }
