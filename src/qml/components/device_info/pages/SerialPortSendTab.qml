@@ -62,24 +62,14 @@ Rectangle {
             return
         }
 
-        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.3]: 使用和电机控制相同的虚拟键盘激活方法
-        // 参考 CurrentProtectionTab.qml 的实现，直接在控件上调用 activateVirtualKeyboard()
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.4]: triggerParamInput 不应该自动打开虚拟键盘
+        // triggerParamInput 只负责移动焦点，不打开虚拟键盘
+        // 只有按回车键（handleEnterKey）时才打开虚拟键盘
+        // 这样用户可以使用方向键在控件之间导航，而不会自动弹出虚拟键盘
         if (inputField) {
-            if (paramIndex === 2) {
-                // 发送数据：激活虚拟键盘
-                console.log("✅ [SerialPortSendTab] 激活虚拟键盘 - 控件:", inputField)
-                console.log("   - inputField.activateVirtualKeyboard 类型:", typeof inputField.activateVirtualKeyboard)
-
-                // 如果控件有 activateVirtualKeyboard 函数，调用它
-                if (inputField.activateVirtualKeyboard) {
-                    console.log("✅ [SerialPortSendTab] 调用 inputField.activateVirtualKeyboard()")
-                    inputField.activateVirtualKeyboard()
-                } else {
-                    // 否则直接设置焦点
-                    console.log("✅ [SerialPortSendTab] 调用 inputField.forceActiveFocus()")
-                    inputField.forceActiveFocus()
-                }
-            }
+            // 对于所有控件，都不调用 activateVirtualKeyboard 或 forceActiveFocus
+            // 焦点已经通过 focusParamIndex 的变化自动设置了
+            console.log("✅ [SerialPortSendTab] 参数索引已更新，焦点指示器已显示")
         }
     }
 

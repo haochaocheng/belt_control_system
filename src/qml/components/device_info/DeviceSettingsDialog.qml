@@ -124,6 +124,20 @@ Item {
         id: qtVirtualKeyboard
         parent: Overlay.overlay  // 显示在最顶层
         z: 2000  // 确保在对话框上方
+
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.4]: 监听虚拟键盘关闭事件
+        // 当虚拟键盘关闭时，恢复对话框的焦点，以便导航键继续工作
+        onActiveChanged: {
+            console.log("✅ [DeviceSettingsDialog] 虚拟键盘 active 变化:", active)
+            if (!active) {
+                // 虚拟键盘关闭，恢复对话框焦点
+                console.log("✅ [DeviceSettingsDialog] 虚拟键盘关闭，恢复对话框焦点")
+                Qt.callLater(function() {
+                    root.forceActiveFocus()
+                    console.log("✅ [DeviceSettingsDialog] 对话框焦点已恢复")
+                })
+            }
+        }
     }
 
     // ✅ 2026-01-29 [Qt 虚拟键盘]: 初始化
