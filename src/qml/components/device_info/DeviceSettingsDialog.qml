@@ -1092,6 +1092,31 @@ Item {
                 // ✅ 2026-02-02 [FIX 100.300.112.8.23.1]: 修正 focusSubArea 值检查
                 // MotorControlPage 的 focusSubArea 定义：0=列表, 1=Tab, 2=参数, 3=按钮
                 if (currentPage.focusSubArea === 2) {
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.11]: 先尝试调用当前Tab的handleEnterKey()
+                    // 如果Tab处理了回车键（返回true），则不执行triggerParamInput
+                    // 用于支持ComboBox的回车键循环切换选项
+                    var handled = false
+
+                    // 串口控制页面特殊处理
+                    if (currentCategory === 6) {
+                        var serialPage = serialPortControlPageLoader.item
+                        if (serialPage) {
+                            var configPanel = serialPage.children[0].children[1]
+                            if (configPanel) {
+                                var currentTab = configPanel.getCurrentTab()
+                                if (currentTab && typeof currentTab.handleEnterKey === "function") {
+                                    handled = currentTab.handleEnterKey()
+                                    if (handled) {
+                                        console.log("✅ [导航] 回车键已被Tab处理（串口控制）")
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 如果Tab没有处理，执行默认行为（弹出虚拟键盘）
                     // ✅ 参数区域：弹出虚拟键盘
                     if (typeof currentPage.triggerParamInput === "function") {
                         currentPage.triggerParamInput(currentPage.focusParamIndex)

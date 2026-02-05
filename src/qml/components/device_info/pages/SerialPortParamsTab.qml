@@ -146,6 +146,43 @@ Rectangle {
         return 8  // 8个参数（移除了打开串口和关闭串口按钮）
     }
 
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.11]: 添加回车键处理函数
+    // 功能：当焦点在ComboBox上时，按回车键循环切换选项
+    function handleEnterKey() {
+        console.log("✅ [SerialPortParamsTab] 处理回车键 - 当前焦点索引:", focusParamIndex)
+
+        var comboBox = null
+
+        switch(focusParamIndex) {
+        case 1:  // 波特率
+            comboBox = baudRateCombo
+            break
+        case 3:  // 数据位
+            comboBox = dataBitsCombo
+            break
+        case 5:  // 停止位
+            comboBox = stopBitsCombo
+            break
+        case 7:  // 校验位
+            comboBox = parityCombo
+            break
+        default:
+            console.log("⚠️ [SerialPortParamsTab] 当前焦点不在ComboBox上")
+            return false
+        }
+
+        if (comboBox) {
+            // 循环切换到下一个选项
+            var oldIndex = comboBox.currentIndex
+            var nextIndex = (comboBox.currentIndex + 1) % comboBox.model.length
+            comboBox.currentIndex = nextIndex
+            console.log("✅ [SerialPortParamsTab] ComboBox选项切换:", oldIndex, "→", nextIndex)
+            return true  // 表示已处理
+        }
+
+        return false
+    }
+
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
         console.log("✅ [SerialPortParamsTab] Component.onCompleted 开始")
