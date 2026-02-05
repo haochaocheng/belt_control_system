@@ -787,6 +787,18 @@ Item {
                     }
                 }
             }
+
+            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.6]: 串口控制页面使用NavigationManager处理左键
+            if (currentCategory === 6 && currentFocusArea === 2) {
+                var serialPage = serialPortControlPageLoader.item
+                if (serialPage && serialPage.navigationManager) {
+                    console.log("✅ [导航] 串口控制页面左键 - 调用NavigationManager")
+                    serialPage.navigationManager.handleDirectionKey("Left")
+                    event.accepted = true
+                    return
+                }
+            }
+
             // 否则切换到左侧类别
             currentFocusArea = 1
             break
