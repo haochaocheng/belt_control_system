@@ -189,10 +189,13 @@ Rectangle {
         // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.7]: 回退到Phase 7.37 Phase 2的成功方案
         // 原因：Qt.binding() + Math.max() 仍然失败（width=16），日志显示paramScrollView.width=0
         // 解决：使用之前成功的方案 width: paramScrollView.width * 0.9（参考docs/2026-02-04/63-FIX100.300.113-Phase7.37-Phase2完成-创建SerialPortParamsTab.md）
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.8]: 移除anchors.horizontalCenter
+        // 原因：anchors.horizontalCenter破坏了width的动态绑定，导致width固定为0
+        // 解决：参考BasicConfigTab，移除anchors.horizontalCenter，让GridLayout自然居中
         GridLayout {
             id: gridLayout
             width: paramScrollView.width * 0.9  // 90% 宽度（Phase 7.37 Phase 2 成功方案）
-            anchors.horizontalCenter: parent.horizontalCenter
+            // anchors.horizontalCenter: parent.horizontalCenter  // ❌ 2026-02-05: 移除，破坏width绑定
 
             // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8]: 改为2列布局
             // 原因：NavigationManager假设2列布局（下键：paramIndex + 2）
