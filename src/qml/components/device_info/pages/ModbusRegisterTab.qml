@@ -78,24 +78,10 @@ Rectangle {
             return
         }
 
-        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.6]: 使用电流保护Tab的方式
-        // 参考 CurrentProtectionTab，直接在控件上调用 activateVirtualKeyboard()
-        // 这样虚拟键盘弹出时，ScrollView会自动滚动，确保输入框不被遮挡
-        if (inputField) {
-            if (paramIndex === 0 || paramIndex === 2 || paramIndex === 3 || paramIndex === 4) {
-                // 从站地址、起始地址、数量、写入值：激活虚拟键盘（数字输入）
-                console.log("✅ [ModbusRegisterTab] 激活虚拟键盘 - 控件:", inputField)
-                // 如果控件有 activateVirtualKeyboard 函数，调用它
-                if (inputField.activateVirtualKeyboard) {
-                    console.log("✅ [ModbusRegisterTab] 调用 inputField.activateVirtualKeyboard()")
-                    inputField.activateVirtualKeyboard()
-                } else {
-                    // 否则直接设置焦点
-                    console.log("✅ [ModbusRegisterTab] 调用 inputField.forceActiveFocus()")
-                    inputField.forceActiveFocus()
-                }
-            }
-        }
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.6.1]: triggerParamInput 不应该自动打开虚拟键盘
+        // 对于所有控件，都不调用 activateVirtualKeyboard 或 forceActiveFocus
+        // 焦点已经通过 focusParamIndex 的变化自动设置了
+        console.log("✅ [ModbusRegisterTab] 参数索引已更新，焦点指示器已显示")
     }
 
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 添加 getParamFieldCount() 函数
@@ -192,7 +178,33 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.6.2]: 添加 isFieldEnabled() 辅助函数
+    // 检查字段是否启用，用于跳过禁用的字段
+    function isFieldEnabled(paramIndex) {
+        switch(paramIndex) {
+        case 0:  // 从站地址
+            return true
+        case 1:  // 功能码
+            return true
+        case 2:  // 起始地址
+            return true
+        case 3:  // 数量
+            return true
+        case 4:  // 写入值
+            return functionCode.currentIndex > 0  // 只有写入操作时启用
+        case 5:  // 读取按钮
+            return functionCode.currentIndex === 0  // 只有读取操作时启用
+        case 6:  // 写入按钮
+            return functionCode.currentIndex > 0 && writeValue.text.length > 0  // 只有写入操作且有值时启用
+        case 7:  // 寄存器列表
+            return true
+        default:
+            return false
+        }
+    }
+
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10]: 自定义导航处理
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.6.2]: 修改 handleDirectionKey() 跳过禁用字段
     // MODBUS 寄存器操作的布局特殊，需要自定义导航逻辑
     // 行0：[0] 从站地址  [1] 功能码
     // 行1：[2] 起始地址  [3] 数量
@@ -214,14 +226,14 @@ Rectangle {
                 // 功能码 → 数量
                 newIndex = 3
             } else if (focusParamIndex === 2) {
-                // 起始地址 → 写入值
-                newIndex = 4
+                // 起始地址 → 写入值（如果启用）或读取按钮
+                newIndex = isFieldEnabled(4) ? 4 : 5  // ✅ 跳过禁用的写入值
             } else if (focusParamIndex === 3) {
-                // 数量 → 写入值
-                newIndex = 4
+                // 数量 → 写入值（如果启用）或读取按钮
+                newIndex = isFieldEnabled(4) ? 4 : 5  // ✅ 跳过禁用的写入值
             } else if (focusParamIndex === 4) {
-                // 写入值 → 读取按钮
-                newIndex = 5
+                // 写入值 → 写入按钮（如果启用）或寄存器列表
+                newIndex = isFieldEnabled(6) ? 6 : 7  // ✅ 跳过禁用的写入按钮
             } else if (focusParamIndex === 5 || focusParamIndex === 6) {
                 // 读取按钮或写入按钮 → 寄存器列表
                 newIndex = 7
@@ -232,11 +244,11 @@ Rectangle {
         case "Up":
             // 上键导航
             if (focusParamIndex === 7) {
-                // 寄存器列表 → 读取按钮
-                newIndex = 5
+                // 寄存器列表 → 读取按钮或写入按钮
+                newIndex = isFieldEnabled(5) ? 5 : (isFieldEnabled(6) ? 6 : 4)  // ✅ 跳过禁用的按钮
             } else if (focusParamIndex === 5 || focusParamIndex === 6) {
-                // 读取按钮或写入按钮 → 写入值
-                newIndex = 4
+                // 读取按钮或写入按钮 → 写入值（如果启用）或起始地址
+                newIndex = isFieldEnabled(4) ? 4 : 2  // ✅ 跳过禁用的写入值
             } else if (focusParamIndex === 4) {
                 // 写入值 → 起始地址
                 newIndex = 2
@@ -259,8 +271,8 @@ Rectangle {
                 // 数量 → 起始地址
                 newIndex = 2
             } else if (focusParamIndex === 6) {
-                // 写入按钮 → 读取按钮
-                newIndex = 5
+                // 写入按钮 → 读取按钮（如果启用）或写入值
+                newIndex = isFieldEnabled(5) ? 5 : (isFieldEnabled(4) ? 4 : 2)  // ✅ 跳过禁用的按钮
             }
             // 其他位置：保持不变
             break
@@ -274,8 +286,8 @@ Rectangle {
                 // 起始地址 → 数量
                 newIndex = 3
             } else if (focusParamIndex === 5) {
-                // 读取按钮 → 写入按钮
-                newIndex = 6
+                // 读取按钮 → 写入按钮（如果启用）
+                newIndex = isFieldEnabled(6) ? 6 : 5  // ✅ 跳过禁用的写入按钮
             }
             // 其他位置：保持不变
             break

@@ -36,6 +36,11 @@ TextField {
     focus: true
     activeFocusOnTab: true
 
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.6.2]: 添加 inputMethodHints 属性
+    // 默认使用数字输入法（Qt.ImhDigitsOnly）
+    // 如果需要其他输入法，可以在使用时覆盖此属性
+    inputMethodHints: Qt.ImhDigitsOnly  // 默认数字输入法
+
     // ========== 背景：使用 034.png 图片 ==========
     background: Rectangle {
         color: "transparent"  // 透明，显示图片
