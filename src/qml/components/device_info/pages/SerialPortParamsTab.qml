@@ -183,9 +183,14 @@ Rectangle {
         // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.5]: 简化布局，直接使用GridLayout
         // 原因：Item包裹层导致宽度计算问题（parent.width为0）
         // 解决：直接使用GridLayout，通过implicitWidth自动计算宽度
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.6]: 修复宽度绑定问题
+        // 原因：width: Math.max(paramScrollView.width - 40, 100) 在Component.onCompleted时评估为100（paramScrollView.width=0）
+        // 解决：使用Qt.binding()动态绑定宽度，确保paramScrollView.width变化时GridLayout宽度也更新
         GridLayout {
             id: gridLayout
-            width: Math.max(paramScrollView.width - 40, 100)  // 减去左右边距
+            width: Qt.binding(function() {
+                return Math.max(paramScrollView.width - 40, 100)
+            })
             anchors.horizontalCenter: parent.horizontalCenter
 
             // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8]: 改为2列布局
