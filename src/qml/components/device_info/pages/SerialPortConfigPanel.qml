@@ -346,6 +346,21 @@ Rectangle {
                         item.currentSerialPort = Qt.binding(function() {
                             return root.currentSerialPort
                         })
+
+                        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10.1]: 传递焦点索引
+                        item.focusParamIndex = Qt.binding(function() {
+                            return root.focusParamIndex
+                        })
+
+                        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10.1]: 传递虚拟键盘引用
+                        item.virtualKeyboard = Qt.binding(function() {
+                            return root.virtualKeyboard
+                        })
+
+                        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.10.1]: 连接信号，转发焦点更新
+                        item.requestFocusParamIndex.connect(function(paramIndex) {
+                            root.requestFocusParamIndex(paramIndex)
+                        })
                     }
                 }
             }
