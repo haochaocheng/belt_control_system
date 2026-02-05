@@ -98,6 +98,9 @@ Rectangle {
     // 行2：[4] 串口类型（只读） [5] 停止位（可编辑）
     // 行3：[6] 状态（只读）     [7] 校验位（可编辑）
     // 行4：[8] 打开串口按钮     [9] 关闭串口按钮
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 修复triggerParamInput导致焦点丢失
+    // 原因：forceActiveFocus()导致DeviceSettingsDialog失去焦点，Keys事件不再被处理
+    // 解决：参考BasicConfigTab，不调用forceActiveFocus()，焦点指示器改为使用focusParamIndex
     function triggerParamInput(paramIndex) {
         console.log("✅ [SerialPortParamsTab] 触发参数输入 - 索引:", paramIndex)
 
@@ -105,44 +108,51 @@ Rectangle {
 
         switch(paramIndex) {
         case 0:  // 串口名称（只读）
-            inputField = serialNameText
+            console.log("✅ [SerialPortParamsTab] 串口名称（只读）")
             break
         case 1:  // 波特率（可编辑）
+            console.log("✅ [SerialPortParamsTab] 波特率")
             inputField = baudRateCombo
             break
         case 2:  // 设备路径（只读）
-            inputField = devicePathText
+            console.log("✅ [SerialPortParamsTab] 设备路径（只读）")
             break
         case 3:  // 数据位（可编辑）
+            console.log("✅ [SerialPortParamsTab] 数据位")
             inputField = dataBitsCombo
             break
         case 4:  // 串口类型（只读）
-            inputField = serialTypeText
+            console.log("✅ [SerialPortParamsTab] 串口类型（只读）")
             break
         case 5:  // 停止位（可编辑）
+            console.log("✅ [SerialPortParamsTab] 停止位")
             inputField = stopBitsCombo
             break
         case 6:  // 状态（只读）
-            inputField = statusText
+            console.log("✅ [SerialPortParamsTab] 状态（只读）")
             break
         case 7:  // 校验位（可编辑）
+            console.log("✅ [SerialPortParamsTab] 校验位")
             inputField = parityCombo
             break
         case 8:  // 打开串口按钮
+            console.log("✅ [SerialPortParamsTab] 打开串口按钮")
             inputField = openButton
             break
         case 9:  // 关闭串口按钮
+            console.log("✅ [SerialPortParamsTab] 关闭串口按钮")
             inputField = closeButton
             break
         }
 
-        // 激活虚拟键盘
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 参考BasicConfigTab，只对可编辑控件激活虚拟键盘
+        // 不调用forceActiveFocus()，避免DeviceSettingsDialog失去焦点
         if (inputField) {
+            console.log("✅ [SerialPortParamsTab] 激活虚拟键盘 - 控件:", inputField)
             if (inputField.activateVirtualKeyboard) {
                 inputField.activateVirtualKeyboard()
-            } else {
-                inputField.forceActiveFocus()
             }
+            // ❌ 不调用 forceActiveFocus()，避免DeviceSettingsDialog失去焦点
         }
     }
 
@@ -271,13 +281,16 @@ Rectangle {
                             // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.1]: 修复焦点指示器布局冲突
                             // 原因：焦点指示器使用anchors.fill，但父元素在RowLayout中，导致布局冲突
                             // 解决：将TextField包裹在Item中，焦点指示器使用anchors.fill Item
+                            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
+                            // 原因：activeFocus需要调用forceActiveFocus()，会导致DeviceSettingsDialog失去焦点
+                            // 解决：参考BasicConfigTab，使用root.focusParamIndex控制焦点指示器
                             Rectangle {
                                 id: serialNameFocusIndicator
                                 anchors.fill: parent
                                 anchors.margins: -4
                                 color: "transparent"
-                                border.color: parent.activeFocus ? "#2196F3" : "transparent"
-                                border.width: parent.activeFocus ? 3 : 0
+                                border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                                border.width: (root.focusParamIndex === 0) ? 3 : 0
                                 radius: 4
                                 z: 10
                             }
@@ -342,11 +355,12 @@ Rectangle {
                     }
 
                     // ✅ 焦点指示器
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
                     Rectangle {
                         anchors.fill: baudRateCombo
                         color: "transparent"
-                        border.color: baudRateCombo.activeFocus ? "#2196F3" : "transparent"
-                        border.width: baudRateCombo.activeFocus ? 3 : 0
+                        border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 1) ? 3 : 0
                         radius: 4
                         z: 10
                     }
@@ -396,13 +410,14 @@ Rectangle {
                         }
 
                         // ✅ 焦点指示器
+                        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
                         Rectangle {
                             id: devicePathFocusIndicator
                             anchors.fill: parent
                             anchors.margins: -4
                             color: "transparent"
-                            border.color: parent.activeFocus ? "#2196F3" : "transparent"
-                            border.width: parent.activeFocus ? 3 : 0
+                            border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                            border.width: (root.focusParamIndex === 2) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -450,11 +465,12 @@ Rectangle {
                     }
 
                     // ✅ 焦点指示器
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
                     Rectangle {
                         anchors.fill: dataBitsCombo
                         color: "transparent"
-                        border.color: dataBitsCombo.activeFocus ? "#2196F3" : "transparent"
-                        border.width: dataBitsCombo.activeFocus ? 3 : 0
+                        border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 3) ? 3 : 0
                         radius: 4
                         z: 10
                     }
@@ -504,13 +520,14 @@ Rectangle {
                         }
 
                         // ✅ 焦点指示器
+                        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
                         Rectangle {
                             id: serialTypeFocusIndicator
                             anchors.fill: parent
                             anchors.margins: -4
                             color: "transparent"
-                            border.color: parent.activeFocus ? "#2196F3" : "transparent"
-                            border.width: parent.activeFocus ? 3 : 0
+                            border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                            border.width: (root.focusParamIndex === 4) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -558,11 +575,12 @@ Rectangle {
                     }
 
                     // ✅ 焦点指示器
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
                     Rectangle {
                         anchors.fill: stopBitsCombo
                         color: "transparent"
-                        border.color: stopBitsCombo.activeFocus ? "#2196F3" : "transparent"
-                        border.width: stopBitsCombo.activeFocus ? 3 : 0
+                        border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 5) ? 3 : 0
                         radius: 4
                         z: 10
                     }
@@ -619,12 +637,13 @@ Rectangle {
                     }
 
                     // ✅ 焦点指示器
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
                     Rectangle {
                         anchors.fill: statusText
                         anchors.margins: -4
                         color: "transparent"
-                        border.color: statusText.activeFocus ? "#2196F3" : "transparent"
-                        border.width: statusText.activeFocus ? 3 : 0
+                        border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 6) ? 3 : 0
                         radius: 4
                         z: 10
                     }
@@ -671,11 +690,12 @@ Rectangle {
                     }
 
                     // ✅ 焦点指示器
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
                     Rectangle {
                         anchors.fill: parityCombo
                         color: "transparent"
-                        border.color: parityCombo.activeFocus ? "#2196F3" : "transparent"
-                        border.width: parityCombo.activeFocus ? 3 : 0
+                        border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                        border.width: (root.focusParamIndex === 7) ? 3 : 0
                         radius: 4
                         z: 10
                     }
@@ -707,12 +727,13 @@ Rectangle {
                 }
 
                 // ✅ 焦点指示器
+                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
                 Rectangle {
                     anchors.fill: parent
                     anchors.margins: -4
                     color: "transparent"
-                    border.color: openButton.activeFocus ? "#2196F3" : "transparent"
-                    border.width: openButton.activeFocus ? 3 : 0
+                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 8) ? 3 : 0
                     radius: 4
                     z: 200
                 }
@@ -739,12 +760,13 @@ Rectangle {
                 }
 
                 // ✅ 焦点指示器
+                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
                 Rectangle {
                     anchors.fill: parent
                     anchors.margins: -4
                     color: "transparent"
-                    border.color: closeButton.activeFocus ? "#2196F3" : "transparent"
-                    border.width: closeButton.activeFocus ? 3 : 0
+                    border.color: (root.focusParamIndex === 9) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 9) ? 3 : 0
                     radius: 4
                     z: 200
                 }
