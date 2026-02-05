@@ -2126,6 +2126,13 @@ Item {
 
                     onLoaded: {
                         console.log("✅ [DeviceSettingsDialog] SerialPortControlPage 加载成功")
+
+                        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.2]: 传递虚拟键盘引用
+                        if (item) {
+                            item.virtualKeyboard = Qt.binding(function() {
+                                return root.virtualKeyboard
+                            })
+                        }
                     }
 
                     onStatusChanged: {
