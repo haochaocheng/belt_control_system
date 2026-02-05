@@ -557,53 +557,30 @@ Item {
                     }
 
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
-                    var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
-                    var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
-
-                    if (layoutMode === "single-column") {
-                        // ✅ 一列布局：直接向下移动
-                        var currentIndex = currentPage.focusParamIndex
-                        var paramCount = currentPage.getParamFieldCount()
-                        if (currentIndex < paramCount - 1) {
-                            currentPage.focusParamIndex = currentIndex + 1
-                            console.log("✅ [导航] 参数区域（一列）下移:", currentIndex, "→", currentIndex + 1)
-                        } else {
-                            console.log("⚠️ [导航] 已到达最后一个参数")
+                } else if (currentPage.focusSubArea === 2) {
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.10]: 串口控制参数区域使用NavigationManager
+                    // 原因：串口控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
+                    // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
+                    // 解决：在focusSubArea=2时，检查是否为串口控制页面，调用NavigationManager
+                    console.log("🔍 [串口控制导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
+                    if (currentCategory === 6) {
+                        // 串口控制页面：使用 NavigationManager
+                        var serialPage = serialPortControlPageLoader.item
+                        console.log("🔍 [串口控制导航] serialPage:", serialPage ? "存在" : "null")
+                        if (serialPage) {
+                            console.log("🔍 [串口控制导航] navigationManager:", serialPage.navigationManager ? "存在" : "null")
                         }
-                    } else {
-                        // ✅ 两列布局：同列向下移动
-                        var currentIndex = currentPage.focusParamIndex
-                        var paramCount = currentPage.getParamFieldCount()
-                        var isRightColumn = (currentIndex % 2 === 1)  // 奇数索引 = 右列
-
-                        if (isRightColumn) {
-                            // 右列：1→3→5→7，向下移动2步
-                            var nextIndex = currentIndex + 2
-                            if (nextIndex < paramCount) {
-                                currentPage.focusParamIndex = nextIndex
-                                console.log("✅ [导航] 参数区域右列下移:", currentIndex, "→", nextIndex)
-                            } else {
-                                // 已到达右列最后一个 → 进入底部按钮区域
-                                currentPage.focusSubArea = 2
-                                currentPage.focusButtonIndex = 1  // 删除输入（右侧按钮）
-                                console.log("✅ [导航] 从参数区域右列进入底部按钮区域")
-                            }
+                        if (serialPage && serialPage.navigationManager) {
+                            console.log("🔍 [串口控制导航] 下键 - 调用 NavigationManager.handleDirectionKey")
+                            serialPage.navigationManager.handleDirectionKey("Down")  // ✅ 2026-02-05: 参数区域也使用NavigationManager
+                            event.accepted = true
+                            return
                         } else {
-                            // 左列：0→2→4→6→8，向下移动2步
-                            var nextIndex = currentIndex + 2
-                            if (nextIndex < paramCount) {
-                                currentPage.focusParamIndex = nextIndex
-                                console.log("✅ [导航] 参数区域左列下移:", currentIndex, "→", nextIndex)
-                            } else {
-                                // 已到达左列最后一个 → 进入底部按钮区域
-                                currentPage.focusSubArea = 2
-                                currentPage.focusButtonIndex = 0  // 添加输入（左侧按钮）
-                                console.log("✅ [导航] 从参数区域左列进入底部按钮区域")
-                            }
+                            console.log("⚠️ [串口控制导航] 下键 - NavigationManager 不可用")
                         }
                     }
-                } else if (currentPage.focusSubArea === 2) {
-                    // ✅ 底部按钮区域：下键导航
+
+                    // ✅ 其他页面的底部按钮区域：下键导航
                     var buttonIndex = currentPage.focusButtonIndex
 
                     // 按钮布局：第一行(0,1) 第二行(2,3,4)
