@@ -720,23 +720,10 @@ Item {
                     }
                 }
 
-                // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.2]: 串口控制页面特殊处理
-                var isSerialPortControlPage = (currentCategory === 6)  // 串口控制类别
-
-                if (isSerialPortControlPage) {
-                    // ✅ SerialPortControlPage 2区域模式：0=列表 1=参数
-                    console.log("🔍 [串口控制导航] 左键 - focusSubArea:", currentPage.focusSubArea, "focusItemIndex:", currentPage.focusItemIndex, "currentSerialIndex:", currentPage.currentSerialIndex)
-                    if (currentPage.focusSubArea === 1) {
-                        // 从参数区域返回串口列表
-                        currentPage.focusSubArea = 0
-                        currentPage.focusItemIndex = currentPage.currentSerialIndex  // 恢复列表焦点
-                        console.log("✅ [导航] 串口控制：从参数区域返回列表")
-                        console.log("🔍 [串口控制导航] 左键后 - focusSubArea:", currentPage.focusSubArea, "focusItemIndex:", currentPage.focusItemIndex)
-                        event.accepted = true
-                        return
-                    }
-                    // 如果在列表区域（focusSubArea === 0），继续默认处理（返回类别）
-                }
+                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.4]: 移除旧的串口控制页面特殊处理
+                // 原因：串口控制页面已改为4区域模式（列表、Tab、参数、按钮），使用NavigationManager管理导航
+                // 旧代码会在Tab区域（focusSubArea=1）按左键时直接跳到列表区域，导致无法逐个向左切换Tab
+                // 现在让SerialPortControlPage自己处理左键事件（通过Keys.onLeftPressed）
 
                 if (currentPage.focusSubArea === 1) {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
