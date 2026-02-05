@@ -72,6 +72,43 @@ Rectangle {
         return 5  // 5个参数（0-4）
     }
 
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.5]: 添加 handleEnterKey() 函数
+    // 处理回车键，根据当前焦点控件执行不同的操作
+    // 参考 SerialPortSendTab 的实现
+    function handleEnterKey() {
+        console.log("✅ [SerialPortReceiveTab] 处理回车键 - 当前焦点索引:", focusParamIndex)
+
+        switch(focusParamIndex) {
+        case 0:  // 接收格式ComboBox
+            // 循环切换选项（HEX ↔ ASCII）
+            var newIndex = (receiveFormat.currentIndex + 1) % receiveFormat.model.length
+            console.log("✅ [SerialPortReceiveTab] 格式切换:", receiveFormat.currentIndex, "→", newIndex)
+            receiveFormat.currentIndex = newIndex
+            return true  // 表示已处理
+
+        case 2:  // 接收数据TextArea
+            // 接收数据是只读的，不需要处理
+            console.log("⚠️ [SerialPortReceiveTab] 接收数据是只读的，不处理回车键")
+            return false
+
+        case 3:  // 清空按钮
+            // 执行清空操作
+            console.log("✅ [SerialPortReceiveTab] 执行清空操作")
+            clearButton.clicked()
+            return true  // 表示已处理
+
+        case 4:  // 暂停/继续按钮
+            // 执行暂停/继续操作
+            console.log("✅ [SerialPortReceiveTab] 执行暂停/继续操作")
+            pauseButton.clicked()
+            return true  // 表示已处理
+
+        default:
+            console.log("⚠️ [SerialPortReceiveTab] 未知焦点索引:", focusParamIndex)
+            return false
+        }
+    }
+
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.8]: 自定义导航处理（调整索引）
     // 接收区的布局特殊，需要自定义导航逻辑
     // 行0：[0] 格式（右上角）    [1] （空）
