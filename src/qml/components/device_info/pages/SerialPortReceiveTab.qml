@@ -215,7 +215,10 @@ Rectangle {
             }
 
             Item {
-                Layout.preferredWidth: 120
+                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.5.1]: 增加宽度到150px
+                // 原因：120px不足以完整显示ASCII文本（5个字符）
+                // 参考：SerialPortSendTab的格式ComboBox宽度（150px）
+                Layout.preferredWidth: 150
                 implicitHeight: receiveFormat.implicitHeight
 
                 DeviceInfo.CustomComboBox {
