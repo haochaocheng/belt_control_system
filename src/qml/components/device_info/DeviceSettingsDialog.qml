@@ -807,7 +807,29 @@ Item {
                         }
                     }
                 } else if (currentPage.focusSubArea === 2) {
-                    // ✅ 底部按钮区域：左键导航
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.16]: 串口控制参数区域使用NavigationManager
+                    // 原因：串口控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
+                    // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
+                    // 解决：在focusSubArea=2时，检查是否为串口控制页面，调用NavigationManager
+                    console.log("🔍 [串口控制导航] 左键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
+                    if (currentCategory === 6) {
+                        // 串口控制页面：使用 NavigationManager
+                        var serialPage = serialPortControlPageLoader.item
+                        console.log("🔍 [串口控制导航] serialPage:", serialPage ? "存在" : "null")
+                        if (serialPage) {
+                            console.log("🔍 [串口控制导航] navigationManager:", serialPage.navigationManager ? "存在" : "null")
+                        }
+                        if (serialPage && serialPage.navigationManager) {
+                            console.log("🔍 [串口控制导航] 左键 - 调用 NavigationManager.handleDirectionKey")
+                            serialPage.navigationManager.handleDirectionKey("Left")  // ✅ 2026-02-05: 参数区域也使用NavigationManager
+                            event.accepted = true
+                            return
+                        } else {
+                            console.log("⚠️ [串口控制导航] 左键 - NavigationManager 不可用")
+                        }
+                    }
+
+                    // ✅ 其他页面的底部按钮区域：左键导航
                     var buttonIndex = currentPage.focusButtonIndex
 
                     // 按钮布局：第一行(0,1) 第二行(2,3,4)
