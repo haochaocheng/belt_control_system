@@ -1100,9 +1100,9 @@ Item {
                     // 串口控制页面特殊处理
                     if (currentCategory === 6) {
                         var serialPage = serialPortControlPageLoader.item
-                        if (serialPage) {
-                            var configPanel = serialPage.children[0].children[1]
-                            if (configPanel) {
+                        if (serialPage && serialPage.serialConfigPanel) {
+                            var configPanel = serialPage.serialConfigPanel.item
+                            if (configPanel && typeof configPanel.getCurrentTab === "function") {
                                 var currentTab = configPanel.getCurrentTab()
                                 if (currentTab && typeof currentTab.handleEnterKey === "function") {
                                     handled = currentTab.handleEnterKey()
