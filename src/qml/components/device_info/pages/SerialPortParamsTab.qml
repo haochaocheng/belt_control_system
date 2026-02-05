@@ -186,11 +186,12 @@ Rectangle {
         // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.6]: 修复宽度绑定问题
         // 原因：width: Math.max(paramScrollView.width - 40, 100) 在Component.onCompleted时评估为100（paramScrollView.width=0）
         // 解决：使用Qt.binding()动态绑定宽度，确保paramScrollView.width变化时GridLayout宽度也更新
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.7]: 回退到Phase 7.37 Phase 2的成功方案
+        // 原因：Qt.binding() + Math.max() 仍然失败（width=16），日志显示paramScrollView.width=0
+        // 解决：使用之前成功的方案 width: paramScrollView.width * 0.9（参考docs/2026-02-04/63-FIX100.300.113-Phase7.37-Phase2完成-创建SerialPortParamsTab.md）
         GridLayout {
             id: gridLayout
-            width: Qt.binding(function() {
-                return Math.max(paramScrollView.width - 40, 100)
-            })
+            width: paramScrollView.width * 0.9  // 90% 宽度（Phase 7.37 Phase 2 成功方案）
             anchors.horizontalCenter: parent.horizontalCenter
 
             // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8]: 改为2列布局
