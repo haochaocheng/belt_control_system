@@ -420,15 +420,28 @@ Item {
                         }
                     }
                 } else if (currentPage.focusSubArea === 2) {
-                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.13]: 串口控制参数区域跳过OLD代码
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.13]: 串口控制参数区域使用NavigationManager
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.15]: 主动调用NavigationManager，而不是只跳过
                     // 原因：串口控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
-                    // 解决：在focusSubArea=2时，检查是否为串口控制页面，跳过OLD按钮导航代码
+                    // 解决：在focusSubArea=2时，检查是否为串口控制页面，调用NavigationManager处理上键
                     if (currentCategory === 6) {
                         // 串口控制页面：focusSubArea=2是参数区域，不是按钮区域
-                        // 跳过OLD代码，避免与NavigationManager冲突
-                        console.log("🔍 [串口控制导航] 上键 - 跳过OLD代码（focusSubArea=2是参数区域）")
-                        // 不做任何处理，让事件继续传播
+                        // 调用NavigationManager处理上键
+                        console.log("🔍 [串口控制导航] 上键 - currentCategory: 6 focusSubArea: 2")
+                        var serialPage = serialPortControlPageLoader.item
+                        console.log("🔍 [串口控制导航] serialPage:", serialPage ? "存在" : "null")
+                        if (serialPage) {
+                            console.log("🔍 [串口控制导航] navigationManager:", serialPage.navigationManager ? "存在" : "null")
+                        }
+                        if (serialPage && serialPage.navigationManager) {
+                            console.log("🔍 [串口控制导航] 上键 - 调用 NavigationManager.handleDirectionKey")
+                            serialPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        } else {
+                            console.log("⚠️ [串口控制导航] 上键 - NavigationManager 不可用")
+                        }
                     } else {
                         // 其他页面：focusSubArea=2是底部按钮区域
                         // ✅ 底部按钮区域：上键导航
