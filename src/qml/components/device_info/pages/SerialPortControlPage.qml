@@ -248,6 +248,20 @@ Rectangle {
                 break
             }
         }
+
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.7]: 监听 returnToCategory 信号，释放焦点
+        // 参考 MotorControlPage.qml 的实现，当在列表区域按左键时，返回到类别区域
+        onReturnToCategory: {
+            console.log("✅ [SerialPortControlPage] 接收到 returnToCategory 信号，释放焦点")
+            // 设置标志，防止后续键盘事件被处理
+            root.isReturningToCategory = true
+            // 禁用键盘事件接收
+            root.keysEnabled = false
+            // 主动通知 DeviceSettingsDialog 获取焦点
+            root.requestReturnToCategory()
+            // 延迟重置标志
+            resetFlagTimer.start()
+        }
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37.1]: 恢复完整的键盘事件处理器
