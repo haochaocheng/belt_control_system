@@ -176,11 +176,14 @@ Rectangle {
         GridLayout {
             width: paramScrollView.width * 0.9  // 90% 宽度
             anchors.horizontalCenter: parent.horizontalCenter
-            columns: 4
+            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8]: 改为2列布局
+            // 原因：NavigationManager假设2列布局（下键：paramIndex + 2）
+            // 4列布局导致导航失败（下键无法移动到下一个参数）
+            columns: 2
             columnSpacing: 16
             rowSpacing: 12
 
-            // ========== 第1行：串口名称 | 波特率 ==========
+            // ========== 第1行：串口名称 ==========
 
             // 串口名称标签
             Text {
