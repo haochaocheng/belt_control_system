@@ -180,26 +180,31 @@ Rectangle {
         clip: true
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
-        GridLayout {
-            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.3]: 修复GridLayout宽度问题
-            // 原因：Layout.fillWidth在ScrollView中不起作用（ScrollView不是Layout容器）
-            // 解决：使用anchors.left/right让GridLayout自动填充ScrollView宽度
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.leftMargin: 20
-            anchors.rightMargin: 20
+        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.4]: 使用Item包裹GridLayout设置边距
+        // 原因：直接在GridLayout上使用anchors.leftMargin/rightMargin导致宽度为负数
+        // 解决：使用Item包裹，Item设置边距，GridLayout填充Item
+        Item {
+            width: paramScrollView.width
+            height: gridLayout.implicitHeight
 
-            // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8]: 改为2列布局
-            // 原因：NavigationManager假设2列布局（下键：paramIndex + 2）
-            // 4列布局导致导航失败（下键无法移动到下一个参数）
-            columns: 2
-            columnSpacing: 16
-            rowSpacing: 12
+            GridLayout {
+                id: gridLayout
+                anchors.fill: parent
+                anchors.leftMargin: 20
+                anchors.rightMargin: 20
+
+                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8]: 改为2列布局
+                // 原因：NavigationManager假设2列布局（下键：paramIndex + 2）
+                // 4列布局导致导航失败（下键无法移动到下一个参数）
+                columns: 2
+                columnSpacing: 16
+                rowSpacing: 12
 
             Component.onCompleted: {
                 console.log("✅ [SerialPortParamsTab] GridLayout 加载完成")
                 console.log("   - columns:", columns)
                 console.log("   - width:", width)
+                console.log("   - parent.width:", parent.width)
                 console.log("   - anchors.leftMargin:", anchors.leftMargin)
                 console.log("   - anchors.rightMargin:", anchors.rightMargin)
                 console.log("   - columnSpacing:", columnSpacing)
@@ -742,6 +747,7 @@ Rectangle {
                     z: 200
                 }
             }
-        }
-    }
-}
+        }  // GridLayout
+        }  // Item
+    }  // ScrollView
+}  // Rectangle root
