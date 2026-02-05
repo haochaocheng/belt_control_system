@@ -1,0 +1,743 @@
+import QtQuick 6.5
+import QtQuick.Controls 6.5
+import QtQuick.Layouts 6.5
+import "../Input1/Input1Content"  // ✅ 2026-01-20 [FIX 100.255]
+
+Item {
+    id: root
+    // ✅ 2026-01-20 [FIX 100.273]: 添加默认尺寸，方便可视化设计
+    // 实际运行时，SwipeView 会自动覆盖这些值，不影响运行
+    width: 1920   // 默认宽度（设计尺寸 1920x1080）
+    height: 1080  // 默认高度（设计尺寸 1920x1080）
+
+    // ✅ 2026-01-20 [FIX 100.255]
+    property int currentPageIndex: 0
+
+    // ✅ 2026-01-20 [FIX 100.271]: 使用 Back 组件作为背景（与模块状态页面一致）
+    // ✅ 2026-01-20 [FIX 100.272]: 禁用鼠标交互，避免拦截其他组件的鼠标事件
+    Back {
+        anchors.fill: parent
+        z: 0  // 确保在最底层
+        enabled: false  // ✅ 不接收鼠标事件，只作为视觉背景
+    }
+
+    // ✅ 2026-01-20 [FIX 100.268] 修复高度缩放问题
+    // 问题：anchors.right 覆盖了 Scale transform 的 yScale 效果
+    // 解决：移除 anchors，使用固定尺寸，让 Scale 完全控制缩放
+    Item {
+        id: headerContainer
+        anchors.top: parent.top
+        anchors.left: parent.left
+        width: 1920
+        height: 80
+        clip: true
+
+        transform: Scale {
+            property real scaleFactor: root.width / 1920  // 0.667（1280屏）
+            xScale: scaleFactor
+            yScale: scaleFactor  // ✅ 等比缩放（高度也使用相同比例）
+            origin.x: 0
+            origin.y: 0
+        }
+
+        Head {
+            id: header
+            // ✅ 2026-01-20 [FIX 100.268]: 移除 anchors，使用固定尺寸
+            width: 1920  // ✅ 固定宽度（不使用 anchors.right）
+            height: 80
+            currentPageIndex: root.currentPageIndex
+        }
+    }
+
+    // Main container
+    Rectangle {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: headerContainer.bottom  // ✅ 2026-01-20 [FIX 100.255] 调整位置
+        anchors.bottom: parent.bottom
+        anchors.margins: 10
+        anchors.leftMargin: 0
+        anchors.rightMargin: 0
+        anchors.topMargin: 0
+        anchors.bottomMargin: 5
+        color: "#001a1a2e"
+        radius: 15
+
+        ColumnLayout {
+            anchors.fill: parent
+
+            anchors.margins: 20
+            anchors.leftMargin: 0
+            anchors.rightMargin: 0
+            anchors.topMargin: 0
+            anchors.bottomMargin: 0
+            spacing: 15
+
+            // Header section
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 20
+
+                // Title
+                Text {
+                    text: "报警记录"
+                    font.pixelSize: 28
+                    font.bold: true
+                    color: "#00d4ff"
+                    Layout.fillWidth: true
+                }
+
+                // Export button
+                Button {
+                    id: exportButton
+                    Layout.preferredWidth: 150
+                    Layout.preferredHeight: 45
+
+                    property bool isHovered: false
+
+                    background: Rectangle {
+                        color: exportButton.pressed ? "#1e7e34" : (exportButton.isHovered ? "#28a745" : "#218838")
+                        radius: 8
+                        border.color: "#00ff88"
+                        border.width: 2
+
+                        // Glow effect
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -3
+                            color: "transparent"
+                            border.color: "#00ff88"
+                            border.width: 1
+                            radius: 10
+                            opacity: 0.3
+                            z: -1
+                        }
+                    }
+
+                    contentItem: RowLayout {
+                        spacing: 8
+
+                        Text {
+                            text: "📊"
+                            font.pixelSize: 18
+                            color: "white"
+                        }
+
+                        Text {
+                            text: "导出Excel"
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                    }
+
+                    onClicked: {
+                        console.log("Export to Excel clicked")
+                        // TODO: Implement Excel export functionality
+                    }
+
+                    HoverHandler {
+                        onHoveredChanged: exportButton.isHovered = hovered
+                    }
+                }
+
+                // Refresh button
+                Button {
+                    id: refreshButton
+                    Layout.preferredWidth: 120
+                    Layout.preferredHeight: 45
+
+                    property bool isHovered: false
+
+                    background: Rectangle {
+                        color: refreshButton.pressed ? "#1565c0" : (refreshButton.isHovered ? "#1e88e5" : "#1976d2")
+                        radius: 8
+                        border.color: "#00d4ff"
+                        border.width: 2
+
+                        // Glow effect
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -3
+                            color: "transparent"
+                            border.color: "#00d4ff"
+                            border.width: 1
+                            radius: 10
+                            opacity: 0.3
+                            z: -1
+                        }
+                    }
+
+                    contentItem: RowLayout {
+                        spacing: 8
+
+                        Text {
+                            text: "🔄"
+                            font.pixelSize: 18
+                            color: "white"
+                        }
+
+                        Text {
+                            text: "刷新"
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                    }
+
+                    onClicked: {
+                        console.log("Refresh clicked")
+                        // TODO: Implement refresh functionality
+                    }
+
+                    HoverHandler {
+                        onHoveredChanged: refreshButton.isHovered = hovered
+                    }
+                }
+
+                // Clear button
+                Button {
+                    id: clearButton
+                    Layout.preferredWidth: 120
+                    Layout.preferredHeight: 45
+
+                    property bool isHovered: false
+
+                    background: Rectangle {
+                        color: clearButton.pressed ? "#c62828" : (clearButton.isHovered ? "#e53935" : "#d32f2f")
+                        radius: 8
+                        border.color: "#ff5555"
+                        border.width: 2
+
+                        // Glow effect
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -3
+                            color: "transparent"
+                            border.color: "#ff5555"
+                            border.width: 1
+                            radius: 10
+                            opacity: 0.3
+                            z: -1
+                        }
+                    }
+
+                    contentItem: RowLayout {
+                        spacing: 8
+
+                        Text {
+                            text: "🗑️"
+                            font.pixelSize: 18
+                            color: "white"
+                        }
+
+                        Text {
+                            text: "清空"
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                    }
+
+                    onClicked: {
+                        console.log("Clear clicked")
+                        // TODO: Implement clear functionality with confirmation
+                    }
+
+                    HoverHandler {
+                        onHoveredChanged: clearButton.isHovered = hovered
+                    }
+                }
+            }
+
+            // Divider line
+            Rectangle {
+                // Layout.fillWidth: true
+                // height: 2
+                // color: "#00d4ff"
+                // opacity: 0.5
+            }
+
+            // Table container
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                color: "transparent"  // ✅ 2026-01-20 [FIX 100.276]: 改为透明，让背景图片可见
+                // radius: 10
+                // border.color: "#00d4ff"
+                // border.width: 2
+
+                // ✅ 调试：检查容器尺寸
+                Component.onCompleted: {
+                    console.log("Table container 尺寸:", width, "x", height)
+                }
+                // ✅ 2026-01-20 [FIX 100.276]: 背景图片（分辨率 2604*1924）
+                // 使用 PreserveAspectCrop 填充屏幕，裁剪超出部分
+                // ❌ 2026-01-20 [调试发现]: 图片加载时尺寸为 0，导致不渲染
+                //    解决：添加尺寸变化监听 + 强制刷新 + smooth/mipmap
+                Image {
+                    id: _349
+                    width: parent.width   // ✅ 显式绑定父容器宽度
+                    height: parent.height // ✅ 显式绑定父容器高度
+                    source: "images/349.png"
+                    fillMode: Image.PreserveAspectCrop  // ✅ 填充屏幕，保持比例，裁剪超出部分
+                    z: -100  // ✅ 显式设置最底层
+                    smooth: true          // ✅ 2026-01-20 [FIX]: 启用平滑缩放，强制重新渲染
+                    mipmap: true          // ✅ 2026-01-20 [FIX]: 启用 mipmap，提高缩放质量
+                    asynchronous: false   // 同步加载，确保立即显示
+                    cache: false          // 禁用缓存，确保每次都加载最新图片
+
+                    // ✅ 2026-01-20 [FIX]: 监听尺寸变化，强制更新
+                    onWidthChanged: {
+                        if (width > 0 && height > 0) {
+                            console.log("🔄 Image 宽度变化:", width, "强制刷新显示")
+                        }
+                    }
+
+                    onHeightChanged: {
+                        if (width > 0 && height > 0) {
+                            console.log("🔄 Image 高度变化:", height, "强制刷新显示")
+                        }
+                    }
+
+                    // ✅ 调试：检查图片加载状态
+                    onStatusChanged: {
+                        if (status === Image.Ready) {
+                            console.log("✅ 图片加载成功：images/349.png, 尺寸:",
+                                      sourceSize.width, "x", sourceSize.height)
+                            console.log("   Image 当前尺寸:", width, "x", height)
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        console.log("🔍 Image 349 Component.onCompleted:")
+                        console.log("   Image size:", width, "x", height)
+                        console.log("   Parent size:", parent.width, "x", parent.height)
+                    }
+                }
+
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 2
+                    spacing: 0
+
+                    // Table header
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 50
+                        color: "#800f3460"  // ✅ 2026-01-20 [FIX 100.276]: 改为半透明，让背景图片可见
+                        radius: 8
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 15
+                            anchors.rightMargin: 15
+                            spacing: 10
+
+                            // 序号
+                            Text {
+                                text: "序号"
+                                font.pixelSize: 16
+                                font.bold: true
+                                color: "#00d4ff"
+                                Layout.preferredWidth: 80
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            Rectangle {
+                                width: 2
+                                Layout.fillHeight: true
+                                color: "#00d4ff"
+                                opacity: 0.3
+                            }
+
+                            // 报警日期
+                            Text {
+                                text: "报警日期"
+                                font.pixelSize: 16
+                                font.bold: true
+                                color: "#00d4ff"
+                                Layout.preferredWidth: 150
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            Rectangle {
+                                width: 2
+                                Layout.fillHeight: true
+                                color: "#00d4ff"
+                                opacity: 0.3
+                            }
+
+                            // 报警时间
+                            Text {
+                                text: "报警时间"
+                                font.pixelSize: 16
+                                font.bold: true
+                                color: "#00d4ff"
+                                Layout.preferredWidth: 120
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            Rectangle {
+                                width: 2
+                                Layout.fillHeight: true
+                                color: "#00d4ff"
+                                opacity: 0.3
+                            }
+
+                            // 报警内容
+                            Text {
+                                text: "报警内容"
+                                font.pixelSize: 16
+                                font.bold: true
+                                color: "#00d4ff"
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignLeft
+                                leftPadding: 20
+                            }
+                        }
+                    }
+
+                    // Table content with scrollable list
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        color: "transparent"
+
+                        ScrollView {
+                            id: scrollView
+                            anchors.fill: parent
+                            anchors.margins: 5
+                            clip: true
+
+                            ScrollBar.vertical: ScrollBar {
+                                policy: ScrollBar.AsNeeded
+                                width: 12
+
+                                contentItem: Rectangle {
+                                    implicitWidth: 8
+                                    radius: 4
+                                    color: parent.pressed ? "#00d4ff" : (parent.hovered ? "#00a8cc" : "#0f3460")
+                                    opacity: parent.pressed || parent.hovered ? 1.0 : 0.6
+
+                                    Behavior on color {
+                                        ColorAnimation { duration: 150 }
+                                    }
+                                }
+
+                                background: Rectangle {
+                                    color: "#1a1a2e"
+                                    radius: 4
+                                    opacity: 0.3
+                                }
+                            }
+
+                            ListView {
+                                id: alarmListView
+                                width: parent.width
+                                spacing: 2
+                                clip: true
+
+                                // Sample data model - replace with database connection later
+                                model: ListModel {
+                                    id: alarmModel
+
+                                    // Sample data (最新的在最上面)
+                                    ListElement {
+                                        index: 1
+                                        date: "2025-11-25"
+                                        time: "14:35:22"
+                                        content: "皮带速度超过上限，当前速度 5.2 m/s"
+                                        level: "error"
+                                    }
+                                    ListElement {
+                                        index: 2
+                                        date: "2025-11-25"
+                                        time: "14:30:15"
+                                        content: "皮带张力异常，张力值 850 N"
+                                        level: "warning"
+                                    }
+                                    ListElement {
+                                        index: 3
+                                        date: "2025-11-25"
+                                        time: "14:25:08"
+                                        content: "电机温度偏高，当前温度 78°C"
+                                        level: "warning"
+                                    }
+                                    ListElement {
+                                        index: 4
+                                        date: "2025-11-25"
+                                        time: "14:20:33"
+                                        content: "系统启动完成"
+                                        level: "info"
+                                    }
+                                    ListElement {
+                                        index: 5
+                                        date: "2025-11-25"
+                                        time: "13:45:19"
+                                        content: "通讯超时，模块地址 192.168.1.100"
+                                        level: "error"
+                                    }
+                                    ListElement {
+                                        index: 6
+                                        date: "2025-11-25"
+                                        time: "12:30:42"
+                                        content: "皮带跑偏检测到异常"
+                                        level: "warning"
+                                    }
+                                    ListElement {
+                                        index: 7
+                                        date: "2025-11-25"
+                                        time: "11:15:27"
+                                        content: "保护装置测试完成"
+                                        level: "info"
+                                    }
+                                    ListElement {
+                                        index: 8
+                                        date: "2025-11-25"
+                                        time: "10:00:00"
+                                        content: "日常维护提醒"
+                                        level: "info"
+                                    }
+                                    ListElement {
+                                        index: 9
+                                        date: "2025-11-24"
+                                        time: "18:30:55"
+                                        content: "急停按钮被触发"
+                                        level: "error"
+                                    }
+                                    ListElement {
+                                        index: 10
+                                        date: "2025-11-24"
+                                        time: "16:45:12"
+                                        content: "速度传感器信号弱"
+                                        level: "warning"
+                                    }
+                                }
+
+                                delegate: Rectangle {
+                                    width: alarmListView.width
+                                    height: 55
+                                    color: {
+                                        // ✅ 2026-01-20 [FIX 100.276]: 改为半透明（50%），让背景图片可见
+                                        if (model.level === "error") return "#803d1f1f"
+                                        if (model.level === "warning") return "#803d331f"
+                                        return index % 2 === 0 ? "#801e2a3a" : "#8016213e"
+                                    }
+                                    radius: 4
+
+                                    // Hover effect
+                                    HoverHandler {
+                                        id: rowHoverHandler
+                                    }
+
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        color: "#00d4ff"
+                                        opacity: rowHoverHandler.hovered ? 0.1 : 0
+                                        radius: 4
+
+                                        Behavior on opacity {
+                                            NumberAnimation { duration: 150 }
+                                        }
+                                    }
+
+                                    // Left indicator bar
+                                    Rectangle {
+                                        x: 0
+                                        y: 5
+                                        width: 4
+                                        height: parent.height - 10
+                                        radius: 2
+                                        color: {
+                                            if (model.level === "error") return "#ff5555"
+                                            if (model.level === "warning") return "#ffaa00"
+                                            return "#00ff88"
+                                        }
+                                    }
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 15
+                                        anchors.rightMargin: 15
+                                        spacing: 10
+
+                                        // 序号
+                                        Text {
+                                            text: model.index
+                                            font.pixelSize: 15
+                                            font.bold: true
+                                            color: {
+                                                if (model.level === "error") return "#ff5555"
+                                                if (model.level === "warning") return "#ffaa00"
+                                                return "#00d4ff"
+                                            }
+                                            Layout.preferredWidth: 80
+                                            horizontalAlignment: Text.AlignHCenter
+                                        }
+
+                                        Rectangle {
+                                            width: 1
+                                            Layout.fillHeight: true
+                                            Layout.topMargin: 5
+                                            Layout.bottomMargin: 5
+                                            color: "#00d4ff"
+                                            opacity: 0.2
+                                        }
+
+                                        // 报警日期
+                                        Text {
+                                            text: model.date
+                                            font.pixelSize: 14
+                                            color: "#ecf0f1"
+                                            Layout.preferredWidth: 150
+                                            horizontalAlignment: Text.AlignHCenter
+                                        }
+
+                                        Rectangle {
+                                            width: 1
+                                            Layout.fillHeight: true
+                                            Layout.topMargin: 5
+                                            Layout.bottomMargin: 5
+                                            color: "#00d4ff"
+                                            opacity: 0.2
+                                        }
+
+                                        // 报警时间
+                                        Text {
+                                            text: model.time
+                                            font.pixelSize: 14
+                                            color: "#ecf0f1"
+                                            Layout.preferredWidth: 120
+                                            horizontalAlignment: Text.AlignHCenter
+                                        }
+
+                                        Rectangle {
+                                            width: 1
+                                            Layout.fillHeight: true
+                                            Layout.topMargin: 5
+                                            Layout.bottomMargin: 5
+                                            color: "#00d4ff"
+                                            opacity: 0.2
+                                        }
+
+                                        // 报警内容
+                                        Text {
+                                            text: model.content
+                                            font.pixelSize: 14
+                                            color: "#ffffff"
+                                            Layout.fillWidth: true
+                                            leftPadding: 20
+                                            wrapMode: Text.WordWrap
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+
+
+
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 40
+                color: "#0f3460"
+                radius: 8
+                border.color: "#00d4ff"
+                border.width: 1
+                opacity: 0.8
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 20
+                    anchors.rightMargin: 20
+                    spacing: 20
+
+                    Text {
+                        text: "📊 总记录数: " + alarmModel.count
+                        font.pixelSize: 13
+                        color: "#00d4ff"
+                        font.bold: true
+                    }
+
+                    Rectangle {
+                        width: 2
+                        height: 20
+                        color: "#00d4ff"
+                        opacity: 0.3
+                    }
+
+                    RowLayout {
+                        spacing: 5
+                        Rectangle {
+                            width: 12
+                            height: 12
+                            radius: 2
+                            color: "#ff5555"
+                        }
+                        Text {
+                            text: "严重"
+                            font.pixelSize: 12
+                            color: "#ecf0f1"
+                        }
+                    }
+
+                    RowLayout {
+                        spacing: 5
+                        Rectangle {
+                            width: 12
+                            height: 12
+                            radius: 2
+                            color: "#ffaa00"
+                        }
+                        Text {
+                            text: "警告"
+                            font.pixelSize: 12
+                            color: "#ecf0f1"
+                        }
+                    }
+
+                    RowLayout {
+                        spacing: 5
+                        Rectangle {
+                            width: 12
+                            height: 12
+                            radius: 2
+                            color: "#00ff88"
+                        }
+                        Text {
+                            text: "信息"
+                            font.pixelSize: 12
+                            color: "#ecf0f1"
+                        }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+
+                    Text {
+                        text: "💾 数据库连接: 未连接"
+                        font.pixelSize: 12
+                        color: "#95a5a6"
+                        font.italic: true
+                    }
+                }
+            }
+
+
+        }
+    }
+}

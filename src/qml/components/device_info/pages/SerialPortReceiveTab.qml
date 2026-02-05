@@ -24,8 +24,8 @@ Rectangle {
     signal requestFocusParamIndex(int paramIndex)
 
     // ========== 导航索引映射 ==========
-    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.7]: 参数索引映射（2列布局）
-    // 行0：[0] 填充                      [1] 格式（右上角，120px宽）
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.8]: 调整索引映射，让格式成为索引0（和发送区一致）
+    // 行0：[0] 格式（右上角，120px宽）  [1] （空，保留用于对齐）
     // 行1：[2] 接收数据（大文本框，跨2列，270px高）
     // 行2：[3] 清空按钮                  [4] 暂停/继续按钮
     // 参数数量：5个（索引0-4）
@@ -39,7 +39,7 @@ Rectangle {
         var inputField = null
 
         switch(paramIndex) {
-        case 0:  // 填充（空）
+        case 0:  // 空（保留，用于对齐）
             console.log("⚠️ [SerialPortReceiveTab] 索引0为空，保持焦点")
             return
         case 1:  // 接收格式
@@ -72,11 +72,11 @@ Rectangle {
         return 5  // 5个参数（0-4）
     }
 
-    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.7]: 自定义导航处理
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.8]: 自定义导航处理（调整索引）
     // 接收区的布局特殊，需要自定义导航逻辑
-    // 行0：[1] 格式（右上角）
+    // 行0：[0] 格式（右上角）    [1] （空）
     // 行1：[2] 接收数据（跨2列）
-    // 行2：[3] 清空按钮    [4] 暂停/继续按钮
+    // 行2：[3] 清空按钮          [4] 暂停/继续按钮
     function handleDirectionKey(direction) {
         console.log("✅ [SerialPortReceiveTab] 自定义导航 - 方向:", direction, "当前索引:", focusParamIndex)
 
@@ -85,7 +85,7 @@ Rectangle {
         switch(direction) {
         case "Down":
             // 下键导航
-            if (focusParamIndex === 1) {
+            if (focusParamIndex === 0) {
                 // 格式 → 接收数据
                 newIndex = 2
             } else if (focusParamIndex === 2) {
@@ -102,7 +102,7 @@ Rectangle {
                 newIndex = 2
             } else if (focusParamIndex === 2) {
                 // 接收数据 → 格式
-                newIndex = 1
+                newIndex = 0
             }
             // 格式：保持不变（已经在最顶部）
             break
@@ -193,12 +193,12 @@ Rectangle {
                     }
                 }
 
-                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.7]: 焦点指示器
+                // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.8]: 焦点指示器（索引0=格式）
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
-                    border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 1) ? 3 : 0
+                    border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 0) ? 3 : 0
                     radius: 4
                     z: 11
                 }

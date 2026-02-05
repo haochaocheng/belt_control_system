@@ -16,12 +16,21 @@ Rectangle {
     property var currentSerialPort: null  // 当前串口信息
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 添加所有焦点函数（参考 SwitchInputPage）
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36]: 简化焦点函数，移除 ScrollView 控制
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.1]: TextField 仍然触发滚动，添加详细调试
+    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.2]: 添加 autoScroll: false 禁用 TextField 自动滚动
     // 索引 0: 串口名称（只读）
     function focusSerialName() {
         console.log("🔍 [SerialPortParamsSection] focusSerialName 开始")
         console.log("   - serialNameText.activeFocus (调用前):", serialNameText.activeFocus)
+        console.log("   - serialNameText.visible:", serialNameText.visible)
+        console.log("   - serialNameText.enabled:", serialNameText.enabled)
+        console.log("   - serialNameText.readOnly:", serialNameText.readOnly)
+        console.log("   - serialNameText.autoScroll:", serialNameText.autoScroll)  // ← 新增
+        console.log("   - serialNameText.x:", serialNameText.x, "y:", serialNameText.y)
+        console.log("   - serialNameText.width:", serialNameText.width, "height:", serialNameText.height)
 
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 找到 ScrollView 并记录滚动状态
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.1]: 查找 ScrollView 并记录初始状态
         var scrollView = serialNameText
         while (scrollView && scrollView.toString().indexOf("ScrollView") === -1) {
             scrollView = scrollView.parent
@@ -32,61 +41,24 @@ Rectangle {
             console.log("   - ScrollView.contentHeight:", scrollView.contentHeight)
             console.log("   - ScrollView.height:", scrollView.height)
             console.log("   - ScrollView.contentItem.interactive:", scrollView.contentItem.interactive)
-
-            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.9]: 手动滚动到顶部
-            // 确保 serialNameText 在可见区域内，防止 Qt 触发自动滚动
-            console.log("🔍 [SerialPortParamsSection] 手动滚动到顶部 (contentY = 0)")
-            scrollView.contentItem.contentY = 0
-
-            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.8]: 暂时禁用 ScrollView 交互
-            // 防止用户交互滚动
-            console.log("🔍 [SerialPortParamsSection] 禁用 ScrollView 交互")
-            scrollView.contentItem.interactive = false
         }
 
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.5]: 先禁用 DeviceSettingsDialog root 的 focus
-        // 防止 root 抢夺焦点
-        var dialog = serialNameText
-        while (dialog && dialog.objectName !== "deviceSettingsDialog") {
-            dialog = dialog.parent
-        }
-        if (dialog) {
-            console.log("🔍 [SerialPortParamsSection] 找到 DeviceSettingsDialog，禁用 root.focus")
-            dialog.focus = false
-        }
-
+        console.log("🔍 [SerialPortParamsSection] 调用 forceActiveFocus()")
         serialNameText.forceActiveFocus()
         console.log("   - serialNameText.activeFocus (调用后):", serialNameText.activeFocus)
         console.log("✅ [SerialPortParamsSection] 串口名称获得焦点")
 
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.9]: 记录 ScrollView 滚动状态（设置焦点后）
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.1]: 记录设置焦点后的 ScrollView 状态
         if (scrollView) {
             console.log("🔍 [SerialPortParamsSection] ScrollView.contentItem.contentY (设置焦点后):", scrollView.contentItem.contentY)
         }
 
-        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.6]: 使用 Qt.callLater 延迟检查焦点
-        // 如果焦点丢失，重新设置焦点
+        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.1]: 使用 Qt.callLater 检查延迟状态
         Qt.callLater(function() {
-            console.log("🔍 [SerialPortParamsSection] Qt.callLater 检查焦点")
+            console.log("🔍 [SerialPortParamsSection] Qt.callLater 检查")
             console.log("   - serialNameText.activeFocus:", serialNameText.activeFocus)
-
-            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.9]: 记录 ScrollView 滚动状态（Qt.callLater）
             if (scrollView) {
                 console.log("   - ScrollView.contentItem.contentY (Qt.callLater):", scrollView.contentItem.contentY)
-            }
-
-            if (!serialNameText.activeFocus) {
-                console.log("⚠️ [SerialPortParamsSection] 焦点丢失，重新设置焦点")
-                serialNameText.forceActiveFocus()
-                console.log("   - serialNameText.activeFocus (重新设置后):", serialNameText.activeFocus)
-            }
-
-            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.9]: 保持 ScrollView 交互禁用状态
-            // 不重新启用，防止滚动
-            if (scrollView) {
-                console.log("🔍 [SerialPortParamsSection] 保持 ScrollView 交互禁用状态")
-                console.log("   - ScrollView.contentItem.contentY (最终):", scrollView.contentItem.contentY)
-                console.log("   - ScrollView.contentItem.interactive (最终):", scrollView.contentItem.interactive)
             }
         })
     }
@@ -189,14 +161,17 @@ Rectangle {
             }
 
             // 串口名称值（只读）
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36]: 改为 TextField（readOnly: true）
+            // 原因：Text 元素不是设计用于接收焦点的，会触发 Qt 的自动滚动导致焦点丢失
+            // 参考：电机配置界面使用 TextField，焦点正常工作
             Item {
                 Layout.column: 1
                 Layout.row: 0
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                Layout.preferredHeight: 40  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 使用固定高度
+                Layout.preferredHeight: 40
 
-                Text {
+                TextField {
                     id: serialNameText
                     anchors.fill: parent
                     text: currentSerialPort ? currentSerialPort.name : ""
@@ -204,20 +179,37 @@ Rectangle {
                     color: "#E0E0E0"
                     verticalAlignment: Text.AlignVCenter
 
-                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 允许接收焦点（参考 SwitchInputPage）
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36]: 设置为只读
+                    readOnly: true
+
+                    // ✅ 允许接收焦点
                     focus: true
                     activeFocusOnTab: true
 
-                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.10.1]: 移除 inputMethodHints
-                    // Text 元素没有 inputMethodHints 属性（只有 TextInput/TextEdit 才有）
-                    // 只保留 Keys.enabled: false 来禁用键盘事件
-                    Keys.enabled: false
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.1]: 禁用输入法，防止触发滚动
+                    inputMethodHints: Qt.ImhNone
 
-                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加焦点变化调试
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.2]: 禁用 TextField 的自动滚动
+                    // 参考：https://runebook.dev/en/articles/qt/qml-qtquick-textinput/autoScroll-prop
+                    // TextInput.autoScroll 控制文本输入时是否自动滚动，设置为 false 可以防止触发 ScrollView 的 ensureVisible()
+                    autoScroll: false
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36]: 透明背景，模拟 Text 外观
+                    background: Rectangle {
+                        color: "transparent"
+                        border.width: 0
+                    }
+
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36]: 添加焦点变化调试
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.1]: 添加输入法相关调试
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.2]: 添加 autoScroll 调试
                     onActiveFocusChanged: {
                         console.log("🔍 [串口名称] activeFocus 变化:", activeFocus)
-                        console.log("   - Text 宽度:", width, "高度:", height)
-                        console.log("   - Text 颜色:", color)
+                        console.log("   - TextField 宽度:", width, "高度:", height)
+                        console.log("   - TextField 颜色:", color)
+                        console.log("   - TextField readOnly:", readOnly)
+                        console.log("   - TextField autoScroll:", autoScroll)  // ← 新增
+                        console.log("   - TextField inputMethodHints:", inputMethodHints)
                         console.log("   - 焦点指示器应该显示:", activeFocus ? "是" : "否")
                     }
 
@@ -230,9 +222,9 @@ Rectangle {
                         border.color: parent.activeFocus ? "#2196F3" : "transparent"
                         border.width: parent.activeFocus ? 3 : 0
                         radius: 4
-                        z: 10  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35]: 改为10，确保边框在Text上面
+                        z: 10
 
-                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加边框调试
+                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36]: 添加边框调试
                         Component.onCompleted: {
                             console.log("🔍 [串口名称焦点指示器] 初始化")
                             console.log("   - z值:", z)
@@ -243,9 +235,7 @@ Rectangle {
                             console.log("   - border.width:", border.width)
                         }
 
-                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.2]: 移除无效的信号处理器
-                        // QML Rectangle 没有 onBorderColorChanged 和 onBorderWidthChanged 信号
-                        // 改用 Connections 监听 parent.activeFocus 变化
+                        // ✅ 监听焦点变化
                         Connections {
                             target: serialNameText
                             function onActiveFocusChanged() {
@@ -327,14 +317,15 @@ Rectangle {
             }
 
             // 设备路径值（只读）
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36]: 改为 TextField（readOnly: true）
             Item {
                 Layout.column: 1
                 Layout.row: 1
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                Layout.preferredHeight: 40  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 使用固定高度
+                Layout.preferredHeight: 40
 
-                Text {
+                TextField {
                     id: devicePathText
                     anchors.fill: parent
                     text: currentSerialPort ? currentSerialPort.path : ""
@@ -342,15 +333,27 @@ Rectangle {
                     color: "#9E9E9E"
                     verticalAlignment: Text.AlignVCenter
 
-                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.31]: 允许接收焦点（参考 SwitchInputPage）
+                    // ✅ 设置为只读
+                    readOnly: true
+
+                    // ✅ 允许接收焦点
                     focus: true
                     activeFocusOnTab: true
 
-                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加焦点变化调试
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.2]: 禁用 TextField 的自动滚动
+                    autoScroll: false
+
+                    // ✅ 透明背景，模拟 Text 外观
+                    background: Rectangle {
+                        color: "transparent"
+                        border.width: 0
+                    }
+
+                    // ✅ 添加焦点变化调试
                     onActiveFocusChanged: {
                         console.log("🔍 [设备路径] activeFocus 变化:", activeFocus)
-                        console.log("   - Text 宽度:", width, "高度:", height)
-                        console.log("   - Text 颜色:", color)
+                        console.log("   - TextField 宽度:", width, "高度:", height)
+                        console.log("   - TextField 颜色:", color)
                         console.log("   - 焦点指示器应该显示:", activeFocus ? "是" : "否")
                     }
 
@@ -363,9 +366,8 @@ Rectangle {
                         border.color: parent.activeFocus ? "#2196F3" : "transparent"
                         border.width: parent.activeFocus ? 3 : 0
                         radius: 4
-                        z: 10  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35]: 改为10，确保边框在Text上面
+                        z: 10
 
-                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加边框调试
                         Component.onCompleted: {
                             console.log("🔍 [设备路径焦点指示器] 初始化")
                             console.log("   - z值:", z)
@@ -376,7 +378,6 @@ Rectangle {
                             console.log("   - border.width:", border.width)
                         }
 
-                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.2]: 移除无效的信号处理器
                         Connections {
                             target: devicePathText
                             function onActiveFocusChanged() {
@@ -453,15 +454,15 @@ Rectangle {
             }
 
             // 串口类型值（只读）
-            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.32]: 改为Text，和串口名称一致
+            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36]: 改为 TextField（readOnly: true）
             Item {
                 Layout.column: 1
                 Layout.row: 2
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                Layout.preferredHeight: 40  // ✅ 使用固定高度
+                Layout.preferredHeight: 40
 
-                Text {
+                TextField {
                     id: serialTypeText
                     anchors.fill: parent
                     text: currentSerialPort ? currentSerialPort.type : ""
@@ -469,15 +470,27 @@ Rectangle {
                     color: "#E0E0E0"
                     verticalAlignment: Text.AlignVCenter
 
+                    // ✅ 设置为只读
+                    readOnly: true
+
                     // ✅ 允许接收焦点
                     focus: true
                     activeFocusOnTab: true
 
-                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加焦点变化调试
+                    // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.36.2]: 禁用 TextField 的自动滚动
+                    autoScroll: false
+
+                    // ✅ 透明背景，模拟 Text 外观
+                    background: Rectangle {
+                        color: "transparent"
+                        border.width: 0
+                    }
+
+                    // ✅ 添加焦点变化调试
                     onActiveFocusChanged: {
                         console.log("🔍 [串口类型] activeFocus 变化:", activeFocus)
-                        console.log("   - Text 宽度:", width, "高度:", height)
-                        console.log("   - Text 颜色:", color)
+                        console.log("   - TextField 宽度:", width, "高度:", height)
+                        console.log("   - TextField 颜色:", color)
                         console.log("   - 焦点指示器应该显示:", activeFocus ? "是" : "否")
                     }
 
@@ -490,9 +503,8 @@ Rectangle {
                         border.color: parent.activeFocus ? "#2196F3" : "transparent"
                         border.width: parent.activeFocus ? 3 : 0
                         radius: 4
-                        z: 10  // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35]: 改为10，确保边框在Text上面
+                        z: 10
 
-                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.1]: 添加边框调试
                         Component.onCompleted: {
                             console.log("🔍 [串口类型焦点指示器] 初始化")
                             console.log("   - z值:", z)
@@ -503,7 +515,6 @@ Rectangle {
                             console.log("   - border.width:", border.width)
                         }
 
-                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.2]: 移除无效的信号处理器
                         Connections {
                             target: serialTypeText
                             function onActiveFocusChanged() {

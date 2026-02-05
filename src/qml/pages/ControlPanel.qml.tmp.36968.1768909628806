@@ -1,0 +1,377 @@
+import QtQuick 6.5
+import QtQuick.Controls 6.5
+import QtQuick.Layouts 6.5
+import "../components/common"
+import "../components/control_panel"
+import "../Input1/Input1Content"  // ✅ 2026-01-20 [FIX 100.255] 引入 Input1 Head 组件
+
+// Control Panel Page - Belt Control System Main Interface
+// Complete system monitoring and control
+Item {
+    id: root
+
+    // Public properties
+    property bool motorRunning: false
+    property real currentSpeed: 2.5
+    property int currentPageIndex: 0  // ✅ 2026-01-20 [FIX 100.255] 接收当前页面索引
+
+    // Track device running states (deviceName -> isRunning)
+    property var deviceRunningStates: ({})
+
+    // 监听设备状态改变信号
+    Connections {
+        target: commonControl
+        function onDeviceStatusChanged(deviceName, isRunning) {
+            console.log("🔗 ControlPanel: 收到设备状态改变信号 -", deviceName, isRunning ? "运行" : "停止")
+            // Update device running state
+            var states = root.deviceRunningStates
+            states[deviceName] = isRunning
+            root.deviceRunningStates = states
+            // Force UI update
+            activeDevicesPanel.updateDeviceStates()
+        }
+    }
+
+    // 监听保护触发和恢复信号
+    Connections {
+        target: protectionMonitor
+
+        function onProtectionTriggered(protectionName, type, value) {
+            console.log("🚨 ControlPanel: 保护触发 -", protectionName, "类型:", type, "值:", value)
+
+            // 根据类型更新对应的保护显示
+            if (type === "digital") {
+                protectionPanel.setDigitalProtectionActive(protectionName, true)
+            } else if (type === "analog") {
+                protectionPanel.setAnalogProtectionActive(protectionName, true)
+            }
+        }
+
+        function onProtectionRestored(protectionName) {
+            console.log("✅ ControlPanel: 保护恢复 -", protectionName)
+
+            // 尝试恢复数字保护
+            protectionPanel.setDigitalProtectionActive(protectionName, false)
+            // 尝试恢复模拟量保护
+            protectionPanel.setAnalogProtectionActive(protectionName, false)
+        }
+    }
+
+    // ✅ 2026-01-20 [FIX 100.271]: 使用 Back 组件作为背景（与模块状态页面一致）
+    Back {
+        anchors.fill: parent
+        z: 0  // 确保在最底层
+    }
+
+    // 2026-01-20: 注释掉 3D Scene Background，改用 Back 组件
+    // BeltScene3D {
+    //     anchors.fill: parent
+    //     isRunning: root.motorRunning
+    //     beltSpeed: root.currentSpeed
+    // }
+
+    // ✅ 2026-01-20 [FIX 100.268] 修复高度缩放问题
+    // 问题：anchors.right 覆盖了 Scale transform 的 yScale 效果
+    // 解决：移除 anchors，使用固定尺寸，让 Scale 完全控制缩放
+    Item {
+        id: headerContainer
+        anchors.top: parent.top
+        anchors.left: parent.left
+        width: 1920  // ✅ 固定宽度（Head 原始设计宽度）
+        height: 80
+        clip: true   // ✅ 裁剪超出部分
+
+        // ✅ 等比缩放（宽度和高度使用相同比例）
+        transform: Scale {
+            property real scaleFactor: root.width / 1920  // 0.667
+            xScale: scaleFactor
+            yScale: scaleFactor  // ✅ 等比缩放
+            origin.x: 0
+            origin.y: 0
+        }
+
+        Head {
+            id: header
+            // ✅ 2026-01-20 [FIX 100.268]: 移除 anchors，使用固定尺寸
+            // 原因：anchors.right 会在 Scale 应用后重新计算，覆盖 yScale 效果
+            width: 1920  // ✅ 固定宽度（不使用 anchors.right）
+            height: 80
+            currentPageIndex: root.currentPageIndex
+        }
+
+        Component.onCompleted: {
+            console.log("🔍 [ControlPanel Head] 布局调试 v6:")
+            console.log("   root 尺寸:", root.width, "×", root.height)
+            console.log("   容器原始尺寸:", width, "×", height)
+            console.log("   scaleFactor:", (root.width / 1920).toFixed(3))
+            console.log("   缩放后尺寸:", (width * root.width / 1920).toFixed(0), "×", (height * root.width / 1920).toFixed(0))
+        }
+    }
+
+    // Left side - Device Status Panel
+    DeviceStatusPanel {
+        id: deviceStatusPanel
+        anchors.left: parent.left
+        anchors.top: headerContainer.bottom
+        anchors.margins: 10
+        width: 300
+        height: 320
+    }
+
+    // Left side - Protection Panel (below device status)
+    ProtectionPanel {
+        id: protectionPanel
+        anchors.left: parent.left
+        anchors.top: deviceStatusPanel.bottom
+        anchors.margins: 10
+        width: 300
+        height: 450  // 精确显示8个保护项
+
+        onProtectionClicked: function(protectionName, sourceItem) {
+            console.log("Protection clicked:", protectionName)
+            operationLogPanel.addLog("打开保护设置: " + protectionName, "info")
+
+            // Find protection type from the model
+            var protectionType = "analog"
+            for (var i = 0; i < protectionPanel.getProtectionCount(); i++) {
+                var item = protectionPanel.getProtectionAt(i)
+                if (item && item.name === protectionName) {
+                    protectionType = item.type
+                    break
+                }
+            }
+
+            settingsPopup.openForEdit(protectionName, protectionType, sourceItem)
+        }
+
+        onAddProtectionClicked: function(sourceItem) {
+            console.log("Add protection clicked")
+            operationLogPanel.addLog("打开新增保护对话框", "info")
+            settingsPopup.openForNew(sourceItem)
+        }
+    }
+
+    // Left side - Active Devices Panel (shows devices in startup sequence)
+    Rectangle {
+        id: activeDevicesPanel
+        anchors.left: parent.left
+        anchors.top: protectionPanel.bottom
+        anchors.bottom: parent.bottom
+        anchors.margins: 10
+        width: 300
+        // 增加高度以完整显示2行设备（每行3个）
+        height: Math.min(230, parent.height - protectionPanel.height - deviceStatusPanel.height - 40)
+        color: "#dd1a2332"
+        radius: 10
+        border.color: "#00d4ff"
+        border.width: 2
+
+        // Function to check if device is running
+        function isDeviceRunning(deviceName) {
+            return root.deviceRunningStates[deviceName] === true
+        }
+
+        // Function to force update device states (called when deviceRunningStates changes)
+        function updateDeviceStates() {
+            // Trigger Repeater to refresh by updating the model reference
+            deviceRepeater.model = systemConfig ? systemConfig.startupSequence : []
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 15
+            spacing: 10
+
+            // Title
+            Text {
+                text: "启用设备"
+                font.pixelSize: 18
+                font.bold: true
+                color: "#00d4ff"
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 2
+                color: "#00d4ff"
+                opacity: 0.5
+            }
+
+            // Active devices grid - 使用 Grid 布局，每行3个
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                Grid {
+                    width: parent.width
+                    columns: 3  // 每行显示3个设备
+                    spacing: 10
+                    horizontalItemAlignment: Grid.AlignHCenter
+
+                    // 显示启动顺序中的设备
+                    Repeater {
+                        id: deviceRepeater
+                        model: systemConfig ? systemConfig.startupSequence : []
+
+                        Rectangle {
+                            id: deviceBox
+                            width: 75
+                            height: 50
+                            radius: 6
+                            // 判断是否为故障设备
+                            property bool isFaultDevice: runtimeTracker && runtimeTracker.faultDevices.indexOf(modelData) !== -1
+                            // 故障设备显示红色，运行设备显示绿色，停止设备显示灰色
+                            color: isFaultDevice ? "#ff4757" : (activeDevicesPanel.isDeviceRunning(modelData) ? "#00ff88" : "#2c3e50")
+                            border.color: isFaultDevice ? "#ff6677" : "#00d4ff"
+                            border.width: 1.5
+
+                            // Smooth color transition
+                            Behavior on color {
+                                ColorAnimation { duration: 300 }
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData
+                                font.pixelSize: 11
+                                font.bold: true
+                                // 故障设备白色文字，运行设备深色文字，停止设备青色文字
+                                color: parent.isFaultDevice ? "#ffffff" : (activeDevicesPanel.isDeviceRunning(modelData) ? "#003322" : "#00d4ff")
+                                wrapMode: Text.WordWrap
+                                horizontalAlignment: Text.AlignHCenter
+                                width: 68
+
+                                Behavior on color {
+                                    ColorAnimation { duration: 300 }
+                                }
+                            }
+                        }
+                    }
+
+                    // 洒水设备（始终显示，保持正常样式）
+                    Rectangle {
+                        width: 75
+                        height: 50
+                        radius: 6
+                        color: "#2c3e50"
+                        border.color: "#00d4ff"  // 正常边框颜色（不是绿色）
+                        border.width: 1.5
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "洒水"
+                            font.pixelSize: 11
+                            font.bold: true
+                            color: "#00d4ff"  // 正常文字颜色
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Right side - Module Connection Panel
+    ModuleConnectionPanel {
+        id: moduleConnectionPanel
+        anchors.right: parent.right
+        anchors.top: header.bottom
+        anchors.margins: 10
+        width: 300
+        height: 200
+
+        mainModuleConnected: true
+        inputModuleConnected: true
+        outputModuleConnected: true
+    }
+
+    // Right side - Operation Log Panel (高度增加1/3: 280 * 1.33 ≈ 373)
+    OperationLogPanel {
+        id: operationLogPanel
+        anchors.right: parent.right
+        anchors.top: moduleConnectionPanel.bottom
+        anchors.margins: 10
+        width: 300
+        height: 373
+    }
+
+    // Right side - Analog Chart (extends to bottom)
+    AnalogChart {
+        id: analogChart
+        anchors.right: parent.right
+        anchors.top: operationLogPanel.bottom
+        anchors.bottom: parent.bottom
+        anchors.margins: 10
+        width: 300
+
+        chartTitle: "速度曲线"
+        yAxisTitle: "速度 (m/s)"
+        maxYValue: 5.0
+    }
+
+    // Bottom center - Device Status Bar (32 devices)
+    // Positioned between activeDevicesPanel and AnalogChart
+    DeviceStatusBar {
+        id: deviceStatusBar
+        anchors.bottom: parent.bottom
+        anchors.left: activeDevicesPanel.right
+        anchors.right: analogChart.left
+        anchors.margins: 10
+    }
+
+    // Protection Settings Popup - Using Popup instead of Dialog
+    ProtectionSettingsPopup {
+        id: settingsPopup
+
+        onAccepted: {
+            if (settingsPopup.isNewProtection) {
+                protectionPanel.addProtection(
+                    settingsPopup.protectionName,
+                    settingsPopup.protectionType
+                )
+                operationLogPanel.addLog(
+                    "新增保护: " + settingsPopup.protectionName +
+                    " [模块:" + settingsPopup.moduleType +
+                    " 通道:" + settingsPopup.channelNumber + "]",
+                    "info"
+                )
+            } else {
+                operationLogPanel.addLog(
+                    "修改保护参数: " + settingsPopup.protectionName +
+                    " [延时:" + settingsPopup.protectionDelay + "s" +
+                    " 播放:" + settingsPopup.playCount + "次]",
+                    "success"
+                )
+            }
+        }
+
+        onRejected: {
+            operationLogPanel.addLog("取消操作", "warning")
+        }
+
+        onDeleteRequested: {
+            protectionPanel.removeProtection(settingsPopup.protectionName)
+            operationLogPanel.addLog("删除保护: " + settingsPopup.protectionName, "error")
+        }
+    }
+
+    // Output Device Settings Popup has been moved to ParameterSettings page
+    // Device configuration is now handled there
+
+    // Monitor speed changes
+    onCurrentSpeedChanged: {
+        analogChart.addDataPoint(currentSpeed)
+    }
+
+    onMotorRunningChanged: {
+        if (motorRunning) {
+            operationLogPanel.addLog("电机启动", "success")
+        } else {
+            operationLogPanel.addLog("电机停止", "info")
+        }
+    }
+}

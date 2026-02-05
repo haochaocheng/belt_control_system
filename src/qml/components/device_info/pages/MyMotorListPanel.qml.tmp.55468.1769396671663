@@ -1,0 +1,506 @@
+import QtQuick 2.15
+
+Rectangle {
+    id: root
+    color: "#1a1f2e"  // 深蓝灰背景
+    
+    // ========== 公开属性 ==========
+    property int currentMotorIndex: 0  // 当前选中的电机索引 (0-7)
+    
+    // ========== 信号 ==========
+    signal motorSelected(int motorIndex)  // 电机被选中时发出信号
+    
+    // ========== 键盘导航支持 ==========
+    focus: true
+    
+    Keys.onUpPressed: {
+        if (root.currentMotorIndex > 0) {
+            root.currentMotorIndex--
+            motorSelected(root.currentMotorIndex)
+        }
+    }
+    
+    Keys.onDownPressed: {
+        if (root.currentMotorIndex < 7) {
+            root.currentMotorIndex++
+            motorSelected(root.currentMotorIndex)
+        }
+    }
+    
+    // ========== 标题 ==========
+    Rectangle {
+        id: header
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 50
+        color: "#252b3d"
+        border.color: "#3d4556"
+        border.width: 1
+        
+        Text {
+            anchors.centerIn: parent
+            text: "电机列表"
+            font.pixelSize: 16
+            font.weight: Font.Bold
+            color: "#E0E0E0"
+        }
+    }
+    
+    // ========== 电机列表（QDS兼容版本，不使用ListView）==========
+    Column {
+        anchors.top: header.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        spacing: 0
+
+        // 1号电机
+        Rectangle {
+            width: parent.width
+            height: 60
+            color: root.currentMotorIndex === 0 ? "#252b3d" : "transparent"
+            border.color: root.currentMotorIndex === 0 ? "#2196F3" : "#3d4556"
+            border.width: 1
+
+            Rectangle {
+                visible: root.currentMotorIndex === 0
+                width: 4
+                height: parent.height
+                color: "#2196F3"
+                anchors.left: parent.left
+            }
+
+            Column {
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+
+                Text {
+                    text: "1号电机"
+                    font.pixelSize: 16
+                    font.weight: root.currentMotorIndex === 0 ? Font.Bold : Font.Normal
+                    color: root.currentMotorIndex === 0 ? "#E0E0E0" : "#9E9E9E"
+                }
+
+                Row {
+                    spacing: 8
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: "#4CAF50"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: "运行中"
+                        font.pixelSize: 12
+                        color: "#9E9E9E"
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    root.currentMotorIndex = 0
+                    root.motorSelected(0)
+                    root.focus = true
+                }
+            }
+        }
+
+        // 2号电机
+        Rectangle {
+            width: parent.width
+            height: 60
+            color: root.currentMotorIndex === 1 ? "#252b3d" : "transparent"
+            border.color: root.currentMotorIndex === 1 ? "#2196F3" : "#3d4556"
+            border.width: 1
+
+            Rectangle {
+                visible: root.currentMotorIndex === 1
+                width: 4
+                height: parent.height
+                color: "#2196F3"
+                anchors.left: parent.left
+            }
+
+            Column {
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+
+                Text {
+                    text: "2号电机"
+                    font.pixelSize: 16
+                    font.weight: root.currentMotorIndex === 1 ? Font.Bold : Font.Normal
+                    color: root.currentMotorIndex === 1 ? "#E0E0E0" : "#9E9E9E"
+                }
+
+                Row {
+                    spacing: 8
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: "#4CAF50"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: "运行中"
+                        font.pixelSize: 12
+                        color: "#9E9E9E"
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    root.currentMotorIndex = 1
+                    root.motorSelected(1)
+                    root.focus = true
+                }
+            }
+        }
+
+        // 3号电机
+        Rectangle {
+            width: parent.width
+            height: 60
+            color: root.currentMotorIndex === 2 ? "#252b3d" : "transparent"
+            border.color: root.currentMotorIndex === 2 ? "#2196F3" : "#3d4556"
+            border.width: 1
+
+            Rectangle {
+                visible: root.currentMotorIndex === 2
+                width: 4
+                height: parent.height
+                color: "#2196F3"
+                anchors.left: parent.left
+            }
+
+            Column {
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+
+                Text {
+                    text: "3号电机"
+                    font.pixelSize: 16
+                    font.weight: root.currentMotorIndex === 2 ? Font.Bold : Font.Normal
+                    color: root.currentMotorIndex === 2 ? "#E0E0E0" : "#9E9E9E"
+                }
+
+                Row {
+                    spacing: 8
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: "#4CAF50"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: "运行中"
+                        font.pixelSize: 12
+                        color: "#9E9E9E"
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    root.currentMotorIndex = 2
+                    root.motorSelected(2)
+                    root.focus = true
+                }
+            }
+        }
+
+        // 4号电机
+        Rectangle {
+            width: parent.width
+            height: 60
+            color: root.currentMotorIndex === 3 ? "#252b3d" : "transparent"
+            border.color: root.currentMotorIndex === 3 ? "#2196F3" : "#3d4556"
+            border.width: 1
+
+            Rectangle {
+                visible: root.currentMotorIndex === 3
+                width: 4
+                height: parent.height
+                color: "#2196F3"
+                anchors.left: parent.left
+            }
+
+            Column {
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+
+                Text {
+                    text: "4号电机"
+                    font.pixelSize: 16
+                    font.weight: root.currentMotorIndex === 3 ? Font.Bold : Font.Normal
+                    color: root.currentMotorIndex === 3 ? "#E0E0E0" : "#9E9E9E"
+                }
+
+                Row {
+                    spacing: 8
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: "#4CAF50"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: "运行中"
+                        font.pixelSize: 12
+                        color: "#9E9E9E"
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    root.currentMotorIndex = 3
+                    root.motorSelected(3)
+                    root.focus = true
+                }
+            }
+        }
+
+        // 5号电机
+        Rectangle {
+            width: parent.width
+            height: 60
+            color: root.currentMotorIndex === 4 ? "#252b3d" : "transparent"
+            border.color: root.currentMotorIndex === 4 ? "#2196F3" : "#3d4556"
+            border.width: 1
+
+            Rectangle {
+                visible: root.currentMotorIndex === 4
+                width: 4
+                height: parent.height
+                color: "#2196F3"
+                anchors.left: parent.left
+            }
+
+            Column {
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+
+                Text {
+                    text: "5号电机"
+                    font.pixelSize: 16
+                    font.weight: root.currentMotorIndex === 4 ? Font.Bold : Font.Normal
+                    color: root.currentMotorIndex === 4 ? "#E0E0E0" : "#9E9E9E"
+                }
+
+                Row {
+                    spacing: 8
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: "#4CAF50"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: "运行中"
+                        font.pixelSize: 12
+                        color: "#9E9E9E"
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    root.currentMotorIndex = 4
+                    root.motorSelected(4)
+                    root.focus = true
+                }
+            }
+        }
+
+        // 6号电机
+        Rectangle {
+            width: parent.width
+            height: 60
+            color: root.currentMotorIndex === 5 ? "#252b3d" : "transparent"
+            border.color: root.currentMotorIndex === 5 ? "#2196F3" : "#3d4556"
+            border.width: 1
+
+            Rectangle {
+                visible: root.currentMotorIndex === 5
+                width: 4
+                height: parent.height
+                color: "#2196F3"
+                anchors.left: parent.left
+            }
+
+            Column {
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+
+                Text {
+                    text: "6号电机"
+                    font.pixelSize: 16
+                    font.weight: root.currentMotorIndex === 5 ? Font.Bold : Font.Normal
+                    color: root.currentMotorIndex === 5 ? "#E0E0E0" : "#9E9E9E"
+                }
+
+                Row {
+                    spacing: 8
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: "#4CAF50"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: "运行中"
+                        font.pixelSize: 12
+                        color: "#9E9E9E"
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    root.currentMotorIndex = 5
+                    root.motorSelected(5)
+                    root.focus = true
+                }
+            }
+        }
+
+        // 7号电机
+        Rectangle {
+            width: parent.width
+            height: 60
+            color: root.currentMotorIndex === 6 ? "#252b3d" : "transparent"
+            border.color: root.currentMotorIndex === 6 ? "#2196F3" : "#3d4556"
+            border.width: 1
+
+            Rectangle {
+                visible: root.currentMotorIndex === 6
+                width: 4
+                height: parent.height
+                color: "#2196F3"
+                anchors.left: parent.left
+            }
+
+            Column {
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+
+                Text {
+                    text: "7号电机"
+                    font.pixelSize: 16
+                    font.weight: root.currentMotorIndex === 6 ? Font.Bold : Font.Normal
+                    color: root.currentMotorIndex === 6 ? "#E0E0E0" : "#9E9E9E"
+                }
+
+                Row {
+                    spacing: 8
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: "#4CAF50"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: "运行中"
+                        font.pixelSize: 12
+                        color: "#9E9E9E"
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    root.currentMotorIndex = 6
+                    root.motorSelected(6)
+                    root.focus = true
+                }
+            }
+        }
+
+        // 8号电机
+        Rectangle {
+            width: parent.width
+            height: 60
+            color: root.currentMotorIndex === 7 ? "#252b3d" : "transparent"
+            border.color: root.currentMotorIndex === 7 ? "#2196F3" : "#3d4556"
+            border.width: 1
+
+            Rectangle {
+                visible: root.currentMotorIndex === 7
+                width: 4
+                height: parent.height
+                color: "#2196F3"
+                anchors.left: parent.left
+            }
+
+            Column {
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+
+                Text {
+                    text: "8号电机"
+                    font.pixelSize: 16
+                    font.weight: root.currentMotorIndex === 7 ? Font.Bold : Font.Normal
+                    color: root.currentMotorIndex === 7 ? "#E0E0E0" : "#9E9E9E"
+                }
+
+                Row {
+                    spacing: 8
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: "#4CAF50"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: "运行中"
+                        font.pixelSize: 12
+                        color: "#9E9E9E"
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    root.currentMotorIndex = 7
+                    root.motorSelected(7)
+                    root.focus = true
+                }
+            }
+        }
+    }
+}

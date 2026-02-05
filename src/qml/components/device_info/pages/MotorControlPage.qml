@@ -20,6 +20,9 @@ Rectangle {
     property string deviceName: "1号皮带"
     property int currentMotorIndex: 0  // 当前选中的电机索引 (0-7)
 
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.6]: 暴露 navigationManager 供外部访问
+    property alias navigationManager: navigationManager
+
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引
     // ✅ 2026-01-30 [FIX 100.300.106.2]: 修正 focusSubArea 定义
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11]: 添加 focusButtonIndex
@@ -300,11 +303,32 @@ Rectangle {
         event.accepted = true
     }
 
-    Keys.onLeftPressed: {
-        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25]: 简化为直接发出信号
-        console.log("✅ [MotorControlPage] 按左键，请求返回到左侧类别")
-        root.requestReturnToCategory()
-        event.accepted = true
+    Keys.onLeftPressed: function(event) {
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.2]: 只在电机列表区域时返回大类
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.3]: 修复警告，使用函数形式声明 event 参数
+        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.4]: 添加标志检查，防止重复处理
+
+        // 检查是否正在返回大类，避免重复处理
+        if (isReturningToCategory) {
+            console.log("⚠️ [MotorControlPage] Keys.onLeftPressed 正在返回大类，忽略 Left 键")
+            event.accepted = true
+            return
+        }
+
+        if (navigationManager.currentArea === navigationManager.areaMotorList) {
+            console.log("✅ [MotorControlPage] 电机列表区域按左键，请求返回到左侧类别")
+            // 设置标志，防止 handleKeyPress 重复处理
+            root.isReturningToCategory = true
+            root.requestReturnToCategory()
+            // 启动定时器，延迟重置标志
+            resetFlagTimer.start()
+            event.accepted = true
+        } else {
+            // 其他区域由 NavigationManager 处理
+            console.log("✅ [MotorControlPage] 其他区域按左键，由 NavigationManager 处理")
+            navigationManager.handleDirectionKey("Left")
+            event.accepted = true
+        }
     }
 
     Keys.onRightPressed: {
@@ -702,12 +726,31 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 公开键盘事件处理函数
     // 供DeviceSettingsDialog调用，转发键盘事件给NavigationManager
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25]: 简化为直接处理
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.3]: 检查 currentArea，只在电机列表区域时返回大类
+    // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.4]: 添加标志检查，防止重复处理
     function handleKeyPress(direction) {
-        // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25]: 左键直接发出信号
-        if (direction === "Left") {
-            console.log("✅ [MotorControlPage] handleKeyPress 接收 Left 键，请求返回到左侧类别")
-            root.requestReturnToCategory()
+        // 检查是否正在返回大类，避免重复处理
+        if (isReturningToCategory) {
+            console.log("⚠️ [MotorControlPage] handleKeyPress 正在返回大类，忽略键盘事件:", direction)
             return
+        }
+
+        // 左键：检查当前区域
+        if (direction === "Left") {
+            if (navigationManager.currentArea === navigationManager.areaMotorList) {
+                console.log("✅ [MotorControlPage] handleKeyPress 电机列表区域按左键，请求返回到左侧类别")
+                // 设置标志，防止 Keys.onLeftPressed 重复处理
+                root.isReturningToCategory = true
+                root.requestReturnToCategory()
+                // 启动定时器，延迟重置标志
+                resetFlagTimer.start()
+                return
+            } else {
+                // 其他区域由 NavigationManager 处理
+                console.log("✅ [MotorControlPage] handleKeyPress 其他区域按左键，由 NavigationManager 处理")
+                navigationManager.handleDirectionKey("Left")
+                return
+            }
         }
 
         // 其他方向键正常处理

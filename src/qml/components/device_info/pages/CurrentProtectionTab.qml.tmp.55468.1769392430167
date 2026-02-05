@@ -1,0 +1,726 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+
+// ✅ 2026-01-25 [电机控制-电流保护] 电流保护Tab内容
+Rectangle {
+    id: root
+    color: "transparent"
+
+    // ========== 公开属性 ==========
+    property int motorIndex: 0  // 当前电机索引 (0-7)
+
+    // ========== 滚动区域 ==========
+    ScrollView {
+        anchors.fill: parent
+        clip: true
+
+        Column {
+            width: parent.width
+            spacing: 20
+            padding: 20
+
+            // ========== 是否投入 ==========
+            Column {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    text: "是否投入"
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                    color: "#2196F3"
+                }
+
+                Row {
+                    spacing: 30
+
+                    Row {
+                        spacing: 8
+                        Rectangle {
+                            width: 20
+                            height: 20
+                            radius: 10
+                            border.color: "#2196F3"
+                            border.width: 2
+                            color: "transparent"
+                            anchors.verticalCenter: parent.verticalCenter
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: "#2196F3"
+                                anchors.centerIn: parent
+                                visible: true
+                            }
+                        }
+                        Text {
+                            text: "投入"
+                            font.pixelSize: 14
+                            color: "#E0E0E0"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    Row {
+                        spacing: 8
+                        Rectangle {
+                            width: 20
+                            height: 20
+                            radius: 10
+                            border.color: "#2196F3"
+                            border.width: 2
+                            color: "transparent"
+                            anchors.verticalCenter: parent.verticalCenter
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: "#2196F3"
+                                anchors.centerIn: parent
+                                visible: false
+                            }
+                        }
+                        Text {
+                            text: "禁用"
+                            font.pixelSize: 14
+                            color: "#E0E0E0"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                }
+            }
+
+            // ========== 报警类型 ==========
+            Column {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    text: "报警类型"
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                    color: "#2196F3"
+                }
+
+                Row {
+                    spacing: 30
+
+                    Row {
+                        spacing: 8
+                        Rectangle {
+                            width: 20
+                            height: 20
+                            radius: 10
+                            border.color: "#2196F3"
+                            border.width: 2
+                            color: "transparent"
+                            anchors.verticalCenter: parent.verticalCenter
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: "#2196F3"
+                                anchors.centerIn: parent
+                                visible: true
+                            }
+                        }
+                        Text {
+                            text: "按次数"
+                            font.pixelSize: 14
+                            color: "#E0E0E0"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    Row {
+                        spacing: 8
+                        Rectangle {
+                            width: 20
+                            height: 20
+                            radius: 10
+                            border.color: "#2196F3"
+                            border.width: 2
+                            color: "transparent"
+                            anchors.verticalCenter: parent.verticalCenter
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: "#2196F3"
+                                anchors.centerIn: parent
+                                visible: false
+                            }
+                        }
+                        Text {
+                            text: "按时间"
+                            font.pixelSize: 14
+                            color: "#E0E0E0"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                }
+            }
+
+            // ========== 动作保护类型 ==========
+            Column {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    text: "动作保护类型"
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                    color: "#2196F3"
+                }
+
+                ComboBox {
+                    width: 250
+                    height: 36
+                    model: ["立即停机", "延时停机", "仅报警"]
+                    currentIndex: 0
+
+                    background: Rectangle {
+                        color: "#2d3548"
+                        border.color: "#3d4556"
+                        border.width: 1
+                        radius: 2
+                    }
+
+                    contentItem: Text {
+                        leftPadding: 10
+                        text: parent.displayText
+                        font.pixelSize: 14
+                        color: "#E0E0E0"
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    indicator: Text {
+                        x: parent.width - width - 10
+                        y: parent.height / 2 - height / 2
+                        text: "▼"
+                        font.pixelSize: 12
+                        color: "#2196F3"
+                    }
+
+                    popup: Popup {
+                        y: parent.height
+                        width: parent.width
+                        padding: 0
+
+                        background: Rectangle {
+                            color: "#2d3548"
+                            border.color: "#2196F3"
+                            border.width: 1
+                        }
+
+                        contentItem: ListView {
+                            clip: true
+                            implicitHeight: contentHeight
+                            model: parent.parent.model
+
+                            delegate: ItemDelegate {
+                                width: parent.width
+                                height: 36
+
+                                background: Rectangle {
+                                    color: parent.hovered ? "#3d4556" : "#2d3548"
+                                }
+
+                                contentItem: Text {
+                                    text: modelData
+                                    font.pixelSize: 14
+                                    color: "#E0E0E0"
+                                    verticalAlignment: Text.AlignVCenter
+                                    leftPadding: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ========== 故障保护类型 ==========
+            Column {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    text: "故障保护类型"
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                    color: "#2196F3"
+                }
+
+                ComboBox {
+                    width: 250
+                    height: 36
+                    model: ["紧急停机", "安全停机", "记录日志"]
+                    currentIndex: 0
+
+                    background: Rectangle {
+                        color: "#2d3548"
+                        border.color: "#3d4556"
+                        border.width: 1
+                        radius: 2
+                    }
+
+                    contentItem: Text {
+                        leftPadding: 10
+                        text: parent.displayText
+                        font.pixelSize: 14
+                        color: "#E0E0E0"
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    indicator: Text {
+                        x: parent.width - width - 10
+                        y: parent.height / 2 - height / 2
+                        text: "▼"
+                        font.pixelSize: 12
+                        color: "#2196F3"
+                    }
+
+                    popup: Popup {
+                        y: parent.height
+                        width: parent.width
+                        padding: 0
+
+                        background: Rectangle {
+                            color: "#2d3548"
+                            border.color: "#2196F3"
+                            border.width: 1
+                        }
+
+                        contentItem: ListView {
+                            clip: true
+                            implicitHeight: contentHeight
+                            model: parent.parent.model
+
+                            delegate: ItemDelegate {
+                                width: parent.width
+                                height: 36
+
+                                background: Rectangle {
+                                    color: parent.hovered ? "#3d4556" : "#2d3548"
+                                }
+
+                                contentItem: Text {
+                                    text: modelData
+                                    font.pixelSize: 14
+                                    color: "#E0E0E0"
+                                    verticalAlignment: Text.AlignVCenter
+                                    leftPadding: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ========== 电流量程 ==========
+            Column {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    text: "电流量程"
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                    color: "#2196F3"
+                }
+
+                ComboBox {
+                    width: 200
+                    height: 36
+                    model: ["0-50A", "0-100A", "0-200A", "0-500A"]
+                    currentIndex: 1
+
+                    background: Rectangle {
+                        color: "#2d3548"
+                        border.color: "#3d4556"
+                        border.width: 1
+                        radius: 2
+                    }
+
+                    contentItem: Text {
+                        leftPadding: 10
+                        text: parent.displayText
+                        font.pixelSize: 14
+                        color: "#E0E0E0"
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    indicator: Text {
+                        x: parent.width - width - 10
+                        y: parent.height / 2 - height / 2
+                        text: "▼"
+                        font.pixelSize: 12
+                        color: "#2196F3"
+                    }
+
+                    popup: Popup {
+                        y: parent.height
+                        width: parent.width
+                        padding: 0
+
+                        background: Rectangle {
+                            color: "#2d3548"
+                            border.color: "#2196F3"
+                            border.width: 1
+                        }
+
+                        contentItem: ListView {
+                            clip: true
+                            implicitHeight: contentHeight
+                            model: parent.parent.model
+
+                            delegate: ItemDelegate {
+                                width: parent.width
+                                height: 36
+
+                                background: Rectangle {
+                                    color: parent.hovered ? "#3d4556" : "#2d3548"
+                                }
+
+                                contentItem: Text {
+                                    text: modelData
+                                    font.pixelSize: 14
+                                    color: "#E0E0E0"
+                                    verticalAlignment: Text.AlignVCenter
+                                    leftPadding: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ========== 电流上限 ==========
+            Column {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    text: "电流上限"
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                    color: "#2196F3"
+                }
+
+                Row {
+                    spacing: 10
+
+                    SpinBox {
+                        width: 150
+                        height: 36
+                        from: 0
+                        to: 500
+                        value: 80
+                        stepSize: 1
+                        editable: true
+
+                        background: Rectangle {
+                            color: "#2d3548"
+                            border.color: "#3d4556"
+                            border.width: 1
+                            radius: 2
+                        }
+
+                        contentItem: TextInput {
+                            text: parent.value
+                            font.pixelSize: 14
+                            color: "#E0E0E0"
+                            horizontalAlignment: Qt.AlignHCenter
+                            verticalAlignment: Qt.AlignVCenter
+                            readOnly: !parent.editable
+                            validator: parent.validator
+                            inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        }
+
+                        up.indicator: Rectangle {
+                            x: parent.width - width
+                            height: parent.height / 2
+                            width: 30
+                            color: "#3d4556"
+                            border.color: "#2196F3"
+                            border.width: 1
+                            Text {
+                                text: "+"
+                                font.pixelSize: 14
+                                color: "#E0E0E0"
+                                anchors.centerIn: parent
+                            }
+                        }
+
+                        down.indicator: Rectangle {
+                            x: parent.width - width
+                            y: parent.height / 2
+                            height: parent.height / 2
+                            width: 30
+                            color: "#3d4556"
+                            border.color: "#2196F3"
+                            border.width: 1
+                            Text {
+                                text: "-"
+                                font.pixelSize: 14
+                                color: "#E0E0E0"
+                                anchors.centerIn: parent
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: "A"
+                        font.pixelSize: 14
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+
+            // ========== 电流下限 ==========
+            Column {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    text: "电流下限"
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                    color: "#2196F3"
+                }
+
+                Row {
+                    spacing: 10
+
+                    SpinBox {
+                        width: 150
+                        height: 36
+                        from: 0
+                        to: 500
+                        value: 10
+                        stepSize: 1
+                        editable: true
+
+                        background: Rectangle {
+                            color: "#2d3548"
+                            border.color: "#3d4556"
+                            border.width: 1
+                            radius: 2
+                        }
+
+                        contentItem: TextInput {
+                            text: parent.value
+                            font.pixelSize: 14
+                            color: "#E0E0E0"
+                            horizontalAlignment: Qt.AlignHCenter
+                            verticalAlignment: Qt.AlignVCenter
+                            readOnly: !parent.editable
+                            validator: parent.validator
+                            inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        }
+
+                        up.indicator: Rectangle {
+                            x: parent.width - width
+                            height: parent.height / 2
+                            width: 30
+                            color: "#3d4556"
+                            border.color: "#2196F3"
+                            border.width: 1
+                            Text {
+                                text: "+"
+                                font.pixelSize: 14
+                                color: "#E0E0E0"
+                                anchors.centerIn: parent
+                            }
+                        }
+
+                        down.indicator: Rectangle {
+                            x: parent.width - width
+                            y: parent.height / 2
+                            height: parent.height / 2
+                            width: 30
+                            color: "#3d4556"
+                            border.color: "#2196F3"
+                            border.width: 1
+                            Text {
+                                text: "-"
+                                font.pixelSize: 14
+                                color: "#E0E0E0"
+                                anchors.centerIn: parent
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: "A"
+                        font.pixelSize: 14
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+
+            // ========== 过滤干扰延时 ==========
+            Column {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    text: "过滤干扰延时"
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                    color: "#2196F3"
+                }
+
+                Row {
+                    spacing: 10
+
+                    SpinBox {
+                        width: 150
+                        height: 36
+                        from: 0
+                        to: 100
+                        value: 5
+                        stepSize: 1
+                        editable: true
+
+                        property real realValue: value / 10.0
+
+                        background: Rectangle {
+                            color: "#2d3548"
+                            border.color: "#3d4556"
+                            border.width: 1
+                            radius: 2
+                        }
+
+                        contentItem: TextInput {
+                            text: parent.realValue.toFixed(1)
+                            font.pixelSize: 14
+                            color: "#E0E0E0"
+                            horizontalAlignment: Qt.AlignHCenter
+                            verticalAlignment: Qt.AlignVCenter
+                            readOnly: true
+                        }
+
+                        up.indicator: Rectangle {
+                            x: parent.width - width
+                            height: parent.height / 2
+                            width: 30
+                            color: "#3d4556"
+                            border.color: "#2196F3"
+                            border.width: 1
+                            Text {
+                                text: "+"
+                                font.pixelSize: 14
+                                color: "#E0E0E0"
+                                anchors.centerIn: parent
+                            }
+                        }
+
+                        down.indicator: Rectangle {
+                            x: parent.width - width
+                            y: parent.height / 2
+                            height: parent.height / 2
+                            width: 30
+                            color: "#3d4556"
+                            border.color: "#2196F3"
+                            border.width: 1
+                            Text {
+                                text: "-"
+                                font.pixelSize: 14
+                                color: "#E0E0E0"
+                                anchors.centerIn: parent
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: "秒"
+                        font.pixelSize: 14
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+
+            // ========== 输入点选择 ==========
+            Column {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    text: "输入点选择"
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                    color: "#2196F3"
+                }
+
+                ComboBox {
+                    width: 200
+                    height: 36
+                    model: ["DI-0", "DI-1", "DI-2", "DI-3", "DI-4", "DI-5", "DI-6", "DI-7"]
+                    currentIndex: root.motorIndex
+
+                    background: Rectangle {
+                        color: "#2d3548"
+                        border.color: "#3d4556"
+                        border.width: 1
+                        radius: 2
+                    }
+
+                    contentItem: Text {
+                        leftPadding: 10
+                        text: parent.displayText
+                        font.pixelSize: 14
+                        color: "#E0E0E0"
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    indicator: Text {
+                        x: parent.width - width - 10
+                        y: parent.height / 2 - height / 2
+                        text: "▼"
+                        font.pixelSize: 12
+                        color: "#2196F3"
+                    }
+
+                    popup: Popup {
+                        y: parent.height
+                        width: parent.width
+                        padding: 0
+
+                        background: Rectangle {
+                            color: "#2d3548"
+                            border.color: "#2196F3"
+                            border.width: 1
+                        }
+
+                        contentItem: ListView {
+                            clip: true
+                            implicitHeight: contentHeight
+                            model: parent.parent.model
+
+                            delegate: ItemDelegate {
+                                width: parent.width
+                                height: 36
+
+                                background: Rectangle {
+                                    color: parent.hovered ? "#3d4556" : "#2d3548"
+                                }
+
+                                contentItem: Text {
+                                    text: modelData
+                                    font.pixelSize: 14
+                                    color: "#E0E0E0"
+                                    verticalAlignment: Text.AlignVCenter
+                                    leftPadding: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

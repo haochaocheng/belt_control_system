@@ -1,0 +1,32 @@
+import QtQuick
+
+// ✅ 2026-01-20 [FIX 100.255] 菜单组件 - 支持文字和高亮状态切换
+Image {
+    id: root
+    source: "images/head_MiddleMenu1.png"
+    fillMode: Image.PreserveAspectFit
+
+    // 可配置属性
+    property string menuText: "首页"  // 菜单文字
+    property bool isActive: false     // 是否是当前页面
+
+    // 背景图片（根据 isActive 切换）
+    Image {
+        id: backgroundImage
+        x: -3
+        y: 6
+        source: isActive ? "images/head_menuOK.png" : "images/head_MiddleMenu2.png"
+        fillMode: Image.PreserveAspectFit
+    }
+
+    // 菜单文字
+    Text {
+        id: menuLabel
+        x: 28
+        y: 2
+        color: "#ffffff"
+        text: root.menuText
+        font.pixelSize: 21
+        font.family: "Verdana"
+    }
+}

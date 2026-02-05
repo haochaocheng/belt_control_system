@@ -1,0 +1,120 @@
+import QtQuick
+
+// ✅ 2026-01-27 [FIX 100.300.54]: 添加选中状态支持
+// 使用 states 切换图片：IN_Data.png <-> IN_Data_OK.png
+// ✅ 2026-02-02 [FIX 100.300.112.8.19.1]: 修复布局问题（第二版）
+// - 保持原始的 y 坐标定位（绝对定位）
+// - 装饰图片宽度使用锚点跟随父容器
+// - 文字使用锚点定位，垂直居中对齐装饰图片
+Image {
+    id: iN_Data
+    source: "images/IN_Data.png"
+    fillMode: Image.PreserveAspectFit
+
+    // ✅ 选中状态属性
+    property bool selected: false
+
+    // ========== 第一行：投入状态 ==========
+    Image {
+        id: inputData_Zhuangshi
+        y: 122  // 保持原始 y 坐标
+        anchors {
+            left: parent.left
+            right: parent.right
+            leftMargin: 8
+            rightMargin: 8
+        }
+        height: 172
+        source: "../../images/inputData_Zhuangshi.png"
+        fillMode: Image.Stretch
+    }
+
+    Text {
+        id: text1
+        anchors {
+            left: inputData_Zhuangshi.left
+            verticalCenter: inputData_Zhuangshi.verticalCenter
+            leftMargin: 95
+        }
+        color: "#eaeaea"
+        text: qsTr("投入状态:")
+        font.pixelSize: 40
+        verticalAlignment: Text.AlignVCenter
+    }
+
+    // ========== 第二行：通讯 ==========
+    Image {
+        id: inputData_Zhuangshi1
+        y: 303  // 保持原始 y 坐标
+        anchors {
+            left: parent.left
+            right: parent.right
+            leftMargin: 8
+            rightMargin: 8
+        }
+        height: 172
+        source: "../../images/inputData_Zhuangshi.png"
+        fillMode: Image.Stretch
+    }
+
+    Text {
+        id: text2
+        anchors {
+            left: inputData_Zhuangshi1.left
+            verticalCenter: inputData_Zhuangshi1.verticalCenter
+            leftMargin: 95
+        }
+        color: "#eaeaea"
+        text: qsTr("通讯:")
+        font.pixelSize: 40
+        verticalAlignment: Text.AlignVCenter
+    }
+
+    // ========== 第三行：模式 ==========
+    Image {
+        id: inputData_Zhuangshi2
+        y: 481  // 保持原始 y 坐标
+        anchors {
+            left: parent.left
+            right: parent.right
+            leftMargin: 8
+            rightMargin: 8
+        }
+        height: 172
+        source: "../../images/inputData_Zhuangshi.png"
+        fillMode: Image.Stretch
+    }
+
+    Text {
+        id: text3
+        anchors {
+            left: inputData_Zhuangshi2.left
+            verticalCenter: inputData_Zhuangshi2.verticalCenter
+            leftMargin: 95
+        }
+        color: "#eaeaea"
+        text: qsTr("模式:")
+        font.pixelSize: 40
+        verticalAlignment: Text.AlignVCenter
+    }
+
+    // ✅ 使用 states 切换图片
+    states: [
+        State {
+            name: "normal"
+            when: !iN_Data.selected
+            PropertyChanges {
+                target: iN_Data
+                source: "images/IN_Data.png"
+            }
+        },
+        State {
+            name: "selected"
+            when: iN_Data.selected
+            PropertyChanges {
+                target: iN_Data
+                source: "images/IN_Data_OK.png"
+            }
+        }
+    ]
+}

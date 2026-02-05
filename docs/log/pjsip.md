@@ -1,8 +1,8 @@
 
-13:31:34: Starting C:\Qt\Tools\QtDesignStudio\qt6_design_studio_reduced_version\bin\qmlpuppet-4.8.0.exe --qml-runtime -I E:/2025/3_gongkongji/belt_control_system/src/qml/. -I E:/2025/3_gongkongji/belt_control_system/src/qml/components -I E:/2025/3_gongkongji/belt_control_system/src/qml/pages -I E:/2025/3_gongkongji/belt_control_system/src/qml/Input1 --apptype widget E:/2025/3_gongkongji/belt_control_system/src/qml/main_qds.qml...
+14:09:21: Starting C:\Qt\Tools\QtDesignStudio\qt6_design_studio_reduced_version\bin\qmlpuppet-4.8.0.exe --qml-runtime -I E:/2025/3_gongkongji/belt_control_system/src/qml/. -I E:/2025/3_gongkongji/belt_control_system/src/qml/components -I E:/2025/3_gongkongji/belt_control_system/src/qml/pages -I E:/2025/3_gongkongji/belt_control_system/src/qml/Input1 --apptype widget E:/2025/3_gongkongji/belt_control_system/src/qml/main_qds.qml...
 QML debugging is enabled. Only use this in a safe environment.
 Info: Starting QML Runtime
-Warning: Could not attach Keys property to:  ApplicationWindow_QMLTYPE_44_QML_55(0x23d1c4c2420)  is not an Item
+Warning: Could not attach Keys property to:  ApplicationWindow_QMLTYPE_1_QML_55(0x1d2d8f18a90)  is not an Item
 Debug: ?? [QDS InputPanel] Height changed: 600
 Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/pages/VoiceManagement.qml:5:1: module "com.belt.control" is not installed
 Debug: ? 语音管理加载失败
@@ -11,7 +11,7 @@ Debug: [Screen01] ?? 强制获取焦点...
 Debug: ?? [Screen01] ========== 焦点状态变化 ==========
 Debug: ?? [Screen01] activeFocus: ? 获得焦点
 Debug: ?? [Screen01] focus 属性: true
-Debug: ?? [Screen01] parent: QQuickLoader(0x23d1c7cd140)
+Debug: ?? [Screen01] parent: QQuickLoader(0x1d2d91d4920)
 Debug: ?? [Screen01] parent.objectName: 
 Debug: ?? [Screen01] =====================================
 Debug: [Screen01Form] ? 组件加载完成
@@ -102,15 +102,15 @@ Debug: [Screen01] ? 组件 9 鼠标交互已设置
 Debug: [Screen01] ? 组件 10 鼠标交互已设置
 Debug: [Screen01] ? 组件 11 鼠标交互已设置
 Debug: [Screen01] ??? 鼠标交互设置完成
-Debug: [Screen01] ?? 按键事件 - Key: 16777236 焦点: ?
-Debug: [Screen01] ?? selectedIndex 变化: 1 → 行 0 列 1
-Debug: [Screen01] ?? 导航成功: → 右 - 索引 0 → 1
-Debug: [Screen01] ?? updateSelection 开始，selectedIndex: 1 有效组件: 12
-Debug: [Screen01] ? 组件 1 已选中
-Debug: [Screen01] ?? updateSelection 完成，成功更新 12 个组件
 Debug: [Screen01] ?? 按键事件 - Key: 16777237 焦点: ?
+Debug: [Screen01] ?? selectedIndex 变化: 4 → 行 1 列 0
+Debug: [Screen01] ?? 导航成功: ↓ 下 - 索引 0 → 4
+Debug: [Screen01] ?? updateSelection 开始，selectedIndex: 4 有效组件: 12
+Debug: [Screen01] ? 组件 4 已选中
+Debug: [Screen01] ?? updateSelection 完成，成功更新 12 个组件
+Debug: [Screen01] ?? 按键事件 - Key: 16777236 焦点: ?
 Debug: [Screen01] ?? selectedIndex 变化: 5 → 行 1 列 1
-Debug: [Screen01] ?? 导航成功: ↓ 下 - 索引 1 → 5
+Debug: [Screen01] ?? 导航成功: → 右 - 索引 4 → 5
 Debug: [Screen01] ?? updateSelection 开始，selectedIndex: 5 有效组件: 12
 Debug: [Screen01] ? 组件 5 已选中
 Debug: [Screen01] ?? updateSelection 完成，成功更新 12 个组件
@@ -120,22 +120,38 @@ Debug: ?? [Screen01] ========== 打开对话框 ==========
 Debug: ?? [Screen01] 当前选中索引: 5
 Debug: ?? [Screen01] 打开前 - activeFocus: true
 Debug: ?? [Screen01] 打开前 - focus: true
-Debug: ? [ModbusRegisterSection] Component.onCompleted 开始
-Debug: ? [ModbusRegisterSection] Component.onCompleted 完成
-Debug: ? [SerialPortConfigPanel] ModbusRegisterSection 加载成功
-Debug: ? [SerialPortReceiveSection] Component.onCompleted 开始
-Debug: ? [SerialPortReceiveSection] Component.onCompleted 完成
-Debug: ? [SerialPortConfigPanel] SerialPortReceiveSection 加载成功
-Debug: ? [SerialPortSendSection] Component.onCompleted 开始
-Debug: ? [SerialPortSendSection] Component.onCompleted 完成
-Debug: ? [SerialPortConfigPanel] SerialPortSendSection 加载成功
-Debug: ? [SerialPortParamsSection] Component.onCompleted 开始
-Debug: ? [SerialPortParamsSection] Component.onCompleted 完成
-Debug: ? [SerialPortConfigPanel] SerialPortParamsSection 加载成功
-Debug: ? [SerialPortConfigPanel] 传递 currentSerialPort: null
-Debug: ? [SerialPortConfigPanel] 绑定完成，item.currentSerialPort: null
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:679:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:626:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:564:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:454:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:344:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Debug: ? [SerialPortParamsTab] Component.onCompleted 开始
+Debug: ? [SerialPortParamsTab] Component.onCompleted 完成
+Debug: ? [SerialPortParamsTab] GridLayout 加载完成
+Debug:    - columns: 2
+Debug:    - width: 0
+Debug:    - paramScrollView.width: 0
+Debug:    - columnSpacing: 16
+Debug:    - rowSpacing: 12
+Debug: ? [CustomComboBox] parityCombo 找到 DeviceSettingsDialog
+Debug: ? [CustomComboBox] stopBitsCombo 找到 DeviceSettingsDialog
+Debug: ? [CustomComboBox] dataBitsCombo 找到 DeviceSettingsDialog
+Debug: ? [SerialPortParamsTab] 索引1（波特率）Item 加载完成
+Debug:    - Layout.column: 1
+Debug:    - Layout.row: 0
+Debug:    - width: 0
+Debug:    - height: 60
+Debug: ? [CustomComboBox] 找到 DeviceSettingsDialog，设置 parentDialog
+Debug: ? [SerialPortParamsTab] 索引0（串口名称）Item 加载完成
+Debug:    - Layout.column: 0
+Debug:    - Layout.row: 0
+Debug:    - width: 0
+Debug:    - height: 40
+Debug: ? [SerialPortParamsTab] serialNameText 加载完成 - text: 
+Debug: ? [SerialPortConfigPanel] SerialPortParamsTab 加载成功
 Debug: ? [SerialPortConfigPanel] Component.onCompleted 开始
 Debug: ? [SerialPortConfigPanel] currentSerialPort: null
+Debug: ? [SerialPortConfigPanel] 使用 Tab 架构
 Debug: ? [SerialPortConfigPanel] Component.onCompleted 完成
 Debug: ?? [SerialPortControlPage] serialConfigPanel Loader 状态变化: 1
 Debug: ? [SerialPortControlPage] serialConfigPanel Loader 加载完成
@@ -144,18 +160,18 @@ Debug: ? [SerialPortConfigPanel] currentSerialPort 变化: [object Object]
 Debug:    - 串口名称: COM1
 Debug:    - 设备路径: /dev/ttyS0
 Debug:    - 串口类型: RS422
-Debug: ? [SerialPortParamsSection] 串口切换: COM1
+Debug: ? [SerialPortParamsTab] 串口切换: COM1
 Debug: ? [SerialPortControlPage] SerialPortListPanel 加载成功
 Debug: ? [SerialPortControlPage] Component.onCompleted 开始
 Debug: ? [SerialPortControlPage] 串口数量: 6
 Debug: ?? [SerialPortControlPage] serialListPanel.status: 1
-Debug: ?? [SerialPortControlPage] serialListPanel.item: SerialPortListPanel_QMLTYPE_251(0x23d5c9d57d0)
+Debug: ?? [SerialPortControlPage] serialListPanel.item: SerialPortListPanel_QMLTYPE_247(0x1d29da7a490)
 Debug: ?? [SerialPortControlPage] serialConfigPanel.status: 1
-Debug: ?? [SerialPortControlPage] serialConfigPanel.item: SerialPortConfigPanel_QMLTYPE_239(0x23d5c9c92f0)
+Debug: ?? [SerialPortControlPage] serialConfigPanel.item: SerialPortConfigPanel_QMLTYPE_240(0x1d29da72150)
 Debug: ? [SerialPortControlPage] focusItemIndex 变化: 0 → 更新 currentSerialIndex
 Debug: ? [SerialPortControlPage] 初始化焦点 - focusSubArea: 0 focusItemIndex: 0
 Debug: ? [SerialPortControlPage] Component.onCompleted 完成
-Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortControlPage.qml:157: ReferenceError: areaSerialList is not defined
+Debug: ? [SerialPortControlPage] NavigationManager 初始化完成
 Debug: ? [DeviceSettingsDialog] SerialPortControlPage 加载成功
 Warning: qrc:/qt/qml/BeltControlQml/components/parameter_settings/NetworkParametersSection.qml: No such file or directory
 Critical: ? [BasicConfigPage] NetworkParametersSection 加载失败
@@ -167,9 +183,10 @@ Debug: ?? [Screen01] focus 属性变化: false
 Debug: ?? [Screen01] ========== 焦点状态变化 ==========
 Debug: ?? [Screen01] activeFocus: ? 失去焦点
 Debug: ?? [Screen01] focus 属性: false
-Debug: ?? [Screen01] parent: QQuickLoader(0x23d1c7cd140)
+Debug: ?? [Screen01] parent: QQuickLoader(0x1d2d91d4920)
 Debug: ?? [Screen01] parent.objectName: 
 Debug: ?? [Screen01] =====================================
+Debug: ?? [DeviceSettingsDialog root] activeFocus 变化: true
 Debug: ? [DeviceSettingsDialog] 对话框已获取焦点
 Debug: ? [DEBUG] StackLayout 宽度: 1369
 Debug: ? [DEBUG] StackLayout 高度: 703
@@ -178,12 +195,19 @@ Debug: ? [DEBUG] SwitchInputPage Loader 宽度: 0
 Debug: ? [DEBUG] SwitchInputPage Loader 高度: 0
 Debug: ?? [Screen01] 对话框创建成功
 Debug: ?? [Screen01] dialog.parent === root: true
-Debug: ?? [Screen01] dialog.parent: Screen01_QMLTYPE_119(0x23d1c8e7f90)
+Debug: ?? [Screen01] dialog.parent: Screen01_QMLTYPE_119(0x1d2d93820d0)
 Debug: ?? [Screen01] dialog.parentContainer === root: true
 Debug: ?? [Screen01] 对话框已显示
 Debug: ?? [Screen01] 打开后 - activeFocus: false
 Debug: ?? [Screen01] 打开后 - focus: false
 Debug: ?? [Screen01] =====================================
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:679:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:626:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:564:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:454:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:344:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Debug: ? [NavigationManager] 更新 lastParamIndex: 7 （参数数量: 8 ）
+Debug: ? [SerialPortControlPage] 初始参数数量: 8
 Debug: ? [导航] 下键 - 当前区域: 1 当前类别: 0
 Debug: ? [DeviceSettingsDialog] 切换到类别 1 恢复内容索引: 0
 Debug: ? [SwitchInputPage] Component.onCompleted 开始
@@ -198,7 +222,7 @@ Debug:    parent.width: 270
 Debug:    paramScrollView.width: 530
 Debug:    计算宽度 (70%): 371
 Debug: ? [DEBUG] onLoaded 开始
-Debug: ? [DEBUG] 设置 virtualKeyboard: QtVirtualKeyboardIntegration_QMLTYPE_219(0x23d4360a440)
+Debug: ? [DEBUG] 设置 virtualKeyboard: QtVirtualKeyboardIntegration_QMLTYPE_219(0x1d29948db70)
 Debug: ? [DEBUG] onLoaded 完成
 Debug: ?? [串口控制同步] onCurrentCategoryChanged - currentCategory: 1 currentFocusArea: 1
 Debug: ? [串口控制同步] 切换到其他类别 - 清除 focusItemIndex
@@ -210,7 +234,7 @@ Debug: ? [AnalogInputPage] 开始加载设备 1 的模拟量保护配置
 Debug: 模拟：加载设备 1 的模拟量保护配置
 Debug: ? [AnalogInputPage] 从数据库加载了 0 个保护项
 Debug: ?? [AnalogInputPage] 数据库中没有配置，使用默认配置
-Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/AnalogInputPage.qml:1125: TypeError: Property 'loadAnalogProtection' of object QObject_QML_47(0x23d1c367eb0) is not a function
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/AnalogInputPage.qml:1125: TypeError: Property 'loadAnalogProtection' of object QObject_QML_4(0x1d2d8d08ef0) is not a function
 Debug: ? [AnalogInputPage] 外层 ColumnLayout 宽度: 1178
 Debug: ? [AnalogInputPage] ScrollView 宽度: 1178
 Debug: ? [AnalogInputPage] ScrollView contentWidth: 1200
@@ -278,6 +302,11 @@ Debug: ? [导航] 下键 - 当前区域: 1 当前类别: 5
 Debug: ? [DeviceSettingsDialog] 切换到类别 6 恢复内容索引: 0
 Debug: ?? [串口控制同步] onCurrentCategoryChanged - currentCategory: 6 currentFocusArea: 1
 Debug: ? [串口控制同步] 切换到其他类别 - 清除 focusItemIndex
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:679:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:626:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:564:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:454:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/pages/SerialPortParamsTab.qml:344:21: QML QQuickRectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
 Debug: ? [导航] 右键 - 当前区域: 1
 Debug: ?? [串口控制同步] onCurrentFocusAreaChanged - currentFocusArea: 2 currentCategory: 6
 Debug: ? [串口控制同步] 焦点进入内容区域 - 设置 focusSubArea=0, focusItemIndex= 0
@@ -291,12 +320,12 @@ Debug: ?? [串口控制导航] currentPage.focusSubArea 类型: number
 Debug: ?? [串口控制导航] currentPage.focusSubArea 值: 0
 Debug: ?? [串口控制导航] 进入子区域导航处理
 Debug: ?? [串口控制导航] isSerialPortControlPage: true
-Debug: ?? [串口控制导航] 右键 - focusSubArea: 0 focusItemIndex: 0
-Debug: ?? [串口控制导航] 设置 focusSubArea = 1
+Debug: ?? [串口控制导航] 右键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Right 当前区域: A 当前索引: 0
+Debug: ? [NavigationManager] 切换区域: A → B
+Debug: ? [SerialPortControlPage] 区域变化: B
 Debug: ?? [SerialPortControlPage] focusSubArea 变化: 1
 Debug: ?? [SerialPortControlPage] 当前状态 - focusItemIndex: 0 currentSerialIndex: 0
-Debug: ? [导航] 串口控制：从列表进入参数区域
-Debug: ?? [串口控制导航] 右键后 - focusSubArea: 1 focusItemIndex: -1
 Debug: ? [导航] 右键 - 当前区域: 2
 Debug: ?? [串口控制导航] case 2 开始 - currentCategory: 6
 Debug: ?? [串口控制导航] getCurrentPage 返回: 有效对象
@@ -304,22 +333,17 @@ Debug: ?? [串口控制导航] currentPage.focusSubArea 类型: number
 Debug: ?? [串口控制导航] currentPage.focusSubArea 值: 1
 Debug: ?? [串口控制导航] 进入子区域导航处理
 Debug: ?? [串口控制导航] isSerialPortControlPage: true
-Debug: ?? [串口控制导航] 右键 - focusSubArea: 1 focusItemIndex: -1
-Debug: ?? [导航] 串口控制：已在参数区域最右侧
-Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
-Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
-Debug: ?? [串口控制调试] currentContentItemIndex: 0
-Debug: ?? [串口控制调试] focusSubArea: 1
-Debug: ?? [串口控制调试] focusItemIndex: -1
-Debug: ?? [串口控制调试] currentSerialIndex: 0
-Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/DeviceSettingsDialog.qml:388: TypeError: Property 'moveDown' of object NavigationManager_QMLTYPE_237(0x23d5ca43050) is not a function
-Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
-Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
-Debug: ?? [串口控制调试] currentContentItemIndex: 0
-Debug: ?? [串口控制调试] focusSubArea: 1
-Debug: ?? [串口控制调试] focusItemIndex: -1
-Debug: ?? [串口控制调试] currentSerialIndex: 0
-Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/DeviceSettingsDialog.qml:388: TypeError: Property 'moveDown' of object NavigationManager_QMLTYPE_237(0x23d5ca43050) is not a function
+Debug: ?? [串口控制导航] 右键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Right 当前区域: B 当前索引: 0
+Debug: ? [SerialPortControlPage] Tab 索引变化: 1
+Debug: ? [SerialPortSendTab] Component.onCompleted 开始
+Debug: ? [SerialPortSendTab] Component.onCompleted 完成
+Debug: ? [SerialPortConfigPanel] SerialPortSendTab 加载成功
+Debug: ? [SerialPortControlPage] Tab 切换: 1
+Debug: ? [SerialPortControlPage] 已同步 currentTabIndex 到 SerialPortConfigPanel: 1
+Debug: ? [NavigationManager] Tab索引: 1 （参数区自动切换显示）
+Debug: ? [NavigationManager] 更新 lastParamIndex: 4 （参数数量: 5 ）
+Debug: ? [SerialPortControlPage] Tab 切换后参数数量: 5
 Debug: ? [导航] 右键 - 当前区域: 2
 Debug: ?? [串口控制导航] case 2 开始 - currentCategory: 6
 Debug: ?? [串口控制导航] getCurrentPage 返回: 有效对象
@@ -327,12 +351,469 @@ Debug: ?? [串口控制导航] currentPage.focusSubArea 类型: number
 Debug: ?? [串口控制导航] currentPage.focusSubArea 值: 1
 Debug: ?? [串口控制导航] 进入子区域导航处理
 Debug: ?? [串口控制导航] isSerialPortControlPage: true
-Debug: ?? [串口控制导航] 右键 - focusSubArea: 1 focusItemIndex: -1
-Debug: ?? [导航] 串口控制：已在参数区域最右侧
+Debug: ? [串口控制导航] 右键 - 调用自定义导航
+Debug: ? [SerialPortSendTab] 自定义导航 - 方向: Right 当前索引: -1
+Debug: ?? [SerialPortSendTab] 导航无变化，返回false
+Debug: ?? [串口控制导航] 右键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Right 当前区域: B 当前索引: 1
+Debug: ? [SerialPortControlPage] Tab 索引变化: 2
+Debug: ? [SerialPortReceiveTab] Component.onCompleted 开始
+Debug: ? [SerialPortReceiveTab] Component.onCompleted 完成
+Debug: ? [SerialPortConfigPanel] SerialPortReceiveTab 加载成功
+Debug: ? [SerialPortControlPage] Tab 切换: 2
+Debug: ? [SerialPortControlPage] 已同步 currentTabIndex 到 SerialPortConfigPanel: 2
+Debug: ? [NavigationManager] Tab索引: 2 （参数区自动切换显示）
+Debug: ? [NavigationManager] 更新 lastParamIndex: 4 （参数数量: 5 ）
+Debug: ? [SerialPortControlPage] Tab 切换后参数数量: 5
 Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
 Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
 Debug: ?? [串口控制调试] currentContentItemIndex: 0
 Debug: ?? [串口控制调试] focusSubArea: 1
 Debug: ?? [串口控制调试] focusItemIndex: -1
 Debug: ?? [串口控制调试] currentSerialIndex: 0
-Warning: file:///E:/2025/3_gongkongji/belt_control_system/src/qml/components/device_info/DeviceSettingsDialog.qml:388: TypeError: Property 'moveDown' of object NavigationManager_QMLTYPE_237(0x23d5ca43050) is not a function
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 1
+Debug: ?? [串口控制导航] serialPage: 存在
+Debug: ?? [串口控制导航] navigationManager: 存在
+Debug: ?? [串口控制导航] 下键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Down 当前区域: B 当前索引: 2
+Debug: ? [NavigationManager] 切换区域: B → C
+Debug: ? [SerialPortControlPage] 区域变化: C
+Debug: ?? [SerialPortControlPage] focusSubArea 变化: 2
+Debug: ?? [SerialPortControlPage] 当前状态 - focusItemIndex: -1 currentSerialIndex: 0
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 0
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 0
+Debug: ?? [SerialPortReceiveTab] 索引0为空，保持焦点
+Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 2
+Debug: ? [串口控制导航] 下键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Down 当前索引: 0
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 0 → 1
+Debug: ? [SerialPortControlPage] 收到焦点请求: 1
+Debug: ?? [NavigationManager] paramIndex 变化: 1
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 1
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 1
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 1
+Debug: ? [SerialPortReceiveTab] 接收格式
+Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 2
+Debug: ? [串口控制导航] 下键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Down 当前索引: 1
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 1 → 2
+Debug: ? [SerialPortControlPage] 收到焦点请求: 2
+Debug: ?? [NavigationManager] paramIndex 变化: 2
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 2
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 2
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 2
+Debug: ? [SerialPortReceiveTab] 接收数据
+Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 2
+Debug: ? [串口控制导航] 下键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Down 当前索引: 2
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 2 → 3
+Debug: ? [SerialPortControlPage] 收到焦点请求: 3
+Debug: ?? [NavigationManager] paramIndex 变化: 3
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 3
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 3
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 3
+Debug: ? [SerialPortReceiveTab] 清空按钮
+Debug: ? [导航] 右键 - 当前区域: 2
+Debug: ?? [串口控制导航] case 2 开始 - currentCategory: 6
+Debug: ?? [串口控制导航] getCurrentPage 返回: 有效对象
+Debug: ?? [串口控制导航] currentPage.focusSubArea 类型: number
+Debug: ?? [串口控制导航] currentPage.focusSubArea 值: 2
+Debug: ?? [串口控制导航] 进入子区域导航处理
+Debug: ?? [串口控制导航] isSerialPortControlPage: true
+Debug: ? [串口控制导航] 右键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Right 当前索引: 3
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 3 → 4
+Debug: ? [SerialPortControlPage] 收到焦点请求: 4
+Debug: ?? [NavigationManager] paramIndex 变化: 4
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 4
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 4
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 4
+Debug: ? [SerialPortReceiveTab] 暂停/继续按钮
+Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 2
+Debug: ? [串口控制导航] 下键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Down 当前索引: 4
+Debug: ?? [SerialPortReceiveTab] 导航无变化，返回false
+Debug: ?? [串口控制导航] 下键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Down 当前区域: C 当前索引: 4
+Debug: ? [NavigationManager] 切换区域: C → D
+Debug: ? [SerialPortControlPage] 区域变化: D
+Debug: ?? [SerialPortControlPage] focusSubArea 变化: 3
+Debug: ?? [SerialPortControlPage] 当前状态 - focusItemIndex: -1 currentSerialIndex: 0
+Debug: ? [导航] 右键 - 当前区域: 2
+Debug: ?? [串口控制导航] case 2 开始 - currentCategory: 6
+Debug: ?? [串口控制导航] getCurrentPage 返回: 有效对象
+Debug: ?? [串口控制导航] currentPage.focusSubArea 类型: number
+Debug: ?? [串口控制导航] currentPage.focusSubArea 值: 3
+Debug: ?? [串口控制导航] 进入子区域导航处理
+Debug: ?? [串口控制导航] isSerialPortControlPage: true
+Debug: ? [串口控制导航] 右键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Right 当前索引: -1
+Debug: ?? [SerialPortReceiveTab] 导航无变化，返回false
+Debug: ?? [串口控制导航] 右键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Right 当前区域: D 当前索引: 0
+Debug: ? [SerialPortControlPage] 按钮索引变化: 1
+Debug: ? [NavigationManager] 按钮索引: 1
+Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 3
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 3
+Debug: ?? [串口控制导航] serialPage: 存在
+Debug: ?? [串口控制导航] navigationManager: 存在
+Debug: ?? [串口控制导航] 下键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Down 当前区域: D 当前索引: 1
+Debug: ? [SerialPortControlPage] 按钮索引变化: 3
+Debug: ? [NavigationManager] 按钮索引: 3
+Debug: ? [导航] 左键 - 当前区域: 2
+Debug: ? [导航] 串口控制页面左键 - 调用NavigationManager
+Debug: ? [NavigationManager] 方向键: Left 当前区域: D 当前索引: 3
+Debug: ? [SerialPortControlPage] 按钮索引变化: 2
+Debug: ? [NavigationManager] 按钮索引: 2
+Debug: ? [导航] 右键 - 当前区域: 2
+Debug: ?? [串口控制导航] case 2 开始 - currentCategory: 6
+Debug: ?? [串口控制导航] getCurrentPage 返回: 有效对象
+Debug: ?? [串口控制导航] currentPage.focusSubArea 类型: number
+Debug: ?? [串口控制导航] currentPage.focusSubArea 值: 3
+Debug: ?? [串口控制导航] 进入子区域导航处理
+Debug: ?? [串口控制导航] isSerialPortControlPage: true
+Debug: ? [串口控制导航] 右键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Right 当前索引: -1
+Debug: ?? [SerialPortReceiveTab] 导航无变化，返回false
+Debug: ?? [串口控制导航] 右键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Right 当前区域: D 当前索引: 2
+Debug: ? [SerialPortControlPage] 按钮索引变化: 3
+Debug: ? [NavigationManager] 按钮索引: 3
+Debug: ? [导航] 右键 - 当前区域: 2
+Debug: ?? [串口控制导航] case 2 开始 - currentCategory: 6
+Debug: ?? [串口控制导航] getCurrentPage 返回: 有效对象
+Debug: ?? [串口控制导航] currentPage.focusSubArea 类型: number
+Debug: ?? [串口控制导航] currentPage.focusSubArea 值: 3
+Debug: ?? [串口控制导航] 进入子区域导航处理
+Debug: ?? [串口控制导航] isSerialPortControlPage: true
+Debug: ? [串口控制导航] 右键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Right 当前索引: -1
+Debug: ?? [SerialPortReceiveTab] 导航无变化，返回false
+Debug: ?? [串口控制导航] 右键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Right 当前区域: D 当前索引: 3
+Debug: ? [SerialPortControlPage] 按钮索引变化: 4
+Debug: ? [NavigationManager] 按钮索引: 4
+Debug: ? [导航] 上键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 上键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 3
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 上键 - currentCategory: 6 focusSubArea: 3
+Debug: ?? [串口控制导航] serialPage: 存在
+Debug: ?? [串口控制导航] navigationManager: 存在
+Debug: ?? [串口控制导航] 上键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Up 当前区域: D 当前索引: 4
+Debug: ? [SerialPortControlPage] 按钮索引变化: 1
+Debug: ? [NavigationManager] 按钮索引: 1
+Debug: ? [导航] 左键 - 当前区域: 2
+Debug: ? [导航] 串口控制页面左键 - 调用NavigationManager
+Debug: ? [NavigationManager] 方向键: Left 当前区域: D 当前索引: 1
+Debug: ? [SerialPortControlPage] 按钮索引变化: 0
+Debug: ? [NavigationManager] 按钮索引: 0
+Debug: ? [导航] 上键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 上键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 3
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 上键 - currentCategory: 6 focusSubArea: 3
+Debug: ?? [串口控制导航] serialPage: 存在
+Debug: ?? [串口控制导航] navigationManager: 存在
+Debug: ?? [串口控制导航] 上键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Up 当前区域: D 当前索引: 0
+Debug: ? [NavigationManager] 切换区域: D → C
+Debug: ? [SerialPortControlPage] 区域变化: C
+Debug: ?? [SerialPortControlPage] focusSubArea 变化: 2
+Debug: ?? [SerialPortControlPage] 当前状态 - focusItemIndex: -1 currentSerialIndex: 0
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 4
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 4
+Debug: ? [SerialPortReceiveTab] 暂停/继续按钮
+Debug: ? [导航] 左键 - 当前区域: 2
+Debug: ?? [串口控制导航] 左键 - currentCategory: 6 focusSubArea: 2
+Debug: ? [串口控制导航] 左键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Left 当前索引: 4
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 4 → 3
+Debug: ? [SerialPortControlPage] 收到焦点请求: 3
+Debug: ?? [NavigationManager] paramIndex 变化: 3
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 3
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 3
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 3
+Debug: ? [SerialPortReceiveTab] 清空按钮
+Debug: ? [导航] 上键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 上键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ? [串口控制导航] 上键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Up 当前索引: 3
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 3 → 2
+Debug: ? [SerialPortControlPage] 收到焦点请求: 2
+Debug: ?? [NavigationManager] paramIndex 变化: 2
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 2
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 2
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 2
+Debug: ? [SerialPortReceiveTab] 接收数据
+Debug: ? [导航] 上键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 上键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ? [串口控制导航] 上键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Up 当前索引: 2
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 2 → 1
+Debug: ? [SerialPortControlPage] 收到焦点请求: 1
+Debug: ?? [NavigationManager] paramIndex 变化: 1
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 1
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 1
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 1
+Debug: ? [SerialPortReceiveTab] 接收格式
+Debug: ? [导航] 上键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 上键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ? [串口控制导航] 上键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Up 当前索引: 1
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 1 → 0
+Debug: ? [SerialPortControlPage] 收到焦点请求: 0
+Debug: ?? [NavigationManager] paramIndex 变化: 0
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 0
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 0
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 0
+Debug: ?? [SerialPortReceiveTab] 索引0为空，保持焦点
+Debug: ? [导航] 上键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 上键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ? [串口控制导航] 上键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Up 当前索引: 0
+Debug: ?? [SerialPortReceiveTab] 导航无变化，返回false
+Debug: ?? [串口控制导航] 上键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Up 当前区域: C 当前索引: 0
+Debug: ? [NavigationManager] 切换区域: C → B
+Debug: ? [SerialPortControlPage] 区域变化: B
+Debug: ?? [SerialPortControlPage] focusSubArea 变化: 1
+Debug: ?? [SerialPortControlPage] 当前状态 - focusItemIndex: -1 currentSerialIndex: 0
+Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 1
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 1
+Debug: ?? [串口控制导航] serialPage: 存在
+Debug: ?? [串口控制导航] navigationManager: 存在
+Debug: ?? [串口控制导航] 下键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Down 当前区域: B 当前索引: 2
+Debug: ? [NavigationManager] 切换区域: B → C
+Debug: ? [SerialPortControlPage] 区域变化: C
+Debug: ?? [SerialPortControlPage] focusSubArea 变化: 2
+Debug: ?? [SerialPortControlPage] 当前状态 - focusItemIndex: -1 currentSerialIndex: 0
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 0
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 0
+Debug: ?? [SerialPortReceiveTab] 索引0为空，保持焦点
+Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 2
+Debug: ? [串口控制导航] 下键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Down 当前索引: 0
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 0 → 1
+Debug: ? [SerialPortControlPage] 收到焦点请求: 1
+Debug: ?? [NavigationManager] paramIndex 变化: 1
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 1
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 1
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 1
+Debug: ? [SerialPortReceiveTab] 接收格式
+Debug: ? [导航] 上键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 上键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ? [串口控制导航] 上键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Up 当前索引: 1
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 1 → 0
+Debug: ? [SerialPortControlPage] 收到焦点请求: 0
+Debug: ?? [NavigationManager] paramIndex 变化: 0
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 0
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 0
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 0
+Debug: ?? [SerialPortReceiveTab] 索引0为空，保持焦点
+Debug: ? [导航] 上键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 上键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ? [串口控制导航] 上键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Up 当前索引: 0
+Debug: ?? [SerialPortReceiveTab] 导航无变化，返回false
+Debug: ?? [串口控制导航] 上键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Up 当前区域: C 当前索引: 0
+Debug: ? [NavigationManager] 切换区域: C → B
+Debug: ? [SerialPortControlPage] 区域变化: B
+Debug: ?? [SerialPortControlPage] focusSubArea 变化: 1
+Debug: ?? [SerialPortControlPage] 当前状态 - focusItemIndex: -1 currentSerialIndex: 0
+Debug: ? [导航] 左键 - 当前区域: 2
+Debug: ? [导航] 串口控制页面左键 - 调用NavigationManager
+Debug: ? [NavigationManager] 方向键: Left 当前区域: B 当前索引: 2
+Debug: ? [SerialPortControlPage] Tab 索引变化: 1
+Debug: ? [SerialPortSendTab] Component.onCompleted 开始
+Debug: ? [SerialPortSendTab] Component.onCompleted 完成
+Debug: ? [SerialPortConfigPanel] SerialPortSendTab 加载成功
+Debug: ? [SerialPortControlPage] Tab 切换: 1
+Debug: ? [SerialPortControlPage] 已同步 currentTabIndex 到 SerialPortConfigPanel: 1
+Debug: ? [NavigationManager] Tab索引: 1 （参数区自动切换显示）
+Debug: ? [NavigationManager] 更新 lastParamIndex: 4 （参数数量: 5 ）
+Debug: ? [SerialPortControlPage] Tab 切换后参数数量: 5
+Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 1
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 1
+Debug: ?? [串口控制导航] serialPage: 存在
+Debug: ?? [串口控制导航] navigationManager: 存在
+Debug: ?? [串口控制导航] 下键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Down 当前区域: B 当前索引: 1
+Debug: ? [NavigationManager] 切换区域: B → C
+Debug: ? [SerialPortControlPage] 区域变化: C
+Debug: ?? [SerialPortControlPage] focusSubArea 变化: 2
+Debug: ?? [SerialPortControlPage] 当前状态 - focusItemIndex: -1 currentSerialIndex: 0
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 0
+Debug: ? [SerialPortSendTab] 触发参数输入 - 索引: 0
+Debug: ? [SerialPortSendTab] 发送格式
+Debug: ? [导航] 上键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 上键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ? [串口控制导航] 上键 - 调用自定义导航
+Debug: ? [SerialPortSendTab] 自定义导航 - 方向: Up 当前索引: 0
+Debug: ?? [SerialPortSendTab] 导航无变化，返回false
+Debug: ?? [串口控制导航] 上键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Up 当前区域: C 当前索引: 0
+Debug: ? [NavigationManager] 切换区域: C → B
+Debug: ? [SerialPortControlPage] 区域变化: B
+Debug: ?? [SerialPortControlPage] focusSubArea 变化: 1
+Debug: ?? [SerialPortControlPage] 当前状态 - focusItemIndex: -1 currentSerialIndex: 0
+Debug: ? [导航] 右键 - 当前区域: 2
+Debug: ?? [串口控制导航] case 2 开始 - currentCategory: 6
+Debug: ?? [串口控制导航] getCurrentPage 返回: 有效对象
+Debug: ?? [串口控制导航] currentPage.focusSubArea 类型: number
+Debug: ?? [串口控制导航] currentPage.focusSubArea 值: 1
+Debug: ?? [串口控制导航] 进入子区域导航处理
+Debug: ?? [串口控制导航] isSerialPortControlPage: true
+Debug: ? [串口控制导航] 右键 - 调用自定义导航
+Debug: ? [SerialPortSendTab] 自定义导航 - 方向: Right 当前索引: -1
+Debug: ?? [SerialPortSendTab] 导航无变化，返回false
+Debug: ?? [串口控制导航] 右键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Right 当前区域: B 当前索引: 1
+Debug: ? [SerialPortControlPage] Tab 索引变化: 2
+Debug: ? [SerialPortReceiveTab] Component.onCompleted 开始
+Debug: ? [SerialPortReceiveTab] Component.onCompleted 完成
+Debug: ? [SerialPortConfigPanel] SerialPortReceiveTab 加载成功
+Debug: ? [SerialPortControlPage] Tab 切换: 2
+Debug: ? [SerialPortControlPage] 已同步 currentTabIndex 到 SerialPortConfigPanel: 2
+Debug: ? [NavigationManager] Tab索引: 2 （参数区自动切换显示）
+Debug: ? [NavigationManager] 更新 lastParamIndex: 4 （参数数量: 5 ）
+Debug: ? [SerialPortControlPage] Tab 切换后参数数量: 5
+Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 1
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 1
+Debug: ?? [串口控制导航] serialPage: 存在
+Debug: ?? [串口控制导航] navigationManager: 存在
+Debug: ?? [串口控制导航] 下键 - 调用 NavigationManager.handleDirectionKey
+Debug: ? [NavigationManager] 方向键: Down 当前区域: B 当前索引: 2
+Debug: ? [NavigationManager] 切换区域: B → C
+Debug: ? [SerialPortControlPage] 区域变化: C
+Debug: ?? [SerialPortControlPage] focusSubArea 变化: 2
+Debug: ?? [SerialPortControlPage] 当前状态 - focusItemIndex: -1 currentSerialIndex: 0
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 0
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 0
+Debug: ?? [SerialPortReceiveTab] 索引0为空，保持焦点
+Debug: ? [导航] 下键 - 当前区域: 2 当前类别: 6
+Debug: ?? [串口控制调试] 下键 - currentFocusArea: 2
+Debug: ?? [串口控制调试] currentContentItemIndex: 0
+Debug: ?? [串口控制调试] focusSubArea: 2
+Debug: ?? [串口控制调试] focusItemIndex: -1
+Debug: ?? [串口控制调试] currentSerialIndex: 0
+Debug: ?? [串口控制导航] 下键 - currentCategory: 6 focusSubArea: 2
+Debug: ? [串口控制导航] 下键 - 调用自定义导航
+Debug: ? [SerialPortReceiveTab] 自定义导航 - 方向: Down 当前索引: 0
+Debug: ? [SerialPortReceiveTab] 导航索引变化: 0 → 1
+Debug: ? [SerialPortControlPage] 收到焦点请求: 1
+Debug: ?? [NavigationManager] paramIndex 变化: 1
+Debug:   - currentArea: C
+Debug:   - lastParamIndex: 4
+Debug: ? [SerialPortControlPage] 参数索引变化: 1
+Debug: ? [SerialPortControlPage] triggerParamInput - 参数索引: 1
+Debug: ? [SerialPortReceiveTab] 触发参数输入 - 索引: 1
+Debug: ? [SerialPortReceiveTab] 接收格式
+Debug: ?? [DeviceSettingsDialog root] activeFocus 变化: false

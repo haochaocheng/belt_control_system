@@ -1,0 +1,850 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+
+// ✅ 2026-01-25 [开关量输入页面] 左右分栏布局：左侧列表 + 右侧参数编辑
+Rectangle {
+    id: root
+    color: "transparent"
+
+    // ========== 公开属性 ==========
+    property int deviceId: 1
+    property string deviceName: "1号皮带"
+    property int currentProtectionIndex: 0  // 当前选中的保护项索引
+
+    // ========== 开关量保护模型 ==========
+    ListModel {
+        id: digitalProtectionModel
+        ListElement { name: "急停"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 0 }
+        ListElement { name: "跑偏"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 1 }
+        ListElement { name: "撕裂"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 2 }
+        ListElement { name: "烟雾"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 3 }
+        ListElement { name: "温度"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 4 }
+        ListElement { name: "护网"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 5 }
+        ListElement { name: "堆煤"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 6 }
+        ListElement { name: "主机急停"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 7 }
+    }
+
+    // ========== 主布局：左右分栏 ==========
+    RowLayout {
+        anchors.fill: parent
+        spacing: 15
+
+        // ========== 左侧：开关量列表 ==========
+        Rectangle {
+            Layout.fillHeight: true
+            Layout.preferredWidth: 240
+            color: "#1a2332"
+            radius: 8
+            border.color: "#00d4ff"
+            border.width: 1
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 8
+
+                // 标题栏
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 5
+
+                    Text {
+                        text: "开关量列表"
+                        font.pixelSize: 14
+                        font.bold: true
+                        color: "#00ff88"
+                        Layout.fillWidth: true
+                    }
+
+                    // + 添加按钮
+                    Rectangle {
+                        width: 24
+                        height: 24
+                        radius: 4
+                        color: "#34495e"
+                        border.color: "#00ff88"
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "+"
+                            font.pixelSize: 16
+                            font.bold: true
+                            color: "#00ff88"
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                console.log("添加新的开关量保护")
+                                // TODO: 实现添加功能
+                            }
+                            hoverEnabled: true
+                            onEntered: parent.scale = 1.1
+                            onExited: parent.scale = 1.0
+                        }
+
+                        Behavior on scale {
+                            NumberAnimation { duration: 150 }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: "#00d4ff"
+                    opacity: 0.3
+                }
+
+                // 开关量列表
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                    ListView {
+                        id: protectionListView
+                        model: digitalProtectionModel
+                        spacing: 6
+                        currentIndex: root.currentProtectionIndex
+
+                        delegate: Rectangle {
+                            width: protectionListView.width
+                            height: 45
+                            radius: 5
+                            color: root.currentProtectionIndex === index ? "#00AA00" : (model.active ? "#ff4757" : "#2c3e50")
+                            border.color: root.currentProtectionIndex === index ? "#00FF00" : (model.active ? "#ff6b7a" : "#00d4ff")
+                            border.width: root.currentProtectionIndex === index ? 2 : 1
+
+                            // 闪烁动画（激活状态）
+                            SequentialAnimation on opacity {
+                                running: model.active && root.currentProtectionIndex !== index
+                                loops: Animation.Infinite
+                                NumberAnimation { to: 0.5; duration: 500 }
+                                NumberAnimation { to: 1.0; duration: 500 }
+                            }
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 8
+
+                                // 状态指示器
+                                Rectangle {
+                                    width: 12
+                                    height: 12
+                                    radius: 6
+                                    color: model.active ? "#ff4757" : "#95a5a6"
+                                    border.color: model.active ? "#ff6b7a" : "#7f8c8d"
+                                    border.width: 1
+                                }
+
+                                // 保护名称
+                                Text {
+                                    text: model.name
+                                    font.pixelSize: 13
+                                    font.bold: root.currentProtectionIndex === index
+                                    color: root.currentProtectionIndex === index ? "white" : (model.active ? "white" : "#00d4ff")
+                                    Layout.fillWidth: true
+                                }
+
+                                // 通道编号
+                                Text {
+                                    text: "CH" + model.channelNumber
+                                    font.pixelSize: 11
+                                    color: root.currentProtectionIndex === index ? "#CCFFCC" : "#95a5a6"
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.currentProtectionIndex = index
+                                    loadProtectionData(index)
+                                }
+
+                                hoverEnabled: true
+                                onEntered: parent.scale = 1.03
+                                onExited: parent.scale = 1.0
+                            }
+
+                            Behavior on scale {
+                                NumberAnimation { duration: 150 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ========== 右侧：参数编辑区域 ==========
+        Rectangle {
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            color: "#1a2332"
+            radius: 8
+            border.color: "#00d4ff"
+            border.width: 1
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 15
+                spacing: 12
+
+                // 标题
+                Text {
+                    text: "保护参数设置"
+                    font.pixelSize: 15
+                    font.bold: true
+                    color: "#00d4ff"
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: "#00d4ff"
+                    opacity: 0.3
+                }
+
+                // 滚动区域：参数字段
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                    ColumnLayout {
+                        width: parent.width - 20
+                        spacing: 12
+
+                        // 保护名称
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "保护名称:"
+                                font.pixelSize: 13
+                                color: "#95a5a6"
+                                Layout.preferredWidth: 100
+                            }
+
+                            TextField {
+                                id: nameField
+                                Layout.fillWidth: true
+                                font.pixelSize: 12
+
+                                background: Rectangle {
+                                    color: "#34495e"
+                                    radius: 4
+                                    border.color: nameField.activeFocus ? "#3498db" : "#7f8c8d"
+                                    border.width: 1
+                                }
+
+                                color: "#ecf0f1"
+                            }
+                        }
+
+                        // 模块类型
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "模块类型:"
+                                font.pixelSize: 13
+                                color: "#95a5a6"
+                                Layout.preferredWidth: 100
+                            }
+
+                            ComboBox {
+                                id: moduleTypeCombo
+                                Layout.fillWidth: true
+
+                                model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
+
+                                background: Rectangle {
+                                    color: "#34495e"
+                                    radius: 4
+                                    border.color: moduleTypeCombo.pressed ? "#3498db" : "#7f8c8d"
+                                    border.width: 1
+                                }
+
+                                contentItem: Text {
+                                    text: moduleTypeCombo.displayText
+                                    color: "#ecf0f1"
+                                    font.pixelSize: 12
+                                    verticalAlignment: Text.AlignVCenter
+                                    leftPadding: 10
+                                }
+
+                                onCurrentTextChanged: {
+                                    // 根据模块类型自动设置寄存器地址
+                                    if (currentText === "输入模块1") {
+                                        registerAddressSpin.value = 2
+                                    } else if (currentText === "输入模块2") {
+                                        registerAddressSpin.value = 3
+                                    } else if (currentText === "输入模块3") {
+                                        registerAddressSpin.value = 4
+                                    } else if (currentText === "输入模块4") {
+                                        registerAddressSpin.value = 5
+                                    } else if (currentText === "输出模块") {
+                                        registerAddressSpin.value = 50
+                                    }
+                                }
+                            }
+                        }
+
+                        // 寄存器地址
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+                            visible: moduleTypeCombo.currentText !== "主模块"
+
+                            Text {
+                                text: "寄存器地址:"
+                                font.pixelSize: 13
+                                color: "#95a5a6"
+                                Layout.preferredWidth: 100
+                            }
+
+                            SpinBox {
+                                id: registerAddressSpin
+                                from: 0
+                                to: 255
+                                editable: true
+                                Layout.fillWidth: true
+
+                                background: Rectangle {
+                                    color: "#34495e"
+                                    radius: 4
+                                    border.color: registerAddressSpin.activeFocus ? "#3498db" : "#7f8c8d"
+                                    border.width: 1
+                                }
+
+                                contentItem: TextInput {
+                                    text: registerAddressSpin.textFromValue(registerAddressSpin.value, registerAddressSpin.locale)
+                                    font.pixelSize: 12
+                                    color: "#ecf0f1"
+                                    horizontalAlignment: Qt.AlignHCenter
+                                    verticalAlignment: Qt.AlignVCenter
+                                    readOnly: !registerAddressSpin.editable
+                                    validator: registerAddressSpin.validator
+                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                }
+                            }
+                        }
+
+                        // 通道编号
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "通道编号:"
+                                font.pixelSize: 13
+                                color: "#95a5a6"
+                                Layout.preferredWidth: 100
+                            }
+
+                            SpinBox {
+                                id: channelSpin
+                                from: 0
+                                to: 7
+                                editable: true
+                                Layout.fillWidth: true
+
+                                background: Rectangle {
+                                    color: "#34495e"
+                                    radius: 4
+                                    border.color: channelSpin.activeFocus ? "#3498db" : "#7f8c8d"
+                                    border.width: 1
+                                }
+
+                                contentItem: TextInput {
+                                    text: channelSpin.textFromValue(channelSpin.value, channelSpin.locale)
+                                    font.pixelSize: 12
+                                    color: "#ecf0f1"
+                                    horizontalAlignment: Qt.AlignHCenter
+                                    verticalAlignment: Qt.AlignVCenter
+                                    readOnly: !channelSpin.editable
+                                    validator: channelSpin.validator
+                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: "#00d4ff"
+                            opacity: 0.2
+                        }
+
+                        // 保护延时
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "保护延时(秒):"
+                                font.pixelSize: 13
+                                color: "#95a5a6"
+                                Layout.preferredWidth: 100
+                            }
+
+                            SpinBox {
+                                id: delaySpin
+                                from: 0
+                                to: 600
+                                value: 10
+                                stepSize: 1
+                                editable: true
+                                Layout.fillWidth: true
+
+                                property int decimals: 1
+                                property real realValue: value / 10
+
+                                textFromValue: function(value, locale) {
+                                    return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                }
+
+                                valueFromText: function(text, locale) {
+                                    return Number.fromLocaleString(locale, text) * 10
+                                }
+
+                                background: Rectangle {
+                                    color: "#34495e"
+                                    radius: 4
+                                    border.color: delaySpin.activeFocus ? "#3498db" : "#7f8c8d"
+                                    border.width: 1
+                                }
+
+                                contentItem: TextInput {
+                                    text: delaySpin.textFromValue(delaySpin.value, delaySpin.locale)
+                                    font.pixelSize: 12
+                                    color: "#ecf0f1"
+                                    horizontalAlignment: Qt.AlignHCenter
+                                    verticalAlignment: Qt.AlignVCenter
+                                    readOnly: !delaySpin.editable
+                                    validator: delaySpin.validator
+                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                }
+                            }
+                        }
+
+                        // 播放次数
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "播放次数:"
+                                font.pixelSize: 13
+                                color: "#95a5a6"
+                                Layout.preferredWidth: 100
+                            }
+
+                            SpinBox {
+                                id: playCountSpin
+                                from: 1
+                                to: 99
+                                value: 3
+                                editable: true
+                                Layout.fillWidth: true
+
+                                background: Rectangle {
+                                    color: "#34495e"
+                                    radius: 4
+                                    border.color: playCountSpin.activeFocus ? "#3498db" : "#7f8c8d"
+                                    border.width: 1
+                                }
+
+                                contentItem: TextInput {
+                                    text: playCountSpin.textFromValue(playCountSpin.value, playCountSpin.locale)
+                                    font.pixelSize: 12
+                                    color: "#ecf0f1"
+                                    horizontalAlignment: Qt.AlignHCenter
+                                    verticalAlignment: Qt.AlignVCenter
+                                    readOnly: !playCountSpin.editable
+                                    validator: playCountSpin.validator
+                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                }
+                            }
+                        }
+
+                        // 播放时长
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "播放时长(秒):"
+                                font.pixelSize: 13
+                                color: "#95a5a6"
+                                Layout.preferredWidth: 100
+                            }
+
+                            SpinBox {
+                                id: durationSpin
+                                from: 1
+                                to: 600
+                                value: 50
+                                stepSize: 5
+                                editable: true
+                                Layout.fillWidth: true
+
+                                property int decimals: 1
+                                property real realValue: value / 10
+
+                                textFromValue: function(value, locale) {
+                                    return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                }
+
+                                valueFromText: function(text, locale) {
+                                    return Number.fromLocaleString(locale, text) * 10
+                                }
+
+                                background: Rectangle {
+                                    color: "#34495e"
+                                    radius: 4
+                                    border.color: durationSpin.activeFocus ? "#3498db" : "#7f8c8d"
+                                    border.width: 1
+                                }
+
+                                contentItem: TextInput {
+                                    text: durationSpin.textFromValue(durationSpin.value, durationSpin.locale)
+                                    font.pixelSize: 12
+                                    color: "#ecf0f1"
+                                    horizontalAlignment: Qt.AlignHCenter
+                                    verticalAlignment: Qt.AlignVCenter
+                                    readOnly: !durationSpin.editable
+                                    validator: durationSpin.validator
+                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: "#00d4ff"
+                            opacity: 0.2
+                        }
+
+                        // 语音报警类型
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Text {
+                                text: "语音报警:"
+                                font.pixelSize: 13
+                                color: "#95a5a6"
+                                Layout.preferredWidth: 100
+                            }
+
+                            RadioButton {
+                                id: ttsRadio
+                                text: "文字转语音"
+                                checked: true
+                                font.pixelSize: 12
+
+                                indicator: Rectangle {
+                                    implicitWidth: 18
+                                    implicitHeight: 18
+                                    x: ttsRadio.leftPadding
+                                    y: parent.height / 2 - height / 2
+                                    radius: 9
+                                    border.color: ttsRadio.checked ? "#00d4ff" : "#7f8c8d"
+                                    border.width: 2
+                                    color: "transparent"
+
+                                    Rectangle {
+                                        width: 10
+                                        height: 10
+                                        x: 4
+                                        y: 4
+                                        radius: 5
+                                        color: "#00d4ff"
+                                        visible: ttsRadio.checked
+                                    }
+                                }
+
+                                contentItem: Text {
+                                    text: ttsRadio.text
+                                    font: ttsRadio.font
+                                    color: "#ecf0f1"
+                                    leftPadding: ttsRadio.indicator.width + 8
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+
+                            RadioButton {
+                                id: fileRadio
+                                text: "音频文件"
+                                checked: false
+                                font.pixelSize: 12
+
+                                indicator: Rectangle {
+                                    implicitWidth: 18
+                                    implicitHeight: 18
+                                    x: fileRadio.leftPadding
+                                    y: parent.height / 2 - height / 2
+                                    radius: 9
+                                    border.color: fileRadio.checked ? "#00d4ff" : "#7f8c8d"
+                                    border.width: 2
+                                    color: "transparent"
+
+                                    Rectangle {
+                                        width: 10
+                                        height: 10
+                                        x: 4
+                                        y: 4
+                                        radius: 5
+                                        color: "#00d4ff"
+                                        visible: fileRadio.checked
+                                    }
+                                }
+
+                                contentItem: Text {
+                                    text: fileRadio.text
+                                    font: fileRadio.font
+                                    color: "#ecf0f1"
+                                    leftPadding: fileRadio.indicator.width + 8
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+                        }
+
+                        // TTS文字输入
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+                            visible: ttsRadio.checked
+
+                            Text {
+                                text: "报警文字:"
+                                font.pixelSize: 13
+                                color: "#95a5a6"
+                                Layout.preferredWidth: 100
+                            }
+
+                            TextField {
+                                id: ttsTextField
+                                placeholderText: "输入报警文字内容..."
+                                Layout.fillWidth: true
+                                font.pixelSize: 12
+
+                                background: Rectangle {
+                                    color: "#34495e"
+                                    radius: 4
+                                    border.color: ttsTextField.activeFocus ? "#3498db" : "#7f8c8d"
+                                    border.width: 1
+                                }
+
+                                color: "#ecf0f1"
+                            }
+                        }
+
+                        // 音频文件选择
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+                            visible: fileRadio.checked
+
+                            Text {
+                                text: "音频文件:"
+                                font.pixelSize: 13
+                                color: "#95a5a6"
+                                Layout.preferredWidth: 100
+                            }
+
+                            TextField {
+                                id: audioField
+                                placeholderText: "选择音频文件..."
+                                Layout.fillWidth: true
+                                readOnly: true
+                                font.pixelSize: 12
+
+                                background: Rectangle {
+                                    color: "#34495e"
+                                    radius: 4
+                                    border.color: "#7f8c8d"
+                                    border.width: 1
+                                }
+
+                                color: "#ecf0f1"
+                            }
+
+                            Button {
+                                text: "浏览"
+                                Layout.preferredWidth: 60
+                                Layout.preferredHeight: 30
+
+                                background: Rectangle {
+                                    color: parent.pressed ? "#2980b9" : (parent.hovered ? "#3498db" : "#34495e")
+                                    radius: 4
+                                    border.color: "#3498db"
+                                    border.width: 1
+                                }
+
+                                contentItem: Text {
+                                    text: parent.text
+                                    font.pixelSize: 11
+                                    color: "#ecf0f1"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+
+                                onClicked: {
+                                    console.log("打开文件选择对话框")
+                                    // TODO: 实现文件选择
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: "#00d4ff"
+                    opacity: 0.3
+                }
+
+                // 底部按钮
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Button {
+                        text: "保存"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
+                            radius: 4
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 13
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            saveProtectionData()
+                        }
+                    }
+
+                    Button {
+                        text: "删除"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
+                            radius: 4
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 13
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            console.log("删除保护:", nameField.text)
+                            // TODO: 实现删除功能
+                        }
+                    }
+
+                    Button {
+                        text: "重置"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            color: parent.pressed ? "#7f8c8d" : (parent.hovered ? "#95a5a6" : "#7f8c8d")
+                            radius: 4
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 13
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            loadProtectionData(root.currentProtectionIndex)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ========== 辅助函数 ==========
+
+    // 加载保护数据到右侧编辑区域
+    function loadProtectionData(index) {
+        if (index < 0 || index >= digitalProtectionModel.count) {
+            return
+        }
+
+        var item = digitalProtectionModel.get(index)
+        nameField.text = item.name
+        moduleTypeCombo.currentIndex = moduleTypeCombo.model.indexOf(item.moduleType)
+        registerAddressSpin.value = item.registerAddress
+        channelSpin.value = item.channelNumber
+
+        // 设置默认的TTS文字
+        ttsTextField.text = item.name + "保护报警"
+
+        console.log("✅ 加载保护数据:", item.name)
+    }
+
+    // 保存保护数据
+    function saveProtectionData() {
+        if (root.currentProtectionIndex < 0 || root.currentProtectionIndex >= digitalProtectionModel.count) {
+            return
+        }
+
+        digitalProtectionModel.setProperty(root.currentProtectionIndex, "name", nameField.text)
+        digitalProtectionModel.setProperty(root.currentProtectionIndex, "moduleType", moduleTypeCombo.currentText)
+        digitalProtectionModel.setProperty(root.currentProtectionIndex, "registerAddress", registerAddressSpin.value)
+        digitalProtectionModel.setProperty(root.currentProtectionIndex, "channelNumber", channelSpin.value)
+
+        console.log("✅ 保存保护数据:", nameField.text)
+
+        // TODO: 保存到数据库
+    }
+
+    // 组件加载完成后，加载第一个保护项的数据
+    Component.onCompleted: {
+        if (digitalProtectionModel.count > 0) {
+            loadProtectionData(0)
+        }
+    }
+}

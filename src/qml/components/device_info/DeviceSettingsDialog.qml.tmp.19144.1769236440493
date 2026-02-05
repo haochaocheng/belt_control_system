@@ -1,0 +1,251 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+
+// ✅ 2026-01-24 [设备信息界面重构] 设备参数设置弹窗
+// QDS 预览版本：使用 Rectangle 替代 Dialog
+Rectangle {
+    id: root
+    width: 800
+    height: 600
+    color: "#ec1e1e1e"
+
+    // ========== 公开属性 ==========
+    property string deviceName: "1号皮带（预览）"  // 设备名称
+    property int deviceId: 1                      // 设备ID
+    property int currentCategory: 0               // 当前选中的参数类别
+
+    // ========== 背景图片 ==========
+    Image {
+        anchors.fill: parent
+        source: "images/deviceInfo40.png"
+        fillMode: Image.Stretch
+        smooth: true
+    }
+
+    // ========== 内容区域 ==========
+    Item {
+        id: item1
+        anchors.fill: parent
+
+        // ========== 上部按钮栏 ==========
+        // ✅ 2026-01-24 [FIX]: 使用 Rectangle 容器，351.png 作为背景
+        Rectangle {
+            id: topButtonsContainer
+            anchors.top: parent.top
+            anchors.right: parent.right  // ✅ 2026-01-24 [FIX]: 改为右对齐
+            anchors.topMargin: 10
+            anchors.rightMargin: 20
+            width: 280  // 3个按钮 + 间距 (80*3 + 20*2)
+            height: 45
+            color: "transparent"
+
+            // ✅ 背景图片 351.png
+            Image {
+                id: topButtonsBackground
+                anchors.fill: parent
+                source: "images/351.png"
+                fillMode: Image.Stretch
+                smooth: true
+                z: -1  // ✅ 确保在按钮下方
+            }
+
+            // ✅ 按钮行（在背景图片上方）
+            Row {
+                id: topButtons
+                anchors.centerIn: parent
+                spacing: 20
+
+                Button {
+                    text: "关闭"
+                    width: 80
+                    height: 35
+                    background: Rectangle {
+                        color: "#333333"
+                        border.color: "#666666"
+                        border.width: 1
+                        radius: 4
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#FFFFFF"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: {
+                        // ✅ 2026-01-24: 关闭弹窗
+                        root.visible = false
+                    }
+                }
+
+                Button {
+                    text: "保存"
+                    width: 80
+                    height: 35
+                    background: Rectangle {
+                        color: "#00AA00"
+                        border.color: "#00FF00"
+                        border.width: 1
+                        radius: 4
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#FFFFFF"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: {
+                        // ✅ 2026-01-24: 保存参数（待实现）
+                        console.log("保存参数")
+                    }
+                }
+
+                Button {
+                    text: "重置"
+                    width: 80
+                    height: 35
+                    background: Rectangle {
+                        color: "#AAAA00"
+                        border.color: "#FFFF00"
+                        border.width: 1
+                        radius: 4
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#FFFFFF"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: {
+                        // ✅ 2026-01-24: 重置参数（待实现）
+                        console.log("重置参数")
+                    }
+                }
+            }
+        }
+
+        // ✅ 2026-01-24 [FIX]: 设备名称显示（左上角）
+        Text {
+            id: deviceNameText
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.leftMargin: 20
+            anchors.topMargin: 20
+            text: root.deviceName
+            font.pixelSize: 24
+            font.bold: true
+            color: "#FFFFFF"
+            style: Text.Outline
+            styleColor: "#000000"
+        }
+
+        // ========== 左侧按钮列 ==========
+        // ✅ 2026-01-24 [FIX 100.301]: 使用 Rectangle 容器，042.png 作为背景
+        Rectangle {
+            id: leftButtonsContainer
+            anchors.left: parent.left
+
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: 0
+            anchors.topMargin: 65
+            anchors.bottomMargin: 8
+            width: 142
+            color: "transparent"
+
+            // ✅ 背景图片 042.png（使用 Image 作为背景）
+            Image {
+                id: leftButtonsBackground
+                anchors.fill: parent
+                anchors.rightMargin: 8
+                source: "images/042.png"
+                fillMode: Image.Stretch  // ✅ 2026-01-24 [FIX]: 拉伸填充整个区域
+                smooth: true
+                z: -1  // ✅ 确保在按钮下方
+            }
+
+            // ✅ 按钮列（在背景图片上方）
+            Column {
+                id: leftButtons
+                anchors.fill: parent
+                anchors.margins: 10
+                anchors.leftMargin: 8
+                anchors.rightMargin: 0
+                anchors.topMargin: 13
+                spacing: 10
+
+                Repeater {
+                    model: ["基本参数", "运行参数", "报警设置", "高级设置", "其他"]
+
+                    Button {
+                        width: parent.width - 20
+                        height: 40
+                        text: modelData
+
+                        background: Rectangle {
+                            color: root.currentCategory === index ? "#00AA00" : "#333333"
+                            border.color: root.currentCategory === index ? "#00FF00" : "#666666"
+                            border.width: root.currentCategory === index ? 2 : 1
+                            radius: 4
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            font.bold: root.currentCategory === index
+                        }
+                    }
+                }
+            }
+        }
+
+        // ========== 中间参数显示区域 ==========
+        Rectangle {
+            id: contentArea
+            anchors.left: leftButtonsContainer.right  // ✅ 2026-01-24 [FIX]: 更新锚点引用
+            anchors.right: parent.right
+            anchors.top: topButtons.bottom
+            anchors.bottom: parent.bottom
+            anchors.margins: 20
+            color: "transparent"  // 透明，显示背景图片
+
+            // 占位符文本
+            Column {
+                anchors.centerIn: parent
+                spacing: 20
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: root.deviceName + " - 参数设置"
+                    font.pixelSize: 24
+                    font.bold: true
+                    color: "#FFFFFF"
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "当前类别: " + getCategoryName(root.currentCategory)
+                    font.pixelSize: 18
+                    color: "#CCCCCC"
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "（参数设置界面待实现）"
+                    font.pixelSize: 14
+                    color: "#888888"
+                }
+            }
+
+
+        }
+    }
+
+    // ========== 辅助函数 ==========
+    function getCategoryName(index) {
+        var names = ["基本参数", "运行参数", "报警设置", "高级设置", "其他"]
+        return names[index] || "未知类别"
+    }
+}

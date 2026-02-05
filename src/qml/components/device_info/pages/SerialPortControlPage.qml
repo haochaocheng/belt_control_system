@@ -35,6 +35,15 @@ Rectangle {
     signal requestReturnToCategory()  // ✅ 请求返回到左侧类别
 
     // ========== 函数 ==========
+    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.6]: 添加 getCurrentTab 函数
+    // 返回当前 Tab 的引用
+    function getCurrentTab() {
+        if (!serialConfigPanel.item) {
+            return null
+        }
+        return serialConfigPanel.item.getCurrentTabItem()
+    }
+
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 4]: 修改 getParamFieldCount 函数
     // 返回当前 Tab 的参数数量（动态获取）
     function getParamFieldCount() {

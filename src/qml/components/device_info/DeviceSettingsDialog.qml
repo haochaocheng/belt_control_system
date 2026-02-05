@@ -422,15 +422,32 @@ Item {
                 } else if (currentPage.focusSubArea === 2) {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.13]: 串口控制参数区域使用NavigationManager
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.15]: 主动调用NavigationManager，而不是只跳过
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.6]: 直接调用SerialPortControlPage.getCurrentTab()
                     // 原因：串口控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
                     // 解决：在focusSubArea=2时，检查是否为串口控制页面，调用NavigationManager处理上键
                     if (currentCategory === 6) {
-                        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.4]: 串口控制页面不拦截，让SerialPortControlPage处理
-                        // 原因：SerialPortControlPage有自定义导航逻辑（发送区Tab）
-                        console.log("🔍 [串口控制导航] 上键 - 不拦截，让SerialPortControlPage处理")
-                        // 不设置event.accepted，让事件继续传播到SerialPortControlPage
-                        return
+                        var serialPage = serialPortControlPageLoader.item
+                        if (serialPage && serialPage.navigationManager) {
+                            // 检查当前Tab是否有自定义导航
+                            if (typeof serialPage.getCurrentTab === "function") {
+                                var currentTab = serialPage.getCurrentTab()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [串口控制导航] 上键 - 调用自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Up")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+
+                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                            console.log("🔍 [串口控制导航] 上键 - 调用 NavigationManager.handleDirectionKey")
+                            serialPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
                     } else {
                         // 其他页面：focusSubArea=2是底部按钮区域
                         // ✅ 底部按钮区域：上键导航
@@ -600,11 +617,28 @@ Item {
                     // 解决：在focusSubArea=2时，检查是否为串口控制页面，调用NavigationManager
                     console.log("🔍 [串口控制导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
-                        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.4]: 串口控制页面不拦截，让SerialPortControlPage处理
-                        // 原因：SerialPortControlPage有自定义导航逻辑（发送区Tab）
-                        console.log("🔍 [串口控制导航] 下键 - 不拦截，让SerialPortControlPage处理")
-                        // 不设置event.accepted，让事件继续传播到SerialPortControlPage
-                        return
+                        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.6]: 直接调用SerialPortControlPage.getCurrentTab()
+                        var serialPage = serialPortControlPageLoader.item
+                        if (serialPage && serialPage.navigationManager) {
+                            // 检查当前Tab是否有自定义导航
+                            if (typeof serialPage.getCurrentTab === "function") {
+                                var currentTab = serialPage.getCurrentTab()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [串口控制导航] 下键 - 调用自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Down")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+
+                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                            console.log("🔍 [串口控制导航] 下键 - 调用 NavigationManager.handleDirectionKey")
+                            serialPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
                     }
 
                     // ✅ 其他页面的底部按钮区域：下键导航
@@ -788,16 +822,33 @@ Item {
                     }
                 } else if (currentPage.focusSubArea === 2) {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.16]: 串口控制参数区域使用NavigationManager
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.6]: 直接调用SerialPortControlPage.getCurrentTab()
                     // 原因：串口控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
                     // 解决：在focusSubArea=2时，检查是否为串口控制页面，调用NavigationManager
                     console.log("🔍 [串口控制导航] 左键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
-                        // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.4]: 串口控制页面不拦截，让SerialPortControlPage处理
-                        // 原因：SerialPortControlPage有自定义导航逻辑（发送区Tab）
-                        console.log("🔍 [串口控制导航] 左键 - 不拦截，让SerialPortControlPage处理")
-                        // 不设置event.accepted，让事件继续传播到SerialPortControlPage
-                        return
+                        var serialPage = serialPortControlPageLoader.item
+                        if (serialPage && serialPage.navigationManager) {
+                            // 检查当前Tab是否有自定义导航
+                            if (typeof serialPage.getCurrentTab === "function") {
+                                var currentTab = serialPage.getCurrentTab()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [串口控制导航] 左键 - 调用自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Left")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+
+                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                            console.log("🔍 [串口控制导航] 左键 - 调用 NavigationManager.handleDirectionKey")
+                            serialPage.navigationManager.handleDirectionKey("Left")
+                            event.accepted = true
+                            return
+                        }
                     }
 
                     // ✅ 其他页面的底部按钮区域：左键导航
@@ -924,15 +975,25 @@ Item {
                 console.log("🔍 [串口控制导航] isSerialPortControlPage:", isSerialPortControlPage)
 
                 if (isSerialPortControlPage) {
-                    // ✅ SerialPortControlPage 使用 NavigationManager 处理导航
+                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.6]: 添加自定义导航调用
                     var serialPage = serialPortControlPageLoader.item
                     if (serialPage && serialPage.navigationManager) {
+                        // 检查当前Tab是否有自定义导航
+                        if (typeof serialPage.getCurrentTab === "function") {
+                            var currentTab = serialPage.getCurrentTab()
+                            if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                console.log("✅ [串口控制导航] 右键 - 调用自定义导航")
+                                var handled = currentTab.handleDirectionKey("Right")
+                                if (handled) {
+                                    event.accepted = true
+                                    return
+                                }
+                            }
+                        }
+
+                        // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
                         console.log("🔍 [串口控制导航] 右键 - 调用 NavigationManager.handleDirectionKey")
                         serialPage.navigationManager.handleDirectionKey("Right")
-                        // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.35.3]: 添加返回后调试
-                        console.log("🔍 [串口控制导航] NavigationManager.handleDirectionKey 返回")
-                        console.log("   - currentPage.focusSubArea:", currentPage.focusSubArea)
-                        console.log("   - currentPage.focusParamIndex:", currentPage.focusParamIndex)
                         event.accepted = true
                         return
                     }

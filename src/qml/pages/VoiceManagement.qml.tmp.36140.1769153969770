@@ -1,0 +1,921 @@
+import QtQuick 6.5
+import QtQuick.Controls 6.5
+import QtQuick.Layouts 6.5
+// ❌ 2026-01-23 11:35 [FIX 100.300.3.2] 注释掉不存在的导入
+// import "../components/voice_management"
+import "../Input1/Input1Content"  // ✅ 2026-01-23 12:30 [FIX 100.300.4] 导入 Back 和 Head 组件
+import com.belt.control 1.0       // ✅ 2026-01-23 11:00 [FIX 100.299] 导入 TTSConfig 单例
+
+/**
+ * @brief 语音管理页面
+ *
+ * 功能：
+ * 1. TTS模型配置
+ * 2. 音频文件管理
+ * 3. 批量识别和生成
+ *
+ * ✅ 2026-01-23 10:30 [FIX 100.299] 语音管理界面
+ * ✅ 2026-01-23 11:00 [FIX 100.299] 后端集成
+ * ✅ 2026-01-23 12:30 [FIX 100.300.4] 使用标准 Head 和 Back 组件（与前5个页面一致）
+ */
+Item {
+    id: root
+    // ✅ 2026-01-23 12:30 [FIX 100.300.4] 添加默认尺寸（与其他页面一致）
+    width: 1920   // 默认宽度（设计尺寸 1920x1080）
+    height: 1080  // 默认高度（设计尺寸 1920x1080）
+
+    // ✅ 2026-01-23 12:30 [FIX 100.300.4] 添加 currentPageIndex 属性（与其他页面一致）
+    property int currentPageIndex: 0
+
+    // ✅ 2026-01-23 15:30 [FIX 100.300.7] 防止重复点击测试按钮
+    property bool isTesting: false
+
+    // ✅ 2026-01-23 12:30 [FIX 100.300.4] 使用 Back 组件作为背景（与前5个页面一致）
+    Back {
+        anchors.fill: parent
+        z: 0  // 确保在最底层
+        enabled: false  // 不接收鼠标事件，只作为视觉背景
+    }
+
+    // ✅ 2026-01-23 12:30 [FIX 100.300.4] 使用标准 Head 组件（与前5个页面一致）
+    // ❌ 2026-01-23 12:30 [FIX 100.300.4] 移除自定义的"语音管理"标题和帮助按钮
+    Item {
+        id: headerContainer
+        anchors.top: parent.top
+        anchors.left: parent.left
+        width: 1920
+        height: 80
+        clip: true
+
+        transform: Scale {
+            property real scaleFactor: root.width / 1920
+            xScale: scaleFactor
+            yScale: scaleFactor
+            origin.x: 0
+            origin.y: 0
+        }
+
+        Head {
+            id: header
+            width: 1920
+            height: 80
+            currentPageIndex: root.currentPageIndex
+        }
+    }
+
+    // 主内容区域
+    RowLayout {
+        anchors.top: headerContainer.bottom  // ✅ 2026-01-23 12:30 [FIX 100.300.4] 从 headerContainer 开始
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 15
+        spacing: 15
+
+        // 左侧：TTS配置区域
+        Rectangle {
+            Layout.preferredWidth: 400
+            Layout.fillHeight: true
+            color: "transparent"  // ✅ 2026-01-23 15:15 [FIX 100.300.6] 使用背景图片，矩形背景透明
+
+            // ✅ 2026-01-23 15:10 [FIX 100.300.6] 背景图片
+            Image {
+                id: audio196
+                anchors.fill: parent
+                anchors.margins: 0
+                source: "images/Audio196.png"
+                fillMode: Image.Stretch  // ✅ 2026-01-23 15:20 [FIX 100.300.6.1] 拉伸填充整个区域
+                z: 0  // 背景层
+            }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 15
+                spacing: 15
+                z: 1  // ✅ 2026-01-23 15:10 [FIX 100.300.6] 内容层在背景之上
+
+                // 区域标题
+                Text {
+                    text: "🎤 TTS模型配置"
+                    font.pixelSize: 18
+                    font.bold: true
+                    color: "#00d4ff"
+                }
+
+                // ✅ 2026-01-23 13:00 [FIX 100.300.5] TTS配置完整实现
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+
+                    ColumnLayout {
+                        width: parent.width
+                        spacing: 15
+
+                        // 模型选择
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 5
+
+                            Text {
+                                text: "TTS模型："
+                                font.pixelSize: 14
+                                color: "#ecf0f1"
+                            }
+
+                            ComboBox {
+                                id: modelComboBox
+                                Layout.fillWidth: true
+                                model: TTSConfig.modelNames()
+                                currentIndex: TTSConfig.modelIndex(TTSConfig.Test)
+
+                                onCurrentIndexChanged: {
+                                    if (currentIndex >= 0) {
+                                        TTSConfig.setModelIndex(TTSConfig.Test, currentIndex)
+
+                                        // ✅ 2026-01-23 15:45 [FIX 100.300.8] 动态更新说话人ID范围
+                                        var maxId = TTSConfig.maxSpeakerId(currentIndex)
+                                        speakerSpinBox.to = maxId
+                                        console.log("模型切换:", modelComboBox.currentText, "最大说话人ID:", maxId)
+
+                                        // 如果当前ID超出范围，重置为0
+                                        if (speakerSpinBox.value > maxId) {
+                                            speakerSpinBox.value = 0
+                                            console.log("  说话人ID超出范围，重置为0")
+                                        }
+                                    }
+                                }
+
+                                background: Rectangle {
+                                    color: parent.pressed ? "#34495e" : "#2c3e50"
+                                    border.color: parent.activeFocus ? "#00d4ff" : "#34495e"
+                                    border.width: 1
+                                    radius: 5
+                                }
+
+                                contentItem: Text {
+                                    leftPadding: 10
+                                    text: modelComboBox.displayText
+                                    font.pixelSize: 14
+                                    color: "#ecf0f1"
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+                        }
+
+                        // 说话人ID
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 5
+
+                            Text {
+                                text: "说话人ID："
+                                font.pixelSize: 14
+                                color: "#ecf0f1"
+                            }
+
+                            SpinBox {
+                                id: speakerSpinBox
+                                Layout.fillWidth: true
+                                from: 0
+                                to: 99
+                                value: TTSConfig.speakerId(TTSConfig.Test)
+                                editable: true  // ✅ 2026-01-23 13:30 [FIX 100.300.5.3] 允许用户编辑
+
+                                onValueChanged: {
+                                    TTSConfig.setSpeakerId(TTSConfig.Test, value)
+                                }
+
+                                background: Rectangle {
+                                    color: "#2c3e50"
+                                    border.color: parent.activeFocus ? "#00d4ff" : "#34495e"
+                                    border.width: 1
+                                    radius: 5
+                                }
+
+                                contentItem: TextInput {
+                                    text: speakerSpinBox.textFromValue(speakerSpinBox.value, speakerSpinBox.locale)
+                                    font.pixelSize: 14
+                                    color: "#ecf0f1"
+                                    horizontalAlignment: Qt.AlignHCenter
+                                    verticalAlignment: Qt.AlignVCenter
+                                    readOnly: !speakerSpinBox.editable
+                                    validator: speakerSpinBox.validator
+                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                }
+                            }
+                        }
+
+                        // 语速
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 5
+
+                            RowLayout {
+                                Layout.fillWidth: true
+
+                                Text {
+                                    text: "语速："
+                                    font.pixelSize: 14
+                                    color: "#ecf0f1"
+                                }
+
+                                Text {
+                                    text: rateSlider.value.toFixed(2)
+                                    font.pixelSize: 14
+                                    color: "#00d4ff"
+                                    Layout.alignment: Qt.AlignRight
+                                }
+                            }
+
+                            Slider {
+                                id: rateSlider
+                                Layout.fillWidth: true
+                                from: 0.5
+                                to: 2.0
+                                value: TTSConfig.rate(TTSConfig.Test)
+                                stepSize: 0.1
+
+                                onValueChanged: {
+                                    TTSConfig.setRate(TTSConfig.Test, value)
+                                }
+
+                                background: Rectangle {
+                                    x: rateSlider.leftPadding
+                                    y: rateSlider.topPadding + rateSlider.availableHeight / 2 - height / 2
+                                    implicitWidth: 200
+                                    implicitHeight: 4
+                                    width: rateSlider.availableWidth
+                                    height: implicitHeight
+                                    radius: 2
+                                    color: "#34495e"
+
+                                    Rectangle {
+                                        width: rateSlider.visualPosition * parent.width
+                                        height: parent.height
+                                        color: "#00d4ff"
+                                        radius: 2
+                                    }
+                                }
+
+                                handle: Rectangle {
+                                    x: rateSlider.leftPadding + rateSlider.visualPosition * (rateSlider.availableWidth - width)
+                                    y: rateSlider.topPadding + rateSlider.availableHeight / 2 - height / 2
+                                    implicitWidth: 16
+                                    implicitHeight: 16
+                                    radius: 8
+                                    color: rateSlider.pressed ? "#00a8cc" : "#00d4ff"
+                                    border.color: "#ecf0f1"
+                                    border.width: 1
+                                }
+                            }
+                        }
+
+                        // 音量
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 5
+
+                            RowLayout {
+                                Layout.fillWidth: true
+
+                                Text {
+                                    text: "音量："
+                                    font.pixelSize: 14
+                                    color: "#ecf0f1"
+                                }
+
+                                Text {
+                                    text: volumeSlider.value.toFixed(2)
+                                    font.pixelSize: 14
+                                    color: "#00d4ff"
+                                    Layout.alignment: Qt.AlignRight
+                                }
+                            }
+
+                            Slider {
+                                id: volumeSlider
+                                Layout.fillWidth: true
+                                from: 0.0
+                                to: 1.0
+                                value: TTSConfig.volume(TTSConfig.Test)
+                                stepSize: 0.1
+
+                                onValueChanged: {
+                                    TTSConfig.setVolume(TTSConfig.Test, value)
+                                }
+
+                                background: Rectangle {
+                                    x: volumeSlider.leftPadding
+                                    y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                                    implicitWidth: 200
+                                    implicitHeight: 4
+                                    width: volumeSlider.availableWidth
+                                    height: implicitHeight
+                                    radius: 2
+                                    color: "#34495e"
+
+                                    Rectangle {
+                                        width: volumeSlider.visualPosition * parent.width
+                                        height: parent.height
+                                        color: "#00d4ff"
+                                        radius: 2
+                                    }
+                                }
+
+                                handle: Rectangle {
+                                    x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
+                                    y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                                    implicitWidth: 16
+                                    implicitHeight: 16
+                                    radius: 8
+                                    color: volumeSlider.pressed ? "#00a8cc" : "#00d4ff"
+                                    border.color: "#ecf0f1"
+                                    border.width: 1
+                                }
+                            }
+                        }
+
+                        // 测试按钮
+                        Button {
+                            text: root.isTesting ? "⏳ 播放中..." : "🔊 测试语音"
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 40
+                            enabled: !root.isTesting  // ✅ 2026-01-23 15:30 [FIX 100.300.7] 播放时禁用按钮
+
+                            background: Rectangle {
+                                color: parent.enabled ? (parent.pressed ? "#27ae60" : "#2ecc71") : "#95a5a6"
+                                border.color: parent.enabled ? "#2ecc71" : "#7f8c8d"
+                                border.width: 1
+                                radius: 5
+                            }
+
+                            contentItem: Text {
+                                text: parent.text
+                                font.pixelSize: 14
+                                color: parent.enabled ? "#1a1a1a" : "#5a5a5a"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            onClicked: {
+                                // ✅ 2026-01-23 15:30 [FIX 100.300.7] 防止重复点击
+                                if (root.isTesting) {
+                                    console.log("⚠️ 正在播放中，忽略点击")
+                                    return
+                                }
+
+                                root.isTesting = true
+
+                                // ✅ 2026-01-23 13:30 [FIX 100.300.5.3] 调用后端测试TTS
+                                var testText = "这是一个测试语音，用于验证TTS配置是否正确。"
+                                audioManagementController.testTts(testText)
+                                console.log("测试TTS语音")
+                                console.log("  模型:", modelComboBox.currentText)
+                                console.log("  说话人:", speakerSpinBox.value)
+                                console.log("  语速:", rateSlider.value)
+                                console.log("  音量:", volumeSlider.value)
+
+                                // ✅ 2026-01-23 15:30 [FIX 100.300.7] 10秒后自动恢复（防止卡住）
+                                testTimeoutTimer.restart()
+                            }
+                        }
+
+                        // ✅ 2026-01-23 15:30 [FIX 100.300.7] 测试超时定时器
+                        Timer {
+                            id: testTimeoutTimer
+                            interval: 10000  // 10秒超时
+                            repeat: false
+                            onTriggered: {
+                                if (root.isTesting) {
+                                    console.log("⚠️ 测试超时，自动恢复按钮状态")
+                                    root.isTesting = false
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+
+        }
+
+        // 右侧：音频文件管理区域
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "transparent"  // ✅ 2026-01-23 15:15 [FIX 100.300.6] 使用背景图片，矩形背景透明
+
+            // ✅ 2026-01-23 15:10 [FIX 100.300.6] 背景图片
+            Image {
+                id: _086
+                anchors.fill: parent
+                anchors.margins: 0
+                source: "images/Audio349.png"
+                fillMode: Image.Stretch  // ✅ 2026-01-23 15:20 [FIX 100.300.6.1] 拉伸填充整个区域
+                z: 0  // 背景层
+            }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 15
+                spacing: 15
+                z: 1  // ✅ 2026-01-23 15:10 [FIX 100.300.6] 内容层在背景之上
+
+                // 区域标题
+                Text {
+                    text: "📁 音频文件管理"
+                    font.pixelSize: 18
+                    font.bold: true
+                    color: "#00d4ff"
+                }
+
+                // 目录选择
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Text {
+                        text: "扫描目录："
+                        font.pixelSize: 14
+                        color: "#ecf0f1"
+                    }
+
+                    TextField {
+                        id: dirPathInput
+                        Layout.fillWidth: true
+                        placeholderText: "E:/2025/3_gongkongji/belt_control_system/AUDIO/1#PD"
+                        text: "E:/2025/3_gongkongji/belt_control_system/AUDIO/1#PD"
+
+                        background: Rectangle {
+                            color: "transparent"
+                            border.color: dirPathInput.activeFocus ? "#00d4ff" : "#34495e"
+                            border.width: 1
+                            radius: 5
+                        }
+
+                        color: "#ecf0f1"
+                        font.pixelSize: 14
+                    }
+
+                    Button {
+                        text: "📂 浏览"
+                        Layout.preferredWidth: 80
+
+                        background: Rectangle {
+                            color: parent.pressed ? "#34495e" : "#2c3e50"
+                            border.color: "#00d4ff"
+                            border.width: 1
+                            radius: 5
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            color: "#ecf0f1"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            // TODO: 打开文件夹选择对话框
+                            console.log("打开文件夹选择对话框")
+                        }
+                    }
+
+                    Button {
+                        text: "🔍 扫描"
+                        Layout.preferredWidth: 80
+
+                        background: Rectangle {
+                            color: parent.pressed ? "#00a8cc" : "#00d4ff"
+                            border.color: "#00d4ff"
+                            border.width: 1
+                            radius: 5
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            color: "#1a1a1a"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            // ✅ 2026-01-23 13:00 [FIX 100.300.5] 调用后端扫描目录
+                            audioManagementController.scanDirectory(dirPathInput.text)
+                            // 刷新文件列表
+                            fileListView.refreshFileList()
+                            // 显示提示
+                            var count = audioManagementController.totalFiles
+                            if (count > 0) {
+                                toastMessage.show("扫描完成，找到 " + count + " 个音频文件", false)
+                            } else {
+                                toastMessage.show("未找到音频文件", true)
+                            }
+                        }
+                    }
+                }
+
+                // 文件列表
+                // ✅ 2026-01-23 13:00 [FIX 100.300.5] 文件列表完整实现
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    color: "#1a1a1a"
+                    radius: 5
+
+                    ListView {
+                        id: fileListView
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        clip: true
+                        spacing: 5
+
+                        // 绑定到后端文件列表
+                        model: ListModel {
+                            id: fileListModel
+                        }
+
+                        // 监听文件列表更新
+                        Connections {
+                            target: audioManagementController
+                            function onFileListUpdated() {
+                                refreshFileList()
+                            }
+                        }
+
+                        // 刷新文件列表
+                        function refreshFileList() {
+                            fileListModel.clear()
+                            var files = audioManagementController.getFileList()
+                            for (var i = 0; i < files.length; i++) {
+                                fileListModel.append(files[i])
+                            }
+                        }
+
+                        // 文件项委托
+                        delegate: Rectangle {
+                            width: fileListView.width
+                            height: 80
+                            color: "#2c3e50"
+                            radius: 5
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 5
+
+                                // 文件名
+                                Text {
+                                    text: model.fileName || ""
+                                    font.pixelSize: 14
+                                    font.bold: true
+                                    color: "#ecf0f1"
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
+
+                                // 状态和识别文本
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 10
+
+                                    // 状态标签
+                                    Rectangle {
+                                        width: 60
+                                        height: 20
+                                        radius: 3
+                                        color: {
+                                            var status = model.status || 0
+                                            if (status === 0) return "#95a5a6"  // Pending
+                                            if (status === 1) return "#f39c12"  // Recognizing
+                                            if (status === 2) return "#3498db"  // Recognized
+                                            if (status === 3) return "#f39c12"  // Generating
+                                            if (status === 4) return "#2ecc71"  // Generated
+                                            if (status === 5) return "#e74c3c"  // Failed
+                                            return "#95a5a6"
+                                        }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: {
+                                                var status = model.status || 0
+                                                if (status === 0) return "待处理"
+                                                if (status === 1) return "识别中"
+                                                if (status === 2) return "已识别"
+                                                if (status === 3) return "生成中"
+                                                if (status === 4) return "已生成"
+                                                if (status === 5) return "失败"
+                                                return "未知"
+                                            }
+                                            font.pixelSize: 11
+                                            color: "#ffffff"
+                                        }
+                                    }
+
+                                    // 识别的文本
+                                    Text {
+                                        text: model.recognizedText || "（未识别）"
+                                        font.pixelSize: 12
+                                        color: model.recognizedText ? "#ecf0f1" : "#95a5a6"
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+                                }
+
+                                // 错误信息（如果有）
+                                Text {
+                                    visible: model.errorMessage && model.errorMessage.length > 0
+                                    text: "错误: " + (model.errorMessage || "")
+                                    font.pixelSize: 11
+                                    color: "#e74c3c"
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
+                            }
+                        }
+
+                        // 空列表提示
+                        Text {
+                            visible: fileListView.count === 0
+                            anchors.centerIn: parent
+                            text: '暂无文件\n请点击"扫描"按钮扫描音频文件'
+                            font.pixelSize: 14
+                            color: "#95a5a6"
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                    }
+                }
+
+                // 批量操作按钮
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Button {
+                        text: "🎯 批量识别"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 40
+
+                        background: Rectangle {
+                            color: parent.pressed ? "#27ae60" : "#2ecc71"
+                            border.color: "#2ecc71"
+                            border.width: 1
+                            radius: 5
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            color: "#1a1a1a"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端批量识别
+                            audioManagementController.recognizeAll()
+                        }
+                    }
+
+                    Button {
+                        text: "🎙️ 批量生成"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 40
+
+                        background: Rectangle {
+                            color: parent.pressed ? "#2980b9" : "#3498db"
+                            border.color: "#3498db"
+                            border.width: 1
+                            radius: 5
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            color: "#ecf0f1"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端批量生成
+                            audioManagementController.generateAllTts()
+                        }
+                    }
+
+                    Button {
+                        text: "⏹️ 停止"
+                        Layout.preferredWidth: 100
+                        Layout.preferredHeight: 40
+
+                        background: Rectangle {
+                            color: parent.pressed ? "#c0392b" : "#e74c3c"
+                            border.color: "#e74c3c"
+                            border.width: 1
+                            radius: 5
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            color: "#ecf0f1"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端停止处理
+                            audioManagementController.stopProcessing()
+                        }
+                    }
+                }
+
+                // 进度显示
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Text {
+                        text: "进度："
+                        font.pixelSize: 14
+                        color: "#ecf0f1"
+                    }
+
+                    ProgressBar {
+                        id: progressBar
+                        Layout.fillWidth: true
+                        // ✅ 2026-01-23 11:00 [FIX 100.299] 绑定后端进度
+                        value: audioManagementController.progress / 100
+
+                        background: Rectangle {
+                            implicitWidth: 200
+                            implicitHeight: 6
+                            color: "#34495e"
+                            radius: 3
+                        }
+
+                        contentItem: Item {
+                            implicitWidth: 200
+                            implicitHeight: 6
+
+                            Rectangle {
+                                width: progressBar.visualPosition * parent.width
+                                height: parent.height
+                                radius: 3
+                                color: "#00d4ff"
+                            }
+                        }
+                    }
+
+                    Text {
+                        id: progressText
+                        // ✅ 2026-01-23 11:00 [FIX 100.299] 绑定后端进度文本
+                        text: audioManagementController.processedFiles + " / " +
+                              audioManagementController.totalFiles + " (" +
+                              audioManagementController.progress + "%)"
+                        font.pixelSize: 14
+                        color: "#00d4ff"
+                        Layout.preferredWidth: 120
+                    }
+                }
+            }
+
+
+        }
+    }
+
+    // ✅ 2026-01-23 13:00 [FIX 100.300.5] Toast 提示组件
+    Rectangle {
+        id: toastMessage
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 100
+        width: Math.min(parent.width * 0.8, 400)
+        height: 60
+        radius: 8
+        color: "#2c3e50"
+        border.color: "#00d4ff"
+        border.width: 2
+        opacity: 0
+        visible: opacity > 0
+        z: 1000
+
+        property string message: ""
+        property bool isError: false
+
+        Behavior on opacity {
+            NumberAnimation { duration: 300 }
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 15
+            spacing: 10
+
+            Text {
+                text: toastMessage.isError ? "❌" : "✅"
+                font.pixelSize: 24
+            }
+
+            Text {
+                text: toastMessage.message
+                font.pixelSize: 14
+                color: toastMessage.isError ? "#e74c3c" : "#ecf0f1"
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+        }
+
+        Timer {
+            id: toastTimer
+            interval: 3000
+            onTriggered: toastMessage.opacity = 0
+        }
+
+        function show(msg, error) {
+            message = msg
+            isError = error || false
+            opacity = 1
+            toastTimer.restart()
+        }
+    }
+
+    // ✅ 2026-01-23 13:00 [FIX 100.300.5] 监听后端错误信号
+    Connections {
+        target: audioManagementController
+
+        function onErrorOccurred(message) {
+            toastMessage.show(message, true)
+        }
+
+        function onProcessingFinished(success, message) {
+            toastMessage.show(message, !success)
+        }
+    }
+
+    // 帮助对话框
+    Dialog {
+        id: helpDialog
+        title: "语音管理帮助"
+        modal: true
+        anchors.centerIn: parent
+        width: 600
+        height: 400
+
+        background: Rectangle {
+            color: "#2c3e50"
+            border.color: "#00d4ff"
+            border.width: 2
+            radius: 10
+        }
+
+        contentItem: ScrollView {
+            clip: true
+
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: "#ecf0f1"
+                font.pixelSize: 14
+                lineHeight: 1.5
+
+                text: "
+<b>语音管理功能说明</b>
+
+<b>1. TTS模型配置</b>
+- 选择TTS模型（7个可选模型）
+- 设置说话人ID
+- 调整语速和音量
+- 测试语音效果
+
+<b>2. 音频文件管理</b>
+- 扫描指定目录的音频文件
+- 支持格式：.wav, .mp3, .ogg, .flac
+- 显示文件列表和状态
+
+<b>3. 批量识别</b>
+- 使用STT识别音频文件内容
+- 自动识别所有文件
+- 显示识别结果
+
+<b>4. 批量生成</b>
+- 根据识别的文本生成TTS语音
+- 使用当前配置的TTS模型
+- 保存到 generated_tts/ 目录
+
+<b>使用流程</b>
+1. 配置TTS模型和参数
+2. 扫描音频文件目录
+3. 批量识别音频内容
+4. 批量生成TTS语音
+5. 查看生成结果
+                "
+            }
+        }
+
+        standardButtons: Dialog.Ok
+    }
+}

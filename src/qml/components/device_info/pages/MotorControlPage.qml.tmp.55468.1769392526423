@@ -1,0 +1,60 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+
+// ✅ 2026-01-25 [电机控制参数设置] 电机控制主页面（左右分栏布局）
+// ✅ 2026-01-25 [FIX 100.311]: 重构为模块化设计，支持键盘操作
+Rectangle {
+    id: root
+    color: "transparent"
+
+    // ========== 公开属性 ==========
+    property int deviceId: 1
+    property string deviceName: "1号皮带"
+    property int currentMotorIndex: 0  // 当前选中的电机索引 (0-7)
+
+    // ========== 键盘导航支持 ==========
+    focus: true
+
+    Keys.onPressed: {
+        // 将键盘事件转发给子组件
+        if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+            motorListPanel.focus = true
+        } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
+            motorConfigPanel.focus = true
+        }
+    }
+
+    // ========== 左右分栏布局 ==========
+    Row {
+        anchors.fill: parent
+        spacing: 0
+
+        // ========== 左侧：电机列表 ==========
+        MotorListPanel {
+            id: motorListPanel
+            width: 200
+            height: parent.height
+            currentMotorIndex: root.currentMotorIndex
+
+            onMotorSelected: function(motorIndex) {
+                root.currentMotorIndex = motorIndex
+                console.log("选中电机:", motorIndex + 1)
+            }
+        }
+
+        // ========== 分隔线 ==========
+        Rectangle {
+            width: 2
+            height: parent.height
+            color: "#3d4556"
+        }
+
+        // ========== 右侧：电机配置面板 ==========
+        MotorConfigPanel {
+            id: motorConfigPanel
+            width: parent.width - motorListPanel.width - 2
+            height: parent.height
+            motorIndex: root.currentMotorIndex
+        }
+    }
+}

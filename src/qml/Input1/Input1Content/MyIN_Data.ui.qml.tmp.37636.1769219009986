@@ -1,0 +1,45 @@
+import QtQuick
+
+// ✅ 2026-01-24 [设备信息界面重构] 设备信息卡片组件
+// QDS 兼容：纯声明式 UI 定义，无 JavaScript
+Rectangle {
+    id: root
+
+    // ========== 公开属性 ==========
+    property string deviceName: "" // 设备名称
+    property string deviceId: "" // 设备ID
+    property bool isSelected: false // 是否选中
+    property bool isRunning: false // 是否运行中
+    property real speed: 0.0 // 当前速度
+    property string status: "停止" // 状态文本
+
+    // ========== 样式属性 ==========
+    color: "transparent" // 透明背景
+
+    // ✅ 2026-01-24 [设备信息界面重构] Phase 4: 选中状态视觉反馈
+    border.color: isSelected ? "#00FF00" : "transparent"  // 选中时绿色边框
+    border.width: isSelected ? 3 : 0  // 选中时 3px 边框
+    radius: 8  // 圆角
+
+    // ========== 背景图片（填充整个组件）==========
+    Image {
+        id: backgroundImage
+        anchors.fill: parent
+        source: "images/IN_Data.png"
+        fillMode: Image.Stretch
+        smooth: true
+    }
+
+    // ========== 设备名称文本（顶部中间）==========
+    Text {
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.topMargin: -2
+        text: deviceName
+        font.pixelSize: 16
+        font.bold: true
+        color: "#FFFFFF"
+        style: Text.Outline
+        styleColor: "#000000"
+    }
+}

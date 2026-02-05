@@ -1,0 +1,265 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+
+// ✅ 2026-01-24 [设备信息界面重构] 设备参数设置弹窗
+// 左侧按钮列 + 上部按钮 + 中间参数显示区域
+Dialog {
+    id: root
+
+    // ========== 公开属性 ==========
+    property string deviceName: ""              // 设备名称
+    property int deviceId: -1                   // 设备ID
+    property int currentCategory: 0             // 当前选中的参数类别
+
+    // ========== 弹窗配置 ==========
+    width: parent ? parent.width * 0.8 : 800
+    height: parent ? parent.height * 0.8 : 600
+    modal: true
+    closePolicy: Popup.CloseOnEscape
+    anchors.centerIn: parent
+
+    // ✅ 2026-01-24 [QDS 预览] 在 QDS 中默认显示弹窗
+    visible: true  // QDS 预览时可见，运行时由代码控制
+
+    // 标题
+    title: deviceName + " - 参数设置"
+
+    // ========== 背景样式 ==========
+    // ✅ 2026-01-24 [设备信息界面重构] 使用图片背景替代矩形框
+    background: Image {
+        source: "images/deviceInfo125.png"
+        fillMode: Image.Stretch  // 拉伸填充整个对话框
+        smooth: true
+        asynchronous: true
+    }
+
+    // ========== 内容区域 ==========
+    contentItem: Item {
+        // ========== 上部按钮栏 ==========
+        Row {
+            id: topButtons
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.topMargin: 10
+            spacing: 20
+
+            Button {
+                text: "关闭"
+                onClicked: root.close()
+                background: Rectangle {
+                    color: parent.pressed ? "#555555" : (parent.hovered ? "#444444" : "#333333")
+                    border.color: "#666666"
+                    border.width: 1
+                    radius: 4
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "#FFFFFF"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            Button {
+                text: "保存"
+                onClicked: saveSettings()
+                background: Rectangle {
+                    color: parent.pressed ? "#006600" : (parent.hovered ? "#008800" : "#00AA00")
+                    border.color: "#00FF00"
+                    border.width: 1
+                    radius: 4
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "#FFFFFF"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            Button {
+                text: "重置"
+                onClicked: resetSettings()
+                background: Rectangle {
+                    color: parent.pressed ? "#666600" : (parent.hovered ? "#888800" : "#AAAA00")
+                    border.color: "#FFFF00"
+                    border.width: 1
+                    radius: 4
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "#FFFFFF"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+        }
+
+        // ========== 左侧按钮列 ==========
+        Column {
+            id: leftButtons
+            anchors.left: parent.left
+            anchors.top: topButtons.bottom
+            anchors.bottom: parent.bottom
+            anchors.topMargin: 20
+            anchors.leftMargin: 10
+            width: 150
+            spacing: 10
+
+            Repeater {
+                model: ["基本参数", "运行参数", "报警设置", "高级设置", "其他"]
+
+                Button {
+                    width: parent.width
+                    height: 40
+                    text: modelData
+
+                    background: Rectangle {
+                        color: {
+                            if (root.currentCategory === index) return "#00AA00"  // 选中
+                            if (parent.pressed) return "#555555"
+                            if (parent.hovered) return "#444444"
+                            return "#333333"
+                        }
+                        border.color: root.currentCategory === index ? "#00FF00" : "#666666"
+                        border.width: root.currentCategory === index ? 2 : 1
+                        radius: 4
+                    }
+
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#FFFFFF"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.bold: root.currentCategory === index
+                    }
+
+                    onClicked: {
+                        root.currentCategory = index
+                        console.log("[DeviceSettingsDialog] 切换到类别:", modelData)
+                    }
+                }
+            }
+        }
+
+        // ========== 中间参数显示区域（矩形占位符） ==========
+        Rectangle {
+            id: contentArea
+            anchors.left: leftButtons.right
+            anchors.right: parent.right
+            anchors.top: topButtons.bottom
+            anchors.bottom: parent.bottom
+            anchors.margins: 20
+            color: "#2A2A2A"
+            border.color: "#555555"
+            border.width: 2
+            radius: 4
+
+            // 图片占位符（用户后续提供）
+            Image {
+                id: backgroundImage
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectFit
+                source: ""  // 用户后续提供图片路径
+                visible: source != ""
+                smooth: true
+                asynchronous: true
+            }
+
+            // 参数内容区域（根据 currentCategory 切换）
+            Loader {
+                id: contentLoader
+                anchors.fill: parent
+                anchors.margins: 20
+
+                // 当前阶段：显示占位符文本
+                sourceComponent: placeholderComponent
+            }
+
+            // 占位符组件（Phase 1）
+            Component {
+                id: placeholderComponent
+
+                Rectangle {
+                    color: "transparent"
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 20
+
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: getCategoryName(root.currentCategory)
+                            font.pixelSize: 24
+                            font.bold: true
+                            color: "#FFFFFF"
+                        }
+
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: "参数设置界面"
+                            font.pixelSize: 18
+                            color: "#CCCCCC"
+                        }
+
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: "（待用户规划具体参数后实现）"
+                            font.pixelSize: 14
+                            color: "#888888"
+                        }
+
+                        Rectangle {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: 300
+                            height: 200
+                            color: "#1E1E1E"
+                            border.color: "#666666"
+                            border.width: 1
+                            radius: 4
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "图片占位符区域\n（用户后续提供背景图片）"
+                                font.pixelSize: 14
+                                color: "#666666"
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ========== 辅助函数 ==========
+    function getCategoryName(index) {
+        var names = ["基本参数", "运行参数", "报警设置", "高级设置", "其他"]
+        return names[index] || "未知类别"
+    }
+
+    function saveSettings() {
+        console.log("[DeviceSettingsDialog] 保存设置 - 设备ID:", deviceId, "类别:", currentCategory)
+        // TODO: 实现保存逻辑
+        root.close()
+    }
+
+    function resetSettings() {
+        console.log("[DeviceSettingsDialog] 重置设置 - 设备ID:", deviceId)
+        // TODO: 实现重置逻辑
+    }
+
+    // ========== 调试信息 ==========
+    onOpened: {
+        console.log("[DeviceSettingsDialog] 打开弹窗")
+        console.log("   设备名称:", deviceName)
+        console.log("   设备ID:", deviceId)
+    }
+
+    onClosed: {
+        console.log("[DeviceSettingsDialog] 关闭弹窗")
+    }
+
+
+}

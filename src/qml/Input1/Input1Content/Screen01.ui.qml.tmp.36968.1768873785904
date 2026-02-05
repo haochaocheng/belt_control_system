@@ -1,0 +1,93 @@
+
+
+/*
+This is a UI file (.ui.qml) that is intended to be edited in Qt Design Studio only.
+It is supposed to be strictly declarative and only uses a subset of QML. If you edit
+this file manually, you might introduce QML code that is not supported by Qt Design Studio.
+Check out https://doc.qt.io/qtcreator/creator-quick-ui-forms.html for details on .ui.qml files.
+*/
+import QtQuick
+import QtQuick.Controls
+import Input1
+
+Rectangle {
+    width: 1920
+    height: 1080
+    // 2026-01-12: 移除固定尺寸，使用 anchors.fill 自适应父容器
+    // 避免与 SwipeView 的 ListView 产生 polish() 循环
+    // width: Constants.width    // 原始固定尺寸 1920
+    // height: Constants.height  // 原始固定尺寸 1080
+    anchors.fill: parent // 自适应父容器尺寸
+
+    color: Constants.backgroundColor
+
+    // ✅ 2026-01-20 [FIX 100.254] 自动缩放以适应屏幕
+    // 计算缩放比例：取宽度和高度缩放比例的较小值（保持宽高比）
+    property real scaleWidth: parent.width / 1920
+    property real scaleHeight: parent.height / 1080
+    property real scaleFactor: Math.min(scaleWidth, scaleHeight)
+
+    // 应用缩放变换（左上角为原点）
+    transform: Scale {
+        origin.x: 0
+        origin.y: 0
+        xScale: scaleFactor
+        yScale: scaleFactor
+    }
+
+    // 日志输出缩放信息
+    Component.onCompleted: {
+        console.log("═══════════════════════════════════════════")
+        console.log("📐 [FIX 100.254] Input1 Scaling Info")
+        console.log("═══════════════════════════════════════════")
+        console.log("   Design size:  1920 x 1080")
+        console.log("   Parent size: ", parent.width, "x", parent.height)
+        console.log("   Scale factor:", scaleFactor.toFixed(3))
+        console.log("   Scaled size: ", (1920 * scaleFactor).toFixed(0), "x", (1080 * scaleFactor).toFixed(0))
+        console.log("═══════════════════════════════════════════")
+    }
+
+    Back {
+        id: back
+    }
+
+    Head {
+        id: head
+        x: 0
+        y: 0
+        width: 1920
+        height: 80
+    }
+
+    MyIN_State {
+        id: iN_State
+        x: 0
+        y: 86
+        width: 934
+        height: 568
+    }
+
+    MyIN_Data {
+        id: myIN_Data
+        x: 0
+        y: 652
+        width: 669
+        height: 420
+    }
+
+    MyIN_Data {
+        id: myIN_Data1
+        x: 667
+        y: 647
+        width: 646
+        height: 425
+    }
+
+    MyIN_Data {
+        id: myIN_Data2
+        x: 1319
+        y: 678
+        width: 608
+        height: 394
+    }
+}
