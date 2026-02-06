@@ -550,6 +550,34 @@ void SerialPortController::resetConfig()
     qDebug() << "✅ [SerialPortController] 配置已重置为默认值";
 }
 
+// ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.5]: 断开/重连 readyRead 信号（用于 MODBUS 从站）
+
+void SerialPortController::disconnectReadyReadSignal()
+{
+    if (m_currentSerialPort) {
+        disconnect(m_currentSerialPort, &QSerialPort::readyRead,
+                   this, &SerialPortController::handleReadyRead);
+        qDebug() << "✅ [SerialPortController] 已断开 readyRead 信号连接";
+        qDebug() << "   - 串口:" << m_currentSerialPort->portName();
+        qDebug() << "   - 原因: MODBUS 从站需要独占串口数据接收";
+    } else {
+        qDebug() << "⚠️ [SerialPortController] 当前串口对象不存在，无需断开信号";
+    }
+}
+
+void SerialPortController::reconnectReadyReadSignal()
+{
+    if (m_currentSerialPort) {
+        // 使用 Qt::UniqueConnection 避免重复连接
+        connect(m_currentSerialPort, &QSerialPort::readyRead,
+                this, &SerialPortController::handleReadyRead, Qt::UniqueConnection);
+        qDebug() << "✅ [SerialPortController] 已重新连接 readyRead 信号";
+        qDebug() << "   - 串口:" << m_currentSerialPort->portName();
+    } else {
+        qDebug() << "⚠️ [SerialPortController] 当前串口对象不存在，无法重新连接信号";
+    }
+}
+
 // ========== 私有槽函数（待实现） ==========
 
 void SerialPortController::handleReadyRead()

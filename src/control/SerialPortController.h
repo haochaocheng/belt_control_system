@@ -94,6 +94,10 @@ public:
     Q_INVOKABLE void loadConfig();
     Q_INVOKABLE void resetConfig();
 
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.5]: 断开/重连 readyRead 信号（用于 MODBUS 从站）
+    Q_INVOKABLE void disconnectReadyReadSignal();
+    Q_INVOKABLE void reconnectReadyReadSignal();
+
 signals:
     // ========== 属性变化信号 ==========
     void currentPortIndexChanged();

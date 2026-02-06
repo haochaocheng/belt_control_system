@@ -1301,6 +1301,11 @@ Rectangle {
                                     serialPortController.closeSerialPort()
                                 }
 
+                                // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.5]: 断开 SerialPortController 的 readyRead 信号
+                                // 避免数据竞争：SerialPortController 和 ModbusSlaveController 同时读取串口数据
+                                console.log("✅ [ModbusRegisterTab] 断开 SerialPortController 的 readyRead 信号")
+                                serialPortController.disconnectReadyReadSignal()
+
                                 // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.2]: 在启动前初始化寄存器
                                 console.log("✅ [ModbusRegisterTab] 初始化寄存器")
                                 root.currentSlave.initializeRegisters(
@@ -1362,6 +1367,11 @@ Rectangle {
                                 console.log("✅ [ModbusRegisterTab] 停止从站")
                                 root.currentSlave.stopSlave()
                                 console.log("✅ [ModbusRegisterTab] 从站已停止")
+
+                                // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.5]: 重新连接 SerialPortController 的 readyRead 信号
+                                // 恢复 SerialPortController 的数据接收功能
+                                console.log("✅ [ModbusRegisterTab] 重新连接 SerialPortController 的 readyRead 信号")
+                                serialPortController.reconnectReadyReadSignal()
                             }
                         }
                     }
