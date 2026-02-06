@@ -19,6 +19,10 @@ Rectangle {
     property int focusParamIndex: 0       // 当前焦点参数索引
     property var virtualKeyboard: null    // 虚拟键盘引用
 
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41]: 新增主站/从站模式切换属性
+    property int modbusMode: 0  // 0: 主站模式, 1: 从站模式
+    property var currentSlave: null  // 当前从站实例
+
     // ========== 信号 ==========
     signal requestFocusParamIndex(int paramIndex)
 
@@ -303,10 +307,51 @@ Rectangle {
         return false  // 导航无变化
     }
 
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41]: 更新当前从站实例
+    function updateCurrentSlave() {
+        var portIndex = serialPortController.currentPortIndex
+        console.log("✅ [ModbusRegisterTab] 更新当前从站 - 串口索引:", portIndex)
+
+        switch(portIndex) {
+        case 0:
+            root.currentSlave = modbusSlaveController1
+            break
+        case 1:
+            root.currentSlave = modbusSlaveController2
+            break
+        case 2:
+            root.currentSlave = modbusSlaveController3
+            break
+        case 3:
+            root.currentSlave = modbusSlaveController4
+            break
+        case 4:
+            root.currentSlave = modbusSlaveController5
+            break
+        case 5:
+            root.currentSlave = modbusSlaveController6
+            break
+        default:
+            console.warn("⚠️ [ModbusRegisterTab] 无效的串口索引:", portIndex)
+            root.currentSlave = null
+        }
+
+        console.log("✅ [ModbusRegisterTab] 当前从站:", root.currentSlave)
+    }
+
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
         console.log("✅ [ModbusRegisterTab] Component.onCompleted 开始")
+        updateCurrentSlave()  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41]: 初始化当前从站
         console.log("✅ [ModbusRegisterTab] Component.onCompleted 完成")
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41]: 监听串口切换，更新当前从站实例
+    Connections {
+        target: serialPortController
+        function onCurrentPortIndexChanged() {
+            updateCurrentSlave()
+        }
     }
 
     // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 监听 modbusController 信号
@@ -366,25 +411,127 @@ Rectangle {
         }
     }
 
-    // ========== 滚动区域 ==========
-    ScrollView {
-        id: modbusScrollView
-        anchors.fill: parent
-        clip: true
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41]: 顶部模式切换按钮
+    RowLayout {
+        id: modeSwitch
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 50
+        spacing: 10
 
-        // ========== 主布局 ==========
-        ColumnLayout {
-            width: modbusScrollView.width * 0.9
-            spacing: 12
+        Text {
+            text: "MODBUS 模式："
+            font.pixelSize: 16
+            color: "#E0E0E0"
+            Layout.leftMargin: 10
+        }
 
-            // ========== 标题 ==========
-            Text {
-                text: "MODBUS 寄存器操作"
-                font.pixelSize: 18
-                font.weight: Font.Bold
-                color: "#E0E0E0"
-                Layout.fillWidth: true
+        Button {
+            text: "主站模式"
+            Layout.preferredWidth: 120
+            Layout.preferredHeight: 35
+            checkable: true
+            checked: root.modbusMode === 0
+
+            background: Rectangle {
+                color: {
+                    if (parent.checked) {
+                        return "#2196F3"  // 选中时：蓝色
+                    } else if (parent.pressed) {
+                        return "#1976D2"
+                    } else if (parent.hovered) {
+                        return "#42A5F5"
+                    } else {
+                        return "#616161"  // 未选中时：灰色
+                    }
+                }
+                radius: 4
             }
+
+            contentItem: Text {
+                text: parent.text
+                font.pixelSize: 14
+                font.bold: parent.checked
+                color: "#FFFFFF"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                console.log("✅ [ModbusRegisterTab] 切换到主站模式")
+                root.modbusMode = 0
+            }
+        }
+
+        Button {
+            text: "从站模式"
+            Layout.preferredWidth: 120
+            Layout.preferredHeight: 35
+            checkable: true
+            checked: root.modbusMode === 1
+
+            background: Rectangle {
+                color: {
+                    if (parent.checked) {
+                        return "#2196F3"  // 选中时：蓝色
+                    } else if (parent.pressed) {
+                        return "#1976D2"
+                    } else if (parent.hovered) {
+                        return "#42A5F5"
+                    } else {
+                        return "#616161"  // 未选中时：灰色
+                    }
+                }
+                radius: 4
+            }
+
+            contentItem: Text {
+                text: parent.text
+                font.pixelSize: 14
+                font.bold: parent.checked
+                color: "#FFFFFF"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                console.log("✅ [ModbusRegisterTab] 切换到从站模式")
+                root.modbusMode = 1
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+        }
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41]: 使用 StackLayout 切换主站/从站界面
+    StackLayout {
+        anchors.top: modeSwitch.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        currentIndex: root.modbusMode
+
+        // ========== 索引 0: 主站模式界面（原有内容）==========
+        ScrollView {
+            id: masterScrollView
+            clip: true
+
+            // ========== 主布局 ==========
+            ColumnLayout {
+                width: masterScrollView.width * 0.9
+                spacing: 12
+
+                // ========== 标题 ==========
+                Text {
+                    text: "MODBUS 主站操作"
+                    font.pixelSize: 18
+                    font.weight: Font.Bold
+                    color: "#E0E0E0"
+                    Layout.fillWidth: true
+                }
 
             // ========== 参数输入区（GridLayout 4列布局）==========
             GridLayout {
@@ -899,5 +1046,486 @@ Rectangle {
                 }
             }
         }
-    }
+        }  // ========== 主站模式 ScrollView 结束 ==========
+
+        // ========== 索引 1: 从站模式界面（新增）==========
+        ScrollView {
+            id: slaveScrollView
+            clip: true
+
+            ColumnLayout {
+                width: slaveScrollView.width * 0.9
+                spacing: 15
+
+                // ========== 标题 ==========
+                Text {
+                    text: "MODBUS 从站配置"
+                    font.pixelSize: 18
+                    font.weight: Font.Bold
+                    color: "#E0E0E0"
+                    Layout.fillWidth: true
+                }
+
+                // ========== 从站配置区域 ==========
+                GroupBox {
+                    title: "从站配置"
+                    Layout.fillWidth: true
+
+                    background: Rectangle {
+                        color: "#1e2838"
+                        border.color: "#3d4556"
+                        border.width: 1
+                        radius: 4
+                    }
+
+                    label: Text {
+                        text: parent.title
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        color: "#E0E0E0"
+                        leftPadding: 10
+                    }
+
+                    GridLayout {
+                        anchors.fill: parent
+                        columns: 4
+                        columnSpacing: 10
+                        rowSpacing: 12
+
+                        // 从站地址
+                        Text {
+                            text: "从站地址："
+                            font.pixelSize: 16
+                            color: "#95a5a6"
+                        }
+
+                        SpinBox {
+                            id: slaveAddressConfig
+                            from: 1
+                            to: 247
+                            value: root.currentSlave ? root.currentSlave.slaveAddress : 1
+                            onValueChanged: {
+                                if (root.currentSlave) {
+                                    root.currentSlave.slaveAddress = value
+                                }
+                            }
+                        }
+
+                        // 从站状态
+                        Text {
+                            text: "状态："
+                            font.pixelSize: 16
+                            color: "#95a5a6"
+                        }
+
+                        Text {
+                            text: root.currentSlave && root.currentSlave.isConnected ? "运行中" : "已停止"
+                            font.pixelSize: 16
+                            color: root.currentSlave && root.currentSlave.isConnected ? "#2ecc71" : "#e74c3c"
+                        }
+                    }
+                }
+
+                // ========== 寄存器初始化配置 ==========
+                GroupBox {
+                    title: "寄存器初始化"
+                    Layout.fillWidth: true
+
+                    background: Rectangle {
+                        color: "#1e2838"
+                        border.color: "#3d4556"
+                        border.width: 1
+                        radius: 4
+                    }
+
+                    label: Text {
+                        text: parent.title
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        color: "#E0E0E0"
+                        leftPadding: 10
+                    }
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 12
+
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: 4
+                            columnSpacing: 10
+                            rowSpacing: 12
+
+                            // Holding Registers
+                            Text {
+                                text: "保持寄存器数量："
+                                font.pixelSize: 16
+                                color: "#95a5a6"
+                            }
+
+                            SpinBox {
+                                id: holdingCount
+                                from: 0
+                                to: 1000
+                                value: 100
+                            }
+
+                            // Input Registers
+                            Text {
+                                text: "输入寄存器数量："
+                                font.pixelSize: 16
+                                color: "#95a5a6"
+                            }
+
+                            SpinBox {
+                                id: inputCount
+                                from: 0
+                                to: 1000
+                                value: 100
+                            }
+
+                            // Coils
+                            Text {
+                                text: "线圈数量："
+                                font.pixelSize: 16
+                                color: "#95a5a6"
+                            }
+
+                            SpinBox {
+                                id: coilCount
+                                from: 0
+                                to: 1000
+                                value: 100
+                            }
+
+                            // Discrete Inputs
+                            Text {
+                                text: "离散输入数量："
+                                font.pixelSize: 16
+                                color: "#95a5a6"
+                            }
+
+                            SpinBox {
+                                id: discreteCount
+                                from: 0
+                                to: 1000
+                                value: 100
+                            }
+                        }
+
+                        Button {
+                            text: "初始化寄存器"
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 35
+
+                            background: Rectangle {
+                                color: {
+                                    if (parent.pressed) {
+                                        return "#1976D2"
+                                    } else if (parent.hovered) {
+                                        return "#42A5F5"
+                                    } else {
+                                        return "#2196F3"
+                                    }
+                                }
+                                radius: 4
+                            }
+
+                            contentItem: Text {
+                                text: parent.text
+                                font.pixelSize: 14
+                                font.bold: true
+                                color: "#FFFFFF"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            onClicked: {
+                                if (root.currentSlave) {
+                                    console.log("✅ [ModbusRegisterTab] 初始化寄存器")
+                                    root.currentSlave.initializeRegisters(
+                                        holdingCount.value,
+                                        inputCount.value,
+                                        coilCount.value,
+                                        discreteCount.value
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ========== 从站控制按钮 ==========
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Button {
+                        text: "启动从站"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+                        enabled: root.currentSlave && !root.currentSlave.isConnected
+
+                        background: Rectangle {
+                            color: {
+                                if (!parent.enabled) {
+                                    return "#616161"  // 禁用时：灰色
+                                } else if (parent.pressed) {
+                                    return "#27ae60"
+                                } else if (parent.hovered) {
+                                    return "#2ecc71"
+                                } else {
+                                    return "#27ae60"
+                                }
+                            }
+                            radius: 4
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            if (root.currentSlave) {
+                                console.log("✅ [ModbusRegisterTab] 启动从站")
+                                // 配置串口参数
+                                root.currentSlave.portName = serialPortController.devicePath
+                                root.currentSlave.baudRate = serialPortController.baudRate
+                                root.currentSlave.dataBits = serialPortController.dataBits
+                                root.currentSlave.stopBits = serialPortController.stopBits
+                                root.currentSlave.parity = serialPortController.parity
+
+                                // 启动从站
+                                if (root.currentSlave.startSlave()) {
+                                    console.log("✅ [ModbusRegisterTab] 从站启动成功")
+                                } else {
+                                    console.error("❌ [ModbusRegisterTab] 从站启动失败")
+                                }
+                            }
+                        }
+                    }
+
+                    Button {
+                        text: "停止从站"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+                        enabled: root.currentSlave && root.currentSlave.isConnected
+
+                        background: Rectangle {
+                            color: {
+                                if (!parent.enabled) {
+                                    return "#616161"  // 禁用时：灰色
+                                } else if (parent.pressed) {
+                                    return "#c0392b"
+                                } else if (parent.hovered) {
+                                    return "#e74c3c"
+                                } else {
+                                    return "#c0392b"
+                                }
+                            }
+                            radius: 4
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            if (root.currentSlave) {
+                                console.log("✅ [ModbusRegisterTab] 停止从站")
+                                root.currentSlave.stopSlave()
+                                console.log("✅ [ModbusRegisterTab] 从站已停止")
+                            }
+                        }
+                    }
+                }
+
+                // ========== 寄存器值管理 ==========
+                GroupBox {
+                    title: "寄存器值管理"
+                    Layout.fillWidth: true
+
+                    background: Rectangle {
+                        color: "#1e2838"
+                        border.color: "#3d4556"
+                        border.width: 1
+                        radius: 4
+                    }
+
+                    label: Text {
+                        text: parent.title
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        color: "#E0E0E0"
+                        leftPadding: 10
+                    }
+
+                    GridLayout {
+                        anchors.fill: parent
+                        columns: 4
+                        columnSpacing: 10
+                        rowSpacing: 12
+
+                        // 寄存器类型
+                        Text {
+                            text: "寄存器类型："
+                            font.pixelSize: 16
+                            color: "#95a5a6"
+                        }
+
+                        ComboBox {
+                            id: registerType
+                            model: ["保持寄存器", "输入寄存器", "线圈", "离散输入"]
+                            Layout.preferredWidth: 200
+                        }
+
+                        // 寄存器地址
+                        Text {
+                            text: "地址："
+                            font.pixelSize: 16
+                            color: "#95a5a6"
+                        }
+
+                        SpinBox {
+                            id: registerAddress
+                            from: 0
+                            to: 999
+                            value: 0
+                        }
+
+                        // 寄存器值
+                        Text {
+                            text: "值："
+                            font.pixelSize: 16
+                            color: "#95a5a6"
+                        }
+
+                        SpinBox {
+                            id: registerValue
+                            from: 0
+                            to: 65535
+                            value: 0
+                        }
+
+                        // 读取按钮
+                        Button {
+                            text: "读取"
+                            Layout.preferredWidth: 100
+                            Layout.preferredHeight: 35
+
+                            background: Rectangle {
+                                color: {
+                                    if (parent.pressed) {
+                                        return "#27ae60"
+                                    } else if (parent.hovered) {
+                                        return "#2ecc71"
+                                    } else {
+                                        return "#27ae60"
+                                    }
+                                }
+                                radius: 4
+                            }
+
+                            contentItem: Text {
+                                text: parent.text
+                                font.pixelSize: 14
+                                color: "#FFFFFF"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            onClicked: {
+                                if (!root.currentSlave) return
+
+                                var value = 0
+                                switch(registerType.currentIndex) {
+                                case 0:  // 保持寄存器
+                                    value = root.currentSlave.getHoldingRegister(registerAddress.value)
+                                    break
+                                case 1:  // 输入寄存器
+                                    value = root.currentSlave.getInputRegister(registerAddress.value)
+                                    break
+                                case 2:  // 线圈
+                                    value = root.currentSlave.getCoil(registerAddress.value) ? 1 : 0
+                                    break
+                                case 3:  // 离散输入
+                                    value = root.currentSlave.getDiscreteInput(registerAddress.value) ? 1 : 0
+                                    break
+                                }
+                                registerValue.value = value
+                                console.log("✅ [ModbusRegisterTab] 读取寄存器 - 地址:", registerAddress.value, "值:", value)
+                            }
+                        }
+
+                        // 写入按钮
+                        Button {
+                            text: "写入"
+                            Layout.preferredWidth: 100
+                            Layout.preferredHeight: 35
+                            enabled: registerType.currentIndex === 0 || registerType.currentIndex === 2
+
+                            background: Rectangle {
+                                color: {
+                                    if (!parent.enabled) {
+                                        return "#616161"  // 禁用时：灰色
+                                    } else if (parent.pressed) {
+                                        return "#c0392b"
+                                    } else if (parent.hovered) {
+                                        return "#e74c3c"
+                                    } else {
+                                        return "#c0392b"
+                                    }
+                                }
+                                radius: 4
+                            }
+
+                            contentItem: Text {
+                                text: parent.text
+                                font.pixelSize: 14
+                                color: "#FFFFFF"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            onClicked: {
+                                if (!root.currentSlave) return
+
+                                var success = false
+                                switch(registerType.currentIndex) {
+                                case 0:  // 保持寄存器
+                                    success = root.currentSlave.setHoldingRegister(
+                                        registerAddress.value,
+                                        registerValue.value
+                                    )
+                                    break
+                                case 2:  // 线圈
+                                    success = root.currentSlave.setCoil(
+                                        registerAddress.value,
+                                        registerValue.value > 0
+                                    )
+                                    break
+                                }
+
+                                if (success) {
+                                    console.log("✅ [ModbusRegisterTab] 写入寄存器成功 - 地址:", registerAddress.value, "值:", registerValue.value)
+                                } else {
+                                    console.error("❌ [ModbusRegisterTab] 写入寄存器失败")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }  // ========== 从站模式 ScrollView 结束 ==========
+    }  // ========== StackLayout 结束 ==========
 }
