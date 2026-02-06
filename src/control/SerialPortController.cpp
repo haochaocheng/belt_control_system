@@ -557,14 +557,22 @@ void SerialPortController::handleReadyRead()
     // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.3]: 实现数据接收处理
     // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.11]: 添加时间戳和自动换行
     // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.13]: 添加数据拼接功能
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.4]: 添加详细调试日志
     if (!m_currentSerialPort) {
         return;
     }
+
+    // ⚠️ 2026-02-06 [FIX 100.300.113 Phase 7.41.4]: 关键调试日志
+    // 这里会读取串口的所有数据，可能与 ModbusSlaveController 产生数据竞争
+    qDebug() << "🔍 [SerialPortController] handleReadyRead() 被调用";
+    qDebug() << "   - 当前串口:" << m_currentSerialPort->portName();
+    qDebug() << "   - 可用字节数:" << m_currentSerialPort->bytesAvailable();
 
     // 读取所有可用数据
     QByteArray data = m_currentSerialPort->readAll();
 
     if (data.isEmpty()) {
+        qDebug() << "⚠️ [SerialPortController] 读取到的数据为空";
         return;
     }
 
@@ -580,6 +588,17 @@ void SerialPortController::handleReadyRead()
              << data.size() << "字节"
              << "[HEX]" << byteArrayToHexString(data)
              << "缓冲区总计:" << m_dataBuffer.size() << "字节";
+
+    // ⚠️ 2026-02-06 [FIX 100.300.113 Phase 7.41.4]: 检查是否是 MODBUS RTU 帧
+    if (data.size() >= 4) {
+        quint8 slaveAddr = static_cast<quint8>(data[0]);
+        quint8 functionCode = static_cast<quint8>(data[1]);
+        qDebug() << "🔍 [SerialPortController] 可能是 MODBUS RTU 帧:";
+        qDebug() << "   - 从站地址:" << slaveAddr;
+        qDebug() << "   - 功能码:" << QString("0x%1").arg(functionCode, 2, 16, QChar('0'));
+        qWarning() << "⚠️ [SerialPortController] 警告：SerialPortController 读取了可能的 MODBUS 数据！";
+        qWarning() << "   这可能导致 ModbusSlaveController 无法接收到完整的 MODBUS 帧！";
+    }
 }
 
 void SerialPortController::handleError(QSerialPort::SerialPortError error)
