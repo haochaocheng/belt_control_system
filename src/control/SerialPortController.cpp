@@ -276,15 +276,133 @@ QSerialPort* SerialPortController::getOrCreateSerialPort(int portIndex)
 
 bool SerialPortController::openSerialPort()
 {
-    // ✅ 2026-02-06: 待实现 - Phase 2
-    qDebug() << "⚠️ [SerialPortController] openSerialPort() 待实现";
-    return false;
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.2]: 实现串口打开功能
+    if (m_currentPortIndex < 0 || m_currentPortIndex >= m_serialPortConfigs.size()) {
+        QString error = QString("无效的串口索引: %1").arg(m_currentPortIndex);
+        qWarning() << "⚠️ [SerialPortController]" << error;
+        emit errorOccurred(error);
+        return false;
+    }
+
+    SerialPortConfig &config = m_serialPortConfigs[m_currentPortIndex];
+
+    // 如果已经打开，先关闭
+    if (config.isOpen && m_currentSerialPort && m_currentSerialPort->isOpen()) {
+        qDebug() << "⚠️ [SerialPortController] 串口已打开，先关闭:" << config.portName;
+        closeSerialPort();
+    }
+
+    // 创建或获取串口对象
+    m_currentSerialPort = getOrCreateSerialPort(m_currentPortIndex);
+    if (!m_currentSerialPort) {
+        QString error = QString("无法创建串口对象: %1").arg(config.portName);
+        qWarning() << "⚠️ [SerialPortController]" << error;
+        emit errorOccurred(error);
+        return false;
+    }
+
+    // 设置串口参数
+    m_currentSerialPort->setPortName(config.devicePath);
+    m_currentSerialPort->setBaudRate(config.baudRate);
+
+    // 设置数据位
+    switch (config.dataBits) {
+    case 5:
+        m_currentSerialPort->setDataBits(QSerialPort::Data5);
+        break;
+    case 6:
+        m_currentSerialPort->setDataBits(QSerialPort::Data6);
+        break;
+    case 7:
+        m_currentSerialPort->setDataBits(QSerialPort::Data7);
+        break;
+    case 8:
+    default:
+        m_currentSerialPort->setDataBits(QSerialPort::Data8);
+        break;
+    }
+
+    // 设置停止位
+    switch (config.stopBits) {
+    case 2:
+        m_currentSerialPort->setStopBits(QSerialPort::TwoStop);
+        break;
+    case 1:
+    default:
+        m_currentSerialPort->setStopBits(QSerialPort::OneStop);
+        break;
+    }
+
+    // 设置校验位
+    if (config.parity == "None") {
+        m_currentSerialPort->setParity(QSerialPort::NoParity);
+    } else if (config.parity == "Even") {
+        m_currentSerialPort->setParity(QSerialPort::EvenParity);
+    } else if (config.parity == "Odd") {
+        m_currentSerialPort->setParity(QSerialPort::OddParity);
+    } else if (config.parity == "Space") {
+        m_currentSerialPort->setParity(QSerialPort::SpaceParity);
+    } else if (config.parity == "Mark") {
+        m_currentSerialPort->setParity(QSerialPort::MarkParity);
+    } else {
+        m_currentSerialPort->setParity(QSerialPort::NoParity);
+    }
+
+    // 设置流控制（默认无流控制）
+    m_currentSerialPort->setFlowControl(QSerialPort::NoFlowControl);
+
+    // 打开串口
+    if (!m_currentSerialPort->open(QIODevice::ReadWrite)) {
+        QString error = QString("无法打开串口 %1 (%2): %3")
+                        .arg(config.portName)
+                        .arg(config.devicePath)
+                        .arg(m_currentSerialPort->errorString());
+        qWarning() << "⚠️ [SerialPortController]" << error;
+        emit errorOccurred(error);
+        return false;
+    }
+
+    // 更新状态
+    config.isOpen = true;
+    emit isOpenChanged();
+
+    qDebug() << "✅ [SerialPortController] 串口已打开:"
+             << config.portName
+             << "(" << config.devicePath << ")"
+             << "波特率:" << config.baudRate
+             << "数据位:" << config.dataBits
+             << "停止位:" << config.stopBits
+             << "校验位:" << config.parity;
+
+    return true;
 }
 
 void SerialPortController::closeSerialPort()
 {
-    // ✅ 2026-02-06: 待实现 - Phase 2
-    qDebug() << "⚠️ [SerialPortController] closeSerialPort() 待实现";
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.2]: 实现串口关闭功能
+    if (!m_currentSerialPort) {
+        qDebug() << "⚠️ [SerialPortController] 串口对象不存在，无需关闭";
+        return;
+    }
+
+    if (!m_currentSerialPort->isOpen()) {
+        qDebug() << "⚠️ [SerialPortController] 串口未打开，无需关闭";
+        return;
+    }
+
+    // 关闭串口
+    m_currentSerialPort->close();
+
+    // 更新状态
+    if (m_currentPortIndex >= 0 && m_currentPortIndex < m_serialPortConfigs.size()) {
+        SerialPortConfig &config = m_serialPortConfigs[m_currentPortIndex];
+        config.isOpen = false;
+        emit isOpenChanged();
+
+        qDebug() << "✅ [SerialPortController] 串口已关闭:"
+                 << config.portName
+                 << "(" << config.devicePath << ")";
+    }
 }
 
 void SerialPortController::sendData(const QString &data, bool isHex)
@@ -398,12 +516,64 @@ void SerialPortController::handleReadyRead()
 
 void SerialPortController::handleError(QSerialPort::SerialPortError error)
 {
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.2]: 完善错误处理
     if (error == QSerialPort::NoError) {
         return;
     }
 
-    QString errorString = m_currentSerialPort ? m_currentSerialPort->errorString() : "未知错误";
-    qWarning() << "⚠️ [SerialPortController] 串口错误:" << errorString;
+    QString errorString;
+    QString errorType;
+
+    // 根据错误类型提供详细的错误信息
+    switch (error) {
+    case QSerialPort::DeviceNotFoundError:
+        errorType = "设备未找到";
+        errorString = QString("串口设备未找到: %1").arg(m_currentSerialPort ? m_currentSerialPort->portName() : "未知");
+        break;
+    case QSerialPort::PermissionError:
+        errorType = "权限错误";
+        errorString = QString("无权限访问串口设备: %1 (请检查用户是否在 dialout 组中)").arg(m_currentSerialPort ? m_currentSerialPort->portName() : "未知");
+        break;
+    case QSerialPort::OpenError:
+        errorType = "打开错误";
+        errorString = QString("无法打开串口设备: %1").arg(m_currentSerialPort ? m_currentSerialPort->errorString() : "未知");
+        break;
+    case QSerialPort::WriteError:
+        errorType = "写入错误";
+        errorString = QString("写入串口数据失败: %1").arg(m_currentSerialPort ? m_currentSerialPort->errorString() : "未知");
+        break;
+    case QSerialPort::ReadError:
+        errorType = "读取错误";
+        errorString = QString("读取串口数据失败: %1").arg(m_currentSerialPort ? m_currentSerialPort->errorString() : "未知");
+        break;
+    case QSerialPort::ResourceError:
+        errorType = "资源错误";
+        errorString = QString("串口资源错误（设备可能被拔出）: %1").arg(m_currentSerialPort ? m_currentSerialPort->errorString() : "未知");
+        // 资源错误通常意味着设备被拔出，自动关闭串口
+        if (m_currentPortIndex >= 0 && m_currentPortIndex < m_serialPortConfigs.size()) {
+            m_serialPortConfigs[m_currentPortIndex].isOpen = false;
+            emit isOpenChanged();
+        }
+        break;
+    case QSerialPort::UnsupportedOperationError:
+        errorType = "不支持的操作";
+        errorString = QString("串口不支持此操作: %1").arg(m_currentSerialPort ? m_currentSerialPort->errorString() : "未知");
+        break;
+    case QSerialPort::TimeoutError:
+        errorType = "超时错误";
+        errorString = QString("串口操作超时: %1").arg(m_currentSerialPort ? m_currentSerialPort->errorString() : "未知");
+        break;
+    case QSerialPort::NotOpenError:
+        errorType = "未打开错误";
+        errorString = QString("串口未打开: %1").arg(m_currentSerialPort ? m_currentSerialPort->errorString() : "未知");
+        break;
+    default:
+        errorType = "未知错误";
+        errorString = m_currentSerialPort ? m_currentSerialPort->errorString() : "未知错误";
+        break;
+    }
+
+    qWarning() << "⚠️ [SerialPortController] 串口错误 [" << errorType << "]:" << errorString;
     emit errorOccurred(errorString);
 }
 
