@@ -1301,6 +1301,15 @@ Rectangle {
                                     serialPortController.closeSerialPort()
                                 }
 
+                                // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.2]: 在启动前初始化寄存器
+                                console.log("✅ [ModbusRegisterTab] 初始化寄存器")
+                                root.currentSlave.initializeRegisters(
+                                    holdingCount.value,
+                                    inputCount.value,
+                                    coilCount.value,
+                                    discreteCount.value
+                                )
+
                                 // 配置串口参数
                                 root.currentSlave.portName = serialPortController.devicePath
                                 root.currentSlave.baudRate = serialPortController.baudRate
