@@ -407,10 +407,47 @@ void SerialPortController::closeSerialPort()
 
 void SerialPortController::sendData(const QString &data, bool isHex)
 {
-    // ✅ 2026-02-06: 待实现 - Phase 3
-    Q_UNUSED(data)
-    Q_UNUSED(isHex)
-    qDebug() << "⚠️ [SerialPortController] sendData() 待实现";
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.3]: 实现数据发送功能
+    if (!m_currentSerialPort || !m_currentSerialPort->isOpen()) {
+        QString error = "串口未打开，无法发送数据";
+        qWarning() << "⚠️ [SerialPortController]" << error;
+        emit errorOccurred(error);
+        return;
+    }
+
+    QByteArray sendData;
+
+    if (isHex) {
+        // HEX 模式：将十六进制字符串转换为字节数组
+        sendData = hexStringToByteArray(data);
+        if (sendData.isEmpty() && !data.isEmpty()) {
+            QString error = "HEX 数据转换失败";
+            qWarning() << "⚠️ [SerialPortController]" << error;
+            emit errorOccurred(error);
+            return;
+        }
+    } else {
+        // ASCII 模式：直接转换为字节数组
+        sendData = data.toUtf8();
+    }
+
+    // 发送数据
+    qint64 bytesWritten = m_currentSerialPort->write(sendData);
+
+    if (bytesWritten == -1) {
+        QString error = QString("发送数据失败: %1").arg(m_currentSerialPort->errorString());
+        qWarning() << "⚠️ [SerialPortController]" << error;
+        emit errorOccurred(error);
+    } else if (bytesWritten < sendData.size()) {
+        QString warning = QString("部分数据发送失败: 已发送 %1/%2 字节").arg(bytesWritten).arg(sendData.size());
+        qWarning() << "⚠️ [SerialPortController]" << warning;
+        emit errorOccurred(warning);
+    } else {
+        qDebug() << "✅ [SerialPortController] 数据已发送:"
+                 << bytesWritten << "字节"
+                 << (isHex ? "[HEX]" : "[ASCII]")
+                 << (isHex ? byteArrayToHexString(sendData) : data);
+    }
 }
 
 void SerialPortController::clearReceiveBuffer()
@@ -510,8 +547,47 @@ void SerialPortController::resetConfig()
 
 void SerialPortController::handleReadyRead()
 {
-    // ✅ 2026-02-06: 待实现 - Phase 3
-    qDebug() << "⚠️ [SerialPortController] handleReadyRead() 待实现";
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.3]: 实现数据接收处理
+    if (!m_currentSerialPort) {
+        return;
+    }
+
+    // 读取所有可用数据
+    QByteArray data = m_currentSerialPort->readAll();
+
+    if (data.isEmpty()) {
+        return;
+    }
+
+    // 发送原始数据信号
+    emit dataReceived(data);
+
+    // 更新接收缓冲区
+    if (m_receiveHexMode) {
+        // HEX 模式：转换为十六进制字符串
+        m_receiveBuffer += byteArrayToHexString(data) + " ";
+    } else {
+        // ASCII 模式：直接转换为字符串
+        m_receiveBuffer += QString::fromUtf8(data);
+    }
+
+    emit receiveBufferChanged();
+
+    // 如果是 MODBUS 响应，添加到 MODBUS 缓冲区
+    if (m_modbusTimer->isActive()) {
+        m_modbusBuffer.append(data);
+
+        // 检查是否接收完整（简单检查：至少5字节 = 地址+功能码+数据长度+CRC）
+        if (isModbusResponseComplete(m_modbusBuffer)) {
+            m_modbusTimer->stop();
+            parseAndEmitModbusResponse();
+        }
+    }
+
+    qDebug() << "✅ [SerialPortController] 接收数据:"
+             << data.size() << "字节"
+             << (m_receiveHexMode ? "[HEX]" : "[ASCII]")
+             << (m_receiveHexMode ? byteArrayToHexString(data) : QString::fromUtf8(data));
 }
 
 void SerialPortController::handleError(QSerialPort::SerialPortError error)
@@ -588,16 +664,47 @@ void SerialPortController::handleModbusTimeout()
 
 QByteArray SerialPortController::hexStringToByteArray(const QString &hex)
 {
-    // ✅ 2026-02-06: 待实现 - Phase 3
-    Q_UNUSED(hex)
-    return QByteArray();
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.3]: 实现HEX字符串转字节数组
+    QByteArray result;
+
+    // 移除空格和其他分隔符
+    QString cleanHex = hex.simplified().remove(' ').remove('-').remove(':');
+
+    // 确保是偶数长度（每两个字符代表一个字节）
+    if (cleanHex.length() % 2 != 0) {
+        qWarning() << "⚠️ [SerialPortController] HEX字符串长度不是偶数:" << hex;
+        // 在前面补0
+        cleanHex.prepend('0');
+    }
+
+    // 转换每两个字符为一个字节
+    for (int i = 0; i < cleanHex.length(); i += 2) {
+        QString byteString = cleanHex.mid(i, 2);
+        bool ok;
+        quint8 byte = byteString.toUInt(&ok, 16);
+        if (ok) {
+            result.append(byte);
+        } else {
+            qWarning() << "⚠️ [SerialPortController] 无效的HEX字符:" << byteString;
+        }
+    }
+
+    qDebug() << "✅ [SerialPortController] HEX转换:" << hex << "→" << result.size() << "字节";
+    return result;
 }
 
 QString SerialPortController::byteArrayToHexString(const QByteArray &data)
 {
-    // ✅ 2026-02-06: 待实现 - Phase 3
-    Q_UNUSED(data)
-    return QString();
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.3]: 实现字节数组转HEX字符串
+    QString result;
+
+    for (quint8 byte : data) {
+        // 每个字节转换为两位十六进制（大写，前导0）
+        result += QString("%1 ").arg(byte, 2, 16, QChar('0')).toUpper();
+    }
+
+    // 移除末尾的空格
+    return result.trimmed();
 }
 
 QByteArray SerialPortController::buildModbusRequest(int slaveAddress, int functionCode,
