@@ -119,6 +119,7 @@ private slots:
     void handleReadyRead();
     void handleError(QSerialPort::SerialPortError error);
     void handleModbusTimeout();
+    void handleDataTimeout();  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.13]: 数据超时处理
 
 private:
     // ========== 串口配置 ==========
@@ -131,6 +132,10 @@ private:
     QString m_receiveBuffer;
     bool m_receiveHexMode;
     QByteArray m_modbusBuffer;  // MODBUS 响应缓冲区
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.13]: 数据拼接缓冲区
+    QByteArray m_dataBuffer;    // 数据拼接缓冲区（用于处理分包）
+    QTimer *m_dataTimer;        // 数据超时定时器（用于判断一帧数据结束）
 
     // ========== MODBUS 超时定时器 ==========
     QTimer *m_modbusTimer;

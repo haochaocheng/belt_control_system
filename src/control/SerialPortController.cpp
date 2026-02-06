@@ -19,6 +19,12 @@ SerialPortController::SerialPortController(QObject *parent)
     // 初始化串口配置
     initSerialPortConfigs();
 
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.13]: 创建数据超时定时器
+    m_dataTimer = new QTimer(this);
+    m_dataTimer->setSingleShot(true);
+    m_dataTimer->setInterval(50);  // 50ms 超时（根据波特率调整）
+    connect(m_dataTimer, &QTimer::timeout, this, &SerialPortController::handleDataTimeout);
+
     // 创建 MODBUS 超时定时器
     m_modbusTimer = new QTimer(this);
     m_modbusTimer->setSingleShot(true);
@@ -550,6 +556,7 @@ void SerialPortController::handleReadyRead()
 {
     // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.3]: 实现数据接收处理
     // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.11]: 添加时间戳和自动换行
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.13]: 添加数据拼接功能
     if (!m_currentSerialPort) {
         return;
     }
@@ -561,56 +568,18 @@ void SerialPortController::handleReadyRead()
         return;
     }
 
-    // 发送原始数据信号
-    emit dataReceived(data);
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.13]: 数据拼接逻辑
+    // 将新数据追加到缓冲区
+    m_dataBuffer.append(data);
 
-    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.11]: 生成时间戳
-    QString timestamp = QDateTime::currentDateTime().toString("[yyyy-MM-dd HH:mm:ss.zzz] ");
+    // 重启超时定时器（50ms 内没有新数据，认为一帧结束）
+    m_dataTimer->start();
 
-    // 更新接收缓冲区（添加时间戳和换行）
-    if (m_receiveHexMode) {
-        // HEX 模式：转换为十六进制字符串
-        QString hexData = byteArrayToHexString(data);
-        m_receiveBuffer += timestamp + hexData + "\n";
-    } else {
-        // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.12]: ASCII 模式 - 对不可打印字符显示为十六进制
-        QString asciiData;
-        for (int i = 0; i < data.size(); ++i) {
-            unsigned char byte = static_cast<unsigned char>(data[i]);
-            if (byte >= 32 && byte <= 126) {
-                // 可打印 ASCII 字符（空格到~）
-                asciiData += QChar(byte);
-            } else if (byte == '\r') {
-                asciiData += "\\r";
-            } else if (byte == '\n') {
-                asciiData += "\\n";
-            } else if (byte == '\t') {
-                asciiData += "\\t";
-            } else {
-                // 不可打印字符：显示为十六进制 \xHH
-                asciiData += QString("\\x%1").arg(byte, 2, 16, QChar('0')).toUpper();
-            }
-        }
-        m_receiveBuffer += timestamp + asciiData + "\n";
-    }
-
-    emit receiveBufferChanged();
-
-    // 如果是 MODBUS 响应，添加到 MODBUS 缓冲区
-    if (m_modbusTimer->isActive()) {
-        m_modbusBuffer.append(data);
-
-        // 检查是否接收完整（简单检查：至少5字节 = 地址+功能码+数据长度+CRC）
-        if (isModbusResponseComplete(m_modbusBuffer)) {
-            m_modbusTimer->stop();
-            parseAndEmitModbusResponse();
-        }
-    }
-
-    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.12]: 日志始终显示 HEX 格式（便于调试）
-    qDebug() << "✅ [SerialPortController] 接收数据:"
+    // 日志：显示接收到的数据片段
+    qDebug() << "✅ [SerialPortController] 接收数据片段:"
              << data.size() << "字节"
-             << "[HEX]" << byteArrayToHexString(data);
+             << "[HEX]" << byteArrayToHexString(data)
+             << "缓冲区总计:" << m_dataBuffer.size() << "字节";
 }
 
 void SerialPortController::handleError(QSerialPort::SerialPortError error)
@@ -681,6 +650,69 @@ void SerialPortController::handleModbusTimeout()
     qWarning() << "⚠️ [SerialPortController] MODBUS 响应超时";
     emit errorOccurred("MODBUS 响应超时");
     m_modbusBuffer.clear();
+}
+
+// ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.13]: 数据超时处理（一帧数据接收完成）
+void SerialPortController::handleDataTimeout()
+{
+    if (m_dataBuffer.isEmpty()) {
+        return;
+    }
+
+    // 一帧数据接收完成
+    QByteArray completeFrame = m_dataBuffer;
+    m_dataBuffer.clear();
+
+    // 发送原始数据信号
+    emit dataReceived(completeFrame);
+
+    // ✅ 生成时间戳
+    QString timestamp = QDateTime::currentDateTime().toString("[yyyy-MM-dd HH:mm:ss.zzz] ");
+
+    // 更新接收缓冲区（添加时间戳和换行）
+    if (m_receiveHexMode) {
+        // HEX 模式：转换为十六进制字符串
+        QString hexData = byteArrayToHexString(completeFrame);
+        m_receiveBuffer += timestamp + hexData + "\n";
+    } else {
+        // ASCII 模式 - 对不可打印字符显示为十六进制
+        QString asciiData;
+        for (int i = 0; i < completeFrame.size(); ++i) {
+            unsigned char byte = static_cast<unsigned char>(completeFrame[i]);
+            if (byte >= 32 && byte <= 126) {
+                // 可打印 ASCII 字符（空格到~）
+                asciiData += QChar(byte);
+            } else if (byte == '\r') {
+                asciiData += "\\r";
+            } else if (byte == '\n') {
+                asciiData += "\\n";
+            } else if (byte == '\t') {
+                asciiData += "\\t";
+            } else {
+                // 不可打印字符：显示为十六进制 \xHH
+                asciiData += QString("\\x%1").arg(byte, 2, 16, QChar('0')).toUpper();
+            }
+        }
+        m_receiveBuffer += timestamp + asciiData + "\n";
+    }
+
+    emit receiveBufferChanged();
+
+    // 如果是 MODBUS 响应，添加到 MODBUS 缓冲区
+    if (m_modbusTimer->isActive()) {
+        m_modbusBuffer.append(completeFrame);
+
+        // 检查是否接收完整（简单检查：至少5字节 = 地址+功能码+数据长度+CRC）
+        if (isModbusResponseComplete(m_modbusBuffer)) {
+            m_modbusTimer->stop();
+            parseAndEmitModbusResponse();
+        }
+    }
+
+    // 日志：显示完整的一帧数据
+    qDebug() << "✅ [SerialPortController] 完整帧数据:"
+             << completeFrame.size() << "字节"
+             << "[HEX]" << byteArrayToHexString(completeFrame);
 }
 
 // ========== MODBUS 协议辅助函数（待实现） ==========
