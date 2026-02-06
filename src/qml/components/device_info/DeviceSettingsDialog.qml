@@ -1376,8 +1376,37 @@ Item {
                         opacity: 1.0
                     }
                     onClicked: {
-                        // ✅ 2026-01-24: 保存参数（待实现）
-                        console.log("保存参数")
+                        console.log("✅ [DeviceSettingsDialog] 保存参数 - 当前分类:", root.currentCategory)
+
+                        // ✅ 2026-02-06 [参数持久化]: 根据当前分类调用对应的保存函数
+                        switch(root.currentCategory) {
+                        case 0:  // 基本配置
+                            if (basicConfigPageLoader.item && typeof basicConfigPageLoader.item.saveAllConfig === "function") {
+                                basicConfigPageLoader.item.saveAllConfig()
+                            }
+                            break
+                        case 1:  // 开关量输入
+                            // TODO: 调用开关量输入的保存函数
+                            break
+                        case 2:  // 模拟量输入
+                            // TODO: 调用模拟量输入的保存函数
+                            break
+                        case 3:  // 电机控制
+                            // TODO: 调用电机控制的保存函数
+                            break
+                        case 4:  // 制动器控制
+                            // TODO: 调用制动器控制的保存函数
+                            break
+                        case 5:  // 张紧控制
+                            // TODO: 调用张紧控制的保存函数
+                            break
+                        case 6:  // 串口控制
+                            // TODO: 调用串口控制的保存函数
+                            break
+                        default:
+                            console.log("⚠️ [DeviceSettingsDialog] 未知分类:", root.currentCategory)
+                            break
+                        }
                     }
                 }
 

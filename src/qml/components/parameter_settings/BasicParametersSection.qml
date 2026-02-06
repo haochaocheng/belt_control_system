@@ -13,6 +13,9 @@ Rectangle {
     // External popup references (set by parent)
     property var dateTimePopup: null
 
+    // ✅ 2026-02-06 [参数持久化]: 配置对象（由父组件传递）
+    property var systemConfig: null
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 12

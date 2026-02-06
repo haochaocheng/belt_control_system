@@ -12,6 +12,9 @@ Rectangle {
 
     property var virtualKeyboardPopup: null
 
+    // ✅ 2026-02-06 [参数持久化]: 配置对象（由父组件传递）
+    property var networkConfig: null
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 12
@@ -39,25 +42,40 @@ Rectangle {
             ParameterRow {
                 Layout.fillWidth: true
                 label: "IP地址"
-                value: "192.168.1.100"
+                value: networkConfig ? networkConfig.ipAddress : "192.168.1.100"
                 unit: ""
                 keyboardPopup: root.virtualKeyboardPopup
+                onFieldValueChanged: function(newValue) {
+                    if (networkConfig) {
+                        networkConfig.ipAddress = newValue
+                    }
+                }
             }
 
             ParameterRow {
                 Layout.fillWidth: true
                 label: "子网掩码"
-                value: "255.255.255.0"
+                value: networkConfig ? networkConfig.subnetMask : "255.255.255.0"
                 unit: ""
                 keyboardPopup: root.virtualKeyboardPopup
+                onFieldValueChanged: function(newValue) {
+                    if (networkConfig) {
+                        networkConfig.subnetMask = newValue
+                    }
+                }
             }
 
             ParameterRow {
                 Layout.fillWidth: true
                 label: "网关"
-                value: "192.168.1.1"
+                value: networkConfig ? networkConfig.gateway : "192.168.1.1"
                 unit: ""
                 keyboardPopup: root.virtualKeyboardPopup
+                onFieldValueChanged: function(newValue) {
+                    if (networkConfig) {
+                        networkConfig.gateway = newValue
+                    }
+                }
             }
 
             Item { Layout.fillHeight: true }
@@ -70,6 +88,9 @@ Rectangle {
         property string unit: ""
         property string keyboardMode: "english"  // IP addresses use english mode for dots and numbers
         property var keyboardPopup: null
+
+        // ✅ 2026-02-06 [参数持久化]: 添加值变化信号
+        signal fieldValueChanged(string newValue)
 
         Layout.fillWidth: true
         spacing: 10
@@ -95,6 +116,11 @@ Rectangle {
                 border.color: parent.activeFocus ? "#00d4ff" : "#34495e"
                 border.width: 1
                 radius: 5
+            }
+
+            // ✅ 2026-02-06 [参数持久化]: 发送值变化信号
+            onTextChanged: {
+                fieldValueChanged(text)
             }
         }
 
