@@ -5,6 +5,7 @@
 #define MODBUSCONTROLLER_H
 
 #include <QObject>
+#include <QVariant>  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.7.1]: 添加 QVariant 头文件
 #include <QModbusRtuSerialMaster>
 #include <QModbusDataUnit>
 #include <QModbusReply>
