@@ -180,6 +180,45 @@ Rectangle {
         return false
     }
 
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.10]: 添加 triggerButton() 函数
+    // 功能：DeviceSettingsDialog 回车键调用此方法触发按钮点击
+    function triggerButton(buttonIndex) {
+        console.log("✅ [SerialPortControlPage] triggerButton - 按钮索引:", buttonIndex)
+
+        switch(buttonIndex) {
+        case 0:  // 打开串口
+            console.log("✅ [SerialPortControlPage] 执行打开串口")
+            if (serialPortController.openSerialPort()) {
+                console.log("✅ [SerialPortControlPage] 串口打开成功")
+            } else {
+                console.error("❌ [SerialPortControlPage] 串口打开失败")
+            }
+            return true
+        case 1:  // 关闭串口
+            console.log("✅ [SerialPortControlPage] 执行关闭串口")
+            serialPortController.closeSerialPort()
+            return true
+        case 2:  // 保存
+            console.log("✅ [SerialPortControlPage] 执行保存配置")
+            serialPortController.saveConfig()
+            return true
+        case 3:  // 删除
+            console.log("✅ [SerialPortControlPage] 执行删除配置")
+            if (serialPortController.isOpen) {
+                serialPortController.closeSerialPort()
+            }
+            serialPortController.resetConfig()
+            return true
+        case 4:  // 重置
+            console.log("✅ [SerialPortControlPage] 执行重置配置")
+            serialPortController.resetConfig()
+            return true
+        default:
+            console.warn("⚠️ [SerialPortControlPage] 未知按钮索引:", buttonIndex)
+            return false
+        }
+    }
+
     // ========== 串口数据 ==========
     property var serialPorts: [
         { name: "COM1", path: "/dev/ttyS0", type: "RS422" },
