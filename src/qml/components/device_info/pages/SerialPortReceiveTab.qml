@@ -209,8 +209,16 @@ Rectangle {
     }
 
     // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 更新接收显示
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.11]: 添加自动滚动到底部
     function updateReceiveDisplay() {
         receiveArea.text = serialPortController.receiveBuffer
+
+        // 自动滚动到底部
+        Qt.callLater(function() {
+            if (receiveScrollView.contentItem) {
+                receiveScrollView.contentItem.contentY = Math.max(0, receiveScrollView.contentItem.contentHeight - receiveScrollView.height)
+            }
+        })
     }
 
     // ========== 主布局 ==========
@@ -289,23 +297,30 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 270
 
-            TextArea {
-                id: receiveArea
+            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.11]: 添加 ScrollView 支持自动滚动
+            ScrollView {
+                id: receiveScrollView
                 anchors.fill: parent
-                readOnly: true
-                wrapMode: TextArea.Wrap
-                font.family: "Consolas"
-                font.pixelSize: 14
-                color: "#E0E0E0"
-                background: Rectangle {
-                    color: "#1e2838"
-                    border.color: "#3d4556"
-                    border.width: 1
-                    radius: 4
-                }
+                clip: true
 
-                // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 文本由 serialPortController.receiveBuffer 提供
-                text: ""
+                TextArea {
+                    id: receiveArea
+                    width: receiveScrollView.width
+                    readOnly: true
+                    wrapMode: TextArea.Wrap
+                    font.family: "Consolas"
+                    font.pixelSize: 14
+                    color: "#E0E0E0"
+                    background: Rectangle {
+                        color: "#1e2838"
+                        border.color: "#3d4556"
+                        border.width: 1
+                        radius: 4
+                    }
+
+                    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 文本由 serialPortController.receiveBuffer 提供
+                    text: ""
+                }
             }
 
             // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.7]: 焦点指示器（外层）

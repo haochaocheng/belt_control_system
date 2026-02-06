@@ -4,6 +4,7 @@
 #include "SerialPortController.h"
 #include <QDebug>
 #include <QSerialPortInfo>
+#include <QDateTime>  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.11]: 添加时间戳支持
 
 // ========== 构造函数和析构函数 ==========
 
@@ -548,6 +549,7 @@ void SerialPortController::resetConfig()
 void SerialPortController::handleReadyRead()
 {
     // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.3]: 实现数据接收处理
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.11]: 添加时间戳和自动换行
     if (!m_currentSerialPort) {
         return;
     }
@@ -562,13 +564,18 @@ void SerialPortController::handleReadyRead()
     // 发送原始数据信号
     emit dataReceived(data);
 
-    // 更新接收缓冲区
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.11]: 生成时间戳
+    QString timestamp = QDateTime::currentDateTime().toString("[yyyy-MM-dd HH:mm:ss.zzz] ");
+
+    // 更新接收缓冲区（添加时间戳和换行）
     if (m_receiveHexMode) {
         // HEX 模式：转换为十六进制字符串
-        m_receiveBuffer += byteArrayToHexString(data) + " ";
+        QString hexData = byteArrayToHexString(data);
+        m_receiveBuffer += timestamp + hexData + "\n";
     } else {
         // ASCII 模式：直接转换为字符串
-        m_receiveBuffer += QString::fromUtf8(data);
+        QString asciiData = QString::fromUtf8(data);
+        m_receiveBuffer += timestamp + asciiData + "\n";
     }
 
     emit receiveBufferChanged();
