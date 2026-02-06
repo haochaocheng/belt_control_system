@@ -15,6 +15,7 @@ set(CONTROL_SOURCES
     AlarmPlaybackService.cpp
     AlarmHistoryDatabase.cpp
     SerialPortController.cpp  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口控制器源文件
+    ModbusController.cpp  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS控制器源文件
 )
 
 set(CONTROL_HEADERS
@@ -33,6 +34,7 @@ set(CONTROL_HEADERS
     AlarmPlaybackService.h
     AlarmHistoryDatabase.h
     SerialPortController.h  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口控制器头文件
+    ModbusController.h  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS控制器头文件
 )
 
 # ========== Sherpa-ONNX TTS 集成（可选） ==========
@@ -107,6 +109,7 @@ add_library(control_module STATIC
 target_link_libraries(control_module
     Qt6::Core
     Qt6::SerialPort  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口支持
+    Qt6::SerialBus  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS支持
     hal_module
     network_module
 )
