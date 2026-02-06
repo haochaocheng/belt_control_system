@@ -209,6 +209,16 @@ Rectangle {
         console.log("✅ [SerialPortSendTab] Component.onCompleted 完成")
     }
 
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 监听 serialPortController 错误信号
+    Connections {
+        target: serialPortController
+
+        function onErrorOccurred(error) {
+            console.error("❌ [SerialPortSendTab] 串口错误:", error)
+            // TODO: 显示错误提示
+        }
+    }
+
     // ========== 滚动区域 ==========
     ScrollView {
         id: sendScrollView
@@ -356,12 +366,9 @@ Rectangle {
                         console.log("   - 格式:", sendFormat.currentText)
                         console.log("   - 数据:", sendInput.text)
 
-                        // TODO: Phase 2 - 调用后端发送数据
-                        if (sendFormat.currentText === "HEX") {
-                            // serialPortController.sendHex(sendInput.text)
-                        } else {
-                            // serialPortController.sendAscii(sendInput.text)
-                        }
+                        // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 调用 serialPortController 发送数据
+                        var isHex = (sendFormat.currentText === "HEX")
+                        serialPortController.sendData(sendInput.text, isHex)
                     }
                 }
 

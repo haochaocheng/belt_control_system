@@ -189,6 +189,14 @@ Rectangle {
         if (currentSerialPort) {
             console.log("✅ [SerialPortParamsTab] 当前串口:", currentSerialPort.name)
         }
+
+        // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 初始化所有显示
+        updateStatusDisplay()
+        updateBaudRateDisplay()
+        updateDataBitsDisplay()
+        updateStopBitsDisplay()
+        updateParityDisplay()
+
         console.log("✅ [SerialPortParamsTab] Component.onCompleted 完成")
     }
 
@@ -200,6 +208,97 @@ Rectangle {
             serialNameText.text = currentSerialPort.name
             devicePathText.text = currentSerialPort.path
             serialTypeText.text = currentSerialPort.type
+        }
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 集成 serialPortController
+    // 监听 serialPortController 属性变化，更新界面显示
+    Connections {
+        target: serialPortController
+
+        // 监听串口打开/关闭状态变化
+        function onIsOpenChanged() {
+            console.log("✅ [SerialPortParamsTab] 串口状态变化:", serialPortController.isOpen)
+            updateStatusDisplay()
+        }
+
+        // 监听波特率变化
+        function onBaudRateChanged() {
+            console.log("✅ [SerialPortParamsTab] 波特率变化:", serialPortController.baudRate)
+            updateBaudRateDisplay()
+        }
+
+        // 监听数据位变化
+        function onDataBitsChanged() {
+            console.log("✅ [SerialPortParamsTab] 数据位变化:", serialPortController.dataBits)
+            updateDataBitsDisplay()
+        }
+
+        // 监听停止位变化
+        function onStopBitsChanged() {
+            console.log("✅ [SerialPortParamsTab] 停止位变化:", serialPortController.stopBits)
+            updateStopBitsDisplay()
+        }
+
+        // 监听校验位变化
+        function onParityChanged() {
+            console.log("✅ [SerialPortParamsTab] 校验位变化:", serialPortController.parity)
+            updateParityDisplay()
+        }
+
+        // 监听错误信号
+        function onErrorOccurred(error) {
+            console.error("❌ [SerialPortParamsTab] 串口错误:", error)
+            // TODO: 显示错误提示
+        }
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 更新状态显示
+    function updateStatusDisplay() {
+        if (serialPortController.isOpen) {
+            statusIndicator.color = "#4CAF50"  // 绿色：已打开
+            statusLabel.text = "已打开"
+            statusLabel.color = "#4CAF50"
+        } else {
+            statusIndicator.color = "#9E9E9E"  // 灰色：已关闭
+            statusLabel.text = "已关闭"
+            statusLabel.color = "#9E9E9E"
+        }
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 更新波特率显示
+    function updateBaudRateDisplay() {
+        var baudRateStr = serialPortController.baudRate.toString()
+        var index = baudRateCombo.model.indexOf(baudRateStr)
+        if (index >= 0) {
+            baudRateCombo.currentIndex = index
+        }
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 更新数据位显示
+    function updateDataBitsDisplay() {
+        var dataBitsStr = serialPortController.dataBits.toString()
+        var index = dataBitsCombo.model.indexOf(dataBitsStr)
+        if (index >= 0) {
+            dataBitsCombo.currentIndex = index
+        }
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 更新停止位显示
+    function updateStopBitsDisplay() {
+        var stopBitsStr = serialPortController.stopBits.toString()
+        var index = stopBitsCombo.model.indexOf(stopBitsStr)
+        if (index >= 0) {
+            stopBitsCombo.currentIndex = index
+        }
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 更新校验位显示
+    function updateParityDisplay() {
+        var parityStr = serialPortController.parity
+        var index = parityCombo.model.indexOf(parityStr)
+        if (index >= 0) {
+            parityCombo.currentIndex = index
         }
     }
 
@@ -359,6 +458,17 @@ Rectangle {
                         model: ["1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"]
                         currentIndex: 3  // 默认9600
 
+                        // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 监听用户选择，更新 serialPortController
+                        onCurrentIndexChanged: {
+                            if (currentIndex >= 0 && currentIndex < model.length) {
+                                var newBaudRate = parseInt(model[currentIndex])
+                                if (serialPortController.baudRate !== newBaudRate) {
+                                    console.log("✅ [SerialPortParamsTab] 用户修改波特率:", newBaudRate)
+                                    serialPortController.baudRate = newBaudRate
+                                }
+                            }
+                        }
+
                         Component.onCompleted: {
                             var parent = baudRateCombo.parent
                             while (parent) {
@@ -373,6 +483,9 @@ Rectangle {
                             if (!baudRateCombo.parentDialog) {
                                 console.log("⚠️ [CustomComboBox] 未找到 DeviceSettingsDialog")
                             }
+
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 初始化时从 serialPortController 读取值
+                            updateBaudRateDisplay()
                         }
                     }
 
@@ -473,6 +586,17 @@ Rectangle {
                         model: ["5", "6", "7", "8"]
                         currentIndex: 3  // 默认8
 
+                        // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 监听用户选择，更新 serialPortController
+                        onCurrentIndexChanged: {
+                            if (currentIndex >= 0 && currentIndex < model.length) {
+                                var newDataBits = parseInt(model[currentIndex])
+                                if (serialPortController.dataBits !== newDataBits) {
+                                    console.log("✅ [SerialPortParamsTab] 用户修改数据位:", newDataBits)
+                                    serialPortController.dataBits = newDataBits
+                                }
+                            }
+                        }
+
                         Component.onCompleted: {
                             var parent = dataBitsCombo.parent
                             while (parent) {
@@ -483,6 +607,9 @@ Rectangle {
                                 }
                                 parent = parent.parent
                             }
+
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 初始化时从 serialPortController 读取值
+                            updateDataBitsDisplay()
                         }
                     }
 
@@ -583,6 +710,17 @@ Rectangle {
                         model: ["1", "1.5", "2"]
                         currentIndex: 0  // 默认1
 
+                        // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 监听用户选择，更新 serialPortController
+                        onCurrentIndexChanged: {
+                            if (currentIndex >= 0 && currentIndex < model.length) {
+                                var newStopBits = parseInt(model[currentIndex])
+                                if (serialPortController.stopBits !== newStopBits) {
+                                    console.log("✅ [SerialPortParamsTab] 用户修改停止位:", newStopBits)
+                                    serialPortController.stopBits = newStopBits
+                                }
+                            }
+                        }
+
                         Component.onCompleted: {
                             var parent = stopBitsCombo.parent
                             while (parent) {
@@ -593,6 +731,9 @@ Rectangle {
                                 }
                                 parent = parent.parent
                             }
+
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 初始化时从 serialPortController 读取值
+                            updateStopBitsDisplay()
                         }
                     }
 
@@ -643,6 +784,7 @@ Rectangle {
                         activeFocusOnTab: true
 
                         Rectangle {
+                            id: statusIndicator  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 添加 id
                             width: 12
                             height: 12
                             radius: 6
@@ -651,6 +793,7 @@ Rectangle {
                         }
 
                         Text {
+                            id: statusLabel  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 添加 id
                             text: "已关闭"
                             font.pixelSize: 21
                             color: "#9E9E9E"
@@ -698,6 +841,17 @@ Rectangle {
                         model: ["None", "Odd", "Even", "Mark", "Space"]
                         currentIndex: 0  // 默认None
 
+                        // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 监听用户选择，更新 serialPortController
+                        onCurrentIndexChanged: {
+                            if (currentIndex >= 0 && currentIndex < model.length) {
+                                var newParity = model[currentIndex]
+                                if (serialPortController.parity !== newParity) {
+                                    console.log("✅ [SerialPortParamsTab] 用户修改校验位:", newParity)
+                                    serialPortController.parity = newParity
+                                }
+                            }
+                        }
+
                         Component.onCompleted: {
                             var parent = parityCombo.parent
                             while (parent) {
@@ -708,6 +862,9 @@ Rectangle {
                                 }
                                 parent = parent.parent
                             }
+
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 初始化时从 serialPortController 读取值
+                            updateParityDisplay()
                         }
                     }
 

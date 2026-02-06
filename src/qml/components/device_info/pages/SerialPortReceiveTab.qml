@@ -176,7 +176,41 @@ Rectangle {
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
         console.log("✅ [SerialPortReceiveTab] Component.onCompleted 开始")
+
+        // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 初始化接收缓冲区显示
+        updateReceiveDisplay()
+
         console.log("✅ [SerialPortReceiveTab] Component.onCompleted 完成")
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 监听 serialPortController 接收数据
+    Connections {
+        target: serialPortController
+
+        // 监听接收缓冲区变化
+        function onReceiveBufferChanged() {
+            if (!root.isPaused) {
+                console.log("✅ [SerialPortReceiveTab] 接收缓冲区更新")
+                updateReceiveDisplay()
+            }
+        }
+
+        // 监听接收模式变化
+        function onReceiveHexModeChanged() {
+            console.log("✅ [SerialPortReceiveTab] 接收模式变化:", serialPortController.receiveHexMode ? "HEX" : "ASCII")
+            updateReceiveDisplay()
+        }
+
+        // 监听错误信号
+        function onErrorOccurred(error) {
+            console.error("❌ [SerialPortReceiveTab] 串口错误:", error)
+            // TODO: 显示错误提示
+        }
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 更新接收显示
+    function updateReceiveDisplay() {
+        receiveArea.text = serialPortController.receiveBuffer
     }
 
     // ========== 主布局 ==========
@@ -227,9 +261,13 @@ Rectangle {
                     model: ["HEX", "ASCII"]
                     currentIndex: 0
 
+                    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 监听格式切换，更新 serialPortController
                     onCurrentIndexChanged: {
                         console.log("✅ [SerialPortReceiveTab] 显示格式切换:", currentText)
-                        // TODO: Phase 2 - 切换显示格式
+                        var isHex = (currentText === "HEX")
+                        if (serialPortController.receiveHexMode !== isHex) {
+                            serialPortController.receiveHexMode = isHex
+                        }
                     }
                 }
 
@@ -266,18 +304,8 @@ Rectangle {
                     radius: 4
                 }
 
-                // 模拟接收数据（Phase 2 后端实现后替换）
-                text: "等待接收数据...\n"
-
-                // TODO: Phase 2 - 连接后端接收数据
-                // Connections {
-                //     target: serialPortController
-                //     function onDataReceived(data) {
-                //         if (!root.isPaused) {
-                //             receiveArea.append(data)
-                //         }
-                //     }
-                // }
+                // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 文本由 serialPortController.receiveBuffer 提供
+                text: ""
             }
 
             // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.7]: 焦点指示器（外层）
@@ -327,7 +355,8 @@ Rectangle {
                 }
 
                 onClicked: {
-                    receiveArea.text = ""
+                    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 调用 serialPortController 清空接收缓冲区
+                    serialPortController.clearReceiveBuffer()
                     console.log("✅ [SerialPortReceiveTab] 清空接收区")
                 }
             }
