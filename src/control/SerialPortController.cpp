@@ -573,8 +573,24 @@ void SerialPortController::handleReadyRead()
         QString hexData = byteArrayToHexString(data);
         m_receiveBuffer += timestamp + hexData + "\n";
     } else {
-        // ASCII 模式：直接转换为字符串
-        QString asciiData = QString::fromUtf8(data);
+        // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.12]: ASCII 模式 - 对不可打印字符显示为十六进制
+        QString asciiData;
+        for (int i = 0; i < data.size(); ++i) {
+            unsigned char byte = static_cast<unsigned char>(data[i]);
+            if (byte >= 32 && byte <= 126) {
+                // 可打印 ASCII 字符（空格到~）
+                asciiData += QChar(byte);
+            } else if (byte == '\r') {
+                asciiData += "\\r";
+            } else if (byte == '\n') {
+                asciiData += "\\n";
+            } else if (byte == '\t') {
+                asciiData += "\\t";
+            } else {
+                // 不可打印字符：显示为十六进制 \xHH
+                asciiData += QString("\\x%1").arg(byte, 2, 16, QChar('0')).toUpper();
+            }
+        }
         m_receiveBuffer += timestamp + asciiData + "\n";
     }
 
@@ -591,10 +607,10 @@ void SerialPortController::handleReadyRead()
         }
     }
 
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.12]: 日志始终显示 HEX 格式（便于调试）
     qDebug() << "✅ [SerialPortController] 接收数据:"
              << data.size() << "字节"
-             << (m_receiveHexMode ? "[HEX]" : "[ASCII]")
-             << (m_receiveHexMode ? byteArrayToHexString(data) : QString::fromUtf8(data));
+             << "[HEX]" << byteArrayToHexString(data);
 }
 
 void SerialPortController::handleError(QSerialPort::SerialPortError error)
