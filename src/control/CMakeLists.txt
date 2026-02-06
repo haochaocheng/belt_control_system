@@ -16,6 +16,7 @@ set(CONTROL_SOURCES
     AlarmHistoryDatabase.cpp
     SerialPortController.cpp  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口控制器源文件
     ModbusController.cpp  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS控制器源文件
+    ModbusSlaveController.cpp  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 添加MODBUS从站控制器源文件
 )
 
 set(CONTROL_HEADERS
@@ -35,6 +36,7 @@ set(CONTROL_HEADERS
     AlarmHistoryDatabase.h
     SerialPortController.h  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口控制器头文件
     ModbusController.h  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS控制器头文件
+    ModbusSlaveController.h  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 添加MODBUS从站控制器头文件
 )
 
 # ========== Sherpa-ONNX TTS 集成（可选） ==========
