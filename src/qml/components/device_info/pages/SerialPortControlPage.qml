@@ -104,6 +104,82 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.8]: 添加回车键处理函数
+    // 功能：根据当前焦点区域，执行不同的回车键操作
+    function handleEnterKey() {
+        console.log("✅ [SerialPortControlPage] 处理回车键 - 当前焦点区域:", focusSubArea)
+
+        // 区域0：列表区域 - 切换串口
+        if (focusSubArea === 0) {
+            console.log("✅ [SerialPortControlPage] 列表区域 - 切换串口:", focusItemIndex)
+            currentSerialIndex = focusItemIndex
+            loadSerialPortConfig()
+            return true
+        }
+
+        // 区域1：Tab 栏区域 - 切换 Tab
+        if (focusSubArea === 1) {
+            console.log("✅ [SerialPortControlPage] Tab 栏区域 - 切换 Tab:", focusTabIndex)
+            if (serialConfigPanel.item) {
+                serialConfigPanel.item.currentTabIndex = focusTabIndex
+            }
+            return true
+        }
+
+        // 区域2：参数区域 - 调用当前 Tab 的 handleEnterKey
+        if (focusSubArea === 2) {
+            console.log("✅ [SerialPortControlPage] 参数区域 - 调用 Tab 的 handleEnterKey")
+            if (serialConfigPanel.item) {
+                var currentTab = serialConfigPanel.item.getCurrentTab()
+                if (currentTab && typeof currentTab.handleEnterKey === "function") {
+                    return currentTab.handleEnterKey()
+                }
+            }
+            console.warn("⚠️ [SerialPortControlPage] 当前 Tab 没有 handleEnterKey 方法")
+            return false
+        }
+
+        // 区域3：按钮区域 - 执行按钮点击
+        if (focusSubArea === 3) {
+            console.log("✅ [SerialPortControlPage] 按钮区域 - 执行按钮点击:", focusButtonIndex)
+            switch(focusButtonIndex) {
+            case 0:  // 打开串口
+                console.log("✅ [SerialPortControlPage] 执行打开串口")
+                if (serialPortController.openSerialPort()) {
+                    console.log("✅ [SerialPortControlPage] 串口打开成功")
+                } else {
+                    console.error("❌ [SerialPortControlPage] 串口打开失败")
+                }
+                return true
+            case 1:  // 关闭串口
+                console.log("✅ [SerialPortControlPage] 执行关闭串口")
+                serialPortController.closeSerialPort()
+                return true
+            case 2:  // 保存
+                console.log("✅ [SerialPortControlPage] 执行保存配置")
+                serialPortController.saveConfig()
+                return true
+            case 3:  // 删除
+                console.log("✅ [SerialPortControlPage] 执行删除配置")
+                if (serialPortController.isOpen) {
+                    serialPortController.closeSerialPort()
+                }
+                serialPortController.resetConfig()
+                return true
+            case 4:  // 重置
+                console.log("✅ [SerialPortControlPage] 执行重置配置")
+                serialPortController.resetConfig()
+                return true
+            default:
+                console.warn("⚠️ [SerialPortControlPage] 未知按钮索引:", focusButtonIndex)
+                return false
+            }
+        }
+
+        console.warn("⚠️ [SerialPortControlPage] 未处理的焦点区域:", focusSubArea)
+        return false
+    }
+
     // ========== 串口数据 ==========
     property var serialPorts: [
         { name: "COM1", path: "/dev/ttyS0", type: "RS422" },
@@ -149,6 +225,15 @@ Rectangle {
     onFocusSubAreaChanged: {
         console.log("🔍 [SerialPortControlPage] focusSubArea 变化:", focusSubArea)
         console.log("🔍 [SerialPortControlPage] 当前状态 - focusItemIndex:", focusItemIndex, "currentSerialIndex:", currentSerialIndex)
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.8]: 监听 currentSerialIndex 变化，同步到 SerialPortController
+    onCurrentSerialIndexChanged: {
+        console.log("✅ [SerialPortControlPage] currentSerialIndex 变化:", currentSerialIndex)
+        if (currentSerialIndex >= 0 && currentSerialIndex < serialPorts.length) {
+            serialPortController.currentPortIndex = currentSerialIndex
+            console.log("✅ [SerialPortControlPage] 已同步到 SerialPortController.currentPortIndex:", currentSerialIndex)
+        }
     }
 
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.2]: NavigationManager 实例
