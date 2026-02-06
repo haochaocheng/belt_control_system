@@ -28,6 +28,9 @@ ModbusSlaveController::ModbusSlaveController(QObject *parent)
     connect(m_modbusServer, &QModbusServer::dataWritten,
             this, &ModbusSlaveController::handleDataWritten);
 
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.3]: 连接串口数据接收信号（用于调试）
+    // 注意：这些信号需要在从站启动后才能连接，因为串口对象是在connectDevice()时创建的
+
     // 初始化寄存器（默认100个寄存器）
     initializeRegisters(100, 100, 100, 100);
 }
@@ -150,6 +153,27 @@ bool ModbusSlaveController::startSlave()
         qWarning() << "❌ [ModbusSlaveController] 启动从站失败:" << error;
         emit errorOccurred(error);
         return false;
+    }
+
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.3]: 连接串口数据接收信号（用于调试）
+    // 获取底层串口对象
+    QSerialPort *serialPort = m_modbusServer->findChild<QSerialPort*>();
+    if (serialPort) {
+        qDebug() << "✅ [ModbusSlaveController] 找到底层串口对象，连接调试信号";
+        connect(serialPort, &QSerialPort::readyRead,
+                this, &ModbusSlaveController::handleSerialPortReadyRead, Qt::UniqueConnection);
+        connect(serialPort, &QSerialPort::errorOccurred,
+                this, &ModbusSlaveController::handleSerialPortError, Qt::UniqueConnection);
+
+        // 打印串口详细信息
+        qDebug() << "   - 串口名称:" << serialPort->portName();
+        qDebug() << "   - 波特率:" << serialPort->baudRate();
+        qDebug() << "   - 数据位:" << serialPort->dataBits();
+        qDebug() << "   - 停止位:" << serialPort->stopBits();
+        qDebug() << "   - 校验位:" << serialPort->parity();
+        qDebug() << "   - 串口是否打开:" << serialPort->isOpen();
+    } else {
+        qWarning() << "⚠️ [ModbusSlaveController] 未找到底层串口对象，无法连接调试信号";
     }
 
     qDebug() << "✅ [ModbusSlaveController] 从站启动成功";
@@ -599,18 +623,133 @@ void ModbusSlaveController::handleDataWritten(QModbusDataUnit::RegisterType tabl
     // 根据表类型发送相应的信号
     switch (table) {
     case QModbusDataUnit::HoldingRegisters:
+        qDebug() << "   - 保持寄存器被写入";
         for (int i = 0; i < size; ++i) {
             int value = getHoldingRegister(address + i);
+            qDebug() << "     地址" << (address + i) << "值:" << value;
             emit holdingRegisterWritten(address + i, value);
         }
         break;
     case QModbusDataUnit::Coils:
+        qDebug() << "   - 线圈被写入";
         for (int i = 0; i < size; ++i) {
             bool value = getCoil(address + i);
+            qDebug() << "     地址" << (address + i) << "值:" << value;
             emit coilWritten(address + i, value);
         }
         break;
     default:
+        qDebug() << "   - 其他类型被写入";
+        break;
+    }
+}
+
+// ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.3]: 串口数据接收调试槽函数
+void ModbusSlaveController::handleSerialPortReadyRead()
+{
+    QSerialPort *serialPort = qobject_cast<QSerialPort*>(sender());
+    if (!serialPort) {
+        return;
+    }
+
+    QByteArray data = serialPort->readAll();
+    qDebug() << "🔍 [ModbusSlaveController] 串口接收到数据 - 字节数:" << data.size();
+    qDebug() << "   - 原始数据(HEX):" << data.toHex(' ');
+
+    // 解析 MODBUS RTU 帧（简单解析，用于调试）
+    if (data.size() >= 4) {
+        quint8 slaveAddr = static_cast<quint8>(data[0]);
+        quint8 functionCode = static_cast<quint8>(data[1]);
+
+        qDebug() << "   - 从站地址:" << slaveAddr << "(期望:" << m_slaveAddress << ")";
+        qDebug() << "   - 功能码:" << QString("0x%1").arg(functionCode, 2, 16, QChar('0'));
+
+        if (slaveAddr != m_slaveAddress) {
+            qWarning() << "⚠️ [ModbusSlaveController] 从站地址不匹配！";
+        }
+
+        // 解析功能码
+        switch (functionCode) {
+        case 0x01:
+            qDebug() << "   - 功能码: 读取线圈 (0x01)";
+            break;
+        case 0x02:
+            qDebug() << "   - 功能码: 读取离散输入 (0x02)";
+            break;
+        case 0x03:
+            qDebug() << "   - 功能码: 读取保持寄存器 (0x03)";
+            break;
+        case 0x04:
+            qDebug() << "   - 功能码: 读取输入寄存器 (0x04)";
+            break;
+        case 0x05:
+            qDebug() << "   - 功能码: 写入单个线圈 (0x05)";
+            break;
+        case 0x06:
+            qDebug() << "   - 功能码: 写入单个保持寄存器 (0x06)";
+            break;
+        case 0x0F:
+            qDebug() << "   - 功能码: 写入多个线圈 (0x0F)";
+            break;
+        case 0x10:
+            qDebug() << "   - 功能码: 写入多个保持寄存器 (0x10)";
+            break;
+        default:
+            qDebug() << "   - 功能码: 未知或不支持";
+            break;
+        }
+
+        // 如果数据足够长，解析起始地址和数量
+        if (data.size() >= 6) {
+            quint16 startAddr = (static_cast<quint8>(data[2]) << 8) | static_cast<quint8>(data[3]);
+            quint16 quantity = (static_cast<quint8>(data[4]) << 8) | static_cast<quint8>(data[5]);
+            qDebug() << "   - 起始地址:" << startAddr;
+            qDebug() << "   - 数量:" << quantity;
+        }
+    } else {
+        qWarning() << "⚠️ [ModbusSlaveController] 接收到的数据太短，无法解析 MODBUS 帧";
+    }
+}
+
+void ModbusSlaveController::handleSerialPortError(QSerialPort::SerialPortError error)
+{
+    if (error == QSerialPort::NoError) {
+        return;
+    }
+
+    QSerialPort *serialPort = qobject_cast<QSerialPort*>(sender());
+    QString errorString = serialPort ? serialPort->errorString() : "未知错误";
+
+    qWarning() << "❌ [ModbusSlaveController] 串口错误:" << error << "-" << errorString;
+
+    // 详细错误类型
+    switch (error) {
+    case QSerialPort::DeviceNotFoundError:
+        qWarning() << "   - 错误类型: 设备未找到";
+        break;
+    case QSerialPort::PermissionError:
+        qWarning() << "   - 错误类型: 权限错误";
+        break;
+    case QSerialPort::OpenError:
+        qWarning() << "   - 错误类型: 打开错误";
+        break;
+    case QSerialPort::WriteError:
+        qWarning() << "   - 错误类型: 写入错误";
+        break;
+    case QSerialPort::ReadError:
+        qWarning() << "   - 错误类型: 读取错误";
+        break;
+    case QSerialPort::ResourceError:
+        qWarning() << "   - 错误类型: 资源错误（设备可能被拔出）";
+        break;
+    case QSerialPort::UnsupportedOperationError:
+        qWarning() << "   - 错误类型: 不支持的操作";
+        break;
+    case QSerialPort::TimeoutError:
+        qWarning() << "   - 错误类型: 超时错误";
+        break;
+    default:
+        qWarning() << "   - 错误类型: 其他错误";
         break;
     }
 }

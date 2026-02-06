@@ -112,6 +112,9 @@ private slots:
     void handleStateChanged(QModbusDevice::State state);
     void handleErrorOccurred(QModbusDevice::Error error);
     void handleDataWritten(QModbusDataUnit::RegisterType table, int address, int size);
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.3]: 添加串口数据接收调试槽函数
+    void handleSerialPortReadyRead();
+    void handleSerialPortError(QSerialPort::SerialPortError error);
 
 private:
     // ========== MODBUS 从站设备 ==========
