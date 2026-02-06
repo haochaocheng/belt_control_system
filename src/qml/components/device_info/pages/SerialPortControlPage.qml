@@ -583,7 +583,12 @@ Rectangle {
 
                         onClicked: {
                             console.log("✅ [SerialPortControlPage] 打开串口")
-                            // TODO: 实现打开串口功能
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.6]: 实现打开串口功能
+                            if (serialPortController.openSerialPort()) {
+                                console.log("✅ [SerialPortControlPage] 串口打开成功")
+                            } else {
+                                console.error("❌ [SerialPortControlPage] 串口打开失败")
+                            }
                         }
                     }
 
@@ -624,7 +629,9 @@ Rectangle {
 
                         onClicked: {
                             console.log("✅ [SerialPortControlPage] 关闭串口")
-                            // TODO: 实现关闭串口功能
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.6]: 实现关闭串口功能
+                            serialPortController.closeSerialPort()
+                            console.log("✅ [SerialPortControlPage] 串口已关闭")
                         }
                     }
                 }
@@ -671,7 +678,9 @@ Rectangle {
 
                         onClicked: {
                             console.log("✅ [SerialPortControlPage] 保存")
-                            // TODO: 实现保存功能
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.6]: 实现保存功能
+                            serialPortController.saveConfig()
+                            console.log("✅ [SerialPortControlPage] 配置已保存")
                         }
                     }
 
@@ -712,7 +721,13 @@ Rectangle {
 
                         onClicked: {
                             console.log("✅ [SerialPortControlPage] 删除")
-                            // TODO: 实现删除功能
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.6]: 实现删除功能
+                            // 删除操作：关闭当前串口并重置配置
+                            if (serialPortController.isOpen) {
+                                serialPortController.closeSerialPort()
+                            }
+                            serialPortController.resetConfig()
+                            console.log("✅ [SerialPortControlPage] 当前串口配置已删除（重置为默认值）")
                         }
                     }
 
@@ -753,7 +768,9 @@ Rectangle {
 
                         onClicked: {
                             console.log("✅ [SerialPortControlPage] 重置")
-                            // TODO: 实现重置功能
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.6]: 实现重置功能
+                            serialPortController.resetConfig()
+                            console.log("✅ [SerialPortControlPage] 配置已重置为默认值")
                         }
                     }
                 }
