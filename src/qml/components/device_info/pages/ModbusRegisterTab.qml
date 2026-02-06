@@ -1293,6 +1293,14 @@ Rectangle {
                         onClicked: {
                             if (root.currentSlave) {
                                 console.log("✅ [ModbusRegisterTab] 启动从站")
+
+                                // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.41.1]: 修复串口占用冲突
+                                // 如果 SerialPortController 已经打开了串口，先关闭它
+                                if (serialPortController.isOpen) {
+                                    console.log("⚠️ [ModbusRegisterTab] 串口已被 SerialPortController 打开，先关闭")
+                                    serialPortController.closeSerialPort()
+                                }
+
                                 // 配置串口参数
                                 root.currentSlave.portName = serialPortController.devicePath
                                 root.currentSlave.baudRate = serialPortController.baudRate
