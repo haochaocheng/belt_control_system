@@ -12,7 +12,7 @@ SerialPortController::SerialPortController(QObject *parent)
     : QObject(parent)
     , m_currentPortIndex(0)
     , m_currentSerialPort(nullptr)
-    , m_receiveHexMode(false)
+    , m_receiveHexMode(true)  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.14]: 默认HEX模式（与UI默认选项一致）
     , m_pendingSlaveAddress(0)
     , m_pendingFunctionCode(0)
 {
