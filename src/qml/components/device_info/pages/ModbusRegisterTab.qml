@@ -309,6 +309,63 @@ Rectangle {
         console.log("✅ [ModbusRegisterTab] Component.onCompleted 完成")
     }
 
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 监听 modbusController 信号
+    Connections {
+        target: modbusController
+
+        // 监听读取寄存器完成
+        function onReadRegistersFinished(serverAddress, startAddress, values) {
+            console.log("✅ [ModbusRegisterTab] 读取寄存器完成")
+            console.log("   - 从站地址:", serverAddress)
+            console.log("   - 起始地址:", startAddress)
+            console.log("   - 数量:", values.length)
+
+            // 清空现有数据
+            registerModel.clear()
+
+            // 添加新数据
+            for (var i = 0; i < values.length; i++) {
+                var addr = startAddress + i
+                var hexValue = values[i].toString(16).toUpperCase().padStart(4, '0')
+                var decValue = values[i].toString()
+                registerModel.append({
+                    address: addr.toString(16).toUpperCase().padStart(4, '0'),
+                    hexValue: hexValue,
+                    decValue: decValue,
+                    description: "寄存器 " + addr
+                })
+            }
+        }
+
+        // 监听写入寄存器完成
+        function onWriteRegisterFinished(serverAddress, address, success) {
+            if (success) {
+                console.log("✅ [ModbusRegisterTab] 写入单个寄存器成功")
+                console.log("   - 从站地址:", serverAddress)
+                console.log("   - 地址:", address)
+            } else {
+                console.error("❌ [ModbusRegisterTab] 写入单个寄存器失败")
+            }
+        }
+
+        // 监听写入多个寄存器完成
+        function onWriteRegistersFinished(serverAddress, startAddress, success) {
+            if (success) {
+                console.log("✅ [ModbusRegisterTab] 写入多个寄存器成功")
+                console.log("   - 从站地址:", serverAddress)
+                console.log("   - 起始地址:", startAddress)
+            } else {
+                console.error("❌ [ModbusRegisterTab] 写入多个寄存器失败")
+            }
+        }
+
+        // 监听错误信号
+        function onErrorOccurred(error) {
+            console.error("❌ [ModbusRegisterTab] MODBUS 错误:", error)
+            // TODO: 显示错误提示
+        }
+    }
+
     // ========== 滚动区域 ==========
     ScrollView {
         id: modbusScrollView
@@ -573,12 +630,12 @@ Rectangle {
                             console.log("   - 起始地址:", startAddress.text)
                             console.log("   - 数量:", quantity.value)
 
-                            // TODO: Phase 2 - 调用后端读取寄存器
-                            // modbusController.readHoldingRegisters(
-                            //     parseInt(slaveAddress.text, 16),
-                            //     parseInt(startAddress.text, 16),
-                            //     quantity.value
-                            // )
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 调用 modbusController 读取寄存器
+                            modbusController.readHoldingRegisters(
+                                parseInt(slaveAddress.text, 16),
+                                parseInt(startAddress.text, 16),
+                                quantity.value
+                            )
                         }
                     }
 
@@ -633,19 +690,21 @@ Rectangle {
                             console.log("   - 起始地址:", startAddress.text)
                             console.log("   - 写入值:", writeValue.text)
 
-                            // TODO: Phase 2 - 调用后端写入寄存器
+                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 调用 modbusController 写入寄存器
                             if (functionCode.currentIndex === 1) {
-                                // modbusController.writeSingleRegister(
-                                //     parseInt(slaveAddress.text, 16),
-                                //     parseInt(startAddress.text, 16),
-                                //     parseInt(writeValue.text, 16)
-                                // )
+                                // 06-写单个寄存器
+                                modbusController.writeSingleRegister(
+                                    parseInt(slaveAddress.text, 16),
+                                    parseInt(startAddress.text, 16),
+                                    parseInt(writeValue.text, 16)
+                                )
                             } else {
-                                // modbusController.writeMultipleRegisters(
-                                //     parseInt(slaveAddress.text, 16),
-                                //     parseInt(startAddress.text, 16),
-                                //     [parseInt(writeValue.text, 16)]
-                                // )
+                                // 10-写多个寄存器
+                                modbusController.writeMultipleRegisters(
+                                    parseInt(slaveAddress.text, 16),
+                                    parseInt(startAddress.text, 16),
+                                    [parseInt(writeValue.text, 16)]
+                                )
                             }
                         }
                     }
@@ -759,10 +818,8 @@ Rectangle {
                     clip: true
                     model: ListModel {
                         id: registerModel
-                        // 模拟数据（Phase 2 后端实现后替换）
-                        ListElement { address: "0000"; hexValue: "0001"; decValue: "1"; description: "状态寄存器" }
-                        ListElement { address: "0001"; hexValue: "0064"; decValue: "100"; description: "速度设定" }
-                        ListElement { address: "0002"; hexValue: "00C8"; decValue: "200"; description: "温度设定" }
+                        // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 数据由 modbusController 提供
+                        // 初始为空，读取寄存器后动态添加
                     }
 
                     delegate: Rectangle {
