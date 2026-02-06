@@ -14,6 +14,7 @@ set(CONTROL_SOURCES
     ProtectionMonitorService.cpp
     AlarmPlaybackService.cpp
     AlarmHistoryDatabase.cpp
+    SerialPortController.cpp  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口控制器源文件
 )
 
 set(CONTROL_HEADERS
@@ -31,6 +32,7 @@ set(CONTROL_HEADERS
     ProtectionMonitorService.h
     AlarmPlaybackService.h
     AlarmHistoryDatabase.h
+    SerialPortController.h  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口控制器头文件
 )
 
 # ========== Sherpa-ONNX TTS 集成（可选） ==========
@@ -104,6 +106,7 @@ add_library(control_module STATIC
 
 target_link_libraries(control_module
     Qt6::Core
+    Qt6::SerialPort  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口支持
     hal_module
     network_module
 )
