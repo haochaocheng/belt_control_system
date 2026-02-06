@@ -120,12 +120,13 @@ bool ModbusController::connectDevice()
         m_modbusDevice->disconnectDevice();
     }
 
-    // 设置串口参数
-    m_modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, m_portName);
-    m_modbusDevice->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, m_baudRate);
-    m_modbusDevice->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, m_dataBits);
-    m_modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, m_stopBits);
-    m_modbusDevice->setConnectionParameter(QModbusDevice::SerialParityParameter, static_cast<int>(convertParity(m_parity)));
+    // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.7]: 修复编译错误 - setConnectionParameter 需要 QVariant 参数
+    // 设置串口参数（需要包装为 QVariant）
+    m_modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, QVariant(m_portName));
+    m_modbusDevice->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, QVariant(m_baudRate));
+    m_modbusDevice->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, QVariant(m_dataBits));
+    m_modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, QVariant(m_stopBits));
+    m_modbusDevice->setConnectionParameter(QModbusDevice::SerialParityParameter, QVariant(static_cast<int>(convertParity(m_parity))));
 
     // 设置超时和重试
     m_modbusDevice->setTimeout(1000);  // 1秒超时
