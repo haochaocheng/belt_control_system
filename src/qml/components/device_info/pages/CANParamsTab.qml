@@ -117,7 +117,7 @@ Rectangle {
                         TextField {
                             id: canInterfaceText
                             anchors.fill: parent
-                            text: canController.canInterface
+                            text: typeof canController !== 'undefined' ? canController.canInterface : ""
                             font.pixelSize: 21
                             color: "#E0E0E0"
                             verticalAlignment: Text.AlignVCenter
@@ -169,6 +169,7 @@ Rectangle {
                         Layout.maximumWidth: 300
                         model: ["125000", "250000", "500000", "1000000"]
                         currentIndex: {
+                            if (typeof canController === 'undefined') return 2
                             var bitrate = canController.bitrate
                             switch(bitrate) {
                             case 125000: return 0
@@ -180,9 +181,11 @@ Rectangle {
                         }
 
                         onActivated: {
-                            var newBitrate = parseInt(model[index])
-                            console.log("✅ [CANParamsTab] 波特率变化:", newBitrate)
-                            canController.bitrate = newBitrate
+                            if (typeof canController !== 'undefined') {
+                                var newBitrate = parseInt(model[index])
+                                console.log("✅ [CANParamsTab] 波特率变化:", newBitrate)
+                                canController.bitrate = newBitrate
+                            }
                         }
                     }
 
@@ -239,9 +242,9 @@ Rectangle {
                         TextField {
                             id: statusText
                             anchors.fill: parent
-                            text: canController.status
+                            text: typeof canController !== 'undefined' ? canController.status : ""
                             font.pixelSize: 21
-                            color: canController.isUp ? "#4CAF50" : "#9E9E9E"
+                            color: (typeof canController !== 'undefined' && canController.isUp) ? "#4CAF50" : "#9E9E9E"
                             font.weight: Font.Bold
                             verticalAlignment: Text.AlignVCenter
                             leftPadding: 15
@@ -291,12 +294,14 @@ Rectangle {
                         Layout.fillWidth: true
                         Layout.maximumWidth: 300
                         model: ["标准帧", "扩展帧"]
-                        currentIndex: canController.frameType === "标准帧" ? 0 : 1
+                        currentIndex: (typeof canController !== 'undefined' && canController.frameType === "标准帧") ? 0 : 1
 
                         onActivated: {
-                            var newFrameType = model[index]
-                            console.log("✅ [CANParamsTab] 帧类型变化:", newFrameType)
-                            canController.frameType = newFrameType
+                            if (typeof canController !== 'undefined') {
+                                var newFrameType = model[index]
+                                console.log("✅ [CANParamsTab] 帧类型变化:", newFrameType)
+                                canController.frameType = newFrameType
+                            }
                         }
                     }
 
