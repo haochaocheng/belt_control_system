@@ -250,6 +250,23 @@ Rectangle {
                             leftPadding: 15
                             readOnly: true
 
+                            // ✅ 2026-02-07 [Phase 7.39.16]: 添加调试日志
+                            Component.onCompleted: {
+                                console.log("🔍 [CANParamsTab] statusText 初始化")
+                                console.log("   - canController 是否存在:", typeof canController !== 'undefined')
+                                if (typeof canController !== 'undefined') {
+                                    console.log("   - canController.status:", canController.status)
+                                    console.log("   - canController.isUp:", canController.isUp)
+                                }
+                            }
+
+                            Connections {
+                                target: typeof canController !== 'undefined' ? canController : null
+                                function onStatusChanged() {
+                                    console.log("🔍 [CANParamsTab] canController.status 变化:", canController.status)
+                                }
+                            }
+
                             background: Rectangle {
                                 color: "transparent"
                                 border.width: 0
