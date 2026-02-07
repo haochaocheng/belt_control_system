@@ -1034,6 +1034,34 @@ Item {
                     }
                 }
 
+                // ✅ 2026-02-07 [Phase 7.39.11 Fix]: CAN控制页面使用 NavigationManager
+                var isCANControlPage = (currentCategory === 7)  // CAN控制类别
+                console.log("🔍 [CAN控制导航] isCANControlPage:", isCANControlPage)
+
+                if (isCANControlPage) {
+                    var canPage = canControlPageLoader.item
+                    if (canPage && canPage.navigationManager) {
+                        // 检查当前Tab是否有自定义导航
+                        if (typeof canPage.getCurrentTab === "function") {
+                            var currentTab = canPage.getCurrentTab()
+                            if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                console.log("✅ [CAN控制导航] 右键 - 调用自定义导航")
+                                var handled = currentTab.handleDirectionKey("Right")
+                                if (handled) {
+                                    event.accepted = true
+                                    return
+                                }
+                            }
+                        }
+
+                        // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                        console.log("🔍 [CAN控制导航] 右键 - 调用 NavigationManager.handleDirectionKey")
+                        canPage.navigationManager.handleDirectionKey("Right")
+                        event.accepted = true
+                        return
+                    }
+                }
+
                 // 如果当前在列表区域，切换到参数区域
                 if (currentPage.focusSubArea === 0) {
                     currentPage.focusSubArea = 1
