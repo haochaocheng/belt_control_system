@@ -789,7 +789,8 @@ Rectangle {
                             height: 12
                             radius: 6
                             color: "#9E9E9E"  // 默认关闭状态
-                            anchors.verticalCenter: parent.verticalCenter
+                            // ✅ 2026-02-07 [Phase 7.39.18]: 移除 anchors.verticalCenter，Row 中不允许使用
+                            y: (parent.height - height) / 2  // 手动居中
                         }
 
                         Text {
@@ -797,7 +798,7 @@ Rectangle {
                             text: "已关闭"
                             font.pixelSize: 21
                             color: "#9E9E9E"
-                            anchors.verticalCenter: parent.verticalCenter
+                            // ✅ 2026-02-07 [Phase 7.39.18]: 移除 anchors.verticalCenter，Row 中不允许使用
                         }
 
                         // ✅ 2026-02-07 [Phase 7.39.17]: 焦点指示器移到内部，避免布局冲突
