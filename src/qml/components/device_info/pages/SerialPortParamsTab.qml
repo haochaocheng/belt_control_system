@@ -487,17 +487,17 @@ Rectangle {
                             // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 初始化时从 serialPortController 读取值
                             updateBaudRateDisplay()
                         }
-                    }
 
-                    // ✅ 焦点指示器
-                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
-                    Rectangle {
-                        anchors.fill: baudRateCombo
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 1) ? 3 : 0
-                        radius: 4
-                        z: 10
+                        // ✅ 2026-02-07 [Phase 7.39.17]: 焦点指示器移到内部，避免布局冲突
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            color: "transparent"
+                            border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                            border.width: (root.focusParamIndex === 1) ? 3 : 0
+                            radius: 4
+                            z: 10
+                        }
                     }
                 }
             }
@@ -611,17 +611,17 @@ Rectangle {
                             // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 初始化时从 serialPortController 读取值
                             updateDataBitsDisplay()
                         }
-                    }
 
-                    // ✅ 焦点指示器
-                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
-                    Rectangle {
-                        anchors.fill: dataBitsCombo
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 3) ? 3 : 0
-                        radius: 4
-                        z: 10
+                        // ✅ 2026-02-07 [Phase 7.39.17]: 焦点指示器移到内部，避免布局冲突
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            color: "transparent"
+                            border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                            border.width: (root.focusParamIndex === 3) ? 3 : 0
+                            radius: 4
+                            z: 10
+                        }
                     }
                 }
             }
@@ -735,17 +735,17 @@ Rectangle {
                             // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 初始化时从 serialPortController 读取值
                             updateStopBitsDisplay()
                         }
-                    }
 
-                    // ✅ 焦点指示器
-                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
-                    Rectangle {
-                        anchors.fill: stopBitsCombo
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 5) ? 3 : 0
-                        radius: 4
-                        z: 10
+                        // ✅ 2026-02-07 [Phase 7.39.17]: 焦点指示器移到内部，避免布局冲突
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            color: "transparent"
+                            border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                            border.width: (root.focusParamIndex === 5) ? 3 : 0
+                            radius: 4
+                            z: 10
+                        }
                     }
                 }
             }
@@ -799,18 +799,17 @@ Rectangle {
                             color: "#9E9E9E"
                             anchors.verticalCenter: parent.verticalCenter
                         }
-                    }
 
-                    // ✅ 焦点指示器
-                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
-                    Rectangle {
-                        anchors.fill: statusText
-                        anchors.margins: -4
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 6) ? 3 : 0
-                        radius: 4
-                        z: 10
+                        // ✅ 2026-02-07 [Phase 7.39.17]: 焦点指示器移到内部，避免布局冲突
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            color: "transparent"
+                            border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                            border.width: (root.focusParamIndex === 6) ? 3 : 0
+                            radius: 4
+                            z: 10
+                        }
                     }
                 }
             }
@@ -866,17 +865,17 @@ Rectangle {
                             // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.5]: 初始化时从 serialPortController 读取值
                             updateParityDisplay()
                         }
-                    }
 
-                    // ✅ 焦点指示器
-                    // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.9]: 改为使用focusParamIndex
-                    Rectangle {
-                        anchors.fill: parityCombo
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 7) ? 3 : 0
-                        radius: 4
-                        z: 10
+                        // ✅ 2026-02-07 [Phase 7.39.17]: 焦点指示器移到内部，避免布局冲突
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            color: "transparent"
+                            border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                            border.width: (root.focusParamIndex === 7) ? 3 : 0
+                            radius: 4
+                            z: 10
+                        }
                     }
                 }
             }
