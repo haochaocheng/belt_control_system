@@ -52,16 +52,27 @@ Rectangle {
 
     // ========== 滚动视图 ==========
     ScrollView {
+        id: paramScrollView
         anchors.fill: parent
         clip: true
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
         // ========== 参数网格 ==========
         GridLayout {
-            width: parent.width * 0.9
+            id: gridLayout
+            width: paramScrollView.width * 0.9  // ✅ 2026-02-07 [Phase 7.39.8]: 修复宽度绑定，参考串口配置
             columns: 2
             rowSpacing: 12
             columnSpacing: 16
+
+            Component.onCompleted: {
+                console.log("✅ [CANParamsTab] GridLayout 加载完成")
+                console.log("   - columns:", columns)
+                console.log("   - width:", width)
+                console.log("   - paramScrollView.width:", paramScrollView.width)
+                console.log("   - columnSpacing:", columnSpacing)
+                console.log("   - rowSpacing:", rowSpacing)
+            }
 
             // ========== 行0：CAN接口、波特率 ==========
             // 索引 0: CAN接口（只读）
