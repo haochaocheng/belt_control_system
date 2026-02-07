@@ -535,9 +535,10 @@ Item {
                     }
                 } else if (currentPage.focusSubArea === 3) {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.12]: 串口控制按钮区域使用NavigationManager
-                    // 原因：串口控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
+                    // ✅ 2026-02-07 [Phase 7.39.11 Fix v7]: CAN控制按钮区域也使用NavigationManager
+                    // 原因：串口控制和CAN控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
-                    // 解决：在focusSubArea=3时，检查是否为串口控制页面，调用NavigationManager
+                    // 解决：在focusSubArea=3时，检查是否为串口控制或CAN控制页面，调用NavigationManager
                     console.log("🔍 [串口控制导航] 上键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
                         // 串口控制页面：使用 NavigationManager
@@ -553,6 +554,15 @@ Item {
                             return
                         } else {
                             console.log("⚠️ [串口控制导航] 上键 - NavigationManager 不可用")
+                        }
+                    } else if (currentCategory === 7) {
+                        // ✅ 2026-02-07 [Phase 7.39.11 Fix v7]: CAN控制按钮区域使用NavigationManager
+                        var canPage = canControlPageLoader.item
+                        if (canPage && canPage.navigationManager) {
+                            console.log("✅ [CAN控制导航] 按钮区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            canPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
                         }
                     }
                 }
@@ -733,9 +743,10 @@ Item {
                     }
                 } else if (currentPage.focusSubArea === 3) {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.12]: 串口控制按钮区域使用NavigationManager
-                    // 原因：串口控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
+                    // ✅ 2026-02-07 [Phase 7.39.11 Fix v7]: CAN控制按钮区域也使用NavigationManager
+                    // 原因：串口控制和CAN控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
-                    // 解决：在focusSubArea=3时，检查是否为串口控制页面，调用NavigationManager
+                    // 解决：在focusSubArea=3时，检查是否为串口控制或CAN控制页面，调用NavigationManager
                     console.log("🔍 [串口控制导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
                         // 串口控制页面：使用 NavigationManager
@@ -751,6 +762,15 @@ Item {
                             return
                         } else {
                             console.log("⚠️ [串口控制导航] 下键 - NavigationManager 不可用")
+                        }
+                    } else if (currentCategory === 7) {
+                        // ✅ 2026-02-07 [Phase 7.39.11 Fix v7]: CAN控制按钮区域使用NavigationManager
+                        var canPage = canControlPageLoader.item
+                        if (canPage && canPage.navigationManager) {
+                            console.log("✅ [CAN控制导航] 按钮区域下键 - 调用 NavigationManager.handleDirectionKey")
+                            canPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
                         }
                     }
                 }
