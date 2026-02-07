@@ -821,13 +821,16 @@ Item {
                 // 现在让SerialPortControlPage自己处理左键事件（通过Keys.onLeftPressed）
 
                 // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.5]: 串口控制页面跳过参数区域左键处理
+                // ✅ 2026-02-07 [Phase 7.39.11 Fix v4]: CAN控制页面也跳过参数区域左键处理
                 // 串口控制页面的区域定义：0=列表 1=Tab 2=参数 3=按钮
+                // CAN控制页面的区域定义：0=列表 1=Tab 2=参数 3=按钮
                 // 电机控制页面的区域定义：0=列表 1=参数 2=按钮
                 // 下面的代码是为电机控制页面设计的，检查 focusSubArea === 1 认为是参数区域
-                // 但对串口控制页面来说，focusSubArea === 1 是Tab区域，不应该执行参数区域的逻辑
+                // 但对串口控制和CAN控制页面来说，focusSubArea === 1 是Tab区域，不应该执行参数区域的逻辑
                 var isSerialPortControlPage = (currentCategory === 6)  // 串口控制类别
+                var isCANControlPage = (currentCategory === 7)  // CAN控制类别
 
-                if (currentPage.focusSubArea === 1 && !isSerialPortControlPage) {
+                if (currentPage.focusSubArea === 1 && !isSerialPortControlPage && !isCANControlPage) {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
                     var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
                     var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
