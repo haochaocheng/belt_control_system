@@ -924,6 +924,17 @@ Item {
                 }
             }
 
+            // ✅ 2026-02-07 [Phase 7.39.11 Fix v3]: CAN控制页面使用NavigationManager处理左键
+            if (currentCategory === 7 && currentFocusArea === 2) {
+                var canPage = canControlPageLoader.item
+                if (canPage && canPage.navigationManager) {
+                    console.log("✅ [导航] CAN控制页面左键 - 调用NavigationManager")
+                    canPage.navigationManager.handleDirectionKey("Left")
+                    event.accepted = true
+                    return
+                }
+            }
+
             // 否则切换到左侧类别
             currentFocusArea = 1
             break
