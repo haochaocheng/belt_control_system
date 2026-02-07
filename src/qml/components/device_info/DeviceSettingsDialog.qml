@@ -2473,7 +2473,9 @@ Item {
             return ["张紧测试", "释放测试", "参数校验"]
         case 6: // 串口控制
             return []  // ✅ 2026-02-04 [FIX 100.300.113]: 串口控制暂无底部按钮
-        case 7: // 逻辑控制
+        case 7: // CAN控制
+            return []  // ✅ 2026-02-07 [Phase 7.39.10]: CAN控制按钮已在 CANControlPage 内部实现
+        case 8: // 逻辑控制
             return ["添加逻辑", "删除逻辑", "测试逻辑"]
         default:
             return []
@@ -2497,7 +2499,9 @@ Item {
             return 14  // 14个输入组件
         case 6:  // 串口控制
             return 6  // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.3]: 6个串口（COM1-COM6）
-        case 7:  // 逻辑控制
+        case 7:  // CAN控制
+            return 2  // ✅ 2026-02-07 [Phase 7.39.10]: 2个CAN接口（CAN0、CAN1）
+        case 8:  // 逻辑控制
             return 0  // 待实现
         default:
             return 0
