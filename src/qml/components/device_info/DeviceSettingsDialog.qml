@@ -398,6 +398,7 @@ Item {
                     }
                 } else if (currentPage.focusSubArea === 1) {
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.7]: 串口控制使用 NavigationManager
+                    // ✅ 2026-02-07 [Phase 7.39.11 Fix v5]: CAN控制也使用 NavigationManager
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.28]: 添加详细调试信息
                     console.log("🔍 [串口控制导航] 上键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
@@ -414,6 +415,15 @@ Item {
                             return
                         } else {
                             console.log("⚠️ [串口控制导航] 上键 - NavigationManager 不可用")
+                        }
+                    } else if (currentCategory === 7) {
+                        // ✅ 2026-02-07 [Phase 7.39.11 Fix v5]: CAN控制页面使用 NavigationManager
+                        var canPage = canControlPageLoader.item
+                        if (canPage && canPage.navigationManager) {
+                            console.log("✅ [CAN控制导航] 上键 - 调用 NavigationManager.handleDirectionKey")
+                            canPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
                         }
                     }
 
@@ -625,6 +635,7 @@ Item {
                     }
                 } else if (currentPage.focusSubArea === 1) {
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.7]: 串口控制使用 NavigationManager
+                    // ✅ 2026-02-07 [Phase 7.39.11 Fix v5]: CAN控制也使用 NavigationManager
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.28]: 添加详细调试信息
                     console.log("🔍 [串口控制导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
@@ -641,6 +652,15 @@ Item {
                             return
                         } else {
                             console.log("⚠️ [串口控制导航] 下键 - NavigationManager 不可用")
+                        }
+                    } else if (currentCategory === 7) {
+                        // ✅ 2026-02-07 [Phase 7.39.11 Fix v5]: CAN控制页面使用 NavigationManager
+                        var canPage = canControlPageLoader.item
+                        if (canPage && canPage.navigationManager) {
+                            console.log("✅ [CAN控制导航] 下键 - 调用 NavigationManager.handleDirectionKey")
+                            canPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
                         }
                     }
 
