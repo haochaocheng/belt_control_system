@@ -181,9 +181,10 @@ Rectangle {
     }
 
     // ========== CAN 数据 ==========
+    // ✅ 2026-02-07 [Phase 7.39.13]: 添加设备路径信息
     property var canInterfaces: [
-        { name: "CAN0", path: "can0", bitrate: 500000 },
-        { name: "CAN1", path: "can1", bitrate: 250000 }
+        { name: "CAN0", path: "can0", bitrate: 500000, devicePath: "/devices/platform/fea50000.can/net/can0" },
+        { name: "CAN1", path: "can1", bitrate: 250000, devicePath: "/devices/platform/fea60000.can/net/can1" }
     ]
 
     // ========== 当前 CAN 信息 ==========

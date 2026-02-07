@@ -106,13 +106,41 @@ Rectangle {
                 anchors.left: parent.left
             }
 
-            // ========== CAN 名称居中显示 ==========
-            Text {
-                text: root.canInterfaces[index] ? root.canInterfaces[index].name : ""
-                font.pixelSize: 16
-                font.weight: root.currentCanIndex === index ? Font.Bold : Font.Normal
-                color: root.currentCanIndex === index ? "#E0E0E0" : "#9E9E9E"
+            // ========== CAN 名称和设备路径显示 ==========
+            // ✅ 2026-02-07 [Phase 7.39.13]: 添加设备路径显示
+            Column {
                 anchors.centerIn: parent
+                spacing: 4
+
+                // CAN 名称
+                Text {
+                    text: root.canInterfaces[index] ? root.canInterfaces[index].name : ""
+                    font.pixelSize: 16
+                    font.weight: root.currentCanIndex === index ? Font.Bold : Font.Normal
+                    color: root.currentCanIndex === index ? "#E0E0E0" : "#9E9E9E"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                // 设备路径（简化显示）
+                Text {
+                    text: {
+                        if (!root.canInterfaces[index] || !root.canInterfaces[index].devicePath) {
+                            return ""
+                        }
+                        var fullPath = root.canInterfaces[index].devicePath
+                        // 提取最后一部分：fea50000.can
+                        var parts = fullPath.split("/")
+                        for (var i = parts.length - 1; i >= 0; i--) {
+                            if (parts[i].indexOf(".can") !== -1) {
+                                return parts[i]
+                            }
+                        }
+                        return fullPath
+                    }
+                    font.pixelSize: 12
+                    color: root.currentCanIndex === index ? "#B0B0B0" : "#707070"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
             }
 
             // ========== 鼠标点击 ==========
