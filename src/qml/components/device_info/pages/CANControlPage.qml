@@ -409,6 +409,18 @@ Rectangle {
         event.accepted = true
     }
 
+    // ✅ 2026-02-07 [Phase 7.39.9]: 添加回车键处理
+    // 回车键：执行当前焦点项的操作
+    Keys.onReturnPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        console.log("✅ [CANControlPage] 按回车键")
+        handleEnterKey()
+        event.accepted = true
+    }
+
     // ========== 组件加载完成 ==========
     Component.onCompleted: {
         console.log("✅ [CANControlPage] Component.onCompleted 开始")
