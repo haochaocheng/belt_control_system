@@ -96,6 +96,13 @@ qt_add_qml_module(qml_module
         components/device_info/pages/TensionControlPage.qml
         components/device_info/pages/TensionControlListPanel.qml
         components/device_info/pages/TensionControlConfigPanel.qml
+        # ✅ 2026-02-07 [Phase 7.39.21]: CAN 控制页面组件
+        components/device_info/pages/CANControlPage.qml
+        components/device_info/pages/CANListPanel.qml
+        components/device_info/pages/CANConfigPanel.qml
+        components/device_info/pages/CANParamsTab.qml
+        components/device_info/pages/CANSendTab.qml
+        components/device_info/pages/CANReceiveTab.qml
         # ✅ 2026-02-04 [FIX 100.300.113]: 串口控制页面组件
         components/device_info/pages/SerialPortControlPage.qml
         components/device_info/pages/SerialPortListPanel.qml
