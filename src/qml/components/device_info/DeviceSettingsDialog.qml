@@ -2606,6 +2606,8 @@ Item {
         case 6:
             return serialPortControlPageLoader.item  // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.5]: 返回串口控制页面
         case 7:
+            return canControlPageLoader.item  // ✅ 2026-02-07 [Phase 7.39.11 Fix]: 返回CAN控制页面
+        case 8:
             return null  // 逻辑控制待实现
         default:
             return null
