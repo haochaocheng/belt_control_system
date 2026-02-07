@@ -28,6 +28,7 @@
 #include "control/SerialPortController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口控制器头文件
 #include "control/ModbusController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS控制器头文件
 #include "control/ModbusSlaveController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 添加MODBUS从站控制器头文件
+#include "control/CANController.h"  // ✅ 2026-02-07 [Phase 7.39.1]: 添加CAN控制器头文件
 #include "network/NetworkTask.h"
 
 // 全局日志文件
@@ -145,6 +146,9 @@ int main(int argc, char *argv[]) {
         ModbusSlaveController modbusSlaveController5;
         ModbusSlaveController modbusSlaveController6;
 
+        // ✅ 2026-02-07 [Phase 7.39.1]: 初始化CAN控制器
+        CANController canController;
+
         NetworkTask networkTask;
 
         CommonControl commonControl;
@@ -176,6 +180,7 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("deviceConfigMgr", &deviceConfigMgr);  // ✅ 2026-02-02 [FIX 100.300.112.8.20]: 注册设备配置管理器到QML
         engine.rootContext()->setContextProperty("serialPortController", &serialPortController);  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 注册串口控制器到QML
         engine.rootContext()->setContextProperty("modbusController", &modbusController);  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 注册MODBUS控制器到QML
+        engine.rootContext()->setContextProperty("canController", &canController);  // ✅ 2026-02-07 [Phase 7.39.1]: 注册CAN控制器到QML
         // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 注册MODBUS从站控制器到QML（6个串口，每个串口一个从站）
         engine.rootContext()->setContextProperty("modbusSlaveController1", &modbusSlaveController1);
         engine.rootContext()->setContextProperty("modbusSlaveController2", &modbusSlaveController2);

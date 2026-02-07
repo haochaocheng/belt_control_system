@@ -76,6 +76,7 @@ Item {
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 为每个类别保存独立的内容索引
     // 避免切换类别时焦点位置丢失
     // ✅ 2026-02-04 [FIX 100.300.113]: 添加串口控制类别
+    // ✅ 2026-02-07 [Phase 7.39.6]: 添加CAN控制类别
     property var categoryContentIndexMap: ({
         0: 0,  // 基本配置
         1: 0,  // 开关量输入
@@ -84,7 +85,8 @@ Item {
         4: 0,  // 制动器控制
         5: 0,  // 张紧控制
         6: 0,  // 串口控制
-        7: 0   // 逻辑控制
+        7: 0,  // CAN控制
+        8: 0   // 逻辑控制
     })
 
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听类别切换，保存和恢复内容索引
@@ -1487,7 +1489,7 @@ Item {
                 spacing: 10
 
                 Repeater {
-                    model: ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "逻辑控制"]
+                    model: ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "逻辑控制"]
 
                     Button {
                         width: parent.width - 20
@@ -2279,7 +2281,106 @@ Item {
                     }
                 }
 
-                // 7: 逻辑控制
+                // ✅ 2026-02-07 [Phase 7.39.6]: 7: CAN 控制
+                Loader {
+                    id: canControlPageLoader
+                    source: "pages/CANControlPage.qml"
+
+                    onLoaded: {
+                        console.log("✅ [DeviceSettingsDialog] CANControlPage 加载成功")
+
+                        // 传递虚拟键盘引用
+                        if (item) {
+                            item.virtualKeyboard = Qt.binding(function() {
+                                return root.virtualKeyboard
+                            })
+                        }
+                    }
+
+                    onStatusChanged: {
+                        if (status === Loader.Error) {
+                            console.error("❌ [DeviceSettingsDialog] CANControlPage 加载失败")
+                        }
+                    }
+
+                    // 添加焦点连接
+                    Connections {
+                        target: root
+                        enabled: canControlPageLoader.item !== null
+
+                        function onCurrentFocusAreaChanged() {
+                            console.log("🔍 [CAN控制同步] onCurrentFocusAreaChanged - currentFocusArea:", root.currentFocusArea, "currentCategory:", root.currentCategory)
+                            if (canControlPageLoader.item && root.currentCategory === 7) {
+                                if (root.currentFocusArea === 2) {
+                                    // 焦点进入内容区域，默认在列表区域
+                                    console.log("✅ [CAN控制同步] 焦点进入内容区域 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
+                                    canControlPageLoader.item.focusSubArea = 0
+                                    canControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    // 焦点离开内容区域，清除焦点
+                                    console.log("✅ [CAN控制同步] 焦点离开内容区域 - 清除 focusItemIndex")
+                                    canControlPageLoader.item.focusItemIndex = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentCategoryChanged() {
+                            console.log("🔍 [CAN控制同步] onCurrentCategoryChanged - currentCategory:", root.currentCategory, "currentFocusArea:", root.currentFocusArea)
+                            if (canControlPageLoader.item) {
+                                if (root.currentFocusArea === 2 && root.currentCategory === 7) {
+                                    // 切换到CAN控制类别，设置焦点
+                                    console.log("✅ [CAN控制同步] 切换到CAN控制 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
+                                    canControlPageLoader.item.focusSubArea = 0
+                                    canControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    // 切换到其他类别，清除焦点
+                                    console.log("✅ [CAN控制同步] 切换到其他类别 - 清除 focusItemIndex")
+                                    canControlPageLoader.item.focusItemIndex = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentContentItemIndexChanged() {
+                            console.log("🔍 [CAN控制同步] onCurrentContentItemIndexChanged - currentContentItemIndex:", root.currentContentItemIndex)
+                            if (canControlPageLoader.item &&
+                                root.currentFocusArea === 2 &&
+                                root.currentCategory === 7 &&
+                                canControlPageLoader.item.focusSubArea === 0) {
+                                // 只在焦点在列表区域时同步
+                                console.log("✅ [CAN控制同步] 同步 focusItemIndex:", root.currentContentItemIndex)
+                                canControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                console.log("⚠️ [CAN控制同步] 不满足同步条件 - focusArea:", root.currentFocusArea, "category:", root.currentCategory, "focusSubArea:", canControlPageLoader.item ? canControlPageLoader.item.focusSubArea : "null")
+                            }
+                        }
+                    }
+
+                    // 监听CAN控制页面焦点变化
+                    Connections {
+                        target: canControlPageLoader.item
+                        enabled: canControlPageLoader.item !== null
+
+                        function onFocusItemIndexChanged() {
+                            if (canControlPageLoader.item &&
+                                root.currentCategory === 7 &&
+                                root.currentFocusArea === 2 &&
+                                canControlPageLoader.item.focusSubArea === 0 &&
+                                canControlPageLoader.item.focusItemIndex >= 0) {
+                                // 只在焦点在列表区域时同步
+                                console.log("✅ [DeviceSettingsDialog] 同步CAN控制列表焦点:", canControlPageLoader.item.focusItemIndex)
+                                root.currentContentItemIndex = canControlPageLoader.item.focusItemIndex
+                            }
+                        }
+
+                        function onRequestReturnToCategory() {
+                            // CAN控制页面请求返回到左侧类别
+                            console.log("✅ [DeviceSettingsDialog] CAN控制请求返回类别")
+                            root.currentFocusArea = 1  // 切换到左侧类别区域
+                        }
+                    }
+                }
+
+                // 8: 逻辑控制
                 Rectangle {
                     color: "transparent"
                     Text {
@@ -2348,7 +2449,7 @@ Item {
 
     // ========== 辅助函数 ==========
     function getCategoryName(index) {
-        var names = ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "逻辑控制"]
+        var names = ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "逻辑控制"]
         return names[index] || "未知类别"
     }
 
