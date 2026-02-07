@@ -187,16 +187,17 @@ Rectangle {
                                 canController.bitrate = newBitrate
                             }
                         }
-                    }
 
-                    // ✅ 焦点指示器
-                    Rectangle {
-                        anchors.fill: bitrateCombo
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 1) ? 3 : 0
-                        radius: 4
-                        z: 10
+                        // ✅ 2026-02-07 [Phase 7.39.22]: 焦点指示器移到内部，避免布局冲突
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            color: "transparent"
+                            border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                            border.width: (root.focusParamIndex === 1) ? 3 : 0
+                            radius: 4
+                            z: 10
+                        }
                     }
                 }
             }
@@ -320,16 +321,17 @@ Rectangle {
                                 canController.frameType = newFrameType
                             }
                         }
-                    }
 
-                    // ✅ 焦点指示器
-                    Rectangle {
-                        anchors.fill: frameTypeCombo
-                        color: "transparent"
-                        border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                        border.width: (root.focusParamIndex === 3) ? 3 : 0
-                        radius: 4
-                        z: 10
+                        // ✅ 2026-02-07 [Phase 7.39.22]: 焦点指示器移到内部，避免布局冲突
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            color: "transparent"
+                            border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                            border.width: (root.focusParamIndex === 3) ? 3 : 0
+                            radius: 4
+                            z: 10
+                        }
                     }
                 }
             }
