@@ -244,6 +244,7 @@ Rectangle {
             paramIndex = 0  // 初始参数索引
             buttonIndex = 0
             skipTabArea = false  // 支持 Tab 导航
+            lastMotorIndex = 1  // ✅ 2026-02-07 [Phase 7.39.11]: CAN控制有2个接口（0-1）
             lastTabIndex = 2  // CAN 控制页面有3个Tab（0-2）
 
             // 动态更新 lastParamIndex

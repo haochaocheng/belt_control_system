@@ -19,6 +19,13 @@ QtObject {
     property int paramIndex: 0                     // 区域C：参数索引（动态范围，取决于当前Tab）
     property int buttonIndex: 0                    // 区域D：按钮索引（0-4，共5个按钮）
 
+    // ✅ 2026-02-07 [Phase 7.39.11]: 添加 lastMotorIndex 属性
+    // 不同页面有不同的列表项数量：
+    // - 电机控制页面：8个电机（0-7），lastMotorIndex=7
+    // - 串口控制页面：6个串口（0-5），lastMotorIndex=5
+    // - CAN控制页面：2个CAN接口（0-1），lastMotorIndex=1
+    property int lastMotorIndex: 7  // 默认为7（电机控制页面）
+
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.3]: 添加 lastTabIndex 属性
     // 不同页面有不同的Tab数量：
     // - 电机控制页面：10个Tab（0-9），lastTabIndex=9
@@ -85,7 +92,8 @@ QtObject {
             break
 
         case "Down":
-            if (motorListIndex < 7) {
+            // ✅ 2026-02-07 [Phase 7.39.11]: 使用 lastMotorIndex 而不是硬编码的7
+            if (motorListIndex < lastMotorIndex) {
                 newIndex = motorListIndex + 1
             }
             // 在底部，保持不变
