@@ -117,7 +117,7 @@ Rectangle {
                         TextField {
                             id: canInterfaceText
                             anchors.fill: parent
-                            text: typeof canController !== 'undefined' ? canController.canInterface : ""
+                            text: currentCanInterface ? currentCanInterface.devicePath : ""
                             font.pixelSize: 21
                             color: "#E0E0E0"
                             verticalAlignment: Text.AlignVCenter
