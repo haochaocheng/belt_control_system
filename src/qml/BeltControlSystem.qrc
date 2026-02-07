@@ -120,6 +120,7 @@
         <file>components/device_info/pages/BrakeConfigPanel.qml</file>
         <file>components/device_info/pages/BrakeControlPage.qml</file>
         <file>components/device_info/pages/BrakeListPanel.qml</file>
+        <file>components/device_info/pages/CANConfigPanel.qml</file>
         <file>components/device_info/pages/CANControlPage.qml</file>
         <file>components/device_info/pages/CANListPanel.qml</file>
         <file>components/device_info/pages/CANParamsTab.qml</file>
