@@ -465,11 +465,12 @@ Item {
                     }
                 } else if (currentPage.focusSubArea === 2) {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.13]: 串口控制参数区域使用NavigationManager
+                    // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: CAN控制参数区域也使用NavigationManager
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.15]: 主动调用NavigationManager，而不是只跳过
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.6]: 直接调用SerialPortControlPage.getCurrentTab()
-                    // 原因：串口控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
+                    // 原因：串口控制和CAN控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
-                    // 解决：在focusSubArea=2时，检查是否为串口控制页面，调用NavigationManager处理上键
+                    // 解决：在focusSubArea=2时，检查是否为串口控制或CAN控制页面，调用NavigationManager处理上键
                     if (currentCategory === 6) {
                         var serialPage = serialPortControlPageLoader.item
                         if (serialPage && serialPage.navigationManager) {
@@ -489,6 +490,15 @@ Item {
                             // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
                             console.log("🔍 [串口控制导航] 上键 - 调用 NavigationManager.handleDirectionKey")
                             serialPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 7) {
+                        // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: CAN控制参数区域使用NavigationManager
+                        var canPage = canControlPageLoader.item
+                        if (canPage && canPage.navigationManager) {
+                            console.log("✅ [CAN控制导航] 参数区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            canPage.navigationManager.handleDirectionKey("Up")
                             event.accepted = true
                             return
                         }
@@ -667,9 +677,10 @@ Item {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
                 } else if (currentPage.focusSubArea === 2) {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.10]: 串口控制参数区域使用NavigationManager
-                    // 原因：串口控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
+                    // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: CAN控制参数区域也使用NavigationManager
+                    // 原因：串口控制和CAN控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
-                    // 解决：在focusSubArea=2时，检查是否为串口控制页面，调用NavigationManager
+                    // 解决：在focusSubArea=2时，检查是否为串口控制或CAN控制页面，调用NavigationManager
                     console.log("🔍 [串口控制导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
                         // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.6]: 直接调用SerialPortControlPage.getCurrentTab()
@@ -691,6 +702,15 @@ Item {
                             // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
                             console.log("🔍 [串口控制导航] 下键 - 调用 NavigationManager.handleDirectionKey")
                             serialPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 7) {
+                        // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: CAN控制参数区域使用NavigationManager
+                        var canPage = canControlPageLoader.item
+                        if (canPage && canPage.navigationManager) {
+                            console.log("✅ [CAN控制导航] 参数区域下键 - 调用 NavigationManager.handleDirectionKey")
+                            canPage.navigationManager.handleDirectionKey("Down")
                             event.accepted = true
                             return
                         }
@@ -880,10 +900,11 @@ Item {
                     }
                 } else if (currentPage.focusSubArea === 2) {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.16]: 串口控制参数区域使用NavigationManager
+                    // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: CAN控制参数区域也使用NavigationManager
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.6]: 直接调用SerialPortControlPage.getCurrentTab()
-                    // 原因：串口控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
+                    // 原因：串口控制和CAN控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
-                    // 解决：在focusSubArea=2时，检查是否为串口控制页面，调用NavigationManager
+                    // 解决：在focusSubArea=2时，检查是否为串口控制或CAN控制页面，调用NavigationManager
                     console.log("🔍 [串口控制导航] 左键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
                         var serialPage = serialPortControlPageLoader.item
@@ -904,6 +925,15 @@ Item {
                             // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
                             console.log("🔍 [串口控制导航] 左键 - 调用 NavigationManager.handleDirectionKey")
                             serialPage.navigationManager.handleDirectionKey("Left")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 7) {
+                        // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: CAN控制参数区域使用NavigationManager
+                        var canPage = canControlPageLoader.item
+                        if (canPage && canPage.navigationManager) {
+                            console.log("✅ [CAN控制导航] 参数区域左键 - 调用 NavigationManager.handleDirectionKey")
+                            canPage.navigationManager.handleDirectionKey("Left")
                             event.accepted = true
                             return
                         }
@@ -1131,7 +1161,21 @@ Item {
                         return
                     }
                 } else if (currentPage.focusSubArea === 2) {
-                    // ✅ 底部按钮区域：右键导航
+                    // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: 串口控制和CAN控制参数区域使用NavigationManager
+                    // 原因：串口控制和CAN控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
+                    // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
+                    if (currentCategory === 6 || currentCategory === 7) {
+                        // 串口控制或CAN控制：focusSubArea=2是参数区域，使用NavigationManager
+                        var page = (currentCategory === 6) ? serialPortControlPageLoader.item : canControlPageLoader.item
+                        if (page && page.navigationManager) {
+                            console.log("✅ [导航] 参数区域右键 - 调用 NavigationManager.handleDirectionKey")
+                            page.navigationManager.handleDirectionKey("Right")
+                            event.accepted = true
+                            return
+                        }
+                    }
+
+                    // ✅ 其他页面：底部按钮区域：右键导航
                     var buttonIndex = currentPage.focusButtonIndex
 
                     // 按钮布局：第一行(0,1) 第二行(2,3,4)
