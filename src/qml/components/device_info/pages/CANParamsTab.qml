@@ -53,149 +53,255 @@ Rectangle {
     // ========== 滚动视图 ==========
     ScrollView {
         anchors.fill: parent
-        anchors.margins: 20
         clip: true
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
         // ========== 参数网格 ==========
         GridLayout {
-            width: parent.width
+            width: parent.width * 0.9
             columns: 2
-            rowSpacing: 15
-            columnSpacing: 20
+            rowSpacing: 12
+            columnSpacing: 16
 
             // ========== 行0：CAN接口、波特率 ==========
             // 索引 0: CAN接口（只读）
-            Text {
-                text: "CAN 接口:"
-                font.pixelSize: 14
-                color: "white"
-                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-            }
-
-            Rectangle {
+            Item {
+                Layout.column: 0
+                Layout.row: 0
                 Layout.fillWidth: true
-                Layout.preferredHeight: 35
-                color: "#2c3e50"
-                radius: 4
-                border.width: root.focusParamIndex === 0 ? 3 : 0
-                border.color: "#2196F3"
+                Layout.preferredHeight: 40
 
-                Text {
-                    id: canInterfaceText
-                    anchors.centerIn: parent
-                    text: canController.canInterface
-                    font.pixelSize: 14
-                    color: "white"
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 10
+
+                    Text {
+                        text: "CAN 接口:"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        Layout.preferredWidth: 120
+                        horizontalAlignment: Text.AlignRight
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 300
+                        Layout.preferredHeight: 40
+
+                        TextField {
+                            id: canInterfaceText
+                            anchors.fill: parent
+                            text: canController.canInterface
+                            font.pixelSize: 21
+                            color: "#E0E0E0"
+                            verticalAlignment: Text.AlignVCenter
+                            readOnly: true
+
+                            background: Rectangle {
+                                color: "transparent"
+                                border.width: 0
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: -4
+                                color: "transparent"
+                                border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                                border.width: (root.focusParamIndex === 0) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+                    }
                 }
             }
 
             // 索引 1: 波特率（可编辑）
-            Text {
-                text: "波特率:"
-                font.pixelSize: 14
-                color: "white"
-                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-            }
-
-            ComboBox {
-                id: bitrateCombo
+            Item {
+                Layout.column: 1
+                Layout.row: 0
                 Layout.fillWidth: true
-                Layout.preferredHeight: 35
-                model: ["125000", "250000", "500000", "1000000"]
-                currentIndex: {
-                    var bitrate = canController.bitrate
-                    switch(bitrate) {
-                    case 125000: return 0
-                    case 250000: return 1
-                    case 500000: return 2
-                    case 1000000: return 3
-                    default: return 2  // 默认 500000
+                implicitHeight: bitrateCombo.implicitHeight
+
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 10
+
+                    Text {
+                        text: "波特率:"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        Layout.preferredWidth: 120
+                        horizontalAlignment: Text.AlignRight
                     }
-                }
 
-                onActivated: {
-                    var newBitrate = parseInt(model[index])
-                    console.log("✅ [CANParamsTab] 波特率变化:", newBitrate)
-                    canController.bitrate = newBitrate
-                }
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 300
+                        Layout.preferredHeight: 40
 
-                background: Rectangle {
-                    color: root.focusParamIndex === 1 ? "#34495e" : "#2c3e50"
-                    radius: 4
-                    border.width: root.focusParamIndex === 1 ? 3 : 0
-                    border.color: "#2196F3"
-                }
+                        ComboBox {
+                            id: bitrateCombo
+                            anchors.fill: parent
+                            model: ["125000", "250000", "500000", "1000000"]
+                            currentIndex: {
+                                var bitrate = canController.bitrate
+                                switch(bitrate) {
+                                case 125000: return 0
+                                case 250000: return 1
+                                case 500000: return 2
+                                case 1000000: return 3
+                                default: return 2
+                                }
+                            }
 
-                contentItem: Text {
-                    text: bitrateCombo.displayText
-                    font.pixelSize: 14
-                    color: "white"
-                    verticalAlignment: Text.AlignVCenter
-                    leftPadding: 10
+                            onActivated: {
+                                var newBitrate = parseInt(model[index])
+                                console.log("✅ [CANParamsTab] 波特率变化:", newBitrate)
+                                canController.bitrate = newBitrate
+                            }
+
+                            background: Rectangle {
+                                color: "transparent"
+                                border.width: 0
+                            }
+
+                            contentItem: Text {
+                                text: bitrateCombo.displayText
+                                font.pixelSize: 21
+                                color: "#E0E0E0"
+                                verticalAlignment: Text.AlignVCenter
+                                leftPadding: 10
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: -4
+                                color: "transparent"
+                                border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                                border.width: (root.focusParamIndex === 1) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+                    }
                 }
             }
 
             // ========== 行1：状态、帧类型 ==========
             // 索引 2: 状态（只读）
-            Text {
-                text: "状态:"
-                font.pixelSize: 14
-                color: "white"
-                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-            }
-
-            Rectangle {
+            Item {
+                Layout.column: 0
+                Layout.row: 1
                 Layout.fillWidth: true
-                Layout.preferredHeight: 35
-                color: canController.isUp ? "#27ae60" : "#c0392b"
-                radius: 4
-                border.width: root.focusParamIndex === 2 ? 3 : 0
-                border.color: "#2196F3"
+                Layout.preferredHeight: 40
 
-                Text {
-                    id: statusText
-                    anchors.centerIn: parent
-                    text: canController.status
-                    font.pixelSize: 14
-                    font.bold: true
-                    color: "white"
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 10
+
+                    Text {
+                        text: "状态:"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        Layout.preferredWidth: 120
+                        horizontalAlignment: Text.AlignRight
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 300
+                        Layout.preferredHeight: 40
+
+                        TextField {
+                            id: statusText
+                            anchors.fill: parent
+                            text: canController.status
+                            font.pixelSize: 21
+                            color: canController.isUp ? "#4CAF50" : "#9E9E9E"
+                            font.weight: Font.Bold
+                            verticalAlignment: Text.AlignVCenter
+                            readOnly: true
+
+                            background: Rectangle {
+                                color: "transparent"
+                                border.width: 0
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: -4
+                                color: "transparent"
+                                border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                                border.width: (root.focusParamIndex === 2) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+                    }
                 }
             }
 
             // 索引 3: 帧类型（可编辑）
-            Text {
-                text: "帧类型:"
-                font.pixelSize: 14
-                color: "white"
-                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-            }
-
-            ComboBox {
-                id: frameTypeCombo
+            Item {
+                Layout.column: 1
+                Layout.row: 1
                 Layout.fillWidth: true
-                Layout.preferredHeight: 35
-                model: ["标准帧", "扩展帧"]
-                currentIndex: canController.frameType === "标准帧" ? 0 : 1
+                implicitHeight: frameTypeCombo.implicitHeight
 
-                onActivated: {
-                    var newFrameType = model[index]
-                    console.log("✅ [CANParamsTab] 帧类型变化:", newFrameType)
-                    canController.frameType = newFrameType
-                }
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 10
 
-                background: Rectangle {
-                    color: root.focusParamIndex === 3 ? "#34495e" : "#2c3e50"
-                    radius: 4
-                    border.width: root.focusParamIndex === 3 ? 3 : 0
-                    border.color: "#2196F3"
-                }
+                    Text {
+                        text: "帧类型:"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        Layout.preferredWidth: 120
+                        horizontalAlignment: Text.AlignRight
+                    }
 
-                contentItem: Text {
-                    text: frameTypeCombo.displayText
-                    font.pixelSize: 14
-                    color: "white"
-                    verticalAlignment: Text.AlignVCenter
-                    leftPadding: 10
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 300
+                        Layout.preferredHeight: 40
+
+                        ComboBox {
+                            id: frameTypeCombo
+                            anchors.fill: parent
+                            model: ["标准帧", "扩展帧"]
+                            currentIndex: canController.frameType === "标准帧" ? 0 : 1
+
+                            onActivated: {
+                                var newFrameType = model[index]
+                                console.log("✅ [CANParamsTab] 帧类型变化:", newFrameType)
+                                canController.frameType = newFrameType
+                            }
+
+                            background: Rectangle {
+                                color: "transparent"
+                                border.width: 0
+                            }
+
+                            contentItem: Text {
+                                text: frameTypeCombo.displayText
+                                font.pixelSize: 21
+                                color: "#E0E0E0"
+                                verticalAlignment: Text.AlignVCenter
+                                leftPadding: 10
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: -4
+                                color: "transparent"
+                                border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                                border.width: (root.focusParamIndex === 3) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+                    }
                 }
             }
         }

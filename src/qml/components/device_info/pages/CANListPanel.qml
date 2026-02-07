@@ -1,6 +1,7 @@
 // CANListPanel.qml
 // CAN 列表面板
 // 创建日期: 2026-02-07
+// ✅ 2026-02-07 [修复]: 使用与串口列表一致的样式
 
 import QtQuick
 import QtQuick.Controls
@@ -8,7 +9,15 @@ import QtQuick.Layouts
 
 Rectangle {
     id: root
-    color: "#1a1f2e"
+    color: "transparent"
+
+    // ========== 背景图片 ==========
+    Image {
+        anchors.fill: parent
+        source: "../images/33.png"
+        fillMode: Image.Stretch
+        z: -1  // 放在最底层
+    }
 
     // ========== 公开属性 ==========
     property var canInterfaces: []
@@ -19,29 +28,20 @@ Rectangle {
     // ========== 信号 ==========
     signal canInterfaceSelected(int index)
 
-    // ========== 标题栏 ==========
+    // ========== 标题 ==========
     Rectangle {
         id: header
+        width: parent.width
+        height: 60
+        color: "#2c3e50"
         anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 50
-        color: "#252d3d"
 
         Text {
-            anchors.centerIn: parent
             text: "CAN 接口"
-            font.pixelSize: 16
-            font.bold: true
-            color: "#00d4ff"
-        }
-
-        // 底部分隔线
-        Rectangle {
-            anchors.bottom: parent.bottom
-            width: parent.width
-            height: 2
-            color: "#3d4556"
+            font.pixelSize: 18
+            font.weight: Font.Bold
+            color: "#E0E0E0"
+            anchors.centerIn: parent
         }
     }
 
@@ -52,83 +52,77 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 10
-        spacing: 8
-        clip: true
+        anchors.margins: 0
 
-        model: root.canInterfaces
+        model: root.canInterfaces.length
+        spacing: 0
+        clip: true
 
         delegate: Rectangle {
             width: listView.width
             height: 60
-            radius: 6
+            color: "transparent"
 
-            // 背景色：选中、焦点、悬停、默认
-            color: {
-                if (index === root.currentCanIndex && root.focusSubArea === 0 && index === root.focusItemIndex) {
-                    return "#2196F3"  // 选中且焦点：蓝色
-                } else if (index === root.currentCanIndex) {
-                    return "#34495e"  // 选中但无焦点：深灰色
-                } else if (mouseArea.containsMouse) {
-                    return "#2c3e50"  // 悬停：中灰色
-                } else {
-                    return "#1e2838"  // 默认：暗灰色
-                }
+            // ========== 背景图片 ==========
+            Image {
+                id: backgroundImage
+                anchors.fill: parent
+                source: "../../../images/bhNameBK.png"
+
+                states: [
+                    State {
+                        name: "selected"
+                        when: root.currentCanIndex === index
+                        PropertyChanges {
+                            target: backgroundImage
+                            source: "../../../images/bhNameBK1.png"
+                        }
+                    },
+                    State {
+                        name: "normal"
+                        when: root.currentCanIndex !== index
+                        PropertyChanges {
+                            target: backgroundImage
+                            source: "../../../images/bhNameBK.png"
+                        }
+                    }
+                ]
             }
 
-            // 边框：焦点时显示
-            border.width: (root.focusSubArea === 0 && index === root.focusItemIndex) ? 3 : 0
-            border.color: "#00d4ff"
-
-            MouseArea {
-                id: mouseArea
+            // ========== 蓝色边框（焦点指示器）==========
+            Rectangle {
                 anchors.fill: parent
-                hoverEnabled: true
+                color: "transparent"
+                border.color: (root.focusSubArea === 0 && root.focusItemIndex === index) ? "#2196F3" : "transparent"
+                border.width: (root.focusSubArea === 0 && root.focusItemIndex === index) ? 3 : 0
+            }
+
+            // ========== 左侧激活指示条 ==========
+            Rectangle {
+                visible: root.currentCanIndex === index
+                width: 4
+                height: parent.height
+                color: "#2196F3"
+                anchors.left: parent.left
+            }
+
+            // ========== CAN 名称居中显示 ==========
+            Text {
+                text: root.canInterfaces[index] ? root.canInterfaces[index].name : ""
+                font.pixelSize: 16
+                font.weight: root.currentCanIndex === index ? Font.Bold : Font.Normal
+                color: root.currentCanIndex === index ? "#E0E0E0" : "#9E9E9E"
+                anchors.centerIn: parent
+            }
+
+            // ========== 鼠标点击 ==========
+            MouseArea {
+                anchors.fill: parent
                 onClicked: {
-                    console.log("✅ [CANListPanel] 点击 CAN:", index)
+                    console.log("🔍 [CANListPanel] 鼠标点击 CAN:", index)
                     root.canInterfaceSelected(index)
                 }
             }
-
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 4
-
-                // CAN 名称
-                Text {
-                    text: modelData.name
-                    font.pixelSize: 16
-                    font.bold: true
-                    color: "white"
-                    Layout.fillWidth: true
-                }
-
-                // CAN 接口路径
-                Text {
-                    text: modelData.path
-                    font.pixelSize: 12
-                    color: "#95a5a6"
-                    Layout.fillWidth: true
-                }
-
-                // 波特率
-                Text {
-                    text: "波特率: " + modelData.bitrate
-                    font.pixelSize: 11
-                    color: "#7f8c8d"
-                    Layout.fillWidth: true
-                }
-            }
         }
-    }
-
-    // ========== 空状态提示 ==========
-    Text {
-        anchors.centerIn: parent
-        text: "无 CAN 接口"
-        font.pixelSize: 14
-        color: "#7f8c8d"
-        visible: root.canInterfaces.length === 0
     }
 }

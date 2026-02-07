@@ -1,6 +1,7 @@
 // CANConfigPanel.qml
 // CAN 配置面板（包含 Tab）
 // 创建日期: 2026-02-07
+// ✅ 2026-02-07 [修复]: 使用与串口控制一致的Tab样式
 
 import QtQuick
 import QtQuick.Controls
@@ -8,7 +9,7 @@ import QtQuick.Layouts
 
 Rectangle {
     id: root
-    color: "#1a1f2e"
+    color: "transparent"
 
     // ========== 公开属性 ==========
     property var currentCanInterface: null
@@ -42,153 +43,120 @@ Rectangle {
         }
     }
 
-    // ========== 主布局 ==========
-    ColumnLayout {
-        anchors.fill: parent
-        spacing: 0
+    // ========== 标题栏 ==========
+    Rectangle {
+        id: header
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 50
+        color: "transparent"
 
-        // ========== Tab 栏 ==========
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 50
-            color: "#252d3d"
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 10
-
-                // Tab 按钮：参数配置
-                Button {
-                    id: paramsTabButton
-                    text: "参数配置"
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 35
-
-                    background: Rectangle {
-                        color: {
-                            if (root.currentTabIndex === 0 && root.focusSubArea === 1 && root.focusTabIndex === 0) {
-                                return "#2196F3"  // 选中且焦点：蓝色
-                            } else if (root.currentTabIndex === 0) {
-                                return "#34495e"  // 选中但无焦点：深灰色
-                            } else if (parent.hovered) {
-                                return "#2c3e50"  // 悬停：中灰色
-                            } else {
-                                return "#1e2838"  // 默认：暗灰色
-                            }
-                        }
-                        radius: 4
-                        border.width: (root.focusSubArea === 1 && root.focusTabIndex === 0) ? 3 : 0
-                        border.color: "#00d4ff"
-                    }
-
-                    contentItem: Text {
-                        text: parent.text
-                        font.pixelSize: 14
-                        font.bold: root.currentTabIndex === 0
-                        color: "white"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    onClicked: {
-                        console.log("✅ [CANConfigPanel] 切换到参数配置 Tab")
-                        root.currentTabIndex = 0
-                    }
-                }
-
-                // Tab 按钮：发送区
-                Button {
-                    id: sendTabButton
-                    text: "发送区"
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 35
-
-                    background: Rectangle {
-                        color: {
-                            if (root.currentTabIndex === 1 && root.focusSubArea === 1 && root.focusTabIndex === 1) {
-                                return "#2196F3"
-                            } else if (root.currentTabIndex === 1) {
-                                return "#34495e"
-                            } else if (parent.hovered) {
-                                return "#2c3e50"
-                            } else {
-                                return "#1e2838"
-                            }
-                        }
-                        radius: 4
-                        border.width: (root.focusSubArea === 1 && root.focusTabIndex === 1) ? 3 : 0
-                        border.color: "#00d4ff"
-                    }
-
-                    contentItem: Text {
-                        text: parent.text
-                        font.pixelSize: 14
-                        font.bold: root.currentTabIndex === 1
-                        color: "white"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    onClicked: {
-                        console.log("✅ [CANConfigPanel] 切换到发送区 Tab")
-                        root.currentTabIndex = 1
-                    }
-                }
-
-                // Tab 按钮：接收区
-                Button {
-                    id: receiveTabButton
-                    text: "接收区"
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 35
-
-                    background: Rectangle {
-                        color: {
-                            if (root.currentTabIndex === 2 && root.focusSubArea === 1 && root.focusTabIndex === 2) {
-                                return "#2196F3"
-                            } else if (root.currentTabIndex === 2) {
-                                return "#34495e"
-                            } else if (parent.hovered) {
-                                return "#2c3e50"
-                            } else {
-                                return "#1e2838"
-                            }
-                        }
-                        radius: 4
-                        border.width: (root.focusSubArea === 1 && root.focusTabIndex === 2) ? 3 : 0
-                        border.color: "#00d4ff"
-                    }
-
-                    contentItem: Text {
-                        text: parent.text
-                        font.pixelSize: 14
-                        font.bold: root.currentTabIndex === 2
-                        color: "white"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    onClicked: {
-                        console.log("✅ [CANConfigPanel] 切换到接收区 Tab")
-                        root.currentTabIndex = 2
-                    }
-                }
-            }
-
-            // 底部分隔线
-            Rectangle {
-                anchors.bottom: parent.bottom
-                width: parent.width
-                height: 2
-                color: "#3d4556"
-            }
+        // 背景图片
+        Image {
+            anchors.fill: parent
+            source: "../images/059.png"
+            fillMode: Image.Stretch
+            z: -1
         }
 
-        // ========== Tab 内容区域 ==========
+        Text {
+            anchors.centerIn: parent
+            text: "CAN 配置"
+            font.pixelSize: 16
+            font.weight: Font.Bold
+            color: "#E0E0E0"
+        }
+    }
+
+    // ========== Tab栏 ==========
+    Rectangle {
+        id: tabBar
+        anchors.top: header.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 50
+        color: "#252b3d"
+        border.color: "#3d4556"
+        border.width: 1
+
+        Row {
+            id: tabRow
+            spacing: 0
+            height: parent.height
+            width: childrenRect.width
+
+            Repeater {
+                model: ["参数配置", "发送区", "接收区"]
+
+                Rectangle {
+                    width: 120
+                    height: 50
+                    color: "transparent"
+
+                    // 焦点指示器
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: (root.focusSubArea === 1 && root.focusTabIndex === index)
+                                      ? "#2196F3" : "transparent"
+                        border.width: (root.focusSubArea === 1 && root.focusTabIndex === index) ? 3 : 0
+                        radius: 4
+                        z: 11
+                    }
+
+                    // 背景图片
+                    Image {
+                        anchors.fill: parent
+                        fillMode: Image.Stretch
+                        z: -1
+                        source: root.currentTabIndex === index
+                                ? "../images/DJHeadbutton2.png"
+                                : "../images/DJHeadbutton1.png"
+                    }
+
+                    // 底部激活指示条
+                    Rectangle {
+                        visible: root.currentTabIndex === index
+                        width: parent.width
+                        height: 3
+                        color: "#2196F3"
+                        anchors.bottom: parent.bottom
+                    }
+
+                    Text {
+                        text: modelData
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: 45
+                        font.pixelSize: 14
+                        font.weight: root.currentTabIndex === index ? Font.Bold : Font.Normal
+                        color: root.currentTabIndex === index ? "#E0E0E0" : "#9E9E9E"
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            console.log("✅ [CANConfigPanel] 切换到 Tab:", index)
+                            root.currentTabIndex = index
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ========== 内容区域 ==========
+    Rectangle {
+        id: contentArea
+        anchors.top: tabBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        color: "transparent"
+
         StackLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            anchors.fill: parent
             currentIndex: root.currentTabIndex
 
             // Tab 0: 参数配置

@@ -608,8 +608,9 @@ Item {
                 currentTopButtonIndex++
             }
             break
-        case 1:  // 左侧类别（7个类别）
-            if (currentCategory < 6) {
+        case 1:  // 左侧类别（9个类别：0-8）
+            // ✅ 2026-02-07 [Phase 7.39.6]: 修改最大值为8（添加CAN控制后）
+            if (currentCategory < 8) {
                 currentCategory++
             }
             break
