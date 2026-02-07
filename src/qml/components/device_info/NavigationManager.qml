@@ -71,16 +71,35 @@ QtObject {
 
     // 切换到指定区域
     function switchToArea(newArea) {
+        // ✅ 2026-02-07 [Phase 7.39.11 Debug]: 添加详细调试信息
+        console.log("🔍 [NavigationManager.switchToArea] 开始切换")
+        console.log("  - 当前区域:", currentArea)
+        console.log("  - 目标区域:", newArea)
+        console.log("  - areaMotorList:", areaMotorList)
+        console.log("  - areaTabBar:", areaTabBar)
+        console.log("  - areaParams:", areaParams)
+        console.log("  - areaButtons:", areaButtons)
+
         if (currentArea !== newArea) {
             console.log("✅ [NavigationManager] 切换区域:", currentArea, "→", newArea)
             currentArea = newArea
             areaChanged(newArea)
+        } else {
+            console.log("⚠️ [NavigationManager] 区域未变化，保持:", currentArea)
         }
     }
 
     // ========== 区域A：电机列表导航 ==========
 
     function moveInMotorList(direction) {
+        // ✅ 2026-02-07 [Phase 7.39.11 Debug]: 添加详细调试信息
+        console.log("🔍 [NavigationManager.moveInMotorList] 开始处理")
+        console.log("  - direction:", direction)
+        console.log("  - motorListIndex:", motorListIndex)
+        console.log("  - lastMotorIndex:", lastMotorIndex)
+        console.log("  - skipTabArea:", skipTabArea)
+        console.log("  - currentArea:", currentArea)
+
         var newIndex = motorListIndex
 
         switch(direction) {
@@ -101,13 +120,19 @@ QtObject {
 
         case "Right":
             // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.12]: 根据 skipTabArea 决定跳转目标
+            console.log("🔍 [NavigationManager.moveInMotorList] 处理右键")
+            console.log("  - skipTabArea:", skipTabArea)
+
             if (skipTabArea) {
                 // 串口控制页面：直接跳转到参数区域
+                console.log("✅ [NavigationManager] 从列表跳转到参数区域（跳过Tab）")
                 switchToArea(areaParams)
                 paramIndex = 0  // 从第一个参数开始
-                console.log("✅ [NavigationManager] 从列表跳转到参数区域（跳过Tab）")
             } else {
                 // 电机控制页面：跳转到Tab导航区
+                console.log("✅ [NavigationManager] 从列表跳转到Tab导航区")
+                console.log("  - 目标区域: areaTabBar")
+                console.log("  - 当前 tabIndex:", tabIndex)
                 switchToArea(areaTabBar)
             }
             return
@@ -115,6 +140,7 @@ QtObject {
         case "Left":
             // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.8]: 向左返回到大类（电机控制）
             // 通过自定义信号通知外部返回到左侧类别
+            console.log("✅ [NavigationManager] 返回到类别")
             returnToCategory()
             return
         }

@@ -307,9 +307,20 @@ Rectangle {
 
         // 监听区域变化
         onAreaChanged: function(newArea) {
+            // ✅ 2026-02-07 [Phase 7.39.11 Debug]: 添加详细调试信息
             console.log("✅ [CANControlPage] 区域变化:", newArea)
+            console.log("  - areaMotorList:", areaMotorList)
+            console.log("  - areaTabBar:", areaTabBar)
+            console.log("  - areaParams:", areaParams)
+            console.log("  - areaButtons:", areaButtons)
+            console.log("  - 当前 motorListIndex:", motorListIndex)
+            console.log("  - 当前 tabIndex:", tabIndex)
+            console.log("  - 当前 paramIndex:", paramIndex)
+            console.log("  - 当前 buttonIndex:", buttonIndex)
+
             switch(newArea) {
             case areaMotorList:  // 列表区域
+                console.log("  → 切换到列表区域")
                 root.focusSubArea = 0
                 root.focusItemIndex = motorListIndex
                 root.focusTabIndex = -1
@@ -317,6 +328,7 @@ Rectangle {
                 root.focusButtonIndex = -1
                 break
             case areaTabBar:  // Tab 栏区域
+                console.log("  → 切换到Tab栏区域")
                 root.focusSubArea = 1
                 root.focusTabIndex = tabIndex
                 root.focusItemIndex = -1
@@ -324,6 +336,7 @@ Rectangle {
                 root.focusButtonIndex = -1
                 break
             case areaParams:  // 参数区域
+                console.log("  → 切换到参数区域")
                 root.focusSubArea = 2
                 root.focusParamIndex = paramIndex
                 root.focusItemIndex = -1
@@ -333,6 +346,7 @@ Rectangle {
                 root.triggerParamInput(paramIndex)
                 break
             case areaButtons:  // 按钮区域
+                console.log("  → 切换到按钮区域")
                 root.focusSubArea = 3
                 root.focusButtonIndex = buttonIndex
                 root.focusItemIndex = -1
@@ -405,7 +419,15 @@ Rectangle {
             event.accepted = true
             return
         }
+        // ✅ 2026-02-07 [Phase 7.39.11 Debug]: 添加详细调试信息
         console.log("✅ [CANControlPage] 按右键")
+        console.log("  - keysEnabled:", keysEnabled)
+        console.log("  - isReturningToCategory:", isReturningToCategory)
+        console.log("  - currentArea:", navigationManager.currentArea)
+        console.log("  - motorListIndex:", navigationManager.motorListIndex)
+        console.log("  - skipTabArea:", navigationManager.skipTabArea)
+        console.log("  - lastMotorIndex:", navigationManager.lastMotorIndex)
+
         navigationManager.handleDirectionKey("Right")
         event.accepted = true
     }
