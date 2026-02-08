@@ -18,6 +18,10 @@ set(CONTROL_SOURCES
     ModbusController.cpp  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS控制器源文件
     ModbusSlaveController.cpp  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 添加MODBUS从站控制器源文件
     CANController.cpp  # ✅ 2026-02-07 [Phase 7.39.1]: 添加CAN控制器源文件
+    ModbusTCPMasterController.cpp  # ✅ 2026-02-08 [Phase 7.42]: 添加Modbus TCP主站控制器源文件
+    ModbusTCPSlaveController.cpp  # ✅ 2026-02-08 [Phase 7.42]: 添加Modbus TCP从站控制器源文件
+    S7ClientController.cpp  # ✅ 2026-02-08 [Phase 7.42]: 添加S7客户端控制器源文件
+    S7ServerController.cpp  # ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器源文件
 )
 
 set(CONTROL_HEADERS
@@ -39,6 +43,10 @@ set(CONTROL_HEADERS
     ModbusController.h  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS控制器头文件
     ModbusSlaveController.h  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 添加MODBUS从站控制器头文件
     CANController.h  # ✅ 2026-02-07 [Phase 7.39.1]: 添加CAN控制器头文件
+    ModbusTCPMasterController.h  # ✅ 2026-02-08 [Phase 7.42]: 添加Modbus TCP主站控制器头文件
+    ModbusTCPSlaveController.h  # ✅ 2026-02-08 [Phase 7.42]: 添加Modbus TCP从站控制器头文件
+    S7ClientController.h  # ✅ 2026-02-08 [Phase 7.42]: 添加S7客户端控制器头文件
+    S7ServerController.h  # ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器头文件
 )
 
 # ========== Sherpa-ONNX TTS 集成（可选） ==========

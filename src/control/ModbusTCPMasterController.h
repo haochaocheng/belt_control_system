@@ -11,6 +11,7 @@
 #include <QModbusDataUnit>
 #include <QModbusReply>
 #include <QTimer>
+#include <QSettings>
 
 class ModbusTCPMasterController : public QObject
 {
@@ -29,6 +30,10 @@ class ModbusTCPMasterController : public QObject
     Q_PROPERTY(int pollInterval READ pollInterval WRITE setPollInterval NOTIFY pollIntervalChanged)
     Q_PROPERTY(int timeout READ timeout WRITE setTimeout NOTIFY timeoutChanged)
     Q_PROPERTY(int retryCount READ retryCount WRITE setRetryCount NOTIFY retryCountChanged)
+
+    // ========== 寄存器配置 ==========
+    Q_PROPERTY(int startRegister READ startRegister WRITE setStartRegister NOTIFY startRegisterChanged)
+    Q_PROPERTY(int registerCount READ registerCount WRITE setRegisterCount NOTIFY registerCountChanged)
 
 public:
     explicit ModbusTCPMasterController(QObject *parent = nullptr);
@@ -58,6 +63,13 @@ public:
     int retryCount() const { return m_retryCount; }
     void setRetryCount(int count);
 
+    // ========== 寄存器配置 ==========
+    int startRegister() const { return m_startRegister; }
+    void setStartRegister(int reg);
+
+    int registerCount() const { return m_registerCount; }
+    void setRegisterCount(int count);
+
     // ========== 主站操作 ==========
     Q_INVOKABLE bool connectToServer();
     Q_INVOKABLE void disconnectFromServer();
@@ -76,6 +88,11 @@ public:
     Q_INVOKABLE bool writeCoil(int address, bool value);
     Q_INVOKABLE bool writeCoils(int startAddress, const QList<bool> &values);
 
+    // ========== 数据持久化 ==========
+    Q_INVOKABLE void saveConfig(int portIndex);
+    Q_INVOKABLE void loadConfig(int portIndex);
+    Q_INVOKABLE void resetConfig();
+
 signals:
     // ========== 属性变化信号 ==========
     void isConnectedChanged();
@@ -86,6 +103,8 @@ signals:
     void pollIntervalChanged();
     void timeoutChanged();
     void retryCountChanged();
+    void startRegisterChanged();
+    void registerCountChanged();
 
     // ========== 数据读取信号 ==========
     void holdingRegistersRead(int startAddress, const QList<int> &values);
@@ -123,11 +142,19 @@ private:
     int m_retryCount;
     QTimer *m_pollTimer;
 
+    // ========== 寄存器配置 ==========
+    int m_startRegister;
+    int m_registerCount;
+
     // ========== 状态 ==========
     QString m_statusText;
 
+    // ========== 数据持久化 ==========
+    QSettings *m_settings;
+
     // ========== 辅助函数 ==========
     void updateStatusText();
+    void initSettings();
 };
 
 #endif // MODBUSTCPMASTERCONTROLLER_H

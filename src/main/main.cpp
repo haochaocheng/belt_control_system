@@ -29,6 +29,10 @@
 #include "control/ModbusController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS控制器头文件
 #include "control/ModbusSlaveController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 添加MODBUS从站控制器头文件
 #include "control/CANController.h"  // ✅ 2026-02-07 [Phase 7.39.1]: 添加CAN控制器头文件
+#include "control/ModbusTCPMasterController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加Modbus TCP主站控制器头文件
+#include "control/ModbusTCPSlaveController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加Modbus TCP从站控制器头文件
+#include "control/S7ClientController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加S7客户端控制器头文件
+#include "control/S7ServerController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器头文件
 #include "network/NetworkTask.h"
 
 // 全局日志文件
@@ -149,6 +153,43 @@ int main(int argc, char *argv[]) {
         // ✅ 2026-02-07 [Phase 7.39.1]: 初始化CAN控制器
         CANController canController;
 
+        // ✅ 2026-02-08 [Phase 7.42]: 初始化TCP控制器（8个端口，每个端口一组控制器）
+        ModbusTCPMasterController modbusTcpMaster1;
+        ModbusTCPMasterController modbusTcpMaster2;
+        ModbusTCPMasterController modbusTcpMaster3;
+        ModbusTCPMasterController modbusTcpMaster4;
+        ModbusTCPMasterController modbusTcpMaster5;
+        ModbusTCPMasterController modbusTcpMaster6;
+        ModbusTCPMasterController modbusTcpMaster7;
+        ModbusTCPMasterController modbusTcpMaster8;
+
+        ModbusTCPSlaveController modbusTcpSlave1;
+        ModbusTCPSlaveController modbusTcpSlave2;
+        ModbusTCPSlaveController modbusTcpSlave3;
+        ModbusTCPSlaveController modbusTcpSlave4;
+        ModbusTCPSlaveController modbusTcpSlave5;
+        ModbusTCPSlaveController modbusTcpSlave6;
+        ModbusTCPSlaveController modbusTcpSlave7;
+        ModbusTCPSlaveController modbusTcpSlave8;
+
+        S7ClientController s7Client1;
+        S7ClientController s7Client2;
+        S7ClientController s7Client3;
+        S7ClientController s7Client4;
+        S7ClientController s7Client5;
+        S7ClientController s7Client6;
+        S7ClientController s7Client7;
+        S7ClientController s7Client8;
+
+        S7ServerController s7Server1;
+        S7ServerController s7Server2;
+        S7ServerController s7Server3;
+        S7ServerController s7Server4;
+        S7ServerController s7Server5;
+        S7ServerController s7Server6;
+        S7ServerController s7Server7;
+        S7ServerController s7Server8;
+
         NetworkTask networkTask;
 
         CommonControl commonControl;
@@ -181,6 +222,39 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("serialPortController", &serialPortController);  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 注册串口控制器到QML
         engine.rootContext()->setContextProperty("modbusController", &modbusController);  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 注册MODBUS控制器到QML
         engine.rootContext()->setContextProperty("canController", &canController);  // ✅ 2026-02-07 [Phase 7.39.1]: 注册CAN控制器到QML
+        // ✅ 2026-02-08 [Phase 7.42]: 注册TCP控制器到QML（8个端口，每个端口一组控制器）
+        engine.rootContext()->setContextProperty("modbusTcpMaster1", &modbusTcpMaster1);
+        engine.rootContext()->setContextProperty("modbusTcpMaster2", &modbusTcpMaster2);
+        engine.rootContext()->setContextProperty("modbusTcpMaster3", &modbusTcpMaster3);
+        engine.rootContext()->setContextProperty("modbusTcpMaster4", &modbusTcpMaster4);
+        engine.rootContext()->setContextProperty("modbusTcpMaster5", &modbusTcpMaster5);
+        engine.rootContext()->setContextProperty("modbusTcpMaster6", &modbusTcpMaster6);
+        engine.rootContext()->setContextProperty("modbusTcpMaster7", &modbusTcpMaster7);
+        engine.rootContext()->setContextProperty("modbusTcpMaster8", &modbusTcpMaster8);
+        engine.rootContext()->setContextProperty("modbusTcpSlave1", &modbusTcpSlave1);
+        engine.rootContext()->setContextProperty("modbusTcpSlave2", &modbusTcpSlave2);
+        engine.rootContext()->setContextProperty("modbusTcpSlave3", &modbusTcpSlave3);
+        engine.rootContext()->setContextProperty("modbusTcpSlave4", &modbusTcpSlave4);
+        engine.rootContext()->setContextProperty("modbusTcpSlave5", &modbusTcpSlave5);
+        engine.rootContext()->setContextProperty("modbusTcpSlave6", &modbusTcpSlave6);
+        engine.rootContext()->setContextProperty("modbusTcpSlave7", &modbusTcpSlave7);
+        engine.rootContext()->setContextProperty("modbusTcpSlave8", &modbusTcpSlave8);
+        engine.rootContext()->setContextProperty("s7Client1", &s7Client1);
+        engine.rootContext()->setContextProperty("s7Client2", &s7Client2);
+        engine.rootContext()->setContextProperty("s7Client3", &s7Client3);
+        engine.rootContext()->setContextProperty("s7Client4", &s7Client4);
+        engine.rootContext()->setContextProperty("s7Client5", &s7Client5);
+        engine.rootContext()->setContextProperty("s7Client6", &s7Client6);
+        engine.rootContext()->setContextProperty("s7Client7", &s7Client7);
+        engine.rootContext()->setContextProperty("s7Client8", &s7Client8);
+        engine.rootContext()->setContextProperty("s7Server1", &s7Server1);
+        engine.rootContext()->setContextProperty("s7Server2", &s7Server2);
+        engine.rootContext()->setContextProperty("s7Server3", &s7Server3);
+        engine.rootContext()->setContextProperty("s7Server4", &s7Server4);
+        engine.rootContext()->setContextProperty("s7Server5", &s7Server5);
+        engine.rootContext()->setContextProperty("s7Server6", &s7Server6);
+        engine.rootContext()->setContextProperty("s7Server7", &s7Server7);
+        engine.rootContext()->setContextProperty("s7Server8", &s7Server8);
         // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 注册MODBUS从站控制器到QML（6个串口，每个串口一个从站）
         engine.rootContext()->setContextProperty("modbusSlaveController1", &modbusSlaveController1);
         engine.rootContext()->setContextProperty("modbusSlaveController2", &modbusSlaveController2);
