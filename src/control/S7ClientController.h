@@ -2,7 +2,7 @@
 // 西门子 S7 客户端（主站）控制器类
 // 创建日期: 2026-02-08
 // ✅ 2026-02-08 [Phase 7.42]: TCP控制功能实现 - 基于 Snap7 库
-// TODO: 集成 Snap7 库后完善实现
+// ✅ 2026-02-08 [Phase 7.42.5]: 集成 Snap7 库实现
 
 #ifndef S7CLIENTCONTROLLER_H
 #define S7CLIENTCONTROLLER_H
@@ -10,8 +10,9 @@
 #include <QObject>
 #include <QTimer>
 
-// TODO: 集成 Snap7 库后取消注释
-// #include "snap7.h"
+#ifdef ENABLE_SNAP7
+#include "snap7.h"
+#endif
 
 class S7ClientController : public QObject
 {
@@ -115,8 +116,9 @@ private slots:
     void handlePollTimeout();
 
 private:
-    // TODO: 集成 Snap7 库后添加
-    // TS7Client *m_s7Client;
+#ifdef ENABLE_SNAP7
+    TS7Client *m_s7Client;  // ✅ 2026-02-08 [Phase 7.42.5]: Snap7客户端
+#endif
 
     // ========== S7配置 ==========
     QString m_targetIP;

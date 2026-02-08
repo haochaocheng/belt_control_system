@@ -112,6 +112,51 @@ else()
     message(STATUS "   To enable: cmake -DENABLE_SHERPA_ONNX=ON ..")
 endif()
 
+# ========== Snap7 库集成（可选） ==========
+option(ENABLE_SNAP7 "Enable Snap7 S7 protocol support" OFF)
+
+if(ENABLE_SNAP7)
+    message(STATUS "🔧 Snap7 S7 protocol support: ENABLED")
+
+    # 定义平台相关的库路径
+    if(WIN32)
+        set(SNAP7_ROOT "${CMAKE_SOURCE_DIR}/libs/snap7-windows")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        # 检查是否在RK3588交叉编译环境中
+        if(EXISTS "/opt/rk3588-libs/lib")
+            set(SNAP7_ROOT "/opt/rk3588-libs")
+            message(STATUS "  🎯 Using RK3588 cross-compile environment")
+        else()
+            set(SNAP7_ROOT "${CMAKE_SOURCE_DIR}/libs/snap7-rk3588")
+        endif()
+    else()
+        set(SNAP7_ROOT "${CMAKE_SOURCE_DIR}/libs/snap7-linux")
+    endif()
+
+    message(STATUS "  Looking for Snap7 in: ${SNAP7_ROOT}")
+
+    # 查找Snap7库
+    find_library(SNAP7_LIB
+        NAMES snap7 libsnap7
+        PATHS "${SNAP7_ROOT}/lib"
+        NO_DEFAULT_PATH
+    )
+
+    if(SNAP7_LIB)
+        message(STATUS "  ✅ Found Snap7: ${SNAP7_LIB}")
+        set(SNAP7_FOUND TRUE)
+    else()
+        message(WARNING "❌ Snap7 library not found in ${SNAP7_ROOT}, S7 protocol will not be available")
+        message(WARNING "   To enable Snap7:")
+        message(WARNING "   1. Download: https://github.com/SCADACS/snap7")
+        message(WARNING "   2. Compile and install to: ${SNAP7_ROOT}")
+        set(ENABLE_SNAP7 OFF)
+    endif()
+else()
+    message(STATUS "🔧 Snap7 S7 protocol support: DISABLED")
+    message(STATUS "   To enable: cmake -DENABLE_SNAP7=ON ..")
+endif()
+
 # ========== 创建控制模块库 ==========
 add_library(control_module STATIC
     ${CONTROL_SOURCES}
@@ -166,6 +211,39 @@ if(ENABLE_SHERPA_ONNX AND SHERPA_ONNX_FOUND)
     if(WIN32)
         file(GLOB SHERPA_DLLS "${SHERPA_ONNX_ROOT}/lib/*.dll" "${SHERPA_ONNX_ROOT}/bin/*.dll")
         foreach(dll ${SHERPA_DLLS})
+            add_custom_command(TARGET control_module POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${dll}"
+                    "$<TARGET_FILE_DIR:belt_control_system>"
+                COMMENT "Copying ${dll} to output directory"
+            )
+        endforeach()
+    endif()
+endif()
+
+# ========== Snap7 后处理（链接库和包含目录）==========
+if(ENABLE_SNAP7 AND SNAP7_FOUND)
+    # 添加头文件路径
+    target_include_directories(control_module PRIVATE
+        "${SNAP7_ROOT}/include"
+        "${CMAKE_SOURCE_DIR}/libs/snap7/src/core"
+        "${CMAKE_SOURCE_DIR}/libs/snap7/src/lib"
+    )
+
+    # 链接Snap7库
+    target_link_libraries(control_module
+        ${SNAP7_LIB}
+    )
+
+    # 添加编译定义
+    target_compile_definitions(control_module PUBLIC
+        ENABLE_SNAP7
+    )
+
+    # Windows: 复制DLL到输出目录
+    if(WIN32)
+        file(GLOB SNAP7_DLLS "${SNAP7_ROOT}/lib/*.dll")
+        foreach(dll ${SNAP7_DLLS})
             add_custom_command(TARGET control_module POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     "${dll}"
