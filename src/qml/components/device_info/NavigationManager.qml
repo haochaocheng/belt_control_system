@@ -35,6 +35,9 @@ QtObject {
     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.12]: 是否跳过Tab区域（串口控制页面没有Tab）
     property bool skipTabArea: false               // 默认false（电机控制有Tab），串口控制设置为true
 
+    // ✅ 2026-02-08 [Phase 7.43.8]: 是否跳过按钮区域（MQTT页面没有底部按钮）
+    property bool skipButtonArea: false            // 默认false（电机控制有按钮），MQTT设置为true
+
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听 paramIndex 变化
     onParamIndexChanged: {
         console.log("🔷 [NavigationManager] paramIndex 变化:", paramIndex)
@@ -229,10 +232,17 @@ QtObject {
 
             // 检查下一个索引是否超出范围
             if (nextIndex > lastParamIndex) {
-                // 超出范围，进入底部按钮区
-                switchToArea(areaButtons)
-                buttonIndex = 0
-                return
+                // ✅ 2026-02-08 [Phase 7.43.8]: 根据 skipButtonArea 决定是否进入按钮区
+                if (skipButtonArea) {
+                    // 跳过按钮区域的页面（如MQTT）：保持在参数区域
+                    console.log("✅ [NavigationManager] 已在参数区底部，跳过按钮区域")
+                    return
+                } else {
+                    // 有按钮区域的页面：进入底部按钮区
+                    switchToArea(areaButtons)
+                    buttonIndex = 0
+                    return
+                }
             } else {
                 // 在范围内，移动到下一个索引
                 newIndex = nextIndex
@@ -243,8 +253,20 @@ QtObject {
             // 向左移动（同行）
             if (paramIndex % 2 === 1) {
                 newIndex = paramIndex - 1
+            } else {
+                // ✅ 2026-02-08 [Phase 7.43.8]: 在左列时，根据 skipTabArea 决定返回目标
+                if (skipTabArea) {
+                    // 跳过Tab区域的页面（如MQTT）：直接返回到模块列表
+                    console.log("✅ [NavigationManager] 从参数区返回到模块列表（跳过Tab）")
+                    switchToArea(areaMotorList)
+                    return
+                } else {
+                    // 有Tab区域的页面：返回到Tab栏
+                    console.log("✅ [NavigationManager] 从参数区返回到Tab栏")
+                    switchToArea(areaTabBar)
+                    return
+                }
             }
-            // 在左列，保持不变
             break
 
         case "Right":
