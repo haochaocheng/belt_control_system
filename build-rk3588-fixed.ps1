@@ -63,7 +63,8 @@ Write-Host ""
 # Skip EGL installation if it fails (paths are set in toolchain)
 $installEglCmd = "if [ -f /tmp/install-egl-headers.sh ]; then /tmp/install-egl-headers.sh || echo 'EGL installation skipped (using toolchain paths)'; fi"
 # Modified CMake command using new toolchain file
-$cmakeCmd = "cmake -DCMAKE_TOOLCHAIN_FILE=/opt/qt-raspi/lib/cmake/Qt6/qt.toolchain.cmake -DQT_CHAINLOAD_TOOLCHAIN_FILE=/workspace/docker/rk3588/toolchain-fixed.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SHERPA_ONNX=ON .."
+# ✅ 2026-02-08 [Phase 7.42.8]: 添加 ENABLE_SNAP7=ON 启用S7协议支持
+$cmakeCmd = "cmake -DCMAKE_TOOLCHAIN_FILE=/opt/qt-raspi/lib/cmake/Qt6/qt.toolchain.cmake -DQT_CHAINLOAD_TOOLCHAIN_FILE=/workspace/docker/rk3588/toolchain-fixed.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SHERPA_ONNX=ON -DENABLE_SNAP7=ON .."
 $makeCmd = "make -j$Threads VERBOSE=1"
 $fullCmd = "$installEglCmd && $cmakeCmd && $makeCmd"
 

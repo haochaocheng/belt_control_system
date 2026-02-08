@@ -46,7 +46,8 @@ cd build
 REM Check if Makefile exists, if not, configure
 if not exist Makefile (
     echo Configuring project...
-    "%CMAKE_EXE%" -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=%QT_PATH% -DCMAKE_MAKE_PROGRAM=%QT_TOOLS_PATH%\mingw1120_64\bin\mingw32-make.exe ..
+    REM ✅ 2026-02-08 [Phase 7.42.8]: 启用Snap7 S7协议支持
+    "%CMAKE_EXE%" -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=%QT_PATH% -DCMAKE_MAKE_PROGRAM=%QT_TOOLS_PATH%\mingw1120_64\bin\mingw32-make.exe -DENABLE_SNAP7=ON ..
     if %ERRORLEVEL% NEQ 0 (
         echo Configuration failed
         cd ..
