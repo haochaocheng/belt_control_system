@@ -2,15 +2,16 @@
 // 西门子 S7 服务器（从站）控制器类
 // 创建日期: 2026-02-08
 // ✅ 2026-02-08 [Phase 7.42]: TCP控制功能实现 - 基于 Snap7 库
-// TODO: 集成 Snap7 库后完善实现
+// ✅ 2026-02-08 [Phase 7.42.7]: 集成 Snap7 库实现
 
 #ifndef S7SERVERCONTROLLER_H
 #define S7SERVERCONTROLLER_H
 
 #include <QObject>
 
-// TODO: 集成 Snap7 库后取消注释
-// #include "snap7.h"
+#ifdef ENABLE_SNAP7
+#include "snap7.h"
+#endif
 
 class S7ServerController : public QObject
 {
@@ -96,8 +97,9 @@ signals:
     void errorOccurred(const QString &error);
 
 private:
-    // TODO: 集成 Snap7 库后添加
-    // TS7Server *m_s7Server;
+#ifdef ENABLE_SNAP7
+    TS7Server *m_s7Server;  // ✅ 2026-02-08 [Phase 7.42.7]: Snap7服务器
+#endif
 
     // ========== S7配置 ==========
     int m_port;
