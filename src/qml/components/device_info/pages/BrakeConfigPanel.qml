@@ -17,6 +17,7 @@ Rectangle {
     color: "transparent"
 
     // ========== 公开属性 ==========
+    property int deviceId: 1  // ✅ 2026-02-06 [参数持久化]: 设备ID（从父组件传递）
     property int brakeIndex: 0  // 当前制动器索引 (0-7)
     // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性（已废弃，保留兼容性）
     property var keyboardManager: null
@@ -591,7 +592,8 @@ Rectangle {
 
                             onClicked: {
                                 console.log("保存制动器配置:", root.brakeIndex + 1)
-                                // TODO: 保存配置到数据库
+                                // ✅ 2026-02-06 [参数持久化]: 保存配置到数据库
+                                saveBrakeConfig()
                             }
                         }
                     }
@@ -766,17 +768,136 @@ Rectangle {
         switch(buttonIndex) {
         case 0:  // 保存
             console.log("✅ [BrakeConfigPanel] 触发：保存")
-            console.log("保存制动器配置:", root.brakeIndex + 1)
-            // TODO: 保存配置到数据库
+            saveBrakeConfig()
             break
         case 1:  // 重置
             console.log("✅ [BrakeConfigPanel] 触发：重置")
-            console.log("重置制动器配置:", root.brakeIndex + 1)
-            // TODO: 重置为默认值
+            loadBrakeConfig()  // 重置 = 重新加载配置
             break
         default:
             console.warn("⚠️ [BrakeConfigPanel] 未知的按钮索引:", buttonIndex)
             break
         }
+    }
+
+    // ========== 参数持久化函数 ==========
+    // ✅ 2026-02-06 [参数持久化]: 收集制动器配置参数
+    function collectConfig() {
+        var config = {}
+
+        // 使用状态
+        config["enabled"] = statusEnabled.checked
+
+        // 10个参数字段
+        config["hold_time"] = parseFloat(holdTimeField.text) || 0
+        config["release_time"] = parseFloat(releaseTimeField.text) || 0
+        config["brake_delay"] = parseFloat(brakeDelayField.text) || 0
+        config["release_delay"] = parseFloat(releaseDelayField.text) || 0
+        config["detect_delay"] = parseFloat(detectDelayField.text) || 0
+        config["fault_delay"] = parseFloat(faultDelayField.text) || 0
+        config["brake_current"] = parseFloat(brakeCurrentField.text) || 0
+        config["release_current"] = parseFloat(releaseCurrentField.text) || 0
+        config["brake_voltage"] = parseFloat(brakeVoltageField.text) || 0
+        config["release_voltage"] = parseFloat(releaseVoltageField.text) || 0
+
+        console.log("✅ [BrakeConfigPanel] 收集配置:", JSON.stringify(config))
+        return config
+    }
+
+    // ✅ 2026-02-06 [参数持久化]: 保存制动器配置
+    function saveBrakeConfig() {
+        console.log("✅ [BrakeConfigPanel] 保存制动器配置 - 设备:", root.deviceId, "制动器:", root.brakeIndex + 1)
+
+        // 收集配置
+        var config = collectConfig()
+
+        // 保存到数据库
+        var success = deviceConfigMgr.saveBrakeConfig(
+            root.deviceId,
+            root.brakeIndex,
+            config
+        )
+
+        if (success) {
+            console.log("✅ [BrakeConfigPanel] 保存成功")
+        } else {
+            console.log("❌ [BrakeConfigPanel] 保存失败")
+        }
+
+        return success
+    }
+
+    // ✅ 2026-02-06 [参数持久化]: 加载制动器配置
+    function loadBrakeConfig() {
+        console.log("✅ [BrakeConfigPanel] 加载制动器配置 - 设备:", root.deviceId, "制动器:", root.brakeIndex + 1)
+
+        // 从数据库加载配置
+        var config = deviceConfigMgr.loadBrakeConfig(
+            root.deviceId,
+            root.brakeIndex
+        )
+
+        if (!config || Object.keys(config).length === 0) {
+            console.log("⚠️ [BrakeConfigPanel] 未找到配置，使用默认值")
+            return false
+        }
+
+        // 应用配置到界面
+        console.log("✅ [BrakeConfigPanel] 应用配置:", JSON.stringify(config))
+
+        // 使用状态
+        if (config.hasOwnProperty("enabled")) {
+            statusEnabled.checked = config["enabled"]
+            statusDisabled.checked = !config["enabled"]
+        }
+
+        // 10个参数字段
+        if (config.hasOwnProperty("hold_time")) {
+            holdTimeField.text = config["hold_time"].toString()
+        }
+        if (config.hasOwnProperty("release_time")) {
+            releaseTimeField.text = config["release_time"].toString()
+        }
+        if (config.hasOwnProperty("brake_delay")) {
+            brakeDelayField.text = config["brake_delay"].toString()
+        }
+        if (config.hasOwnProperty("release_delay")) {
+            releaseDelayField.text = config["release_delay"].toString()
+        }
+        if (config.hasOwnProperty("detect_delay")) {
+            detectDelayField.text = config["detect_delay"].toString()
+        }
+        if (config.hasOwnProperty("fault_delay")) {
+            faultDelayField.text = config["fault_delay"].toString()
+        }
+        if (config.hasOwnProperty("brake_current")) {
+            brakeCurrentField.text = config["brake_current"].toString()
+        }
+        if (config.hasOwnProperty("release_current")) {
+            releaseCurrentField.text = config["release_current"].toString()
+        }
+        if (config.hasOwnProperty("brake_voltage")) {
+            brakeVoltageField.text = config["brake_voltage"].toString()
+        }
+        if (config.hasOwnProperty("release_voltage")) {
+            releaseVoltageField.text = config["release_voltage"].toString()
+        }
+
+        console.log("✅ [BrakeConfigPanel] 配置加载完成")
+        return true
+    }
+
+    // ========== 组件初始化 ==========
+    Component.onCompleted: {
+        console.log("✅ [BrakeConfigPanel] Component.onCompleted - 制动器:", root.brakeIndex + 1)
+        // ✅ 2026-02-06 [参数持久化]: 加载配置
+        loadBrakeConfig()
+    }
+
+    // ========== 监听制动器索引变化 ==========
+    onBrakeIndexChanged: {
+        console.log("✅ [BrakeConfigPanel] 制动器索引变化:", root.brakeIndex + 1)
+        // ✅ 2026-02-06 [参数持久化]: 重新加载配置
+        loadBrakeConfig()
     }
 }

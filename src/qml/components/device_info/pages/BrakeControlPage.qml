@@ -411,6 +411,7 @@ Rectangle {
             source: "BrakeConfigPanel.qml"
 
             onLoaded: {
+                item.deviceId = Qt.binding(function() { return root.deviceId })  // ✅ 2026-02-06 [参数持久化]: 传递设备ID
                 item.brakeIndex = Qt.binding(function() { return root.currentBrakeIndex })
                 // ✅ 2026-01-31 [FIX 100.300.112]: 传递焦点索引和虚拟键盘
                 // ✅ 2026-01-31 [FIX 100.300.112.7]: 传递使用状态焦点索引

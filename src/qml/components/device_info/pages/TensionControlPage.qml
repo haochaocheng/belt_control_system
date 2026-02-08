@@ -373,6 +373,7 @@ Rectangle {
             source: "TensionControlConfigPanel.qml"
 
             onLoaded: {
+                item.deviceId = Qt.binding(function() { return root.deviceId })  // ✅ 2026-02-06 [参数持久化]: 传递设备ID
                 item.controlIndex = Qt.binding(function() { return root.currentControlIndex })
                 // ✅ 2026-01-31 [FIX 100.300.112.8]: 传递焦点索引和虚拟键盘
                 // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 移除 usageStatusIndex（无使用状态区域）

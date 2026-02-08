@@ -16,6 +16,7 @@ Rectangle {
     color: "transparent"
 
     // ========== 公开属性 ==========
+    property int deviceId: 1  // ✅ 2026-02-06 [参数持久化]: 设备ID
     property int controlIndex: 0  // 当前控制索引 (0=张力传感器, 1=独立张紧控制)
     // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性
     property var keyboardManager: null
@@ -791,7 +792,8 @@ Rectangle {
 
                                 onClicked: {
                                     console.log("保存张力传感器配置")
-                                    // TODO: 保存配置到数据库
+                                    // ✅ 2026-02-06 [参数持久化]: 保存配置到数据库
+                                    saveTensionConfig()
                                 }
                             }
 
@@ -836,6 +838,138 @@ Rectangle {
                 }
             }
         }
+    }
+
+    // ✅ 2026-02-06 [参数持久化]: 收集张力传感器配置参数
+    function collectConfig() {
+        var config = {}
+        config["protection_name"] = nameField.text
+        config["unit"] = unitCombo.editable ? unitCombo.editText : unitCombo.displayText
+        config["protection_type"] = typeCombo.currentText
+        config["protection_delay"] = delaySpin.realValue
+        config["module_type"] = moduleTypeCombo.currentText
+        config["register_address"] = registerAddressSpin.value
+        config["channel_number"] = channelSpin.value
+        config["upper_limit"] = upperLimitSpin.value
+        config["lower_limit"] = lowerLimitSpin.value
+        config["range_value"] = rangeSpin.value
+        config["rated_value"] = ratedSpin.value
+        config["play_count"] = playCountSpin.value
+        config["play_duration"] = durationSpin.realValue
+        config["use_text_to_speech"] = ttsRadio.checked
+        config["tts_text"] = ttsTextField.text
+        config["audio_file"] = audioField.text
+        return config
+    }
+
+    // ✅ 2026-02-06 [参数持久化]: 保存张力传感器配置到数据库
+    function saveTensionConfig() {
+        var config = collectConfig()
+        var success = deviceConfigMgr.saveTensionConfig(
+            root.deviceId,
+            root.controlIndex,  // 0=张力传感器, 1=独立张紧控制
+            config
+        )
+
+        if (success) {
+            console.log("✅ [TensionControlConfigPanel] 保存成功")
+        } else {
+            console.error("❌ [TensionControlConfigPanel] 保存失败")
+        }
+
+        return success
+    }
+
+    // ✅ 2026-02-06 [参数持久化]: 从数据库加载张力传感器配置
+    function loadTensionConfig() {
+        var config = deviceConfigMgr.loadTensionConfig(
+            root.deviceId,
+            root.controlIndex  // 0=张力传感器, 1=独立张紧控制
+        )
+
+        if (!config || Object.keys(config).length === 0) {
+            console.log("⚠️ [TensionControlConfigPanel] 没有找到配置，使用默认值")
+            return false
+        }
+
+        console.log("✅ [TensionControlConfigPanel] 加载配置成功")
+
+        // 应用配置到界面
+        if (config.hasOwnProperty("protection_name")) {
+            nameField.text = config["protection_name"]
+        }
+        if (config.hasOwnProperty("unit")) {
+            var unitIndex = unitCombo.model.indexOf(config["unit"])
+            if (unitIndex >= 0) {
+                unitCombo.currentIndex = unitIndex
+            } else {
+                unitCombo.editText = config["unit"]
+            }
+        }
+        if (config.hasOwnProperty("protection_type")) {
+            var typeIndex = typeCombo.model.indexOf(config["protection_type"])
+            if (typeIndex >= 0) {
+                typeCombo.currentIndex = typeIndex
+            }
+        }
+        if (config.hasOwnProperty("protection_delay")) {
+            delaySpin.realValue = config["protection_delay"]
+        }
+        if (config.hasOwnProperty("module_type")) {
+            var moduleIndex = moduleTypeCombo.model.indexOf(config["module_type"])
+            if (moduleIndex >= 0) {
+                moduleTypeCombo.currentIndex = moduleIndex
+            }
+        }
+        if (config.hasOwnProperty("register_address")) {
+            registerAddressSpin.value = config["register_address"]
+        }
+        if (config.hasOwnProperty("channel_number")) {
+            channelSpin.value = config["channel_number"]
+        }
+        if (config.hasOwnProperty("upper_limit")) {
+            upperLimitSpin.value = config["upper_limit"]
+        }
+        if (config.hasOwnProperty("lower_limit")) {
+            lowerLimitSpin.value = config["lower_limit"]
+        }
+        if (config.hasOwnProperty("range_value")) {
+            rangeSpin.value = config["range_value"]
+        }
+        if (config.hasOwnProperty("rated_value")) {
+            ratedSpin.value = config["rated_value"]
+        }
+        if (config.hasOwnProperty("play_count")) {
+            playCountSpin.value = config["play_count"]
+        }
+        if (config.hasOwnProperty("play_duration")) {
+            durationSpin.realValue = config["play_duration"]
+        }
+        if (config.hasOwnProperty("use_text_to_speech")) {
+            if (config["use_text_to_speech"]) {
+                ttsRadio.checked = true
+            } else {
+                fileRadio.checked = true
+            }
+        }
+        if (config.hasOwnProperty("tts_text")) {
+            ttsTextField.text = config["tts_text"]
+        }
+        if (config.hasOwnProperty("audio_file")) {
+            audioField.text = config["audio_file"]
+        }
+
+        return true
+    }
+
+    // ✅ 2026-02-06 [参数持久化]: 组件初始化时加载配置
+    Component.onCompleted: {
+        loadTensionConfig()
+    }
+
+    // ✅ 2026-02-06 [参数持久化]: 控制索引变化时重新加载配置
+    onControlIndexChanged: {
+        loadTensionConfig()
     }
 }
 
