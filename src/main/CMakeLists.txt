@@ -20,6 +20,12 @@ target_link_libraries(belt_control_system PRIVATE
     audio_network
 )
 
+# ✅ 2026-02-08 [Phase 7.43]: 链接MQTT模块（如果可用）
+if(TARGET mqtt_module)
+    target_link_libraries(belt_control_system PRIVATE mqtt_module)
+    message(STATUS "MQTT module linked to belt_control_system")
+endif()
+
 # Link risip_sdk with whole-archive to force inclusion of stub symbols
 target_link_libraries(belt_control_system PRIVATE
     -Wl,--whole-archive

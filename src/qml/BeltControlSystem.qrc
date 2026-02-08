@@ -128,7 +128,6 @@
         <file>components/device_info/pages/CANSendTab.qml</file>
         <file>components/device_info/pages/CurrentProtectionTab.qml</file>
         <file>components/device_info/pages/FrontBearingTempTab.qml</file>
-        <file>components/device_info/pages/ModbusRegisterSection.qml</file>
         <file>components/device_info/pages/ModbusRegisterTab.qml</file>
         <file>components/device_info/pages/ModbusTCPMasterTab.qml</file>
         <file>components/device_info/pages/ModbusTCPSlaveTab.qml</file>
@@ -138,11 +137,20 @@
         <file>components/device_info/pages/MotorListPanel.qml</file>
         <file>components/device_info/pages/MotorListPanel_QDS.qml</file>
         <file>components/device_info/pages/MotorTempTab.qml</file>
+        <file>components/device_info/pages/MQTTConfigPanel.qml</file>
+        <file>components/device_info/pages/MQTTConnectionTab.qml</file>
+        <file>components/device_info/pages/MQTTControlPage.qml</file>
+        <file>components/device_info/pages/MQTTListPanel.qml</file>
+        <file>components/device_info/pages/MQTTMonitorTab.qml</file>
+        <file>components/device_info/pages/MQTTPublishTab.qml</file>
+        <file>components/device_info/pages/MQTTSubscribeTab.qml</file>
         <file>components/device_info/pages/MyMotorListPanel.qml</file>
         <file>components/device_info/pages/PhaseAWindingTab.qml</file>
         <file>components/device_info/pages/PhaseBWindingTab.qml</file>
         <file>components/device_info/pages/PhaseCWindingTab.qml</file>
         <file>components/device_info/pages/RearBearingTempTab.qml</file>
+        <file>components/device_info/pages/S7MasterTab.qml</file>
+        <file>components/device_info/pages/S7SlaveTab.qml</file>
         <file>components/device_info/pages/SerialPortConfigPanel.qml</file>
         <file>components/device_info/pages/SerialPortControlPage.qml</file>
         <file>components/device_info/pages/SerialPortListPanel.qml</file>
@@ -151,8 +159,6 @@
         <file>components/device_info/pages/SerialPortReceiveTab.qml</file>
         <file>components/device_info/pages/SerialPortSendTab.qml</file>
         <file>components/device_info/pages/SwitchInputPage.qml</file>
-        <file>components/device_info/pages/S7MasterTab.qml</file>
-        <file>components/device_info/pages/S7SlaveTab.qml</file>
         <file>components/device_info/pages/TCPConfigPanel.qml</file>
         <file>components/device_info/pages/TCPControlPage.qml</file>
         <file>components/device_info/pages/TCPListPanel.qml</file>

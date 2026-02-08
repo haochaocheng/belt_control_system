@@ -33,6 +33,9 @@
 #include "control/ModbusTCPSlaveController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加Modbus TCP从站控制器头文件
 #include "control/S7ClientController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加S7客户端控制器头文件
 #include "control/S7ServerController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器头文件
+#ifdef MQTT_ENABLED
+#include "mqtt/MQTTController.h"  // ✅ 2026-02-08 [Phase 7.43]: 添加MQTT控制器头文件
+#endif
 #include "network/NetworkTask.h"
 
 // 全局日志文件
@@ -190,6 +193,12 @@ int main(int argc, char *argv[]) {
         S7ServerController s7Server7;
         S7ServerController s7Server8;
 
+#ifdef MQTT_ENABLED
+        // ✅ 2026-02-08 [Phase 7.43]: 初始化MQTT控制器
+        MQTTController mqttController;
+        logMessage("MQTTController initialized");
+#endif
+
         NetworkTask networkTask;
 
         CommonControl commonControl;
@@ -255,6 +264,10 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("s7Server6", &s7Server6);
         engine.rootContext()->setContextProperty("s7Server7", &s7Server7);
         engine.rootContext()->setContextProperty("s7Server8", &s7Server8);
+#ifdef MQTT_ENABLED
+        // ✅ 2026-02-08 [Phase 7.43]: 注册MQTT控制器到QML
+        engine.rootContext()->setContextProperty("mqttController", &mqttController);
+#endif
         // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 注册MODBUS从站控制器到QML（6个串口，每个串口一个从站）
         engine.rootContext()->setContextProperty("modbusSlaveController1", &modbusSlaveController1);
         engine.rootContext()->setContextProperty("modbusSlaveController2", &modbusSlaveController2);

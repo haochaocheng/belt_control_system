@@ -1,0 +1,389 @@
+// MQTTControlPage.qml
+// MQTT 控制主页面
+// 创建日期: 2026-02-08
+// ✅ 2026-02-08 [Phase 7.43]: MQTT通讯控制功能实现
+// ✅ 2026-02-08 [Phase 7.43.7]: 移除底部按钮区域（MQTT页面不需要），修复导航问题
+
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+import "../" as DeviceInfo
+
+Rectangle {
+    id: root
+    color: "transparent"
+    focus: true
+
+    // ========== 公开属性 ==========
+    property int currentModuleIndex: 0    // 当前选中的模块索引 (0-7)
+    property int focusItemIndex: -1       // 导航焦点索引
+    property int focusSubArea: 0          // 焦点子区域 (0:列表 1:Tab栏 2:参数)
+    property int focusTabIndex: -1        // Tab 焦点索引
+    property int focusParamIndex: 0       // 参数焦点索引
+    property int focusButtonIndex: 0      // 按钮焦点索引（保留但不使用）
+
+    // 导航控制标志
+    property bool isReturningToCategory: false
+    property bool keysEnabled: true
+
+    // 暴露 navigationManager 供外部访问
+    property alias navigationManager: navigationManager
+
+    // 暴露 mqttConfigPanel 供外部访问
+    property alias mqttConfigPanel: mqttConfigPanel
+
+    // Qt 虚拟键盘引用
+    property var virtualKeyboard: null
+
+    // MQTT 控制器引用
+    property var mqttController: null
+
+    // ========== 信号 ==========
+    signal requestReturnToCategory()
+    signal moduleSelected(int index)
+
+    // ========== MQTT 模块数据 ==========
+    property var mqttModules: [
+        { name: "模块1", connected: false, connectionState: "未连接" },
+        { name: "模块2", connected: false, connectionState: "未连接" },
+        { name: "模块3", connected: false, connectionState: "未连接" },
+        { name: "模块4", connected: false, connectionState: "未连接" },
+        { name: "模块5", connected: false, connectionState: "未连接" },
+        { name: "模块6", connected: false, connectionState: "未连接" },
+        { name: "模块7", connected: false, connectionState: "未连接" },
+        { name: "模块8", connected: false, connectionState: "未连接" }
+    ]
+
+    // ========== 当前模块信息 ==========
+    property var currentModule: mqttModules[currentModuleIndex]
+
+    // ========== 函数 ==========
+    function getCurrentTab() {
+        if (!mqttConfigPanel.item) {
+            return null
+        }
+        return mqttConfigPanel.item.getCurrentTabItem()
+    }
+
+    function getParamFieldCount() {
+        if (!mqttConfigPanel.item) {
+            return 0
+        }
+        var currentTab = mqttConfigPanel.item.getCurrentTab()
+        if (!currentTab) {
+            return 0
+        }
+        if (typeof currentTab.getParamFieldCount === "function") {
+            return currentTab.getParamFieldCount()
+        }
+        // 默认参数数量
+        switch(root.focusTabIndex) {
+        case 0:  // 连接配置
+            return 9
+        case 1:  // 订阅主题
+            return 4
+        case 2:  // 发布消息
+            return 6
+        case 3:  // 数据监控
+            return 5
+        default:
+            return 0
+        }
+    }
+
+    function triggerParamInput(index) {
+        console.log("✅ [MQTTControlPage] triggerParamInput - 参数索引:", index)
+        if (!mqttConfigPanel.item) {
+            return
+        }
+        var currentTab = mqttConfigPanel.item.getCurrentTab()
+        if (!currentTab) {
+            return
+        }
+        if (typeof currentTab.triggerParamInput === "function") {
+            currentTab.triggerParamInput(index)
+        }
+    }
+
+    function handleEnterKey() {
+        console.log("✅ [MQTTControlPage] 处理回车键 - 当前焦点区域:", focusSubArea)
+
+        if (focusSubArea === 0) {
+            console.log("✅ [MQTTControlPage] 列表区域 - 切换模块:", focusItemIndex)
+            currentModuleIndex = focusItemIndex
+            return true
+        }
+
+        if (focusSubArea === 1) {
+            console.log("✅ [MQTTControlPage] Tab 栏区域 - 切换 Tab:", focusTabIndex)
+            if (mqttConfigPanel.item) {
+                mqttConfigPanel.item.currentTabIndex = focusTabIndex
+            }
+            return true
+        }
+
+        if (focusSubArea === 2) {
+            console.log("✅ [MQTTControlPage] 参数区域 - 触发参数输入:", focusParamIndex)
+            triggerParamInput(focusParamIndex)
+            return true
+        }
+
+        return false
+    }
+
+    // ========== 更新模块状态 ==========
+    function updateModuleStatus(moduleIndex, connected, connectionState) {
+        if (moduleIndex >= 0 && moduleIndex < mqttModules.length) {
+            var modules = mqttModules
+            modules[moduleIndex].connected = connected
+            modules[moduleIndex].connectionState = connectionState
+            mqttModules = modules
+        }
+    }
+
+    // ========== 定时器 ==========
+    Timer {
+        id: resetFlagTimer
+        interval: 100
+        repeat: false
+        onTriggered: {
+            root.isReturningToCategory = false
+        }
+    }
+
+    // ========== 监听器 ==========
+    onActiveFocusChanged: {
+        if (activeFocus) {
+            keysEnabled = true
+        }
+    }
+
+    onFocusItemIndexChanged: {
+        if (focusSubArea === 0 && focusItemIndex >= 0 && focusItemIndex < mqttModules.length) {
+            console.log("✅ [MQTTControlPage] focusItemIndex 变化:", focusItemIndex)
+            currentModuleIndex = focusItemIndex
+        }
+    }
+
+    onFocusSubAreaChanged: {
+        console.log("🔍 [MQTTControlPage] focusSubArea 变化:", focusSubArea)
+    }
+
+    onCurrentModuleIndexChanged: {
+        console.log("✅ [MQTTControlPage] currentModuleIndex 变化:", currentModuleIndex)
+        if (mqttController) {
+            mqttController.currentModuleIndex = currentModuleIndex
+        }
+    }
+
+    // ========== NavigationManager ==========
+    DeviceInfo.NavigationManager {
+        id: navigationManager
+
+        Component.onCompleted: {
+            currentArea = areaMotorList
+            motorListIndex = 0
+            tabIndex = 0
+            paramIndex = 0
+            buttonIndex = 0
+            skipTabArea = false
+            skipButtonArea = true  // ✅ 跳过按钮区域（MQTT页面没有底部按钮）
+            lastMotorIndex = 7  // 8个模块 (0-7)
+            lastTabIndex = 3    // 4个Tab (0-3)
+
+            Qt.callLater(function() {
+                var paramCount = root.getParamFieldCount()
+                updateLastParamIndex(paramCount)
+            })
+
+            root.currentModuleIndex = 0
+            root.focusItemIndex = 0
+            root.focusSubArea = 0
+            root.focusTabIndex = 0
+            root.focusParamIndex = 0
+            root.focusButtonIndex = 0
+        }
+
+        onMotorListIndexChanged: {
+            root.currentModuleIndex = motorListIndex
+            root.focusItemIndex = motorListIndex
+        }
+
+        onTabIndexChanged: {
+            root.focusTabIndex = tabIndex
+            if (mqttConfigPanel.item) {
+                mqttConfigPanel.item.currentTabIndex = tabIndex
+            }
+            Qt.callLater(function() {
+                var paramCount = root.getParamFieldCount()
+                updateLastParamIndex(paramCount)
+            })
+        }
+
+        onParamIndexChanged: {
+            root.focusParamIndex = paramIndex
+        }
+
+        onButtonIndexChanged: {
+            root.focusButtonIndex = buttonIndex
+        }
+
+        onAreaChanged: function(newArea) {
+            switch(newArea) {
+            case areaMotorList:
+                root.focusSubArea = 0
+                root.focusItemIndex = motorListIndex
+                root.focusTabIndex = -1
+                root.focusParamIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaTabBar:
+                root.focusSubArea = 1
+                root.focusTabIndex = tabIndex
+                root.focusItemIndex = -1
+                root.focusParamIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaParams:
+                root.focusSubArea = 2
+                root.focusParamIndex = paramIndex
+                root.focusItemIndex = -1
+                root.focusTabIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaButtons:
+                // ✅ MQTT页面没有按钮区域，跳过
+                break
+            }
+        }
+
+        onReturnToCategory: {
+            root.isReturningToCategory = true
+            root.keysEnabled = false
+            root.requestReturnToCategory()
+            resetFlagTimer.start()
+        }
+    }
+
+    // ========== 键盘事件 ==========
+    Keys.onUpPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        navigationManager.handleDirectionKey("Up")
+        event.accepted = true
+    }
+
+    Keys.onDownPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        navigationManager.handleDirectionKey("Down")
+        event.accepted = true
+    }
+
+    Keys.onLeftPressed: function(event) {
+        if (isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        if (navigationManager.currentArea === navigationManager.areaMotorList) {
+            root.isReturningToCategory = true
+            root.requestReturnToCategory()
+            resetFlagTimer.start()
+            event.accepted = true
+        } else {
+            navigationManager.handleDirectionKey("Left")
+            event.accepted = true
+        }
+    }
+
+    Keys.onRightPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        navigationManager.handleDirectionKey("Right")
+        event.accepted = true
+    }
+
+    Keys.onReturnPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        handleEnterKey()
+        event.accepted = true
+    }
+
+    // ========== 组件加载 ==========
+    Component.onCompleted: {
+        console.log("✅ [MQTTControlPage] Component.onCompleted")
+        focusSubArea = 0
+        focusItemIndex = 0
+    }
+
+    // ========== 主布局 ==========
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
+
+        // 左侧：模块列表
+        Loader {
+            id: mqttListPanel
+            Layout.preferredWidth: 240
+            Layout.fillHeight: true
+            source: "MQTTListPanel.qml"
+
+            onLoaded: {
+                console.log("✅ [MQTTControlPage] MQTTListPanel 加载成功")
+                item.mqttModules = Qt.binding(function() { return root.mqttModules })
+                item.currentModuleIndex = Qt.binding(function() { return root.currentModuleIndex })
+                item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
+                item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+
+                item.moduleSelected.connect(function(index) {
+                    root.currentModuleIndex = index
+                    root.focusItemIndex = index
+                    root.focusSubArea = 0
+                    root.moduleSelected(index)
+                })
+            }
+        }
+
+        // 分隔线
+        Rectangle {
+            Layout.preferredWidth: 2
+            Layout.fillHeight: true
+            color: "#3d4556"
+        }
+
+        // 右侧：MQTT 配置区域
+        Loader {
+            id: mqttConfigPanel
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            source: "MQTTConfigPanel.qml"
+
+            onLoaded: {
+                console.log("✅ [MQTTControlPage] MQTTConfigPanel 加载成功")
+                item.currentModule = Qt.binding(function() { return root.currentModule })
+                item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+                item.focusTabIndex = Qt.binding(function() { return root.focusTabIndex })
+                item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+
+                item.requestFocusParamIndex.connect(function(paramIndex) {
+                    root.focusParamIndex = paramIndex
+                    navigationManager.paramIndex = paramIndex
+                })
+
+                item.onCurrentTabIndexChanged.connect(function() {
+                    navigationManager.tabIndex = item.currentTabIndex
+                })
+            }
+        }
+    }
+}

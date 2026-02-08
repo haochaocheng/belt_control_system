@@ -26,6 +26,7 @@ find_package(Qt6 6.5 QUIET COMPONENTS
     TextToSpeech    # Qt TextToSpeech for voice alerts
     Sql             # Qt SQL for database support
     Test            # 单元测试（可选）
+    Mqtt            # ✅ 2026-02-08 [Phase 7.43]: Qt MQTT for MQTT communication
 )
 
 # 报告可选组件的可用性
@@ -53,6 +54,14 @@ else()
     message(WARNING "Qt6::Sql not found - database features may be limited")
 endif()
 
+# ✅ 2026-02-08 [Phase 7.43]: 检查 Qt MQTT 可用性
+if(Qt6Mqtt_FOUND)
+    message(STATUS "Qt6::Mqtt available - MQTT features enabled")
+    add_compile_definitions(MQTT_ENABLED)
+else()
+    message(WARNING "Qt6::Mqtt not found - MQTT features disabled")
+endif()
+
 qt_standard_project_setup(REQUIRES 6.5)
 
 # 配置输出目录
@@ -69,6 +78,9 @@ add_subdirectory(src/hardware/simulated)
 add_subdirectory(src/hardware/real)
 add_subdirectory(src/control)
 add_subdirectory(src/network)  # Network module (Modbus TCP)
+# ✅ 2026-02-08 [Phase 7.43]: MQTT 通讯控制模块
+# 功能：管理 8 个 MQTT 模块的连接、订阅、发布
+add_subdirectory(src/mqtt)  # MQTT communication module
 add_subdirectory(src/risip)  # Risip VoIP SDK (PJSIP wrapper)
 add_subdirectory(src/sip_phone)  # SIP Phone module
 # ✅ 2026-01-21 19:50 [音频网络传输] 添加音频网络发送模块

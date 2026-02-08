@@ -119,6 +119,14 @@ qt_add_qml_module(qml_module
         components/device_info/pages/ModbusTCPSlaveTab.qml
         components/device_info/pages/S7MasterTab.qml
         components/device_info/pages/S7SlaveTab.qml
+        # ✅ 2026-02-08 [Phase 7.43]: MQTT控制页面组件
+        components/device_info/pages/MQTTControlPage.qml
+        components/device_info/pages/MQTTListPanel.qml
+        components/device_info/pages/MQTTConfigPanel.qml
+        components/device_info/pages/MQTTConnectionTab.qml
+        components/device_info/pages/MQTTSubscribeTab.qml
+        components/device_info/pages/MQTTPublishTab.qml
+        components/device_info/pages/MQTTMonitorTab.qml
         components/device_info/pages/CurrentProtectionTab.qml
         components/device_info/pages/MotorTempTab.qml
         components/device_info/pages/FrontBearingTempTab.qml

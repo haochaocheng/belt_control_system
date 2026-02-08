@@ -78,6 +78,7 @@ Item {
     // ✅ 2026-02-04 [FIX 100.300.113]: 添加串口控制类别
     // ✅ 2026-02-07 [Phase 7.39.6]: 添加CAN控制类别
     // ✅ 2026-02-08 [Phase 7.42]: 添加TCP控制类别
+    // ✅ 2026-02-08 [Phase 7.43]: 添加MQTT控制类别
     property var categoryContentIndexMap: ({
         0: 0,  // 基本配置
         1: 0,  // 开关量输入
@@ -88,7 +89,8 @@ Item {
         6: 0,  // 串口控制
         7: 0,  // CAN控制
         8: 0,  // TCP控制
-        9: 0   // 逻辑控制
+        9: 0,  // MQTT控制
+        10: 0  // 逻辑控制
     })
 
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听类别切换，保存和恢复内容索引
@@ -427,6 +429,24 @@ Item {
                             event.accepted = true
                             return
                         }
+                    } else if (currentCategory === 8) {
+                        // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制页面使用 NavigationManager
+                        var tcpPage = tcpControlPageLoader.item
+                        if (tcpPage && tcpPage.navigationManager) {
+                            console.log("✅ [TCP控制导航] 上键 - 调用 NavigationManager.handleDirectionKey")
+                            tcpPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 9) {
+                        // ✅ 2026-02-08 [Phase 7.43]: MQTT控制页面使用 NavigationManager
+                        var mqttPage = mqttControlPageLoader.item
+                        if (mqttPage && mqttPage.navigationManager) {
+                            console.log("✅ [MQTT控制导航] 上键 - 调用 NavigationManager.handleDirectionKey")
+                            mqttPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
                     }
 
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
@@ -520,6 +540,56 @@ Item {
                                 return
                             }
                         }
+                    } else if (currentCategory === 8) {
+                        // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制参数区域使用NavigationManager
+                        var tcpPage = tcpControlPageLoader.item
+                        if (tcpPage) {
+                            // 先检查当前 Tab 是否有自定义导航
+                            var tcpConfigPanel = tcpPage.tcpConfigPanel ? tcpPage.tcpConfigPanel.item : null
+                            if (tcpConfigPanel && typeof tcpConfigPanel.getCurrentTabItem === "function") {
+                                var currentTab = tcpConfigPanel.getCurrentTabItem()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [TCP控制导航] 参数区域上键 - 调用当前Tab自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Up")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                            if (tcpPage.navigationManager) {
+                                console.log("✅ [TCP控制导航] 参数区域上键 - 调用 NavigationManager.handleDirectionKey")
+                                tcpPage.navigationManager.handleDirectionKey("Up")
+                                event.accepted = true
+                                return
+                            }
+                        }
+                    } else if (currentCategory === 9) {
+                        // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域使用NavigationManager
+                        var mqttPage = mqttControlPageLoader.item
+                        if (mqttPage) {
+                            // 先检查当前 Tab 是否有自定义导航
+                            var mqttConfigPanel = mqttPage.mqttConfigPanel ? mqttPage.mqttConfigPanel.item : null
+                            if (mqttConfigPanel && typeof mqttConfigPanel.getCurrentTabItem === "function") {
+                                var currentTab = mqttConfigPanel.getCurrentTabItem()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [MQTT控制导航] 参数区域上键 - 调用当前Tab自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Up")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                            if (mqttPage.navigationManager) {
+                                console.log("✅ [MQTT控制导航] 参数区域上键 - 调用 NavigationManager.handleDirectionKey")
+                                mqttPage.navigationManager.handleDirectionKey("Up")
+                                event.accepted = true
+                                return
+                            }
+                        }
                     } else {
                         // 其他页面：focusSubArea=2是底部按钮区域
                         // ✅ 底部按钮区域：上键导航
@@ -579,6 +649,24 @@ Item {
                         if (canPage && canPage.navigationManager) {
                             console.log("✅ [CAN控制导航] 按钮区域上键 - 调用 NavigationManager.handleDirectionKey")
                             canPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 8) {
+                        // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制按钮区域使用NavigationManager
+                        var tcpPage = tcpControlPageLoader.item
+                        if (tcpPage && tcpPage.navigationManager) {
+                            console.log("✅ [TCP控制导航] 按钮区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            tcpPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 9) {
+                        // ✅ 2026-02-08 [Phase 7.43]: MQTT控制按钮区域使用NavigationManager
+                        var mqttPage = mqttControlPageLoader.item
+                        if (mqttPage && mqttPage.navigationManager) {
+                            console.log("✅ [MQTT控制导航] 按钮区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            mqttPage.navigationManager.handleDirectionKey("Up")
                             event.accepted = true
                             return
                         }
@@ -701,6 +789,24 @@ Item {
                             event.accepted = true
                             return
                         }
+                    } else if (currentCategory === 8) {
+                        // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制页面使用 NavigationManager
+                        var tcpPage = tcpControlPageLoader.item
+                        if (tcpPage && tcpPage.navigationManager) {
+                            console.log("✅ [TCP控制导航] 下键 - 调用 NavigationManager.handleDirectionKey")
+                            tcpPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 9) {
+                        // ✅ 2026-02-08 [Phase 7.43]: MQTT控制页面使用 NavigationManager
+                        var mqttPage = mqttControlPageLoader.item
+                        if (mqttPage && mqttPage.navigationManager) {
+                            console.log("✅ [MQTT控制导航] 下键 - 调用 NavigationManager.handleDirectionKey")
+                            mqttPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
                     }
 
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
@@ -759,6 +865,56 @@ Item {
                                 return
                             }
                         }
+                    } else if (currentCategory === 8) {
+                        // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制参数区域使用NavigationManager
+                        var tcpPage = tcpControlPageLoader.item
+                        if (tcpPage) {
+                            // 先检查当前 Tab 是否有自定义导航
+                            var tcpConfigPanel = tcpPage.tcpConfigPanel ? tcpPage.tcpConfigPanel.item : null
+                            if (tcpConfigPanel && typeof tcpConfigPanel.getCurrentTabItem === "function") {
+                                var currentTab = tcpConfigPanel.getCurrentTabItem()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [TCP控制导航] 参数区域下键 - 调用当前Tab自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Down")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                            if (tcpPage.navigationManager) {
+                                console.log("✅ [TCP控制导航] 参数区域下键 - 调用 NavigationManager.handleDirectionKey")
+                                tcpPage.navigationManager.handleDirectionKey("Down")
+                                event.accepted = true
+                                return
+                            }
+                        }
+                    } else if (currentCategory === 9) {
+                        // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域使用NavigationManager
+                        var mqttPage = mqttControlPageLoader.item
+                        if (mqttPage) {
+                            // 先检查当前 Tab 是否有自定义导航
+                            var mqttConfigPanel = mqttPage.mqttConfigPanel ? mqttPage.mqttConfigPanel.item : null
+                            if (mqttConfigPanel && typeof mqttConfigPanel.getCurrentTabItem === "function") {
+                                var currentTab = mqttConfigPanel.getCurrentTabItem()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [MQTT控制导航] 参数区域下键 - 调用当前Tab自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Down")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                            if (mqttPage.navigationManager) {
+                                console.log("✅ [MQTT控制导航] 参数区域下键 - 调用 NavigationManager.handleDirectionKey")
+                                mqttPage.navigationManager.handleDirectionKey("Down")
+                                event.accepted = true
+                                return
+                            }
+                        }
                     }
 
                     // ✅ 其他页面的底部按钮区域：下键导航
@@ -804,6 +960,15 @@ Item {
                         if (canPage && canPage.navigationManager) {
                             console.log("✅ [CAN控制导航] 按钮区域下键 - 调用 NavigationManager.handleDirectionKey")
                             canPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 8) {
+                        // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制按钮区域使用NavigationManager
+                        var tcpPage = tcpControlPageLoader.item
+                        if (tcpPage && tcpPage.navigationManager) {
+                            console.log("✅ [TCP控制导航] 按钮区域下键 - 调用 NavigationManager.handleDirectionKey")
+                            tcpPage.navigationManager.handleDirectionKey("Down")
                             event.accepted = true
                             return
                         }
@@ -917,15 +1082,20 @@ Item {
 
                 // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.5]: 串口控制页面跳过参数区域左键处理
                 // ✅ 2026-02-07 [Phase 7.39.11 Fix v4]: CAN控制页面也跳过参数区域左键处理
+                // ✅ 2026-02-08 [Phase 7.42.16]: TCP控制页面也跳过参数区域左键处理
                 // 串口控制页面的区域定义：0=列表 1=Tab 2=参数 3=按钮
                 // CAN控制页面的区域定义：0=列表 1=Tab 2=参数 3=按钮
+                // TCP控制页面的区域定义：0=列表 1=Tab 2=参数 3=按钮
+                // MQTT控制页面的区域定义：0=列表 1=Tab 2=参数 3=按钮
                 // 电机控制页面的区域定义：0=列表 1=参数 2=按钮
                 // 下面的代码是为电机控制页面设计的，检查 focusSubArea === 1 认为是参数区域
-                // 但对串口控制和CAN控制页面来说，focusSubArea === 1 是Tab区域，不应该执行参数区域的逻辑
+                // 但对串口控制、CAN控制、TCP控制和MQTT控制页面来说，focusSubArea === 1 是Tab区域，不应该执行参数区域的逻辑
                 var isSerialPortControlPage = (currentCategory === 6)  // 串口控制类别
                 var isCANControlPage = (currentCategory === 7)  // CAN控制类别
+                var isTCPControlPage = (currentCategory === 8)  // TCP控制类别
+                var isMQTTControlPage = (currentCategory === 9)  // MQTT控制类别
 
-                if (currentPage.focusSubArea === 1 && !isSerialPortControlPage && !isCANControlPage) {
+                if (currentPage.focusSubArea === 1 && !isSerialPortControlPage && !isCANControlPage && !isTCPControlPage && !isMQTTControlPage) {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
                     var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
                     var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
@@ -992,6 +1162,24 @@ Item {
                             event.accepted = true
                             return
                         }
+                    } else if (currentCategory === 8) {
+                        // ✅ 2026-02-08 [Phase 7.42.16]: TCP控制参数区域使用NavigationManager
+                        var tcpPage = tcpControlPageLoader.item
+                        if (tcpPage && tcpPage.navigationManager) {
+                            console.log("✅ [TCP控制导航] 参数区域左键 - 调用 NavigationManager.handleDirectionKey")
+                            tcpPage.navigationManager.handleDirectionKey("Left")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 9) {
+                        // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域使用NavigationManager
+                        var mqttPage = mqttControlPageLoader.item
+                        if (mqttPage && mqttPage.navigationManager) {
+                            console.log("✅ [MQTT控制导航] 参数区域左键 - 调用 NavigationManager.handleDirectionKey")
+                            mqttPage.navigationManager.handleDirectionKey("Left")
+                            event.accepted = true
+                            return
+                        }
                     }
 
                     // ✅ 其他页面的底部按钮区域：左键导航
@@ -1038,6 +1226,17 @@ Item {
                 if (canPage && canPage.navigationManager) {
                     console.log("✅ [导航] CAN控制页面左键 - 调用NavigationManager")
                     canPage.navigationManager.handleDirectionKey("Left")
+                    event.accepted = true
+                    return
+                }
+            }
+
+            // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制页面使用NavigationManager处理左键
+            if (currentCategory === 8 && currentFocusArea === 2) {
+                var tcpPage = tcpControlPageLoader.item
+                if (tcpPage && tcpPage.navigationManager) {
+                    console.log("✅ [导航] TCP控制页面左键 - 调用NavigationManager")
+                    tcpPage.navigationManager.handleDirectionKey("Left")
                     event.accepted = true
                     return
                 }
@@ -1181,6 +1380,62 @@ Item {
                     }
                 }
 
+                // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制页面使用 NavigationManager
+                var isTCPControlPage = (currentCategory === 8)  // TCP控制类别
+                console.log("🔍 [TCP控制导航] isTCPControlPage:", isTCPControlPage)
+
+                if (isTCPControlPage) {
+                    var tcpPage = tcpControlPageLoader.item
+                    if (tcpPage && tcpPage.navigationManager) {
+                        // 检查当前Tab是否有自定义导航
+                        if (typeof tcpPage.getCurrentTab === "function") {
+                            var currentTab = tcpPage.getCurrentTab()
+                            if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                console.log("✅ [TCP控制导航] 右键 - 调用自定义导航")
+                                var handled = currentTab.handleDirectionKey("Right")
+                                if (handled) {
+                                    event.accepted = true
+                                    return
+                                }
+                            }
+                        }
+
+                        // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                        console.log("🔍 [TCP控制导航] 右键 - 调用 NavigationManager.handleDirectionKey")
+                        tcpPage.navigationManager.handleDirectionKey("Right")
+                        event.accepted = true
+                        return
+                    }
+                }
+
+                // ✅ 2026-02-08 [Phase 7.43]: MQTT控制页面使用 NavigationManager
+                var isMQTTControlPage = (currentCategory === 9)  // MQTT控制类别
+                console.log("🔍 [MQTT控制导航] isMQTTControlPage:", isMQTTControlPage)
+
+                if (isMQTTControlPage) {
+                    var mqttPage = mqttControlPageLoader.item
+                    if (mqttPage && mqttPage.navigationManager) {
+                        // 检查当前Tab是否有自定义导航
+                        if (typeof mqttPage.getCurrentTab === "function") {
+                            var currentTab = mqttPage.getCurrentTab()
+                            if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                console.log("✅ [MQTT控制导航] 右键 - 调用自定义导航")
+                                var handled = currentTab.handleDirectionKey("Right")
+                                if (handled) {
+                                    event.accepted = true
+                                    return
+                                }
+                            }
+                        }
+
+                        // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                        console.log("🔍 [MQTT控制导航] 右键 - 调用 NavigationManager.handleDirectionKey")
+                        mqttPage.navigationManager.handleDirectionKey("Right")
+                        event.accepted = true
+                        return
+                    }
+                }
+
                 // 如果当前在列表区域，切换到参数区域
                 if (currentPage.focusSubArea === 0) {
                     currentPage.focusSubArea = 1
@@ -1217,11 +1472,22 @@ Item {
                     }
                 } else if (currentPage.focusSubArea === 2) {
                     // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: 串口控制和CAN控制参数区域使用NavigationManager
-                    // 原因：串口控制和CAN控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
+                    // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制参数区域也使用NavigationManager
+                    // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域也使用NavigationManager
+                    // 原因：串口控制、CAN控制、TCP控制和MQTT控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
-                    if (currentCategory === 6 || currentCategory === 7) {
-                        // 串口控制或CAN控制：focusSubArea=2是参数区域，使用NavigationManager
-                        var page = (currentCategory === 6) ? serialPortControlPageLoader.item : canControlPageLoader.item
+                    if (currentCategory === 6 || currentCategory === 7 || currentCategory === 8 || currentCategory === 9) {
+                        // 串口控制、CAN控制、TCP控制或MQTT控制：focusSubArea=2是参数区域，使用NavigationManager
+                        var page = null
+                        if (currentCategory === 6) {
+                            page = serialPortControlPageLoader.item
+                        } else if (currentCategory === 7) {
+                            page = canControlPageLoader.item
+                        } else if (currentCategory === 8) {
+                            page = tcpControlPageLoader.item
+                        } else if (currentCategory === 9) {
+                            page = mqttControlPageLoader.item
+                        }
                         if (page && page.navigationManager) {
                             console.log("✅ [导航] 参数区域右键 - 调用 NavigationManager.handleDirectionKey")
                             page.navigationManager.handleDirectionKey("Right")
@@ -1354,6 +1620,68 @@ Item {
                             }
                         } else {
                             console.log("⚠️ [导航] canConfigPanel 不存在")
+                        }
+                    // ✅ 2026-02-08 [Phase 7.42.15]: TCP 控制页面回车键处理
+                    } else if (currentCategory === 8) {
+                        console.log("✅ [导航] 回车键 - TCP 控制页面特殊处理开始")
+                        var tcpPage = tcpControlPageLoader.item
+                        console.log("✅ [导航] tcpPage:", tcpPage ? "存在" : "不存在")
+                        if (tcpPage && tcpPage.tcpConfigPanel) {
+                            console.log("✅ [导航] tcpConfigPanel:", tcpPage.tcpConfigPanel ? "存在" : "不存在")
+                            var tcpConfigPanel = tcpPage.tcpConfigPanel.item
+                            console.log("✅ [导航] tcpConfigPanel.item:", tcpConfigPanel ? "存在" : "不存在")
+                            if (tcpConfigPanel && typeof tcpConfigPanel.getCurrentTabItem === "function") {
+                                console.log("✅ [导航] getCurrentTabItem 函数存在")
+                                var currentTab = tcpConfigPanel.getCurrentTabItem()
+                                console.log("✅ [导航] currentTab:", currentTab ? "存在" : "不存在")
+                                if (currentTab && typeof currentTab.handleEnterKey === "function") {
+                                    console.log("✅ [导航] handleEnterKey 函数存在，准备调用")
+                                    handled = currentTab.handleEnterKey()
+                                    console.log("✅ [导航] handleEnterKey 返回值:", handled)
+                                    if (handled) {
+                                        console.log("✅ [导航] 回车键已被Tab处理（TCP 控制）")
+                                        event.accepted = true
+                                        return
+                                    }
+                                } else {
+                                    console.log("⚠️ [导航] handleEnterKey 函数不存在")
+                                }
+                            } else {
+                                console.log("⚠️ [导航] getCurrentTabItem 函数不存在")
+                            }
+                        } else {
+                            console.log("⚠️ [导航] tcpConfigPanel 不存在")
+                        }
+                    // ✅ 2026-02-08 [Phase 7.43]: MQTT 控制页面回车键处理
+                    } else if (currentCategory === 9) {
+                        console.log("✅ [导航] 回车键 - MQTT 控制页面特殊处理开始")
+                        var mqttPage = mqttControlPageLoader.item
+                        console.log("✅ [导航] mqttPage:", mqttPage ? "存在" : "不存在")
+                        if (mqttPage && mqttPage.mqttConfigPanel) {
+                            console.log("✅ [导航] mqttConfigPanel:", mqttPage.mqttConfigPanel ? "存在" : "不存在")
+                            var mqttConfigPanel = mqttPage.mqttConfigPanel.item
+                            console.log("✅ [导航] mqttConfigPanel.item:", mqttConfigPanel ? "存在" : "不存在")
+                            if (mqttConfigPanel && typeof mqttConfigPanel.getCurrentTabItem === "function") {
+                                console.log("✅ [导航] getCurrentTabItem 函数存在")
+                                var currentTab = mqttConfigPanel.getCurrentTabItem()
+                                console.log("✅ [导航] currentTab:", currentTab ? "存在" : "不存在")
+                                if (currentTab && typeof currentTab.handleEnterKey === "function") {
+                                    console.log("✅ [导航] handleEnterKey 函数存在，准备调用")
+                                    handled = currentTab.handleEnterKey()
+                                    console.log("✅ [导航] handleEnterKey 返回值:", handled)
+                                    if (handled) {
+                                        console.log("✅ [导航] 回车键已被Tab处理（MQTT 控制）")
+                                        event.accepted = true
+                                        return
+                                    }
+                                } else {
+                                    console.log("⚠️ [导航] handleEnterKey 函数不存在")
+                                }
+                            } else {
+                                console.log("⚠️ [导航] getCurrentTabItem 函数不存在")
+                            }
+                        } else {
+                            console.log("⚠️ [导航] mqttConfigPanel 不存在")
                         }
                     } else {
                         console.log("✅ [导航] 回车键 - 其他页面，currentCategory:", currentCategory)
@@ -1682,7 +2010,7 @@ Item {
                 spacing: 10
 
                 Repeater {
-                    model: ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "TCP控制", "逻辑控制"]
+                    model: ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "TCP控制", "MQTT控制", "逻辑控制"]
 
                     Button {
                         width: parent.width - 20
@@ -2672,7 +3000,106 @@ Item {
                     }
                 }
 
-                // 9: 逻辑控制
+                // ✅ 2026-02-08 [Phase 7.43]: 9: MQTT 控制
+                Loader {
+                    id: mqttControlPageLoader
+                    source: "pages/MQTTControlPage.qml"
+
+                    onLoaded: {
+                        console.log("✅ [DeviceSettingsDialog] MQTTControlPage 加载成功")
+
+                        // 传递虚拟键盘引用
+                        if (item) {
+                            item.virtualKeyboard = Qt.binding(function() {
+                                return root.virtualKeyboard
+                            })
+                        }
+                    }
+
+                    onStatusChanged: {
+                        if (status === Loader.Error) {
+                            console.error("❌ [DeviceSettingsDialog] MQTTControlPage 加载失败")
+                        }
+                    }
+
+                    // 添加焦点连接
+                    Connections {
+                        target: root
+                        enabled: mqttControlPageLoader.item !== null
+
+                        function onCurrentFocusAreaChanged() {
+                            console.log("🔍 [MQTT控制同步] onCurrentFocusAreaChanged - currentFocusArea:", root.currentFocusArea, "currentCategory:", root.currentCategory)
+                            if (mqttControlPageLoader.item && root.currentCategory === 9) {
+                                if (root.currentFocusArea === 2) {
+                                    // 焦点进入内容区域，默认在列表区域
+                                    console.log("✅ [MQTT控制同步] 焦点进入内容区域 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
+                                    mqttControlPageLoader.item.focusSubArea = 0
+                                    mqttControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    // 焦点离开内容区域，清除焦点
+                                    console.log("✅ [MQTT控制同步] 焦点离开内容区域 - 清除 focusItemIndex")
+                                    mqttControlPageLoader.item.focusItemIndex = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentCategoryChanged() {
+                            console.log("🔍 [MQTT控制同步] onCurrentCategoryChanged - currentCategory:", root.currentCategory, "currentFocusArea:", root.currentFocusArea)
+                            if (mqttControlPageLoader.item) {
+                                if (root.currentFocusArea === 2 && root.currentCategory === 9) {
+                                    // 切换到MQTT控制类别，设置焦点
+                                    console.log("✅ [MQTT控制同步] 切换到MQTT控制 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
+                                    mqttControlPageLoader.item.focusSubArea = 0
+                                    mqttControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    // 切换到其他类别，清除焦点
+                                    console.log("✅ [MQTT控制同步] 切换到其他类别 - 清除 focusItemIndex")
+                                    mqttControlPageLoader.item.focusItemIndex = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentContentItemIndexChanged() {
+                            console.log("🔍 [MQTT控制同步] onCurrentContentItemIndexChanged - currentContentItemIndex:", root.currentContentItemIndex)
+                            if (mqttControlPageLoader.item &&
+                                root.currentFocusArea === 2 &&
+                                root.currentCategory === 9 &&
+                                mqttControlPageLoader.item.focusSubArea === 0) {
+                                // 只在焦点在列表区域时同步
+                                console.log("✅ [MQTT控制同步] 同步 focusItemIndex:", root.currentContentItemIndex)
+                                mqttControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                console.log("⚠️ [MQTT控制同步] 不满足同步条件 - focusArea:", root.currentFocusArea, "category:", root.currentCategory, "focusSubArea:", mqttControlPageLoader.item ? mqttControlPageLoader.item.focusSubArea : "null")
+                            }
+                        }
+                    }
+
+                    // 监听MQTT控制页面焦点变化
+                    Connections {
+                        target: mqttControlPageLoader.item
+                        enabled: mqttControlPageLoader.item !== null
+
+                        function onFocusItemIndexChanged() {
+                            if (mqttControlPageLoader.item &&
+                                root.currentCategory === 9 &&
+                                root.currentFocusArea === 2 &&
+                                mqttControlPageLoader.item.focusSubArea === 0 &&
+                                mqttControlPageLoader.item.focusItemIndex >= 0) {
+                                // 只在焦点在列表区域时同步
+                                console.log("✅ [DeviceSettingsDialog] 同步MQTT控制列表焦点:", mqttControlPageLoader.item.focusItemIndex)
+                                root.currentContentItemIndex = mqttControlPageLoader.item.focusItemIndex
+                            }
+                        }
+
+                        function onRequestReturnToCategory() {
+                            // MQTT控制页面请求返回到左侧类别
+                            console.log("✅ [DeviceSettingsDialog] MQTT控制请求返回类别")
+                            root.currentFocusArea = 1  // 切换到左侧类别区域
+                        }
+                    }
+                }
+
+                // 10: 逻辑控制
                 Rectangle {
                     color: "transparent"
                     Text {
@@ -2741,7 +3168,7 @@ Item {
 
     // ========== 辅助函数 ==========
     function getCategoryName(index) {
-        var names = ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "TCP控制", "逻辑控制"]
+        var names = ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "TCP控制", "MQTT控制", "逻辑控制"]
         return names[index] || "未知类别"
     }
 
@@ -2877,6 +3304,8 @@ Item {
         case 8:
             return tcpControlPageLoader.item  // ✅ 2026-02-08 [Phase 7.42]: 返回TCP控制页面
         case 9:
+            return mqttControlPageLoader.item  // ✅ 2026-02-08 [Phase 7.43.7]: 返回MQTT控制页面
+        case 10:
             return null  // 逻辑控制待实现
         default:
             return null
