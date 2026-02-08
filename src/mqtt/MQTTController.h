@@ -179,14 +179,8 @@ signals:
     void cleanSessionChanged();
     void defaultQosChanged();
 
-private slots:
-#ifdef MQTT_ENABLED
-    void onClientConnected();
-    void onClientDisconnected();
-    void onClientStateChanged(QMqttClient::ClientState state);
-    void onClientErrorChanged(QMqttClient::ClientError error);
-    void onMessageReceived(const QByteArray &message, const QMqttTopicName &topic);
-#endif
+// ✅ 2026-02-08 [Phase 7.43.15]: 移除未使用的槽函数声明
+// 信号连接使用lambda表达式实现，不需要单独的槽函数
 
 private:
     // 获取有效的模块索引
