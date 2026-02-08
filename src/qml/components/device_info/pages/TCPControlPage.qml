@@ -119,14 +119,10 @@ Rectangle {
         }
 
         if (focusSubArea === 2) {
-            console.log("✅ [TCPControlPage] 参数区域 - 调用 Tab 的 handleEnterKey")
-            if (tcpConfigPanel.item) {
-                var currentTab = tcpConfigPanel.item.getCurrentTab()
-                if (currentTab && typeof currentTab.handleEnterKey === "function") {
-                    return currentTab.handleEnterKey()
-                }
-            }
-            return false
+            // ✅ 2026-02-08 [Phase 7.42.15]: 参数区域按回车键时触发虚拟键盘
+            console.log("✅ [TCPControlPage] 参数区域 - 触发参数输入:", focusParamIndex)
+            triggerParamInput(focusParamIndex)
+            return true
         }
 
         if (focusSubArea === 3) {
@@ -242,7 +238,9 @@ Rectangle {
 
         onParamIndexChanged: {
             root.focusParamIndex = paramIndex
-            root.triggerParamInput(paramIndex)
+            // ✅ 2026-02-08 [Phase 7.42.15]: 移除自动触发虚拟键盘
+            // 虚拟键盘应该在按回车键时才弹出，而不是焦点变化时
+            // root.triggerParamInput(paramIndex)  // ❌ 移除
         }
 
         onButtonIndexChanged: {
@@ -271,7 +269,9 @@ Rectangle {
                 root.focusItemIndex = -1
                 root.focusTabIndex = -1
                 root.focusButtonIndex = -1
-                root.triggerParamInput(paramIndex)
+                // ✅ 2026-02-08 [Phase 7.42.15]: 移除自动触发虚拟键盘
+                // 虚拟键盘应该在按回车键时才弹出，而不是进入参数区域时
+                // root.triggerParamInput(paramIndex)  // ❌ 移除
                 break
             case areaButtons:
                 root.focusSubArea = 3

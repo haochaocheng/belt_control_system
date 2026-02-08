@@ -2,11 +2,12 @@
 // S7 主站（客户端）配置Tab
 // 创建日期: 2026-02-08
 // ✅ 2026-02-08 [Phase 7.42]: TCP控制功能实现
+// ✅ 2026-02-08 [Phase 7.42.13]: 重构布局，参照 CurrentProtectionTab.qml
 // 使用 Snap7 库实现西门子 S7 协议
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 import "../" as DeviceInfo
 
 Rectangle {
@@ -18,6 +19,9 @@ Rectangle {
     property int focusParamIndex: -1
     property var virtualKeyboard: null
 
+    // ✅ 2026-02-08 [Phase 7.42.13]: 信号 - 请求更新焦点索引
+    signal requestFocusParamIndex(int paramIndex)
+
     // ========== 参数数据 ==========
     property int portNumber: 102  // S7 标准端口
     property bool isEnabled: false
@@ -28,7 +32,7 @@ Rectangle {
     property string localTSAP: "0x0100"
     property string remoteTSAP: "0x0302"
     property int pduSize: 480
-    property real pollInterval: 1.0  // 0.1秒单位
+    property real pollInterval: 10  // 0.1秒单位
     property int timeout: 5000
 
     // ========== 函数 ==========
@@ -36,386 +40,695 @@ Rectangle {
         return 11
     }
 
-    // ✅ 2026-02-08 [Phase 7.42]: 添加虚拟键盘支持
+    // ✅ 2026-02-08 [Phase 7.42.13]: 重构虚拟键盘支持
     function triggerParamInput(index) {
         console.log("✅ [S7MasterTab] triggerParamInput:", index)
 
         var inputField = null
 
         switch(index) {
-        case 0:  // 端口号
-            inputField = portNumberInput
+        case 0:  // 端口号（CustomSpinBox）
+            inputField = portNumberField
             break
-        case 1:  // 状态（ComboBox）
-            inputField = statusCombo
+        case 1:  // 状态（CustomComboBox）
+            console.log("✅ [S7MasterTab] 切换状态")
+            statusField.currentIndex = (statusField.currentIndex + 1) % statusField.model.length
+            return
+        case 2:  // 目标IP（CustomTextField）
+            inputField = targetIPField
             break
-        case 2:  // 目标IP
-            inputField = targetIPInput
+        case 3:  // Rack（CustomSpinBox）
+            inputField = rackField
             break
-        case 3:  // Rack
-            inputField = rackInput
+        case 4:  // Slot（CustomSpinBox）
+            inputField = slotField
             break
-        case 4:  // Slot
-            inputField = slotInput
+        case 5:  // 连接类型（CustomComboBox）
+            console.log("✅ [S7MasterTab] 切换连接类型")
+            connectionTypeField.currentIndex = (connectionTypeField.currentIndex + 1) % connectionTypeField.model.length
+            return
+        case 6:  // Local TSAP（CustomTextField）
+            inputField = localTSAPField
             break
-        case 5:  // 连接类型（ComboBox）
-            inputField = connectionTypeCombo
+        case 7:  // Remote TSAP（CustomTextField）
+            inputField = remoteTSAPField
             break
-        case 6:  // Local TSAP
-            inputField = localTSAPInput
+        case 8:  // PDU大小（CustomSpinBox）
+            inputField = pduSizeField
             break
-        case 7:  // Remote TSAP
-            inputField = remoteTSAPInput
+        case 9:  // 轮询时间（CustomSpinBox）
+            inputField = pollIntervalField
             break
-        case 8:  // PDU大小
-            inputField = pduSizeInput
-            break
-        case 9:  // 轮询时间
-            inputField = pollIntervalInput
-            break
-        case 10:  // 超时时间
-            inputField = timeoutInput
+        case 10:  // 超时时间（CustomSpinBox）
+            inputField = timeoutField
             break
         }
 
         // 激活虚拟键盘
         if (inputField) {
-            inputField.forceActiveFocus()
-            if (root.virtualKeyboard) {
-                root.virtualKeyboard.visible = true
+            console.log("✅ [S7MasterTab] 激活虚拟键盘 - 控件:", inputField)
+            if (inputField.activateVirtualKeyboard) {
+                inputField.activateVirtualKeyboard()
+            } else {
+                inputField.forceActiveFocus()
             }
         }
     }
 
     // ✅ 2026-02-08 [Phase 7.42]: 完善回车键处理
+    // ✅ 2026-02-08 [Phase 7.42.15]: 修复返回值逻辑
     function handleEnterKey() {
         console.log("✅ [S7MasterTab] handleEnterKey - focusParamIndex:", focusParamIndex)
 
-        // 如果是 ComboBox，打开下拉列表
-        if (focusParamIndex === 1) {
-            if (statusCombo) {
-                statusCombo.popup.open()
-                return true
-            }
-        } else if (focusParamIndex === 5) {
-            if (connectionTypeCombo) {
-                connectionTypeCombo.popup.open()
-                return true
-            }
+        // 如果是 ComboBox，切换选项
+        if (focusParamIndex === 1) {  // 状态（ComboBox）
+            statusField.currentIndex = (statusField.currentIndex + 1) % statusField.model.length
+            return true  // 已处理，不需要弹出虚拟键盘
+        } else if (focusParamIndex === 5) {  // 连接类型（ComboBox）
+            connectionTypeField.currentIndex = (connectionTypeField.currentIndex + 1) % connectionTypeField.model.length
+            return true  // 已处理，不需要弹出虚拟键盘
         }
 
-        return true
+        // 其他输入框返回 false，让 DeviceSettingsDialog 调用 triggerParamInput
+        return false
     }
 
-    // ========== 主布局 ==========
+    // ========== 滚动视图 ==========
     ScrollView {
+        id: paramScrollView
         anchors.fill: parent
-        anchors.margins: 10
         clip: true
 
+        // ✅ 2026-02-08 [Phase 7.42.13]: 改为 4 列 GridLayout，参考 CurrentProtectionTab
         GridLayout {
-            width: parent.width - 20
-            columns: 2
-            columnSpacing: 20
-            rowSpacing: 15
+            width: paramScrollView.width * 0.9
+            columns: 4  // 4列：标签1、输入框1、标签2、输入框2
+            columnSpacing: 10
+            rowSpacing: 12
 
-            // 端口号
-            Label {
+            // ========== 第一行：端口号（左侧，索引0）、状态（右侧，索引1）==========
+
+            // 端口号标签
+            Text {
                 text: "端口号:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 0
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 0 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 0 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: portNumberInput
+            // 端口号输入
+            Item {
+                Layout.column: 1
+                Layout.row: 0
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: portNumberField.implicitHeight
+
+                DeviceInfo.CustomSpinBox {
+                    id: portNumberField
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.portNumber
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.portNumber = parseInt(text) || 102
+                    from: 1
+                    to: 65535
+                    value: root.portNumber
+                    onValueChanged: root.portNumber = value
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击端口号，发射信号: requestFocusParamIndex(0)")
+                        root.requestFocusParamIndex(0)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 0) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // 状态
-            Label {
+            // 状态标签
+            Text {
                 text: "状态:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 0
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            ComboBox {
-                id: statusCombo
-                Layout.fillWidth: true
-                model: ["关闭", "打开"]
-                currentIndex: root.isEnabled ? 1 : 0
-                onCurrentIndexChanged: root.isEnabled = (currentIndex === 1)
 
-                background: Rectangle {
-                    color: "#2a3142"
-                    border.color: focusParamIndex === 1 ? "#2196F3" : "#3d4556"
-                    border.width: focusParamIndex === 1 ? 2 : 1
+            // 状态输入（下拉框）
+            Item {
+                Layout.column: 3
+                Layout.row: 0
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: statusField.implicitHeight
+
+                DeviceInfo.CustomComboBox {
+                    id: statusField
+                    anchors.fill: parent
+                    model: ["关闭", "打开"]
+                    currentIndex: root.isEnabled ? 1 : 0
+                    onCurrentIndexChanged: root.isEnabled = (currentIndex === 1)
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击状态，发射信号: requestFocusParamIndex(1)")
+                        root.requestFocusParamIndex(1)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 1) ? 3 : 0
                     radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // 目标IP
-            Label {
+            // ========== 第二行：目标IP（左侧，索引2）、连接类型（右侧，索引5）==========
+
+            // 目标IP标签
+            Text {
                 text: "目标IP:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 1
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 2 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 2 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: targetIPInput
+            // 目标IP输入
+            Item {
+                Layout.column: 1
+                Layout.row: 1
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: targetIPField.implicitHeight
+
+                DeviceInfo.CustomTextField {
+                    id: targetIPField
                     anchors.fill: parent
-                    anchors.margins: 8
                     text: root.targetIP
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhFormattedNumbersOnly
                     onTextChanged: root.targetIP = text
+                    placeholderText: "192.168.0.1"
                 }
-            }
 
-            // Rack
-            Label {
-                text: "Rack:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
-            }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 3 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 3 ? 2 : 1
-                radius: 4
-
-                TextInput {
-                    id: rackInput
+                MouseArea {
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.rack
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.rack = parseInt(text) || 0
-                }
-            }
-
-            // Slot
-            Label {
-                text: "Slot:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
-            }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 4 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 4 ? 2 : 1
-                radius: 4
-
-                TextInput {
-                    id: slotInput
-                    anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.slot
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.slot = parseInt(text) || 2
-                }
-            }
-
-            // 连接类型
-            Label {
-                text: "连接类型:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
-            }
-            ComboBox {
-                id: connectionTypeCombo
-                Layout.fillWidth: true
-                model: ["PG", "OP", "Basic"]
-                currentIndex: {
-                    switch(root.connectionType) {
-                    case "PG": return 0
-                    case "OP": return 1
-                    case "Basic": return 2
-                    default: return 0
-                    }
-                }
-                onCurrentIndexChanged: {
-                    switch(currentIndex) {
-                    case 0: root.connectionType = "PG"; break
-                    case 1: root.connectionType = "OP"; break
-                    case 2: root.connectionType = "Basic"; break
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击目标IP，发射信号: requestFocusParamIndex(2)")
+                        root.requestFocusParamIndex(2)
+                        mouse.accepted = false
                     }
                 }
 
-                background: Rectangle {
-                    color: "#2a3142"
-                    border.color: focusParamIndex === 5 ? "#2196F3" : "#3d4556"
-                    border.width: focusParamIndex === 5 ? 2 : 1
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 2) ? 3 : 0
                     radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // Local TSAP
-            Label {
+            // 连接类型标签
+            Text {
+                text: "连接类型:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 1
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 连接类型输入（下拉框）
+            Item {
+                Layout.column: 3
+                Layout.row: 1
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: connectionTypeField.implicitHeight
+
+                DeviceInfo.CustomComboBox {
+                    id: connectionTypeField
+                    anchors.fill: parent
+                    model: ["PG", "OP", "Basic"]
+                    currentIndex: {
+                        switch(root.connectionType) {
+                        case "PG": return 0
+                        case "OP": return 1
+                        case "Basic": return 2
+                        default: return 0
+                        }
+                    }
+                    onCurrentIndexChanged: {
+                        switch(currentIndex) {
+                        case 0: root.connectionType = "PG"; break
+                        case 1: root.connectionType = "OP"; break
+                        case 2: root.connectionType = "Basic"; break
+                        }
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击连接类型，发射信号: requestFocusParamIndex(5)")
+                        root.requestFocusParamIndex(5)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 5) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
+                }
+            }
+
+            // ========== 第三行：Rack（左侧，索引3）、Slot（右侧，索引4）==========
+
+            // Rack标签
+            Text {
+                text: "Rack:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 2
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // Rack输入
+            Item {
+                Layout.column: 1
+                Layout.row: 2
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: rackField.implicitHeight
+
+                DeviceInfo.CustomSpinBox {
+                    id: rackField
+                    anchors.fill: parent
+                    from: 0
+                    to: 7
+                    value: root.rack
+                    onValueChanged: root.rack = value
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击Rack，发射信号: requestFocusParamIndex(3)")
+                        root.requestFocusParamIndex(3)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 3) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
+                }
+            }
+
+            // Slot标签
+            Text {
+                text: "Slot:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 2
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // Slot输入
+            Item {
+                Layout.column: 3
+                Layout.row: 2
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: slotField.implicitHeight
+
+                DeviceInfo.CustomSpinBox {
+                    id: slotField
+                    anchors.fill: parent
+                    from: 0
+                    to: 31
+                    value: root.slot
+                    onValueChanged: root.slot = value
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击Slot，发射信号: requestFocusParamIndex(4)")
+                        root.requestFocusParamIndex(4)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 4) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
+                }
+            }
+
+            // ========== 第四行：Local TSAP（左侧，索引6）、Remote TSAP（右侧，索引7）==========
+
+            // Local TSAP标签
+            Text {
                 text: "Local TSAP:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 3
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 6 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 6 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: localTSAPInput
+            // Local TSAP输入
+            Item {
+                Layout.column: 1
+                Layout.row: 3
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: localTSAPField.implicitHeight
+
+                DeviceInfo.CustomTextField {
+                    id: localTSAPField
                     anchors.fill: parent
-                    anchors.margins: 8
                     text: root.localTSAP
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhNoPredictiveText
                     onTextChanged: root.localTSAP = text
+                    placeholderText: "0x0100"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击Local TSAP，发射信号: requestFocusParamIndex(6)")
+                        root.requestFocusParamIndex(6)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 6) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // Remote TSAP
-            Label {
+            // Remote TSAP标签
+            Text {
                 text: "Remote TSAP:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 3
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 7 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 7 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: remoteTSAPInput
+            // Remote TSAP输入
+            Item {
+                Layout.column: 3
+                Layout.row: 3
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: remoteTSAPField.implicitHeight
+
+                DeviceInfo.CustomTextField {
+                    id: remoteTSAPField
                     anchors.fill: parent
-                    anchors.margins: 8
                     text: root.remoteTSAP
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhNoPredictiveText
                     onTextChanged: root.remoteTSAP = text
+                    placeholderText: "0x0302"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击Remote TSAP，发射信号: requestFocusParamIndex(7)")
+                        root.requestFocusParamIndex(7)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 7) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // PDU大小
-            Label {
+            // ========== 第五行：PDU大小（左侧，索引8）、轮询时间（右侧，索引9）==========
+
+            // PDU大小标签
+            Text {
                 text: "PDU大小:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 4
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 8 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 8 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: pduSizeInput
+            // PDU大小输入（带单位）
+            Item {
+                Layout.column: 1
+                Layout.row: 4
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: pduSizeRow.implicitHeight
+
+                Row {
+                    id: pduSizeRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: pduSizeField
+                        width: parent.width - 60
+                        height: 60
+                        from: 240
+                        to: 960
+                        value: root.pduSize
+                        onValueChanged: root.pduSize = value
+                    }
+
+                    Text {
+                        text: "字节"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.pduSize
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.pduSize = parseInt(text) || 480
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击PDU大小，发射信号: requestFocusParamIndex(8)")
+                        root.requestFocusParamIndex(8)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 8) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // 轮询时间
-            Label {
-                text: "轮询时间(0.1秒):"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+            // 轮询时间标签
+            Text {
+                text: "轮询时间:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 4
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 9 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 9 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: pollIntervalInput
+            // 轮询时间输入（带单位）
+            Item {
+                Layout.column: 3
+                Layout.row: 4
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: pollIntervalRow.implicitHeight
+
+                Row {
+                    id: pollIntervalRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: pollIntervalField
+                        width: parent.width - 60
+                        height: 60
+                        from: 1
+                        to: 1000
+                        value: root.pollInterval
+                        onValueChanged: root.pollInterval = value
+                    }
+
+                    Text {
+                        text: "0.1秒"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.pollInterval.toFixed(1)
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhFormattedNumbersOnly
-                    onTextChanged: root.pollInterval = parseFloat(text) || 1.0
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击轮询时间，发射信号: requestFocusParamIndex(9)")
+                        root.requestFocusParamIndex(9)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 9) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 9) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // 超时时间
-            Label {
-                text: "超时时间(ms):"
-                color: "#E0E0E0"
-                font.pixelSize: 14
-            }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 10 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 10 ? 2 : 1
-                radius: 4
+            // ========== 第六行：超时时间（左侧，索引10）==========
 
-                TextInput {
-                    id: timeoutInput
+            // 超时时间标签
+            Text {
+                text: "超时时间:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 5
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 超时时间输入（带单位）
+            Item {
+                Layout.column: 1
+                Layout.row: 5
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: timeoutRow.implicitHeight
+
+                Row {
+                    id: timeoutRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: timeoutField
+                        width: parent.width - 40
+                        height: 60
+                        from: 100
+                        to: 30000
+                        value: root.timeout
+                        onValueChanged: root.timeout = value
+                    }
+
+                    Text {
+                        text: "ms"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.timeout
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.timeout = parseInt(text) || 5000
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7MasterTab] 鼠标点击超时时间，发射信号: requestFocusParamIndex(10)")
+                        root.requestFocusParamIndex(10)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 10) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 10) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
-        }
-    }
+        }  // GridLayout 结束
+    }  // ScrollView 结束
 }

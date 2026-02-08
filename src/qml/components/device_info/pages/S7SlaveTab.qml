@@ -2,11 +2,12 @@
 // S7 从站（服务器）配置Tab
 // 创建日期: 2026-02-08
 // ✅ 2026-02-08 [Phase 7.42]: TCP控制功能实现
+// ✅ 2026-02-08 [Phase 7.42.13]: 重构布局，参照 CurrentProtectionTab.qml
 // 使用 Snap7 库实现西门子 S7 协议
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 import "../" as DeviceInfo
 
 Rectangle {
@@ -17,6 +18,9 @@ Rectangle {
     property var currentPort: null
     property int focusParamIndex: -1
     property var virtualKeyboard: null
+
+    // ✅ 2026-02-08 [Phase 7.42.13]: 信号 - 请求更新焦点索引
+    signal requestFocusParamIndex(int paramIndex)
 
     // ========== 参数数据 ==========
     property int portNumber: 102  // S7 标准端口
@@ -34,314 +38,620 @@ Rectangle {
         return 9
     }
 
-    // ✅ 2026-02-08 [Phase 7.42]: 添加虚拟键盘支持
+    // ✅ 2026-02-08 [Phase 7.42.13]: 重构虚拟键盘支持
     function triggerParamInput(index) {
         console.log("✅ [S7SlaveTab] triggerParamInput:", index)
 
         var inputField = null
 
         switch(index) {
-        case 0:  // 端口号
-            inputField = portNumberInput
+        case 0:  // 端口号（CustomSpinBox）
+            inputField = portNumberField
             break
-        case 1:  // 状态（ComboBox）
-            inputField = statusCombo
+        case 1:  // 状态（CustomComboBox）
+            console.log("✅ [S7SlaveTab] 切换状态")
+            statusField.currentIndex = (statusField.currentIndex + 1) % statusField.model.length
+            return
+        case 2:  // 绑定IP（CustomTextField）
+            inputField = bindIPField
             break
-        case 2:  // 绑定IP
-            inputField = bindIPInput
+        case 3:  // 最大连接数（CustomSpinBox）
+            inputField = maxConnectionsField
             break
-        case 3:  // 最大连接数
-            inputField = maxConnectionsInput
+        case 4:  // DB数量（CustomSpinBox）
+            inputField = dbCountField
             break
-        case 4:  // DB数量
-            inputField = dbCountInput
+        case 5:  // DB大小（CustomSpinBox）
+            inputField = dbSizeField
             break
-        case 5:  // DB大小
-            inputField = dbSizeInput
+        case 6:  // M区大小（CustomSpinBox）
+            inputField = merkerSizeField
             break
-        case 6:  // Merker大小
-            inputField = merkerSizeInput
+        case 7:  // I区大小（CustomSpinBox）
+            inputField = inputSizeField
             break
-        case 7:  // 输入大小
-            inputField = inputSizeInput
-            break
-        case 8:  // 输出大小
-            inputField = outputSizeInput
+        case 8:  // Q区大小（CustomSpinBox）
+            inputField = outputSizeField
             break
         }
 
         // 激活虚拟键盘
         if (inputField) {
-            inputField.forceActiveFocus()
-            if (root.virtualKeyboard) {
-                root.virtualKeyboard.visible = true
+            console.log("✅ [S7SlaveTab] 激活虚拟键盘 - 控件:", inputField)
+            if (inputField.activateVirtualKeyboard) {
+                inputField.activateVirtualKeyboard()
+            } else {
+                inputField.forceActiveFocus()
             }
         }
     }
 
     // ✅ 2026-02-08 [Phase 7.42]: 完善回车键处理
+    // ✅ 2026-02-08 [Phase 7.42.15]: 修复返回值逻辑
     function handleEnterKey() {
         console.log("✅ [S7SlaveTab] handleEnterKey - focusParamIndex:", focusParamIndex)
 
-        // 如果是 ComboBox，打开下拉列表
-        if (focusParamIndex === 1) {
-            if (statusCombo) {
-                statusCombo.popup.open()
-                return true
-            }
+        // 如果是 ComboBox，切换选项
+        if (focusParamIndex === 1) {  // 状态（ComboBox）
+            statusField.currentIndex = (statusField.currentIndex + 1) % statusField.model.length
+            return true  // 已处理，不需要弹出虚拟键盘
         }
 
-        return true
+        // 其他输入框返回 false，让 DeviceSettingsDialog 调用 triggerParamInput
+        return false
     }
 
-    // ========== 主布局 ==========
+    // ========== 滚动视图 ==========
     ScrollView {
+        id: paramScrollView
         anchors.fill: parent
-        anchors.margins: 10
         clip: true
 
+        // ✅ 2026-02-08 [Phase 7.42.13]: 改为 4 列 GridLayout，参考 CurrentProtectionTab
         GridLayout {
-            width: parent.width - 20
-            columns: 2
-            columnSpacing: 20
-            rowSpacing: 15
+            width: paramScrollView.width * 0.9
+            columns: 4  // 4列：标签1、输入框1、标签2、输入框2
+            columnSpacing: 10
+            rowSpacing: 12
 
-            // 端口号
-            Label {
+            // ========== 第一行：端口号（左侧，索引0）、状态（右侧，索引1）==========
+
+            // 端口号标签
+            Text {
                 text: "端口号:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 0
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 0 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 0 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: portNumberInput
+            // 端口号输入
+            Item {
+                Layout.column: 1
+                Layout.row: 0
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: portNumberField.implicitHeight
+
+                DeviceInfo.CustomSpinBox {
+                    id: portNumberField
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.portNumber
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.portNumber = parseInt(text) || 102
+                    from: 1
+                    to: 65535
+                    value: root.portNumber
+                    onValueChanged: root.portNumber = value
                 }
-            }
 
-            // 状态
-            Label {
-                text: "状态:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
-            }
-            ComboBox {
-                id: statusCombo
-                Layout.fillWidth: true
-                model: ["关闭", "打开"]
-                currentIndex: root.isEnabled ? 1 : 0
-                onCurrentIndexChanged: root.isEnabled = (currentIndex === 1)
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7SlaveTab] 鼠标点击端口号，发射信号: requestFocusParamIndex(0)")
+                        root.requestFocusParamIndex(0)
+                        mouse.accepted = false
+                    }
+                }
 
-                background: Rectangle {
-                    color: "#2a3142"
-                    border.color: focusParamIndex === 1 ? "#2196F3" : "#3d4556"
-                    border.width: focusParamIndex === 1 ? 2 : 1
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 0) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 0) ? 3 : 0
                     radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // 绑定IP
-            Label {
+            // 状态标签
+            Text {
+                text: "状态:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 0
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // 状态输入（下拉框）
+            Item {
+                Layout.column: 3
+                Layout.row: 0
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: statusField.implicitHeight
+
+                DeviceInfo.CustomComboBox {
+                    id: statusField
+                    anchors.fill: parent
+                    model: ["关闭", "打开"]
+                    currentIndex: root.isEnabled ? 1 : 0
+                    onCurrentIndexChanged: root.isEnabled = (currentIndex === 1)
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7SlaveTab] 鼠标点击状态，发射信号: requestFocusParamIndex(1)")
+                        root.requestFocusParamIndex(1)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 1) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
+                }
+            }
+
+            // ========== 第二行：绑定IP（左侧，索引2）、最大连接数（右侧，索引3）==========
+
+            // 绑定IP标签
+            Text {
                 text: "绑定IP:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 1
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 2 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 2 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: bindIPInput
+            // 绑定IP输入
+            Item {
+                Layout.column: 1
+                Layout.row: 1
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: bindIPField.implicitHeight
+
+                DeviceInfo.CustomTextField {
+                    id: bindIPField
                     anchors.fill: parent
-                    anchors.margins: 8
                     text: root.bindIP
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhFormattedNumbersOnly
                     onTextChanged: root.bindIP = text
+                    placeholderText: "0.0.0.0"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7SlaveTab] 鼠标点击绑定IP，发射信号: requestFocusParamIndex(2)")
+                        root.requestFocusParamIndex(2)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 2) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 2) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // 最大连接数
-            Label {
+            // 最大连接数标签
+            Text {
                 text: "最大连接数:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 1
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 3 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 3 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: maxConnectionsInput
+            // 最大连接数输入（带单位）
+            Item {
+                Layout.column: 3
+                Layout.row: 1
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: maxConnectionsRow.implicitHeight
+
+                Row {
+                    id: maxConnectionsRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: maxConnectionsField
+                        width: parent.width - 30
+                        height: 60
+                        from: 1
+                        to: 32
+                        value: root.maxConnections
+                        onValueChanged: root.maxConnections = value
+                    }
+
+                    Text {
+                        text: "个"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.maxConnections
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.maxConnections = parseInt(text) || 8
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7SlaveTab] 鼠标点击最大连接数，发射信号: requestFocusParamIndex(3)")
+                        root.requestFocusParamIndex(3)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 3) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // DB数量
-            Label {
+            // ========== 第三行：DB数量（左侧，索引4）、DB大小（右侧，索引5）==========
+
+            // DB数量标签
+            Text {
                 text: "DB数量:"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 2
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 4 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 4 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: dbCountInput
+            // DB数量输入（带单位）
+            Item {
+                Layout.column: 1
+                Layout.row: 2
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: dbCountRow.implicitHeight
+
+                Row {
+                    id: dbCountRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: dbCountField
+                        width: parent.width - 30
+                        height: 60
+                        from: 1
+                        to: 100
+                        value: root.dbCount
+                        onValueChanged: root.dbCount = value
+                    }
+
+                    Text {
+                        text: "个"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.dbCount
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.dbCount = parseInt(text) || 10
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7SlaveTab] 鼠标点击DB数量，发射信号: requestFocusParamIndex(4)")
+                        root.requestFocusParamIndex(4)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 4) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // DB大小
-            Label {
-                text: "DB大小(字节):"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+            // DB大小标签
+            Text {
+                text: "DB大小:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 2
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 5 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 5 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: dbSizeInput
+            // DB大小输入（带单位）
+            Item {
+                Layout.column: 3
+                Layout.row: 2
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: dbSizeRow.implicitHeight
+
+                Row {
+                    id: dbSizeRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: dbSizeField
+                        width: parent.width - 60
+                        height: 60
+                        from: 64
+                        to: 65535
+                        value: root.dbSize
+                        onValueChanged: root.dbSize = value
+                    }
+
+                    Text {
+                        text: "字节"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.dbSize
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.dbSize = parseInt(text) || 1024
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7SlaveTab] 鼠标点击DB大小，发射信号: requestFocusParamIndex(5)")
+                        root.requestFocusParamIndex(5)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 5) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // Merker大小
-            Label {
-                text: "M区大小(字节):"
-                color: "#E0E0E0"
-                font.pixelSize: 14
-            }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 6 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 6 ? 2 : 1
-                radius: 4
+            // ========== 第四行：M区大小（左侧，索引6）、I区大小（右侧，索引7）==========
 
-                TextInput {
-                    id: merkerSizeInput
+            // M区大小标签
+            Text {
+                text: "M区大小:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 3
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // M区大小输入（带单位）
+            Item {
+                Layout.column: 1
+                Layout.row: 3
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: merkerSizeRow.implicitHeight
+
+                Row {
+                    id: merkerSizeRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: merkerSizeField
+                        width: parent.width - 60
+                        height: 60
+                        from: 32
+                        to: 65535
+                        value: root.merkerSize
+                        onValueChanged: root.merkerSize = value
+                    }
+
+                    Text {
+                        text: "字节"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.merkerSize
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.merkerSize = parseInt(text) || 256
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7SlaveTab] 鼠标点击M区大小，发射信号: requestFocusParamIndex(6)")
+                        root.requestFocusParamIndex(6)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 6) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // 输入大小
-            Label {
-                text: "I区大小(字节):"
-                color: "#E0E0E0"
-                font.pixelSize: 14
+            // I区大小标签
+            Text {
+                text: "I区大小:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 3
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
             }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 7 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 7 ? 2 : 1
-                radius: 4
 
-                TextInput {
-                    id: inputSizeInput
+            // I区大小输入（带单位）
+            Item {
+                Layout.column: 3
+                Layout.row: 3
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: inputSizeRow.implicitHeight
+
+                Row {
+                    id: inputSizeRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: inputSizeField
+                        width: parent.width - 60
+                        height: 60
+                        from: 32
+                        to: 65535
+                        value: root.inputSize
+                        onValueChanged: root.inputSize = value
+                    }
+
+                    Text {
+                        text: "字节"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.inputSize
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.inputSize = parseInt(text) || 128
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7SlaveTab] 鼠标点击I区大小，发射信号: requestFocusParamIndex(7)")
+                        root.requestFocusParamIndex(7)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 7) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
 
-            // 输出大小
-            Label {
-                text: "Q区大小(字节):"
-                color: "#E0E0E0"
-                font.pixelSize: 14
-            }
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: "#2a3142"
-                border.color: focusParamIndex === 8 ? "#2196F3" : "#3d4556"
-                border.width: focusParamIndex === 8 ? 2 : 1
-                radius: 4
+            // ========== 第五行：Q区大小（左侧，索引8）==========
 
-                TextInput {
-                    id: outputSizeInput
+            // Q区大小标签
+            Text {
+                text: "Q区大小:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 0
+                Layout.row: 4
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+
+            // Q区大小输入（带单位）
+            Item {
+                Layout.column: 1
+                Layout.row: 4
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: outputSizeRow.implicitHeight
+
+                Row {
+                    id: outputSizeRow
+                    width: parent.width
+                    height: 60
+                    spacing: 5
+
+                    DeviceInfo.CustomSpinBox {
+                        id: outputSizeField
+                        width: parent.width - 60
+                        height: 60
+                        from: 32
+                        to: 65535
+                        value: root.outputSize
+                        onValueChanged: root.outputSize = value
+                    }
+
+                    Text {
+                        text: "字节"
+                        font.pixelSize: 21
+                        color: "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
                     anchors.fill: parent
-                    anchors.margins: 8
-                    text: root.outputSize
-                    color: "#E0E0E0"
-                    font.pixelSize: 14
-                    verticalAlignment: Text.AlignVCenter
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    onTextChanged: root.outputSize = parseInt(text) || 128
+                    onClicked: function(mouse) {
+                        console.log("✅ [S7SlaveTab] 鼠标点击Q区大小，发射信号: requestFocusParamIndex(8)")
+                        root.requestFocusParamIndex(8)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 8) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
                 }
             }
-        }
-    }
+        }  // GridLayout 结束
+    }  // ScrollView 结束
 }
