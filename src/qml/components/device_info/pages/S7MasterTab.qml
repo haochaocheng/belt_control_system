@@ -7,6 +7,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../" as DeviceInfo
 
 Rectangle {
     id: root
@@ -35,12 +36,74 @@ Rectangle {
         return 11
     }
 
+    // ✅ 2026-02-08 [Phase 7.42]: 添加虚拟键盘支持
     function triggerParamInput(index) {
         console.log("✅ [S7MasterTab] triggerParamInput:", index)
+
+        var inputField = null
+
+        switch(index) {
+        case 0:  // 端口号
+            inputField = portNumberInput
+            break
+        case 1:  // 状态（ComboBox）
+            inputField = statusCombo
+            break
+        case 2:  // 目标IP
+            inputField = targetIPInput
+            break
+        case 3:  // Rack
+            inputField = rackInput
+            break
+        case 4:  // Slot
+            inputField = slotInput
+            break
+        case 5:  // 连接类型（ComboBox）
+            inputField = connectionTypeCombo
+            break
+        case 6:  // Local TSAP
+            inputField = localTSAPInput
+            break
+        case 7:  // Remote TSAP
+            inputField = remoteTSAPInput
+            break
+        case 8:  // PDU大小
+            inputField = pduSizeInput
+            break
+        case 9:  // 轮询时间
+            inputField = pollIntervalInput
+            break
+        case 10:  // 超时时间
+            inputField = timeoutInput
+            break
+        }
+
+        // 激活虚拟键盘
+        if (inputField) {
+            inputField.forceActiveFocus()
+            if (root.virtualKeyboard) {
+                root.virtualKeyboard.visible = true
+            }
+        }
     }
 
+    // ✅ 2026-02-08 [Phase 7.42]: 完善回车键处理
     function handleEnterKey() {
         console.log("✅ [S7MasterTab] handleEnterKey - focusParamIndex:", focusParamIndex)
+
+        // 如果是 ComboBox，打开下拉列表
+        if (focusParamIndex === 1) {
+            if (statusCombo) {
+                statusCombo.popup.open()
+                return true
+            }
+        } else if (focusParamIndex === 5) {
+            if (connectionTypeCombo) {
+                connectionTypeCombo.popup.open()
+                return true
+            }
+        }
+
         return true
     }
 
@@ -71,12 +134,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: portNumberInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.portNumber
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.portNumber = parseInt(text) || 102
                 }
             }
@@ -88,6 +153,7 @@ Rectangle {
                 font.pixelSize: 14
             }
             ComboBox {
+                id: statusCombo
                 Layout.fillWidth: true
                 model: ["关闭", "打开"]
                 currentIndex: root.isEnabled ? 1 : 0
@@ -116,12 +182,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: targetIPInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.targetIP
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhFormattedNumbersOnly
                     onTextChanged: root.targetIP = text
                 }
             }
@@ -141,12 +209,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: rackInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.rack
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.rack = parseInt(text) || 0
                 }
             }
@@ -166,12 +236,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: slotInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.slot
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.slot = parseInt(text) || 2
                 }
             }
@@ -183,6 +255,7 @@ Rectangle {
                 font.pixelSize: 14
             }
             ComboBox {
+                id: connectionTypeCombo
                 Layout.fillWidth: true
                 model: ["PG", "OP", "Basic"]
                 currentIndex: {
@@ -224,12 +297,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: localTSAPInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.localTSAP
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhNoPredictiveText
                     onTextChanged: root.localTSAP = text
                 }
             }
@@ -249,12 +324,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: remoteTSAPInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.remoteTSAP
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhNoPredictiveText
                     onTextChanged: root.remoteTSAP = text
                 }
             }
@@ -274,12 +351,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: pduSizeInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.pduSize
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.pduSize = parseInt(text) || 480
                 }
             }
@@ -299,12 +378,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: pollIntervalInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.pollInterval.toFixed(1)
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhFormattedNumbersOnly
                     onTextChanged: root.pollInterval = parseFloat(text) || 1.0
                 }
             }
@@ -324,12 +405,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: timeoutInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.timeout
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.timeout = parseInt(text) || 5000
                 }
             }

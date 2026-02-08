@@ -7,6 +7,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../" as DeviceInfo
 
 Rectangle {
     id: root
@@ -33,12 +34,63 @@ Rectangle {
         return 9
     }
 
+    // ✅ 2026-02-08 [Phase 7.42]: 添加虚拟键盘支持
     function triggerParamInput(index) {
         console.log("✅ [S7SlaveTab] triggerParamInput:", index)
+
+        var inputField = null
+
+        switch(index) {
+        case 0:  // 端口号
+            inputField = portNumberInput
+            break
+        case 1:  // 状态（ComboBox）
+            inputField = statusCombo
+            break
+        case 2:  // 绑定IP
+            inputField = bindIPInput
+            break
+        case 3:  // 最大连接数
+            inputField = maxConnectionsInput
+            break
+        case 4:  // DB数量
+            inputField = dbCountInput
+            break
+        case 5:  // DB大小
+            inputField = dbSizeInput
+            break
+        case 6:  // Merker大小
+            inputField = merkerSizeInput
+            break
+        case 7:  // 输入大小
+            inputField = inputSizeInput
+            break
+        case 8:  // 输出大小
+            inputField = outputSizeInput
+            break
+        }
+
+        // 激活虚拟键盘
+        if (inputField) {
+            inputField.forceActiveFocus()
+            if (root.virtualKeyboard) {
+                root.virtualKeyboard.visible = true
+            }
+        }
     }
 
+    // ✅ 2026-02-08 [Phase 7.42]: 完善回车键处理
     function handleEnterKey() {
         console.log("✅ [S7SlaveTab] handleEnterKey - focusParamIndex:", focusParamIndex)
+
+        // 如果是 ComboBox，打开下拉列表
+        if (focusParamIndex === 1) {
+            if (statusCombo) {
+                statusCombo.popup.open()
+                return true
+            }
+        }
+
         return true
     }
 
@@ -69,12 +121,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: portNumberInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.portNumber
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.portNumber = parseInt(text) || 102
                 }
             }
@@ -86,6 +140,7 @@ Rectangle {
                 font.pixelSize: 14
             }
             ComboBox {
+                id: statusCombo
                 Layout.fillWidth: true
                 model: ["关闭", "打开"]
                 currentIndex: root.isEnabled ? 1 : 0
@@ -114,12 +169,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: bindIPInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.bindIP
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhFormattedNumbersOnly
                     onTextChanged: root.bindIP = text
                 }
             }
@@ -139,12 +196,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: maxConnectionsInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.maxConnections
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.maxConnections = parseInt(text) || 8
                 }
             }
@@ -164,12 +223,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: dbCountInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.dbCount
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.dbCount = parseInt(text) || 10
                 }
             }
@@ -189,12 +250,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: dbSizeInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.dbSize
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.dbSize = parseInt(text) || 1024
                 }
             }
@@ -214,12 +277,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: merkerSizeInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.merkerSize
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.merkerSize = parseInt(text) || 256
                 }
             }
@@ -239,12 +304,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: inputSizeInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.inputSize
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.inputSize = parseInt(text) || 128
                 }
             }
@@ -264,12 +331,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: outputSizeInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.outputSize
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.outputSize = parseInt(text) || 128
                 }
             }

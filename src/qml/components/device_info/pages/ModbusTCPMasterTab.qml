@@ -6,6 +6,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../" as DeviceInfo
 
 Rectangle {
     id: root
@@ -32,12 +33,63 @@ Rectangle {
         return 9
     }
 
+    // ✅ 2026-02-08 [Phase 7.42]: 添加虚拟键盘支持
     function triggerParamInput(index) {
         console.log("✅ [ModbusTCPMasterTab] triggerParamInput:", index)
+
+        var inputField = null
+
+        switch(index) {
+        case 0:  // 端口号
+            inputField = portNumberInput
+            break
+        case 1:  // 状态（ComboBox）
+            inputField = statusCombo
+            break
+        case 2:  // 轮询时间
+            inputField = pollIntervalInput
+            break
+        case 3:  // 目标IP
+            inputField = targetIPInput
+            break
+        case 4:  // 从站地址
+            inputField = slaveAddressInput
+            break
+        case 5:  // 起始寄存器
+            inputField = startRegisterInput
+            break
+        case 6:  // 寄存器数量
+            inputField = registerCountInput
+            break
+        case 7:  // 超时时间
+            inputField = timeoutInput
+            break
+        case 8:  // 重试次数
+            inputField = retryCountInput
+            break
+        }
+
+        // 激活虚拟键盘
+        if (inputField) {
+            inputField.forceActiveFocus()
+            if (root.virtualKeyboard) {
+                root.virtualKeyboard.visible = true
+            }
+        }
     }
 
+    // ✅ 2026-02-08 [Phase 7.42]: 完善回车键处理
     function handleEnterKey() {
         console.log("✅ [ModbusTCPMasterTab] handleEnterKey - focusParamIndex:", focusParamIndex)
+
+        // 如果是 ComboBox，打开下拉列表
+        if (focusParamIndex === 1) {
+            if (statusCombo) {
+                statusCombo.popup.open()
+                return true
+            }
+        }
+
         return true
     }
 
@@ -68,12 +120,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: portNumberInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.portNumber
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.portNumber = parseInt(text) || 502
                 }
             }
@@ -85,6 +139,7 @@ Rectangle {
                 font.pixelSize: 14
             }
             ComboBox {
+                id: statusCombo
                 Layout.fillWidth: true
                 model: ["关闭", "打开"]
                 currentIndex: root.isEnabled ? 1 : 0
@@ -113,12 +168,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: pollIntervalInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.pollInterval.toFixed(1)
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhFormattedNumbersOnly
                     onTextChanged: root.pollInterval = parseFloat(text) || 1.0
                 }
             }
@@ -138,12 +195,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: targetIPInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.targetIP
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhFormattedNumbersOnly
                     onTextChanged: root.targetIP = text
                 }
             }
@@ -163,12 +222,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: slaveAddressInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.slaveAddress
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.slaveAddress = parseInt(text) || 1
                 }
             }
@@ -188,12 +249,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: startRegisterInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.startRegister
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.startRegister = parseInt(text) || 0
                 }
             }
@@ -213,12 +276,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: registerCountInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.registerCount
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.registerCount = parseInt(text) || 10
                 }
             }
@@ -238,12 +303,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: timeoutInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.timeout
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.timeout = parseInt(text) || 3000
                 }
             }
@@ -263,12 +330,14 @@ Rectangle {
                 radius: 4
 
                 TextInput {
+                    id: retryCountInput
                     anchors.fill: parent
                     anchors.margins: 8
                     text: root.retryCount
                     color: "#E0E0E0"
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
+                    inputMethodHints: Qt.ImhDigitsOnly
                     onTextChanged: root.retryCount = parseInt(text) || 3
                 }
             }
