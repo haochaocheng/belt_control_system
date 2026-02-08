@@ -1348,6 +1348,16 @@ if (Test-Path $SherpaLibPath) {
     Write-Host "    WARNING: sherpa-onnx libraries not found" -ForegroundColor Yellow
 }
 
+# ✅ 2026-02-08 [Phase 7.42.11]: Copy Snap7 library (S7 protocol support)
+Write-Host "    Copying Snap7 library (S7 protocol)..." -ForegroundColor Yellow
+$Snap7LibPath = "$ProjectRoot\libs\snap7-rk3588\lib\libsnap7.so"
+if (Test-Path $Snap7LibPath) {
+    Copy-Item $Snap7LibPath "$DockerContextDir\lib\" -Force
+    Write-Host "    OK: Snap7 library copied (S7 protocol enabled)" -ForegroundColor Green
+} else {
+    Write-Host "    WARNING: Snap7 library not found - S7 protocol will NOT work!" -ForegroundColor Yellow
+}
+
 # Copy libonnxruntime (RKNN acceleration for TTS)
 Write-Host "  Copying libonnxruntime (RKNN acceleration)..." -ForegroundColor Yellow
 $OnnxRuntimePath = "$ProjectRoot\libs\sherpa-onnx-v1.12.9-rknn-linux-aarch64-shared\lib\libonnxruntime.so"
