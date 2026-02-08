@@ -111,6 +111,14 @@ qt_add_qml_module(qml_module
         components/device_info/pages/SerialPortSendTab.qml  # ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.7]: 修正文件名（原为SerialPortSendSection.qml）
         components/device_info/pages/SerialPortReceiveTab.qml  # ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.7]: 修正文件名（原为SerialPortReceiveSection.qml）
         components/device_info/pages/ModbusRegisterTab.qml  # ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.9]: 修正文件名（原为ModbusRegisterSection.qml）
+        # ✅ 2026-02-08 [Phase 7.42]: TCP控制页面组件
+        components/device_info/pages/TCPControlPage.qml
+        components/device_info/pages/TCPListPanel.qml
+        components/device_info/pages/TCPConfigPanel.qml
+        components/device_info/pages/ModbusTCPMasterTab.qml
+        components/device_info/pages/ModbusTCPSlaveTab.qml
+        components/device_info/pages/S7MasterTab.qml
+        components/device_info/pages/S7SlaveTab.qml
         components/device_info/pages/CurrentProtectionTab.qml
         components/device_info/pages/MotorTempTab.qml
         components/device_info/pages/FrontBearingTempTab.qml
