@@ -1,0 +1,575 @@
+// TCPControlPage.qml
+// TCP 控制主页面
+// 创建日期: 2026-02-08
+// ✅ 2026-02-08 [Phase 7.42]: TCP控制功能实现
+
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import "../" as DeviceInfo
+
+Rectangle {
+    id: root
+    color: "transparent"
+    focus: true
+
+    // ========== 公开属性 ==========
+    property int currentPortIndex: 0     // 当前选中的端口索引 (0-7)
+    property int focusItemIndex: -1      // 导航焦点索引
+    property int focusSubArea: 0         // 焦点子区域 (0:列表 1:Tab栏 2:参数 3:按钮)
+    property int focusTabIndex: -1       // Tab 焦点索引
+    property int focusParamIndex: 0      // 参数焦点索引
+    property int focusButtonIndex: 0     // 按钮焦点索引
+
+    // 导航控制标志
+    property bool isReturningToCategory: false
+    property bool keysEnabled: true
+
+    // 暴露 navigationManager 供外部访问
+    property alias navigationManager: navigationManager
+
+    // 暴露 tcpConfigPanel 供外部访问
+    property alias tcpConfigPanel: tcpConfigPanel
+
+    // Qt 虚拟键盘引用
+    property var virtualKeyboard: null
+
+    // ========== 信号 ==========
+    signal requestReturnToCategory()
+    signal portSelected(int index)
+
+    // ========== TCP 端口数据 ==========
+    property var tcpPorts: [
+        { name: "端口1", port: 502, status: false },
+        { name: "端口2", port: 503, status: false },
+        { name: "端口3", port: 504, status: false },
+        { name: "端口4", port: 505, status: false },
+        { name: "端口5", port: 506, status: false },
+        { name: "端口6", port: 507, status: false },
+        { name: "端口7", port: 508, status: false },
+        { name: "端口8", port: 509, status: false }
+    ]
+
+    // ========== 当前端口信息 ==========
+    property var currentPort: tcpPorts[currentPortIndex]
+
+    // ========== 函数 ==========
+    function getCurrentTab() {
+        if (!tcpConfigPanel.item) {
+            return null
+        }
+        return tcpConfigPanel.item.getCurrentTabItem()
+    }
+
+    function getParamFieldCount() {
+        if (!tcpConfigPanel.item) {
+            return 0
+        }
+        var currentTab = tcpConfigPanel.item.getCurrentTab()
+        if (!currentTab) {
+            return 0
+        }
+        if (typeof currentTab.getParamFieldCount === "function") {
+            return currentTab.getParamFieldCount()
+        }
+        // 默认参数数量
+        switch(root.focusTabIndex) {
+        case 0:  // Modbus主站
+            return 9
+        case 1:  // Modbus从站
+            return 8
+        case 2:  // S7主站
+            return 11
+        case 3:  // S7从站
+            return 9
+        default:
+            return 0
+        }
+    }
+
+    function triggerParamInput(index) {
+        console.log("✅ [TCPControlPage] triggerParamInput - 参数索引:", index)
+        if (!tcpConfigPanel.item) {
+            return
+        }
+        var currentTab = tcpConfigPanel.item.getCurrentTab()
+        if (!currentTab) {
+            return
+        }
+        if (typeof currentTab.triggerParamInput === "function") {
+            currentTab.triggerParamInput(index)
+        }
+    }
+
+    function handleEnterKey() {
+        console.log("✅ [TCPControlPage] 处理回车键 - 当前焦点区域:", focusSubArea)
+
+        if (focusSubArea === 0) {
+            console.log("✅ [TCPControlPage] 列表区域 - 切换端口:", focusItemIndex)
+            currentPortIndex = focusItemIndex
+            return true
+        }
+
+        if (focusSubArea === 1) {
+            console.log("✅ [TCPControlPage] Tab 栏区域 - 切换 Tab:", focusTabIndex)
+            if (tcpConfigPanel.item) {
+                tcpConfigPanel.item.currentTabIndex = focusTabIndex
+            }
+            return true
+        }
+
+        if (focusSubArea === 2) {
+            console.log("✅ [TCPControlPage] 参数区域 - 调用 Tab 的 handleEnterKey")
+            if (tcpConfigPanel.item) {
+                var currentTab = tcpConfigPanel.item.getCurrentTab()
+                if (currentTab && typeof currentTab.handleEnterKey === "function") {
+                    return currentTab.handleEnterKey()
+                }
+            }
+            return false
+        }
+
+        if (focusSubArea === 3) {
+            console.log("✅ [TCPControlPage] 按钮区域 - 执行按钮点击:", focusButtonIndex)
+            return triggerButton(focusButtonIndex)
+        }
+
+        return false
+    }
+
+    function triggerButton(buttonIndex) {
+        console.log("✅ [TCPControlPage] triggerButton - 按钮索引:", buttonIndex)
+        switch(buttonIndex) {
+        case 0:  // 打开连接
+            console.log("✅ [TCPControlPage] 执行打开连接")
+            // TODO: 实现打开连接逻辑
+            return true
+        case 1:  // 关闭连接
+            console.log("✅ [TCPControlPage] 执行关闭连接")
+            // TODO: 实现关闭连接逻辑
+            return true
+        case 2:  // 保存
+            console.log("✅ [TCPControlPage] 执行保存配置")
+            // TODO: 实现保存配置逻辑
+            return true
+        case 3:  // 删除
+            console.log("✅ [TCPControlPage] 执行删除配置")
+            // TODO: 实现删除配置逻辑
+            return true
+        case 4:  // 重置
+            console.log("✅ [TCPControlPage] 执行重置配置")
+            // TODO: 实现重置配置逻辑
+            return true
+        default:
+            return false
+        }
+    }
+
+    // ========== 定时器 ==========
+    Timer {
+        id: resetFlagTimer
+        interval: 100
+        repeat: false
+        onTriggered: {
+            root.isReturningToCategory = false
+        }
+    }
+
+    // ========== 监听器 ==========
+    onActiveFocusChanged: {
+        if (activeFocus) {
+            keysEnabled = true
+        }
+    }
+
+    onFocusItemIndexChanged: {
+        if (focusSubArea === 0 && focusItemIndex >= 0 && focusItemIndex < tcpPorts.length) {
+            console.log("✅ [TCPControlPage] focusItemIndex 变化:", focusItemIndex)
+            currentPortIndex = focusItemIndex
+        }
+    }
+
+    onFocusSubAreaChanged: {
+        console.log("🔍 [TCPControlPage] focusSubArea 变化:", focusSubArea)
+    }
+
+    onCurrentPortIndexChanged: {
+        console.log("✅ [TCPControlPage] currentPortIndex 变化:", currentPortIndex)
+    }
+
+    // ========== NavigationManager ==========
+    DeviceInfo.NavigationManager {
+        id: navigationManager
+
+        Component.onCompleted: {
+            currentArea = areaMotorList
+            motorListIndex = 0
+            tabIndex = 0
+            paramIndex = 0
+            buttonIndex = 0
+            skipTabArea = false
+            lastMotorIndex = 7  // 8个端口 (0-7)
+            lastTabIndex = 3    // 4个Tab (0-3)
+
+            Qt.callLater(function() {
+                var paramCount = root.getParamFieldCount()
+                updateLastParamIndex(paramCount)
+            })
+
+            root.currentPortIndex = 0
+            root.focusItemIndex = 0
+            root.focusSubArea = 0
+            root.focusTabIndex = 0
+            root.focusParamIndex = 0
+            root.focusButtonIndex = 0
+        }
+
+        onMotorListIndexChanged: {
+            root.currentPortIndex = motorListIndex
+            root.focusItemIndex = motorListIndex
+        }
+
+        onTabIndexChanged: {
+            root.focusTabIndex = tabIndex
+            if (tcpConfigPanel.item) {
+                tcpConfigPanel.item.currentTabIndex = tabIndex
+            }
+            Qt.callLater(function() {
+                var paramCount = root.getParamFieldCount()
+                updateLastParamIndex(paramCount)
+            })
+        }
+
+        onParamIndexChanged: {
+            root.focusParamIndex = paramIndex
+            root.triggerParamInput(paramIndex)
+        }
+
+        onButtonIndexChanged: {
+            root.focusButtonIndex = buttonIndex
+        }
+
+        onAreaChanged: function(newArea) {
+            switch(newArea) {
+            case areaMotorList:
+                root.focusSubArea = 0
+                root.focusItemIndex = motorListIndex
+                root.focusTabIndex = -1
+                root.focusParamIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaTabBar:
+                root.focusSubArea = 1
+                root.focusTabIndex = tabIndex
+                root.focusItemIndex = -1
+                root.focusParamIndex = -1
+                root.focusButtonIndex = -1
+                break
+            case areaParams:
+                root.focusSubArea = 2
+                root.focusParamIndex = paramIndex
+                root.focusItemIndex = -1
+                root.focusTabIndex = -1
+                root.focusButtonIndex = -1
+                root.triggerParamInput(paramIndex)
+                break
+            case areaButtons:
+                root.focusSubArea = 3
+                root.focusButtonIndex = buttonIndex
+                root.focusItemIndex = -1
+                root.focusTabIndex = -1
+                root.focusParamIndex = -1
+                break
+            }
+        }
+
+        onReturnToCategory: {
+            root.isReturningToCategory = true
+            root.keysEnabled = false
+            root.requestReturnToCategory()
+            resetFlagTimer.start()
+        }
+    }
+
+    // ========== 键盘事件 ==========
+    Keys.onUpPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        navigationManager.handleDirectionKey("Up")
+        event.accepted = true
+    }
+
+    Keys.onDownPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        navigationManager.handleDirectionKey("Down")
+        event.accepted = true
+    }
+
+    Keys.onLeftPressed: function(event) {
+        if (isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        if (navigationManager.currentArea === navigationManager.areaMotorList) {
+            root.isReturningToCategory = true
+            root.requestReturnToCategory()
+            resetFlagTimer.start()
+            event.accepted = true
+        } else {
+            navigationManager.handleDirectionKey("Left")
+            event.accepted = true
+        }
+    }
+
+    Keys.onRightPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        navigationManager.handleDirectionKey("Right")
+        event.accepted = true
+    }
+
+    Keys.onReturnPressed: {
+        if (!keysEnabled || isReturningToCategory) {
+            event.accepted = true
+            return
+        }
+        handleEnterKey()
+        event.accepted = true
+    }
+
+    // ========== 组件加载 ==========
+    Component.onCompleted: {
+        console.log("✅ [TCPControlPage] Component.onCompleted")
+        focusSubArea = 0
+        focusItemIndex = 0
+    }
+
+    // ========== 主布局 ==========
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: 0
+
+        // 上部：列表和配置区域
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 0
+
+            // 左侧：端口列表
+            Loader {
+                id: tcpListPanel
+                Layout.preferredWidth: 240
+                Layout.fillHeight: true
+                source: "TCPListPanel.qml"
+
+                onLoaded: {
+                    console.log("✅ [TCPControlPage] TCPListPanel 加载成功")
+                    item.tcpPorts = Qt.binding(function() { return root.tcpPorts })
+                    item.currentPortIndex = Qt.binding(function() { return root.currentPortIndex })
+                    item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
+                    item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+
+                    item.portSelected.connect(function(index) {
+                        root.currentPortIndex = index
+                        root.focusItemIndex = index
+                        root.focusSubArea = 0
+                        root.portSelected(index)
+                    })
+                }
+            }
+
+            // 分隔线
+            Rectangle {
+                Layout.preferredWidth: 2
+                Layout.fillHeight: true
+                color: "#3d4556"
+            }
+
+            // 右侧：TCP 配置区域
+            Loader {
+                id: tcpConfigPanel
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                source: "TCPConfigPanel.qml"
+
+                onLoaded: {
+                    console.log("✅ [TCPControlPage] TCPConfigPanel 加载成功")
+                    item.currentPort = Qt.binding(function() { return root.currentPort })
+                    item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+                    item.focusTabIndex = Qt.binding(function() { return root.focusTabIndex })
+                    item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                    item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+
+                    item.requestFocusParamIndex.connect(function(paramIndex) {
+                        root.focusParamIndex = paramIndex
+                        navigationManager.paramIndex = paramIndex
+                    })
+
+                    item.onCurrentTabIndexChanged.connect(function() {
+                        navigationManager.tabIndex = item.currentTabIndex
+                    })
+                }
+            }
+        }
+
+        // 底部：按钮区域
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 90
+            color: "#1a1f2e"
+
+            Rectangle {
+                anchors.top: parent.top
+                width: parent.width
+                height: 2
+                color: "#00d4ff"
+                opacity: 0.3
+            }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 10
+
+                // 第一行：打开连接、关闭连接
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Button {
+                        text: "打开连接"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            color: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? "#2ecc71" : "#27ae60"
+                            radius: 4
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? 5 : 0
+                            border.color: "#2196F3"
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: triggerButton(0)
+                    }
+
+                    Button {
+                        text: "关闭连接"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            color: root.focusSubArea === 3 && root.focusButtonIndex === 1 ? "#e74c3c" : "#c0392b"
+                            radius: 4
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 1 ? 5 : 0
+                            border.color: "#2196F3"
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: triggerButton(1)
+                    }
+                }
+
+                // 第二行：保存、删除、重置
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Button {
+                        text: "保存"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            color: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? "#2ecc71" : "#27ae60"
+                            radius: 4
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? 5 : 0
+                            border.color: "#2196F3"
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: triggerButton(2)
+                    }
+
+                    Button {
+                        text: "删除"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            color: root.focusSubArea === 3 && root.focusButtonIndex === 3 ? "#e74c3c" : "#d35400"
+                            radius: 4
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 3 ? 5 : 0
+                            border.color: "#2196F3"
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: triggerButton(3)
+                    }
+
+                    Button {
+                        text: "重置"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            color: root.focusSubArea === 3 && root.focusButtonIndex === 4 ? "#3498db" : "#2980b9"
+                            radius: 4
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 4 ? 5 : 0
+                            border.color: "#2196F3"
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: triggerButton(4)
+                    }
+                }
+            }
+        }
+    }
+}

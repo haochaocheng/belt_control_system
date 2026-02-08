@@ -130,6 +130,8 @@
         <file>components/device_info/pages/FrontBearingTempTab.qml</file>
         <file>components/device_info/pages/ModbusRegisterSection.qml</file>
         <file>components/device_info/pages/ModbusRegisterTab.qml</file>
+        <file>components/device_info/pages/ModbusTCPMasterTab.qml</file>
+        <file>components/device_info/pages/ModbusTCPSlaveTab.qml</file>
         <file>components/device_info/pages/MotorConfigPanel.qml</file>
         <file>components/device_info/pages/MotorControlPage.qml</file>
         <file>components/device_info/pages/MotorControlPage_QDS.qml</file>
@@ -149,6 +151,11 @@
         <file>components/device_info/pages/SerialPortReceiveTab.qml</file>
         <file>components/device_info/pages/SerialPortSendTab.qml</file>
         <file>components/device_info/pages/SwitchInputPage.qml</file>
+        <file>components/device_info/pages/S7MasterTab.qml</file>
+        <file>components/device_info/pages/S7SlaveTab.qml</file>
+        <file>components/device_info/pages/TCPConfigPanel.qml</file>
+        <file>components/device_info/pages/TCPControlPage.qml</file>
+        <file>components/device_info/pages/TCPListPanel.qml</file>
         <file>components/device_info/pages/TensionControlConfigPanel.qml</file>
         <file>components/device_info/pages/TensionControlListPanel.qml</file>
         <file>components/device_info/pages/TensionControlPage.qml</file>

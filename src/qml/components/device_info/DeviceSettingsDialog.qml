@@ -77,6 +77,7 @@ Item {
     // 避免切换类别时焦点位置丢失
     // ✅ 2026-02-04 [FIX 100.300.113]: 添加串口控制类别
     // ✅ 2026-02-07 [Phase 7.39.6]: 添加CAN控制类别
+    // ✅ 2026-02-08 [Phase 7.42]: 添加TCP控制类别
     property var categoryContentIndexMap: ({
         0: 0,  // 基本配置
         1: 0,  // 开关量输入
@@ -86,7 +87,8 @@ Item {
         5: 0,  // 张紧控制
         6: 0,  // 串口控制
         7: 0,  // CAN控制
-        8: 0   // 逻辑控制
+        8: 0,  // TCP控制
+        9: 0   // 逻辑控制
     })
 
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听类别切换，保存和恢复内容索引
@@ -494,13 +496,29 @@ Item {
                             return
                         }
                     } else if (currentCategory === 7) {
-                        // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: CAN控制参数区域使用NavigationManager
+                        // ✅ 2026-02-07 [Phase 7.39.23.2]: CAN控制参数区域先检查自定义导航
                         var canPage = canControlPageLoader.item
-                        if (canPage && canPage.navigationManager) {
-                            console.log("✅ [CAN控制导航] 参数区域上键 - 调用 NavigationManager.handleDirectionKey")
-                            canPage.navigationManager.handleDirectionKey("Up")
-                            event.accepted = true
-                            return
+                        if (canPage) {
+                            // 先检查当前 Tab 是否有自定义导航
+                            var canConfigPanel = canPage.canConfigPanel ? canPage.canConfigPanel.item : null
+                            if (canConfigPanel && typeof canConfigPanel.getCurrentTabItem === "function") {
+                                var currentTab = canConfigPanel.getCurrentTabItem()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [CAN控制导航] 参数区域上键 - 调用当前Tab自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Up")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                            if (canPage.navigationManager) {
+                                console.log("✅ [CAN控制导航] 参数区域上键 - 调用 NavigationManager.handleDirectionKey")
+                                canPage.navigationManager.handleDirectionKey("Up")
+                                event.accepted = true
+                                return
+                            }
                         }
                     } else {
                         // 其他页面：focusSubArea=2是底部按钮区域
@@ -640,7 +658,8 @@ Item {
             break
         case 1:  // 左侧类别（9个类别：0-8）
             // ✅ 2026-02-07 [Phase 7.39.6]: 修改最大值为8（添加CAN控制后）
-            if (currentCategory < 8) {
+            // ✅ 2026-02-08 [Phase 7.42]: 修改最大值为9（添加TCP控制后）
+            if (currentCategory < 9) {
                 currentCategory++
             }
             break
@@ -716,13 +735,29 @@ Item {
                             return
                         }
                     } else if (currentCategory === 7) {
-                        // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: CAN控制参数区域使用NavigationManager
+                        // ✅ 2026-02-07 [Phase 7.39.23.2]: CAN控制参数区域先检查自定义导航
                         var canPage = canControlPageLoader.item
-                        if (canPage && canPage.navigationManager) {
-                            console.log("✅ [CAN控制导航] 参数区域下键 - 调用 NavigationManager.handleDirectionKey")
-                            canPage.navigationManager.handleDirectionKey("Down")
-                            event.accepted = true
-                            return
+                        if (canPage) {
+                            // 先检查当前 Tab 是否有自定义导航
+                            var canConfigPanel = canPage.canConfigPanel ? canPage.canConfigPanel.item : null
+                            if (canConfigPanel && typeof canConfigPanel.getCurrentTabItem === "function") {
+                                var currentTab = canConfigPanel.getCurrentTabItem()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [CAN控制导航] 参数区域下键 - 调用当前Tab自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Down")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                            if (canPage.navigationManager) {
+                                console.log("✅ [CAN控制导航] 参数区域下键 - 调用 NavigationManager.handleDirectionKey")
+                                canPage.navigationManager.handleDirectionKey("Down")
+                                event.accepted = true
+                                return
+                            }
                         }
                     }
 
@@ -1289,8 +1324,39 @@ Item {
                         } else {
                             console.log("⚠️ [导航] serialConfigPanel 不存在")
                         }
+                    // ✅ 2026-02-07 [Phase 7.39.23.4]: CAN 控制页面回车键处理
+                    } else if (currentCategory === 7) {
+                        console.log("✅ [导航] 回车键 - CAN 控制页面特殊处理开始")
+                        var canPage = canControlPageLoader.item
+                        console.log("✅ [导航] canPage:", canPage ? "存在" : "不存在")
+                        if (canPage && canPage.canConfigPanel) {
+                            console.log("✅ [导航] canConfigPanel:", canPage.canConfigPanel ? "存在" : "不存在")
+                            var canConfigPanel = canPage.canConfigPanel.item
+                            console.log("✅ [导航] canConfigPanel.item:", canConfigPanel ? "存在" : "不存在")
+                            if (canConfigPanel && typeof canConfigPanel.getCurrentTabItem === "function") {
+                                console.log("✅ [导航] getCurrentTabItem 函数存在")
+                                var currentTab = canConfigPanel.getCurrentTabItem()
+                                console.log("✅ [导航] currentTab:", currentTab ? "存在" : "不存在")
+                                if (currentTab && typeof currentTab.handleEnterKey === "function") {
+                                    console.log("✅ [导航] handleEnterKey 函数存在，准备调用")
+                                    handled = currentTab.handleEnterKey()
+                                    console.log("✅ [导航] handleEnterKey 返回值:", handled)
+                                    if (handled) {
+                                        console.log("✅ [导航] 回车键已被Tab处理（CAN 控制）")
+                                        event.accepted = true
+                                        return
+                                    }
+                                } else {
+                                    console.log("⚠️ [导航] handleEnterKey 函数不存在")
+                                }
+                            } else {
+                                console.log("⚠️ [导航] getCurrentTabItem 函数不存在")
+                            }
+                        } else {
+                            console.log("⚠️ [导航] canConfigPanel 不存在")
+                        }
                     } else {
-                        console.log("✅ [导航] 回车键 - 不是串口控制页面，currentCategory:", currentCategory)
+                        console.log("✅ [导航] 回车键 - 其他页面，currentCategory:", currentCategory)
                     }
 
                     // 如果Tab没有处理，执行默认行为（弹出虚拟键盘）
@@ -1616,7 +1682,7 @@ Item {
                 spacing: 10
 
                 Repeater {
-                    model: ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "逻辑控制"]
+                    model: ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "TCP控制", "逻辑控制"]
 
                     Button {
                         width: parent.width - 20
@@ -2507,7 +2573,106 @@ Item {
                     }
                 }
 
-                // 8: 逻辑控制
+                // ✅ 2026-02-08 [Phase 7.42]: 8: TCP 控制
+                Loader {
+                    id: tcpControlPageLoader
+                    source: "pages/TCPControlPage.qml"
+
+                    onLoaded: {
+                        console.log("✅ [DeviceSettingsDialog] TCPControlPage 加载成功")
+
+                        // 传递虚拟键盘引用
+                        if (item) {
+                            item.virtualKeyboard = Qt.binding(function() {
+                                return root.virtualKeyboard
+                            })
+                        }
+                    }
+
+                    onStatusChanged: {
+                        if (status === Loader.Error) {
+                            console.error("❌ [DeviceSettingsDialog] TCPControlPage 加载失败")
+                        }
+                    }
+
+                    // 添加焦点连接
+                    Connections {
+                        target: root
+                        enabled: tcpControlPageLoader.item !== null
+
+                        function onCurrentFocusAreaChanged() {
+                            console.log("🔍 [TCP控制同步] onCurrentFocusAreaChanged - currentFocusArea:", root.currentFocusArea, "currentCategory:", root.currentCategory)
+                            if (tcpControlPageLoader.item && root.currentCategory === 8) {
+                                if (root.currentFocusArea === 2) {
+                                    // 焦点进入内容区域，默认在列表区域
+                                    console.log("✅ [TCP控制同步] 焦点进入内容区域 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
+                                    tcpControlPageLoader.item.focusSubArea = 0
+                                    tcpControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    // 焦点离开内容区域，清除焦点
+                                    console.log("✅ [TCP控制同步] 焦点离开内容区域 - 清除 focusItemIndex")
+                                    tcpControlPageLoader.item.focusItemIndex = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentCategoryChanged() {
+                            console.log("🔍 [TCP控制同步] onCurrentCategoryChanged - currentCategory:", root.currentCategory, "currentFocusArea:", root.currentFocusArea)
+                            if (tcpControlPageLoader.item) {
+                                if (root.currentFocusArea === 2 && root.currentCategory === 8) {
+                                    // 切换到TCP控制类别，设置焦点
+                                    console.log("✅ [TCP控制同步] 切换到TCP控制 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
+                                    tcpControlPageLoader.item.focusSubArea = 0
+                                    tcpControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    // 切换到其他类别，清除焦点
+                                    console.log("✅ [TCP控制同步] 切换到其他类别 - 清除 focusItemIndex")
+                                    tcpControlPageLoader.item.focusItemIndex = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentContentItemIndexChanged() {
+                            console.log("🔍 [TCP控制同步] onCurrentContentItemIndexChanged - currentContentItemIndex:", root.currentContentItemIndex)
+                            if (tcpControlPageLoader.item &&
+                                root.currentFocusArea === 2 &&
+                                root.currentCategory === 8 &&
+                                tcpControlPageLoader.item.focusSubArea === 0) {
+                                // 只在焦点在列表区域时同步
+                                console.log("✅ [TCP控制同步] 同步 focusItemIndex:", root.currentContentItemIndex)
+                                tcpControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                console.log("⚠️ [TCP控制同步] 不满足同步条件 - focusArea:", root.currentFocusArea, "category:", root.currentCategory, "focusSubArea:", tcpControlPageLoader.item ? tcpControlPageLoader.item.focusSubArea : "null")
+                            }
+                        }
+                    }
+
+                    // 监听TCP控制页面焦点变化
+                    Connections {
+                        target: tcpControlPageLoader.item
+                        enabled: tcpControlPageLoader.item !== null
+
+                        function onFocusItemIndexChanged() {
+                            if (tcpControlPageLoader.item &&
+                                root.currentCategory === 8 &&
+                                root.currentFocusArea === 2 &&
+                                tcpControlPageLoader.item.focusSubArea === 0 &&
+                                tcpControlPageLoader.item.focusItemIndex >= 0) {
+                                // 只在焦点在列表区域时同步
+                                console.log("✅ [DeviceSettingsDialog] 同步TCP控制列表焦点:", tcpControlPageLoader.item.focusItemIndex)
+                                root.currentContentItemIndex = tcpControlPageLoader.item.focusItemIndex
+                            }
+                        }
+
+                        function onRequestReturnToCategory() {
+                            // TCP控制页面请求返回到左侧类别
+                            console.log("✅ [DeviceSettingsDialog] TCP控制请求返回类别")
+                            root.currentFocusArea = 1  // 切换到左侧类别区域
+                        }
+                    }
+                }
+
+                // 9: 逻辑控制
                 Rectangle {
                     color: "transparent"
                     Text {
@@ -2576,7 +2741,7 @@ Item {
 
     // ========== 辅助函数 ==========
     function getCategoryName(index) {
-        var names = ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "逻辑控制"]
+        var names = ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "TCP控制", "逻辑控制"]
         return names[index] || "未知类别"
     }
 
@@ -2601,7 +2766,9 @@ Item {
             return []  // ✅ 2026-02-04 [FIX 100.300.113]: 串口控制暂无底部按钮
         case 7: // CAN控制
             return []  // ✅ 2026-02-07 [Phase 7.39.10]: CAN控制按钮已在 CANControlPage 内部实现
-        case 8: // 逻辑控制
+        case 8: // TCP控制
+            return []  // ✅ 2026-02-08 [Phase 7.42]: TCP控制按钮已在 TCPControlPage 内部实现
+        case 9: // 逻辑控制
             return ["添加逻辑", "删除逻辑", "测试逻辑"]
         default:
             return []
@@ -2627,7 +2794,9 @@ Item {
             return 6  // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.3]: 6个串口（COM1-COM6）
         case 7:  // CAN控制
             return 2  // ✅ 2026-02-07 [Phase 7.39.10]: 2个CAN接口（CAN0、CAN1）
-        case 8:  // 逻辑控制
+        case 8:  // TCP控制
+            return 8  // ✅ 2026-02-08 [Phase 7.42]: 8个TCP端口（端口1-端口8）
+        case 9:  // 逻辑控制
             return 0  // 待实现
         default:
             return 0
@@ -2706,6 +2875,8 @@ Item {
         case 7:
             return canControlPageLoader.item  // ✅ 2026-02-07 [Phase 7.39.11 Fix]: 返回CAN控制页面
         case 8:
+            return tcpControlPageLoader.item  // ✅ 2026-02-08 [Phase 7.42]: 返回TCP控制页面
+        case 9:
             return null  // 逻辑控制待实现
         default:
             return null
