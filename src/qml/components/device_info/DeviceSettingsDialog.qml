@@ -392,7 +392,42 @@ Item {
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
                 if (currentPage.focusSubArea === 0) {
-                    // 列表区域：使用 currentContentItemIndex
+                    // 列表区域：检查是否是使用NavigationManager的页面
+                    // ✅ 2026-02-08 [Phase 7.43.10]: MQTT控制页面列表区域使用NavigationManager
+                    if (currentCategory === 9) {
+                        var mqttPage = mqttControlPageLoader.item
+                        if (mqttPage && mqttPage.navigationManager) {
+                            console.log("✅ [MQTT控制导航] 列表区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            mqttPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 8) {
+                        var tcpPage = tcpControlPageLoader.item
+                        if (tcpPage && tcpPage.navigationManager) {
+                            console.log("✅ [TCP控制导航] 列表区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            tcpPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 7) {
+                        var canPage = canControlPageLoader.item
+                        if (canPage && canPage.navigationManager) {
+                            console.log("✅ [CAN控制导航] 列表区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            canPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 6) {
+                        var serialPage = serialPortControlPageLoader.item
+                        if (serialPage && serialPage.navigationManager) {
+                            console.log("✅ [串口控制导航] 列表区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            serialPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    }
+                    // 其他页面：使用 currentContentItemIndex
                     console.log("✅ [导航] 列表区域上移 - 当前索引:", currentContentItemIndex)
                     if (currentContentItemIndex > 0) {
                         currentContentItemIndex--
@@ -755,7 +790,42 @@ Item {
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
                 if (currentPage.focusSubArea === 0) {
-                    // 列表区域：使用 currentContentItemIndex
+                    // 列表区域：检查是否是使用NavigationManager的页面
+                    // ✅ 2026-02-08 [Phase 7.43.10]: MQTT控制页面列表区域使用NavigationManager
+                    if (currentCategory === 9) {
+                        var mqttPage = mqttControlPageLoader.item
+                        if (mqttPage && mqttPage.navigationManager) {
+                            console.log("✅ [MQTT控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
+                            mqttPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 8) {
+                        var tcpPage = tcpControlPageLoader.item
+                        if (tcpPage && tcpPage.navigationManager) {
+                            console.log("✅ [TCP控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
+                            tcpPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 7) {
+                        var canPage = canControlPageLoader.item
+                        if (canPage && canPage.navigationManager) {
+                            console.log("✅ [CAN控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
+                            canPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 6) {
+                        var serialPage = serialPortControlPageLoader.item
+                        if (serialPage && serialPage.navigationManager) {
+                            console.log("✅ [串口控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
+                            serialPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    }
+                    // 其他页面：使用 currentContentItemIndex
                     var maxIndex = getContentItemCount(currentCategory)
                     if (currentContentItemIndex < maxIndex - 1) {
                         currentContentItemIndex++
