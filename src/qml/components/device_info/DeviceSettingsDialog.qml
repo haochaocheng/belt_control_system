@@ -1242,6 +1242,17 @@ Item {
                 }
             }
 
+            // ✅ 2026-02-08 [Phase 7.43.9]: MQTT控制页面使用NavigationManager处理左键
+            if (currentCategory === 9 && currentFocusArea === 2) {
+                var mqttPage = mqttControlPageLoader.item
+                if (mqttPage && mqttPage.navigationManager) {
+                    console.log("✅ [导航] MQTT控制页面左键 - 调用NavigationManager")
+                    mqttPage.navigationManager.handleDirectionKey("Left")
+                    event.accepted = true
+                    return
+                }
+            }
+
             // 否则切换到左侧类别
             currentFocusArea = 1
             break
