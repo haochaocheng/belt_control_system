@@ -181,6 +181,12 @@ Rectangle {
                     console.log("✅ [CANConfigPanel] CANSendTab 加载成功")
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                     item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+
+                    // ✅ 2026-02-07 [Phase 7.39.23.2]: 连接焦点请求信号
+                    item.requestFocusParamIndex.connect(function(paramIndex) {
+                        console.log("✅ [CANConfigPanel] CANSendTab 请求焦点索引:", paramIndex)
+                        root.requestFocusParamIndex(paramIndex)
+                    })
                 }
             }
 
