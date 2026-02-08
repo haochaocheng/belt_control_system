@@ -4,6 +4,7 @@
 // ✅ 2026-02-08 [Phase 7.43]: MQTT通讯控制功能实现
 // ✅ 2026-02-08 [Phase 7.43.4]: 重构布局，参照 ModbusTCPMasterTab.qml
 // ✅ 2026-02-08 [Phase 7.43.6]: 修复QML语法错误
+// ✅ 2026-02-08 [Phase 7.43.11]: 完善与MQTTController的绑定
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -27,6 +28,9 @@ Rectangle {
     property string filterText: ""
     property bool autoScroll: true
 
+    // ✅ 2026-02-08 [Phase 7.43.11]: 连接状态
+    property bool isConnected: mqttController ? mqttController.connected : false
+
     function getParamFieldCount() { return 5 }
 
     function triggerParamInput(paramIndex) {
@@ -35,11 +39,11 @@ Rectangle {
             if (filterField.activateVirtualKeyboard) filterField.activateVirtualKeyboard()
             else filterField.forceActiveFocus()
         } else if (paramIndex === 1) {
-            pauseButton.clicked()
+            doPauseResume()
         } else if (paramIndex === 2) {
-            clearButton.clicked()
+            doClear()
         } else if (paramIndex === 3) {
-            exportButton.clicked()
+            doExport()
         } else if (paramIndex === 4) {
             root.autoScroll = !root.autoScroll
         }
@@ -47,15 +51,15 @@ Rectangle {
 
     function handleEnterKey() {
         if (focusParamIndex === 1) {
-            pauseButton.clicked()
+            doPauseResume()
             return true
         }
         if (focusParamIndex === 2) {
-            clearButton.clicked()
+            doClear()
             return true
         }
         if (focusParamIndex === 3) {
-            exportButton.clicked()
+            doExport()
             return true
         }
         if (focusParamIndex === 4) {
@@ -63,6 +67,26 @@ Rectangle {
             return true
         }
         return false
+    }
+
+    // ✅ 2026-02-08 [Phase 7.43.11]: 暂停/继续函数
+    function doPauseResume() {
+        isPaused = !isPaused
+        console.log("✅ [MQTTMonitorTab] 监控状态:", isPaused ? "暂停" : "继续")
+    }
+
+    // ✅ 2026-02-08 [Phase 7.43.11]: 清空函数
+    function doClear() {
+        messageModel.clear()
+        messageCount = 0
+        filteredCount = 0
+        console.log("✅ [MQTTMonitorTab] 清空消息")
+    }
+
+    // ✅ 2026-02-08 [Phase 7.43.11]: 导出函数
+    function doExport() {
+        console.log("✅ [MQTTMonitorTab] 导出消息（待实现）")
+        // TODO: 实现导出功能
     }
 
     // 添加消息函数
@@ -91,6 +115,23 @@ Rectangle {
         // 自动滚动到顶部
         if (autoScroll) {
             messageListView.positionViewAtBeginning()
+        }
+    }
+
+    // ✅ 2026-02-08 [Phase 7.43.11]: 监听控制器的消息接收
+    Connections {
+        target: mqttController
+        enabled: mqttController !== null
+
+        function onMessageReceived(moduleIndex, topic, payload) {
+            console.log("✅ [MQTTMonitorTab] 收到消息 - 模块:", moduleIndex, "主题:", topic)
+            // 将 QByteArray 转换为字符串
+            var payloadStr = payload.toString()
+            addMessage(topic, payloadStr, 1, false)
+        }
+
+        function onReceivedMessagesChanged() {
+            // 可以在这里同步控制器的消息列表
         }
     }
 
@@ -180,8 +221,7 @@ Rectangle {
                         }
 
                         onClicked: {
-                            root.isPaused = !root.isPaused
-                            console.log("✅ [MQTTMonitorTab] 监控状态:", root.isPaused ? "暂停" : "继续")
+                            doPauseResume()
                         }
                     }
 
@@ -228,10 +268,7 @@ Rectangle {
                         }
 
                         onClicked: {
-                            messageModel.clear()
-                            root.messageCount = 0
-                            root.filteredCount = 0
-                            console.log("✅ [MQTTMonitorTab] 清空消息")
+                            doClear()
                         }
                     }
 
@@ -278,7 +315,7 @@ Rectangle {
                         }
 
                         onClicked: {
-                            console.log("✅ [MQTTMonitorTab] 导出消息（待实现）")
+                            doExport()
                         }
                     }
 
@@ -546,16 +583,17 @@ Rectangle {
                 Row {
                     spacing: 8
 
+                    // ✅ 2026-02-08 [Phase 7.43.11]: 使用isConnected属性
                     Rectangle {
                         width: 12
                         height: 12
                         radius: 6
                         anchors.verticalCenter: parent.verticalCenter
-                        color: root.currentModule && root.currentModule.connected ? "#4CAF50" : "#9E9E9E"
+                        color: root.isConnected ? "#4CAF50" : "#9E9E9E"
                     }
 
                     Text {
-                        text: root.currentModule && root.currentModule.connected ? "已连接" : "未连接"
+                        text: root.isConnected ? "已连接" : "未连接"
                         font.pixelSize: 14
                         color: "#B0B0B0"
                         anchors.verticalCenter: parent.verticalCenter

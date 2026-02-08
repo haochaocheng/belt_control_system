@@ -3,6 +3,7 @@
 // 创建日期: 2026-02-08
 // ✅ 2026-02-08 [Phase 7.43]: MQTT通讯控制功能实现
 // ✅ 2026-02-08 [Phase 7.43.7]: 移除底部按钮区域（MQTT页面不需要），修复导航问题
+// ✅ 2026-02-08 [Phase 7.43.11]: 完善与MQTTController的绑定
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -35,15 +36,15 @@ Rectangle {
     // Qt 虚拟键盘引用
     property var virtualKeyboard: null
 
-    // MQTT 控制器引用
-    property var mqttController: null
-
     // ========== 信号 ==========
     signal requestReturnToCategory()
     signal moduleSelected(int index)
+    signal connectRequested(int moduleIndex)
+    signal disconnectRequested(int moduleIndex)
 
-    // ========== MQTT 模块数据 ==========
-    property var mqttModules: [
+    // ========== MQTT 模块数据（从控制器同步）==========
+    // ✅ 2026-02-08 [Phase 7.43.11]: 使用mqttController的modules属性
+    property var mqttModules: mqttController ? mqttController.modules : [
         { name: "模块1", connected: false, connectionState: "未连接" },
         { name: "模块2", connected: false, connectionState: "未连接" },
         { name: "模块3", connected: false, connectionState: "未连接" },
@@ -56,6 +57,72 @@ Rectangle {
 
     // ========== 当前模块信息 ==========
     property var currentModule: mqttModules[currentModuleIndex]
+
+    // ========== 连接/断开函数 ==========
+    // ✅ 2026-02-08 [Phase 7.43.11]: 添加连接/断开功能
+    function connectToModule(moduleIndex) {
+        var idx = moduleIndex >= 0 ? moduleIndex : currentModuleIndex
+        console.log("✅ [MQTTControlPage] 连接模块:", idx)
+        if (mqttController) {
+            mqttController.connectToModule(idx)
+        }
+        connectRequested(idx)
+    }
+
+    function disconnectFromModule(moduleIndex) {
+        var idx = moduleIndex >= 0 ? moduleIndex : currentModuleIndex
+        console.log("✅ [MQTTControlPage] 断开模块:", idx)
+        if (mqttController) {
+            mqttController.disconnectFromModule(idx)
+        }
+        disconnectRequested(idx)
+    }
+
+    function saveConfig() {
+        console.log("✅ [MQTTControlPage] 保存配置")
+        if (mqttController) {
+            mqttController.saveModuleConfig(currentModuleIndex)
+        }
+    }
+
+    function loadConfig() {
+        console.log("✅ [MQTTControlPage] 加载配置")
+        if (mqttController) {
+            mqttController.loadModuleConfig(currentModuleIndex)
+        }
+    }
+
+    function resetConfig() {
+        console.log("✅ [MQTTControlPage] 重置配置")
+        if (mqttController) {
+            mqttController.resetModuleConfig(currentModuleIndex)
+        }
+    }
+
+    // ========== 监听控制器信号 ==========
+    // ✅ 2026-02-08 [Phase 7.43.11]: 监听控制器的连接状态变化
+    Connections {
+        target: mqttController
+        enabled: mqttController !== null
+
+        function onModulesChanged() {
+            console.log("✅ [MQTTControlPage] 模块列表已更新")
+            // 强制刷新模块列表
+            mqttModules = mqttController.modules
+        }
+
+        function onConnectedChanged(moduleIndex, connected) {
+            console.log("✅ [MQTTControlPage] 模块", moduleIndex, "连接状态:", connected)
+        }
+
+        function onConnectionStateChanged() {
+            console.log("✅ [MQTTControlPage] 连接状态变化")
+        }
+
+        function onLastErrorChanged() {
+            console.log("⚠️ [MQTTControlPage] 错误:", mqttController.lastError)
+        }
+    }
 
     // ========== 函数 ==========
     function getCurrentTab() {
@@ -78,8 +145,8 @@ Rectangle {
         }
         // 默认参数数量
         switch(root.focusTabIndex) {
-        case 0:  // 连接配置
-            return 9
+        case 0:  // 连接配置（包括连接/断开按钮）
+            return 11
         case 1:  // 订阅主题
             return 4
         case 2:  // 发布消息
@@ -131,15 +198,7 @@ Rectangle {
         return false
     }
 
-    // ========== 更新模块状态 ==========
-    function updateModuleStatus(moduleIndex, connected, connectionState) {
-        if (moduleIndex >= 0 && moduleIndex < mqttModules.length) {
-            var modules = mqttModules
-            modules[moduleIndex].connected = connected
-            modules[moduleIndex].connectionState = connectionState
-            mqttModules = modules
-        }
-    }
+    // ✅ 2026-02-08 [Phase 7.43.11]: 移除旧的updateModuleStatus函数，使用控制器的modules属性
 
     // ========== 定时器 ==========
     Timer {
@@ -171,6 +230,7 @@ Rectangle {
 
     onCurrentModuleIndexChanged: {
         console.log("✅ [MQTTControlPage] currentModuleIndex 变化:", currentModuleIndex)
+        // ✅ 2026-02-08 [Phase 7.43.11]: 同步到控制器
         if (mqttController) {
             mqttController.currentModuleIndex = currentModuleIndex
         }

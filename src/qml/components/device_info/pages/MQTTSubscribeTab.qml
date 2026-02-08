@@ -4,6 +4,7 @@
 // ✅ 2026-02-08 [Phase 7.43]: MQTT通讯控制功能实现
 // ✅ 2026-02-08 [Phase 7.43.2]: 重构布局，参照 ModbusTCPMasterTab.qml
 // ✅ 2026-02-08 [Phase 7.43.6]: 修复QML语法错误
+// ✅ 2026-02-08 [Phase 7.43.11]: 完善与MQTTController的绑定
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -33,9 +34,9 @@ Rectangle {
         } else if (paramIndex === 1) {
             qosField.currentIndex = (qosField.currentIndex + 1) % qosField.model.length
         } else if (paramIndex === 2) {
-            subscribeButton.clicked()
+            doSubscribe()
         } else if (paramIndex === 3) {
-            unsubscribeButton.clicked()
+            doUnsubscribe()
         }
     }
 
@@ -45,14 +46,62 @@ Rectangle {
             return true
         }
         if (focusParamIndex === 2) {
-            subscribeButton.clicked()
+            doSubscribe()
             return true
         }
         if (focusParamIndex === 3) {
-            unsubscribeButton.clicked()
+            doUnsubscribe()
             return true
         }
         return false
+    }
+
+    // ✅ 2026-02-08 [Phase 7.43.11]: 订阅函数
+    function doSubscribe() {
+        if (subscribeTopic.length === 0) {
+            console.log("⚠️ [MQTTSubscribeTab] 主题不能为空")
+            return
+        }
+        console.log("✅ [MQTTSubscribeTab] 订阅主题:", subscribeTopic, "QoS:", subscribeQos)
+        if (mqttController) {
+            var success = mqttController.subscribe(subscribeTopic, subscribeQos)
+            if (success) {
+                // 添加到本地列表显示
+                subscribedModel.append({ topic: subscribeTopic, qos: subscribeQos })
+                subscribeTopic = ""  // 清空输入
+            } else {
+                console.log("⚠️ [MQTTSubscribeTab] 订阅失败:", mqttController.lastError)
+            }
+        } else {
+            // 模拟模式：直接添加到列表
+            subscribedModel.append({ topic: subscribeTopic, qos: subscribeQos })
+            subscribeTopic = ""
+        }
+    }
+
+    // ✅ 2026-02-08 [Phase 7.43.11]: 取消订阅函数
+    function doUnsubscribe() {
+        if (subscribedListView.currentIndex < 0) {
+            console.log("⚠️ [MQTTSubscribeTab] 请先选择要取消的主题")
+            return
+        }
+        var topic = subscribedModel.get(subscribedListView.currentIndex).topic
+        console.log("✅ [MQTTSubscribeTab] 取消订阅:", topic)
+        if (mqttController) {
+            mqttController.unsubscribe(topic)
+        }
+        subscribedModel.remove(subscribedListView.currentIndex)
+    }
+
+    // ✅ 2026-02-08 [Phase 7.43.11]: 监听控制器的订阅变化
+    Connections {
+        target: mqttController
+        enabled: mqttController !== null
+
+        function onSubscriptionsChanged() {
+            console.log("✅ [MQTTSubscribeTab] 订阅列表已更新")
+            // 可以在这里同步控制器的订阅列表到本地模型
+        }
     }
 
     ColumnLayout {
@@ -168,7 +217,7 @@ Rectangle {
                         }
 
                         onClicked: {
-                            subscribedModel.append({ topic: topicField.text, qos: qosField.currentIndex })
+                            doSubscribe()
                         }
                     }
 
@@ -214,7 +263,7 @@ Rectangle {
                         }
 
                         onClicked: {
-                            console.log("取消订阅")
+                            doUnsubscribe()
                         }
                     }
 
@@ -257,10 +306,13 @@ Rectangle {
                     color: "#E0E0E0"
                 }
 
+                // ✅ 2026-02-08 [Phase 7.43.11]: 添加id以便取消订阅时使用
                 ListView {
+                    id: subscribedListView
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
+                    currentIndex: -1  // 默认无选中
 
                     model: ListModel {
                         id: subscribedModel
@@ -270,7 +322,8 @@ Rectangle {
                     delegate: Rectangle {
                         width: parent ? parent.width : 0
                         height: 50
-                        color: index % 2 === 0 ? "#2a3142" : "#252b3d"
+                        // ✅ 2026-02-08 [Phase 7.43.11]: 选中高亮
+                        color: subscribedListView.currentIndex === index ? "#3d4556" : (index % 2 === 0 ? "#2a3142" : "#252b3d")
 
                         RowLayout {
                             anchors.fill: parent
@@ -287,6 +340,14 @@ Rectangle {
                                 text: "QoS: " + model.qos
                                 font.pixelSize: 14
                                 color: "#808080"
+                            }
+                        }
+
+                        // ✅ 2026-02-08 [Phase 7.43.11]: 点击选中
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                subscribedListView.currentIndex = index
                             }
                         }
                     }

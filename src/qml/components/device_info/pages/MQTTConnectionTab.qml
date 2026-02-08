@@ -3,6 +3,7 @@
 // 创建日期: 2026-02-08
 // ✅ 2026-02-08 [Phase 7.43]: MQTT通讯控制功能实现
 // ✅ 2026-02-08 [Phase 7.43.2]: 重构布局，参照 ModbusTCPMasterTab.qml
+// ✅ 2026-02-08 [Phase 7.43.11]: 完善与MQTTController的绑定
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -20,21 +21,35 @@ Rectangle {
 
     // ========== 信号 ==========
     signal requestFocusParamIndex(int paramIndex)
+    signal connectRequested()
+    signal disconnectRequested()
 
-    // ========== 参数数据 ==========
-    property string brokerHost: "192.168.10.1"
-    property int brokerPort: 1883
-    property string clientId: "belt_control_module_1"
-    property string username: ""
-    property string password: ""
-    property int keepAlive: 60
-    property bool cleanSession: true
-    property int defaultQos: 1
-    property bool isConnected: false
+    // ========== 参数数据（绑定到mqttController）==========
+    // ✅ 2026-02-08 [Phase 7.43.11]: 使用mqttController的属性
+    property string brokerHost: mqttController ? mqttController.brokerHost : "192.168.10.1"
+    property int brokerPort: mqttController ? mqttController.brokerPort : 1883
+    property string clientId: mqttController ? mqttController.clientId : "belt_control_module_1"
+    property string username: mqttController ? mqttController.username : ""
+    property string password: mqttController ? mqttController.password : ""
+    property int keepAlive: mqttController ? mqttController.keepAlive : 60
+    property bool cleanSession: mqttController ? mqttController.cleanSession : true
+    property int defaultQos: mqttController ? mqttController.defaultQos : 1
+    property bool isConnected: mqttController ? mqttController.connected : false
+    property string connectionState: mqttController ? mqttController.connectionState : "未连接"
+
+    // ========== 同步属性到控制器 ==========
+    onBrokerHostChanged: if (mqttController) mqttController.brokerHost = brokerHost
+    onBrokerPortChanged: if (mqttController) mqttController.brokerPort = brokerPort
+    onClientIdChanged: if (mqttController) mqttController.clientId = clientId
+    onUsernameChanged: if (mqttController) mqttController.username = username
+    onPasswordChanged: if (mqttController) mqttController.password = password
+    onKeepAliveChanged: if (mqttController) mqttController.keepAlive = keepAlive
+    onCleanSessionChanged: if (mqttController) mqttController.cleanSession = cleanSession
+    onDefaultQosChanged: if (mqttController) mqttController.defaultQos = defaultQos
 
     // ========== 获取参数数量 ==========
     function getParamFieldCount() {
-        return 9  // 9个参数
+        return 11  // 11个参数（包括连接/断开按钮）
     }
 
     // ========== 触发参数输入 ==========
@@ -72,6 +87,15 @@ Rectangle {
             return
         case 8:  // 状态（只读）
             return
+        // ✅ 2026-02-08 [Phase 7.43.11]: 添加连接/断开按钮处理
+        case 9:  // 连接按钮
+            console.log("✅ [MQTTConnectionTab] 触发连接")
+            connectButton.clicked()
+            return
+        case 10:  // 断开按钮
+            console.log("✅ [MQTTConnectionTab] 触发断开")
+            disconnectButton.clicked()
+            return
         }
 
         // 激活虚拟键盘
@@ -97,6 +121,12 @@ Rectangle {
             defaultQosField.currentIndex = (defaultQosField.currentIndex + 1) % defaultQosField.model.length
             return true
         } else if (focusParamIndex === 8) {  // 状态（只读）
+            return true
+        } else if (focusParamIndex === 9) {  // 连接按钮
+            connectButton.clicked()
+            return true
+        } else if (focusParamIndex === 10) {  // 断开按钮
+            disconnectButton.clicked()
             return true
         }
 
@@ -567,8 +597,9 @@ Rectangle {
                             color: root.isConnected ? "#4CAF50" : "#9E9E9E"
                         }
 
+                        // ✅ 2026-02-08 [Phase 7.43.11]: 使用connectionState显示详细状态
                         Text {
-                            text: root.isConnected ? "已连接" : "未连接"
+                            text: root.connectionState
                             font.pixelSize: 21
                             color: "#E0E0E0"
                             anchors.verticalCenter: parent.verticalCenter
@@ -591,6 +622,141 @@ Rectangle {
                     color: "transparent"
                     border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 8) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
+                }
+            }
+
+            // ========== 第六行：连接/断开按钮（索引9、10）==========
+            // ✅ 2026-02-08 [Phase 7.43.11]: 添加连接/断开按钮
+
+            // 空白占位
+            Item {
+                Layout.column: 0
+                Layout.row: 5
+                Layout.preferredWidth: 160
+            }
+
+            // 连接按钮（索引9）
+            Item {
+                Layout.column: 1
+                Layout.row: 5
+                Layout.preferredWidth: 120
+                Layout.preferredHeight: 50
+
+                Button {
+                    id: connectButton
+                    anchors.fill: parent
+                    text: "连接"
+                    enabled: !root.isConnected
+
+                    background: Rectangle {
+                        color: {
+                            if (!connectButton.enabled) return "#555555"
+                            if (root.focusParamIndex === 9) return "#4CAF50"
+                            if (connectButton.pressed) return "#388E3C"
+                            if (connectButton.hovered) return "#4CAF50"
+                            return "#388E3C"
+                        }
+                        radius: 4
+                    }
+
+                    contentItem: Text {
+                        text: parent.text
+                        font.pixelSize: 18
+                        color: connectButton.enabled ? "#FFFFFF" : "#888888"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onClicked: {
+                        console.log("✅ [MQTTConnectionTab] 点击连接按钮")
+                        root.connectRequested()
+                        if (mqttController) {
+                            mqttController.connectToModule()
+                        }
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        root.requestFocusParamIndex(9)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 9) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 9) ? 3 : 0
+                    radius: 4
+                    z: 1000
+                    enabled: false
+                }
+            }
+
+            // 断开按钮（索引10）
+            Item {
+                Layout.column: 2
+                Layout.row: 5
+                Layout.columnSpan: 2
+                Layout.preferredWidth: 120
+                Layout.preferredHeight: 50
+
+                Button {
+                    id: disconnectButton
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    width: 120
+                    text: "断开"
+                    enabled: root.isConnected
+
+                    background: Rectangle {
+                        color: {
+                            if (!disconnectButton.enabled) return "#555555"
+                            if (root.focusParamIndex === 10) return "#f44336"
+                            if (disconnectButton.pressed) return "#c62828"
+                            if (disconnectButton.hovered) return "#f44336"
+                            return "#d32f2f"
+                        }
+                        radius: 4
+                    }
+
+                    contentItem: Text {
+                        text: parent.text
+                        font.pixelSize: 18
+                        color: disconnectButton.enabled ? "#FFFFFF" : "#888888"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onClicked: {
+                        console.log("✅ [MQTTConnectionTab] 点击断开按钮")
+                        root.disconnectRequested()
+                        if (mqttController) {
+                            mqttController.disconnectFromModule()
+                        }
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        root.requestFocusParamIndex(10)
+                        mouse.accepted = false
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: (root.focusParamIndex === 10) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 10) ? 3 : 0
                     radius: 4
                     z: 1000
                     enabled: false

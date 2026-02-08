@@ -4,6 +4,7 @@
 // ✅ 2026-02-08 [Phase 7.43]: MQTT通讯控制功能实现
 // ✅ 2026-02-08 [Phase 7.43.3]: 重构布局，参照 ModbusTCPMasterTab.qml
 // ✅ 2026-02-08 [Phase 7.43.6]: 修复QML语法错误
+// ✅ 2026-02-08 [Phase 7.43.11]: 完善与MQTTController的绑定
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -41,9 +42,9 @@ Rectangle {
             if (messageField.activateVirtualKeyboard) messageField.activateVirtualKeyboard()
             else messageField.forceActiveFocus()
         } else if (paramIndex === 4) {
-            publishButton.clicked()
+            doPublish()
         } else if (paramIndex === 5) {
-            clearButton.clicked()
+            doClear()
         }
     }
 
@@ -57,14 +58,55 @@ Rectangle {
             return true
         }
         if (focusParamIndex === 4) {
-            publishButton.clicked()
+            doPublish()
             return true
         }
         if (focusParamIndex === 5) {
-            clearButton.clicked()
+            doClear()
             return true
         }
         return false
+    }
+
+    // ✅ 2026-02-08 [Phase 7.43.11]: 发布函数
+    function doPublish() {
+        if (publishTopic.length === 0) {
+            console.log("⚠️ [MQTTPublishTab] 主题不能为空")
+            return
+        }
+        console.log("✅ [MQTTPublishTab] 发布消息 - 主题:", publishTopic, "QoS:", publishQos, "Retain:", publishRetain)
+
+        var success = false
+        if (mqttController) {
+            success = mqttController.publish(publishTopic, publishMessage, publishQos, publishRetain)
+            if (!success) {
+                console.log("⚠️ [MQTTPublishTab] 发布失败:", mqttController.lastError)
+            }
+        } else {
+            // 模拟模式
+            success = true
+        }
+
+        // 添加到历史记录
+        historyModel.insert(0, {
+            topic: publishTopic,
+            message: publishMessage,
+            qos: publishQos,
+            retain: publishRetain,
+            timestamp: new Date().toLocaleTimeString(),
+            success: success
+        })
+
+        // 限制历史记录数量
+        while (historyModel.count > 50) {
+            historyModel.remove(historyModel.count - 1)
+        }
+    }
+
+    // ✅ 2026-02-08 [Phase 7.43.11]: 清空函数
+    function doClear() {
+        console.log("✅ [MQTTPublishTab] 清空消息")
+        publishMessage = ""
     }
 
     ColumnLayout {
@@ -231,14 +273,7 @@ Rectangle {
                         }
 
                         onClicked: {
-                            console.log("✅ [MQTTPublishTab] 发布消息")
-                            historyModel.insert(0, {
-                                topic: topicField.text,
-                                message: messageField.text,
-                                qos: qosField.currentIndex,
-                                retain: retainField.currentIndex === 1,
-                                timestamp: new Date().toLocaleTimeString()
-                            })
+                            doPublish()
                         }
                     }
 
@@ -288,8 +323,7 @@ Rectangle {
                         }
 
                         onClicked: {
-                            console.log("✅ [MQTTPublishTab] 清空消息")
-                            messageField.text = ""
+                            doClear()
                         }
                     }
 
