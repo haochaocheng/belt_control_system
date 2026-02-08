@@ -53,6 +53,46 @@ if (!(Test-Path $buildDir)) {
     New-Item -ItemType Directory $buildDir | Out-Null
 }
 
+# ✅ 2026-02-08 [Phase 7.42.9]: 自动复制Snap7库到rk3588-libs目录
+Write-Host ""
+Write-Host "Checking Snap7 library..." -ForegroundColor Cyan
+$snap7SourceLib = "$ProjectRoot/libs/snap7-rk3588/lib/libsnap7.so"
+$snap7SourceHeader = "$ProjectRoot/libs/snap7-rk3588/include/snap7.h"
+$snap7TargetLibDir = "$ProjectRoot/docker/rk3588/rk3588-libs/lib"
+$snap7TargetIncludeDir = "$ProjectRoot/docker/rk3588/rk3588-libs/include"
+
+if (Test-Path $snap7SourceLib) {
+    # 检查目标文件是否存在或需要更新
+    $targetLib = "$snap7TargetLibDir/libsnap7.so"
+    $needCopy = $false
+
+    if (-not (Test-Path $targetLib)) {
+        $needCopy = $true
+        Write-Host "  Snap7 library not found in rk3588-libs, copying..." -ForegroundColor Yellow
+    } else {
+        $sourceTime = (Get-Item $snap7SourceLib).LastWriteTime
+        $targetTime = (Get-Item $targetLib).LastWriteTime
+        if ($sourceTime -gt $targetTime) {
+            $needCopy = $true
+            Write-Host "  Snap7 library updated, copying..." -ForegroundColor Yellow
+        }
+    }
+
+    if ($needCopy) {
+        # 复制库文件
+        Copy-Item "$ProjectRoot/libs/snap7-rk3588/lib/libsnap7.so" $snap7TargetLibDir -Force
+        Copy-Item "$ProjectRoot/libs/snap7-rk3588/lib/libsnap7.a" $snap7TargetLibDir -Force
+        # 复制头文件
+        Copy-Item $snap7SourceHeader $snap7TargetIncludeDir -Force
+        Write-Host "  [OK] Snap7 library copied to rk3588-libs" -ForegroundColor Green
+    } else {
+        Write-Host "  [OK] Snap7 library is up to date" -ForegroundColor Green
+    }
+} else {
+    Write-Host "  [WARN] Snap7 RK3588 library not found at: $snap7SourceLib" -ForegroundColor Yellow
+    Write-Host "  S7 protocol support will be disabled" -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host "Starting compilation..." -ForegroundColor Green
 Write-Host "  Using container ARM64 libraries (GLIBC 2.39)" -ForegroundColor Gray
