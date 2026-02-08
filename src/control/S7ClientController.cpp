@@ -2,7 +2,7 @@
 // 西门子 S7 客户端（主站）控制器实现
 // 创建日期: 2026-02-08
 // ✅ 2026-02-08 [Phase 7.42]: TCP控制功能实现 - 基于 Snap7 库
-// TODO: 集成 Snap7 库后完善实现
+// ✅ 2026-02-08 [Phase 7.42.5]: 集成 Snap7 库实现
 
 #include "S7ClientController.h"
 #include <QDebug>
@@ -22,21 +22,26 @@ S7ClientController::S7ClientController(QObject *parent)
     , m_isConnected(false)
     , m_statusText("未连接")
 {
-    // TODO: 集成 Snap7 库后初始化 S7 客户端
-    // m_s7Client = new TS7Client();
+#ifdef ENABLE_SNAP7
+    // ✅ 2026-02-08 [Phase 7.42.5]: 初始化 Snap7 客户端
+    m_s7Client = new TS7Client();
+    qDebug() << "✅ [S7ClientController] 初始化完成（Snap7支持已启用）";
+#else
+    qDebug() << "⚠️ [S7ClientController] 初始化完成（Snap7未启用，S7功能不可用）";
+#endif
 
     // 配置轮询定时器
     connect(m_pollTimer, &QTimer::timeout,
             this, &S7ClientController::handlePollTimeout);
-
-    qDebug() << "✅ [S7ClientController] 初始化完成（Snap7库待集成）";
 }
 
 S7ClientController::~S7ClientController()
 {
     disconnectFromPLC();
-    // TODO: 集成 Snap7 库后释放资源
-    // delete m_s7Client;
+#ifdef ENABLE_SNAP7
+    // ✅ 2026-02-08 [Phase 7.42.5]: 释放 Snap7 客户端资源
+    delete m_s7Client;
+#endif
 }
 
 // ========== S7配置 ==========
@@ -117,28 +122,47 @@ void S7ClientController::setTimeout(int timeout)
 // ========== 客户端操作 ==========
 bool S7ClientController::connectToPLC()
 {
-    qDebug() << "TODO: connectToPLC - Snap7库待集成";
+#ifdef ENABLE_SNAP7
+    if (!m_s7Client) {
+        qWarning() << "❌ [S7ClientController] S7客户端未初始化";
+        return false;
+    }
+
+    qDebug() << "🔌 [S7ClientController] 连接到PLC...";
     qDebug() << "  目标IP:" << m_targetIP;
     qDebug() << "  Rack:" << m_rack << "Slot:" << m_slot;
 
-    // TODO: 集成 Snap7 库后实现连接
-    // int result = m_s7Client->ConnectTo(m_targetIP.toStdString().c_str(), m_rack, m_slot);
-    // if (result == 0) {
-    //     m_isConnected = true;
-    //     updateStatusText();
-    //     emit isConnectedChanged();
-    //     return true;
-    // }
+    // 使用 ConnectTo 方法连接到 PLC
+    int result = m_s7Client->ConnectTo(m_targetIP.toStdString().c_str(), m_rack, m_slot);
 
+    if (result == 0) {
+        m_isConnected = true;
+        updateStatusText();
+        emit isConnectedChanged();
+        qDebug() << "✅ [S7ClientController] 连接成功";
+        return true;
+    } else {
+        QString errorMsg = QString("连接失败 (错误码: %1)").arg(result);
+        qWarning() << "❌ [S7ClientController]" << errorMsg;
+        emit errorOccurred(errorMsg);
+        return false;
+    }
+#else
+    qWarning() << "⚠️ [S7ClientController] Snap7未启用，无法连接";
+    emit errorOccurred("Snap7库未启用");
     return false;
+#endif
 }
 
 void S7ClientController::disconnectFromPLC()
 {
     if (m_isConnected) {
         stopPolling();
-        // TODO: 集成 Snap7 库后实现断开
-        // m_s7Client->Disconnect();
+#ifdef ENABLE_SNAP7
+        if (m_s7Client) {
+            m_s7Client->Disconnect();
+        }
+#endif
         m_isConnected = false;
         updateStatusText();
         emit isConnectedChanged();
@@ -163,65 +187,237 @@ void S7ClientController::stopPolling()
 // ========== 读取操作 ==========
 bool S7ClientController::readDB(int dbNumber, int start, int size, QByteArray &data)
 {
-    qDebug() << "TODO: readDB" << dbNumber << start << size;
-    // TODO: 集成 Snap7 库后实现
-    // byte buffer[size];
-    // int result = m_s7Client->DBRead(dbNumber, start, size, buffer);
-    // if (result == 0) {
-    //     data = QByteArray((char*)buffer, size);
-    //     return true;
-    // }
+#ifdef ENABLE_SNAP7
+    if (!m_s7Client || !m_isConnected) {
+        qWarning() << "❌ [S7ClientController] 未连接到PLC";
+        return false;
+    }
+
+    // 分配缓冲区
+    QByteArray buffer(size, 0);
+
+    // 调用 Snap7 的 DBRead 方法
+    int result = m_s7Client->DBRead(dbNumber, start, size, buffer.data());
+
+    if (result == 0) {
+        data = buffer;
+        qDebug() << "✅ [S7ClientController] 读取DB成功 - DB" << dbNumber
+                 << "起始:" << start << "大小:" << size;
+        emit dataRead(dbNumber, start, data);
+        return true;
+    } else {
+        QString errorMsg = QString("读取DB失败 (错误码: %1)").arg(result);
+        qWarning() << "❌ [S7ClientController]" << errorMsg;
+        emit errorOccurred(errorMsg);
+        return false;
+    }
+#else
+    Q_UNUSED(dbNumber);
+    Q_UNUSED(start);
+    Q_UNUSED(size);
+    Q_UNUSED(data);
+    qWarning() << "⚠️ [S7ClientController] Snap7未启用";
     return false;
+#endif
 }
 
 bool S7ClientController::readMerker(int start, int size, QByteArray &data)
 {
-    qDebug() << "TODO: readMerker" << start << size;
-    // TODO: 集成 Snap7 库后实现
+#ifdef ENABLE_SNAP7
+    if (!m_s7Client || !m_isConnected) {
+        qWarning() << "❌ [S7ClientController] 未连接到PLC";
+        return false;
+    }
+
+    // 分配缓冲区
+    QByteArray buffer(size, 0);
+
+    // 调用 Snap7 的 MBRead 方法（Merker = Memory Bit）
+    int result = m_s7Client->MBRead(start, size, buffer.data());
+
+    if (result == 0) {
+        data = buffer;
+        qDebug() << "✅ [S7ClientController] 读取Merker成功 - 起始:" << start << "大小:" << size;
+        return true;
+    } else {
+        QString errorMsg = QString("读取Merker失败 (错误码: %1)").arg(result);
+        qWarning() << "❌ [S7ClientController]" << errorMsg;
+        emit errorOccurred(errorMsg);
+        return false;
+    }
+#else
+    Q_UNUSED(start);
+    Q_UNUSED(size);
+    Q_UNUSED(data);
+    qWarning() << "⚠️ [S7ClientController] Snap7未启用";
     return false;
+#endif
 }
 
 bool S7ClientController::readInput(int start, int size, QByteArray &data)
 {
-    qDebug() << "TODO: readInput" << start << size;
-    // TODO: 集成 Snap7 库后实现
+#ifdef ENABLE_SNAP7
+    if (!m_s7Client || !m_isConnected) {
+        qWarning() << "❌ [S7ClientController] 未连接到PLC";
+        return false;
+    }
+
+    // 分配缓冲区
+    QByteArray buffer(size, 0);
+
+    // 调用 Snap7 的 EBRead 方法（EB = Eingangsbyte = Input Byte）
+    int result = m_s7Client->EBRead(start, size, buffer.data());
+
+    if (result == 0) {
+        data = buffer;
+        qDebug() << "✅ [S7ClientController] 读取Input成功 - 起始:" << start << "大小:" << size;
+        return true;
+    } else {
+        QString errorMsg = QString("读取Input失败 (错误码: %1)").arg(result);
+        qWarning() << "❌ [S7ClientController]" << errorMsg;
+        emit errorOccurred(errorMsg);
+        return false;
+    }
+#else
+    Q_UNUSED(start);
+    Q_UNUSED(size);
+    Q_UNUSED(data);
+    qWarning() << "⚠️ [S7ClientController] Snap7未启用";
     return false;
+#endif
 }
 
 bool S7ClientController::readOutput(int start, int size, QByteArray &data)
 {
-    qDebug() << "TODO: readOutput" << start << size;
-    // TODO: 集成 Snap7 库后实现
+#ifdef ENABLE_SNAP7
+    if (!m_s7Client || !m_isConnected) {
+        qWarning() << "❌ [S7ClientController] 未连接到PLC";
+        return false;
+    }
+
+    // 分配缓冲区
+    QByteArray buffer(size, 0);
+
+    // 调用 Snap7 的 ABRead 方法（AB = Ausgangsbyte = Output Byte）
+    int result = m_s7Client->ABRead(start, size, buffer.data());
+
+    if (result == 0) {
+        data = buffer;
+        qDebug() << "✅ [S7ClientController] 读取Output成功 - 起始:" << start << "大小:" << size;
+        return true;
+    } else {
+        QString errorMsg = QString("读取Output失败 (错误码: %1)").arg(result);
+        qWarning() << "❌ [S7ClientController]" << errorMsg;
+        emit errorOccurred(errorMsg);
+        return false;
+    }
+#else
+    Q_UNUSED(start);
+    Q_UNUSED(size);
+    Q_UNUSED(data);
+    qWarning() << "⚠️ [S7ClientController] Snap7未启用";
     return false;
+#endif
 }
 
 // ========== 写入操作 ==========
 bool S7ClientController::writeDB(int dbNumber, int start, const QByteArray &data)
 {
-    qDebug() << "TODO: writeDB" << dbNumber << start << data.size();
-    // TODO: 集成 Snap7 库后实现
+#ifdef ENABLE_SNAP7
+    if (!m_s7Client || !m_isConnected) {
+        qWarning() << "❌ [S7ClientController] 未连接到PLC";
+        return false;
+    }
+
+    // 调用 Snap7 的 DBWrite 方法
+    int result = m_s7Client->DBWrite(dbNumber, start, data.size(),
+                                      const_cast<char*>(data.data()));
+
+    if (result == 0) {
+        qDebug() << "✅ [S7ClientController] 写入DB成功 - DB" << dbNumber
+                 << "起始:" << start << "大小:" << data.size();
+        return true;
+    } else {
+        QString errorMsg = QString("写入DB失败 (错误码: %1)").arg(result);
+        qWarning() << "❌ [S7ClientController]" << errorMsg;
+        emit errorOccurred(errorMsg);
+        return false;
+    }
+#else
+    Q_UNUSED(dbNumber);
+    Q_UNUSED(start);
+    Q_UNUSED(data);
+    qWarning() << "⚠️ [S7ClientController] Snap7未启用";
     return false;
+#endif
 }
 
 bool S7ClientController::writeMerker(int start, const QByteArray &data)
 {
-    qDebug() << "TODO: writeMerker" << start << data.size();
-    // TODO: 集成 Snap7 库后实现
+#ifdef ENABLE_SNAP7
+    if (!m_s7Client || !m_isConnected) {
+        qWarning() << "❌ [S7ClientController] 未连接到PLC";
+        return false;
+    }
+
+    // 调用 Snap7 的 MBWrite 方法
+    int result = m_s7Client->MBWrite(start, data.size(),
+                                      const_cast<char*>(data.data()));
+
+    if (result == 0) {
+        qDebug() << "✅ [S7ClientController] 写入Merker成功 - 起始:" << start
+                 << "大小:" << data.size();
+        return true;
+    } else {
+        QString errorMsg = QString("写入Merker失败 (错误码: %1)").arg(result);
+        qWarning() << "❌ [S7ClientController]" << errorMsg;
+        emit errorOccurred(errorMsg);
+        return false;
+    }
+#else
+    Q_UNUSED(start);
+    Q_UNUSED(data);
+    qWarning() << "⚠️ [S7ClientController] Snap7未启用";
     return false;
+#endif
 }
 
 bool S7ClientController::writeOutput(int start, const QByteArray &data)
 {
-    qDebug() << "TODO: writeOutput" << start << data.size();
-    // TODO: 集成 Snap7 库后实现
+#ifdef ENABLE_SNAP7
+    if (!m_s7Client || !m_isConnected) {
+        qWarning() << "❌ [S7ClientController] 未连接到PLC";
+        return false;
+    }
+
+    // 调用 Snap7 的 ABWrite 方法
+    int result = m_s7Client->ABWrite(start, data.size(),
+                                      const_cast<char*>(data.data()));
+
+    if (result == 0) {
+        qDebug() << "✅ [S7ClientController] 写入Output成功 - 起始:" << start
+                 << "大小:" << data.size();
+        return true;
+    } else {
+        QString errorMsg = QString("写入Output失败 (错误码: %1)").arg(result);
+        qWarning() << "❌ [S7ClientController]" << errorMsg;
+        emit errorOccurred(errorMsg);
+        return false;
+    }
+#else
+    Q_UNUSED(start);
+    Q_UNUSED(data);
+    qWarning() << "⚠️ [S7ClientController] Snap7未启用";
     return false;
+#endif
 }
 
 // ========== 私有槽函数 ==========
 void S7ClientController::handlePollTimeout()
 {
     // TODO: 实现轮询逻辑
-    // qDebug() << "TODO: handlePollTimeout";
+    // 可以在这里定期读取PLC数据
+    // 例如：readDB(1, 0, 10, data);
 }
 
 // ========== 辅助函数 ==========
