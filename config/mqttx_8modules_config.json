@@ -1,0 +1,312 @@
+{
+  "connections": [
+    {
+      "id": "module1_di1",
+      "name": "开关量输入1",
+      "client_id": "belt_control_di1",
+      "host": "192.168.10.142",
+      "port": 1883,
+      "protocol": "mqtt",
+      "clean_session": true,
+      "keepalive": 60,
+      "subscriptions": [
+        {
+          "topic": "belt_control/di/module1/control",
+          "qos": 1
+        }
+      ],
+      "publish": {
+        "topic": "belt_control/di/module1/status",
+        "qos": 1,
+        "retain": false,
+        "payload": {
+          "module": 1,
+          "type": "di",
+          "timestamp": 1707456789,
+          "data": {
+            "bits": [1, 0, 1, 1, 0, 0, 1, 0],
+            "byte": 178
+          },
+          "quality": "good"
+        }
+      }
+    },
+    {
+      "id": "module2_di2",
+      "name": "开关量输入2",
+      "client_id": "belt_control_di2",
+      "host": "192.168.10.142",
+      "port": 1883,
+      "protocol": "mqtt",
+      "clean_session": true,
+      "keepalive": 60,
+      "subscriptions": [
+        {
+          "topic": "belt_control/di/module2/control",
+          "qos": 1
+        }
+      ],
+      "publish": {
+        "topic": "belt_control/di/module2/status",
+        "qos": 1,
+        "retain": false,
+        "payload": {
+          "module": 2,
+          "type": "di",
+          "timestamp": 1707456789,
+          "data": {
+            "bits": [1, 1, 1, 1, 1, 1, 1, 1],
+            "byte": 255
+          },
+          "quality": "good"
+        }
+      }
+    },
+    {
+      "id": "module3_ai1",
+      "name": "模拟量输入1",
+      "client_id": "belt_control_ai1",
+      "host": "192.168.10.142",
+      "port": 1883,
+      "protocol": "mqtt",
+      "clean_session": true,
+      "keepalive": 60,
+      "subscriptions": [
+        {
+          "topic": "belt_control/ai/module3/control",
+          "qos": 1
+        }
+      ],
+      "publish": {
+        "topic": "belt_control/ai/module3/status",
+        "qos": 1,
+        "retain": false,
+        "payload": {
+          "module": 3,
+          "type": "ai",
+          "timestamp": 1707456789,
+          "data": {
+            "channels": [
+              {"ch": 0, "value": 32768, "voltage": 10.0},
+              {"ch": 1, "value": 40000, "voltage": 12.21},
+              {"ch": 2, "value": 50000, "voltage": 15.26},
+              {"ch": 3, "value": 55000, "voltage": 16.79},
+              {"ch": 4, "value": 45000, "voltage": 13.73},
+              {"ch": 5, "value": 35000, "voltage": 10.68},
+              {"ch": 6, "value": 25000, "voltage": 7.63},
+              {"ch": 7, "value": 20000, "voltage": 6.10}
+            ]
+          },
+          "quality": "good"
+        }
+      }
+    },
+    {
+      "id": "module4_ai2",
+      "name": "模拟量输入2",
+      "client_id": "belt_control_ai2",
+      "host": "192.168.10.142",
+      "port": 1883,
+      "protocol": "mqtt",
+      "clean_session": true,
+      "keepalive": 60,
+      "subscriptions": [
+        {
+          "topic": "belt_control/ai/module4/control",
+          "qos": 1
+        }
+      ],
+      "publish": {
+        "topic": "belt_control/ai/module4/status",
+        "qos": 1,
+        "retain": false,
+        "payload": {
+          "module": 4,
+          "type": "ai",
+          "timestamp": 1707456789,
+          "data": {
+            "channels": [
+              {"ch": 0, "value": 30000, "voltage": 9.16},
+              {"ch": 1, "value": 35000, "voltage": 10.68},
+              {"ch": 2, "value": 40000, "voltage": 12.21},
+              {"ch": 3, "value": 45000, "voltage": 13.73},
+              {"ch": 4, "value": 50000, "voltage": 15.26},
+              {"ch": 5, "value": 55000, "voltage": 16.79},
+              {"ch": 6, "value": 60000, "voltage": 18.31},
+              {"ch": 7, "value": 65000, "voltage": 19.84}
+            ]
+          },
+          "quality": "good"
+        }
+      }
+    },
+    {
+      "id": "module5_cs1",
+      "name": "CS1",
+      "client_id": "belt_control_cs1",
+      "host": "192.168.10.142",
+      "port": 1883,
+      "protocol": "mqtt",
+      "clean_session": true,
+      "keepalive": 60,
+      "subscriptions": [
+        {
+          "topic": "belt_control/cs/module5/control",
+          "qos": 1
+        }
+      ],
+      "publish": {
+        "topic": "belt_control/cs/module5/status",
+        "qos": 1,
+        "retain": false,
+        "payload": {
+          "module": 5,
+          "type": "cs",
+          "timestamp": 1707456789,
+          "data": {
+            "emergency_stop": false,
+            "stop_positions": [
+              {"id": 1, "status": false},
+              {"id": 2, "status": false},
+              {"id": 3, "status": false}
+            ],
+            "comm_status": "online",
+            "signal_strength": 85
+          },
+          "quality": "good"
+        }
+      }
+    },
+    {
+      "id": "module6_cs2",
+      "name": "CS2",
+      "client_id": "belt_control_cs2",
+      "host": "192.168.10.142",
+      "port": 1883,
+      "protocol": "mqtt",
+      "clean_session": true,
+      "keepalive": 60,
+      "subscriptions": [
+        {
+          "topic": "belt_control/cs/module6/control",
+          "qos": 1
+        }
+      ],
+      "publish": {
+        "topic": "belt_control/cs/module6/status",
+        "qos": 1,
+        "retain": false,
+        "payload": {
+          "module": 6,
+          "type": "cs",
+          "timestamp": 1707456789,
+          "data": {
+            "emergency_stop": false,
+            "stop_positions": [
+              {"id": 1, "status": false},
+              {"id": 2, "status": false},
+              {"id": 3, "status": false}
+            ],
+            "comm_status": "online",
+            "signal_strength": 92
+          },
+          "quality": "good"
+        }
+      }
+    },
+    {
+      "id": "module7_voice",
+      "name": "语音模块",
+      "client_id": "belt_control_voice",
+      "host": "192.168.10.142",
+      "port": 1883,
+      "protocol": "mqtt",
+      "clean_session": true,
+      "keepalive": 60,
+      "subscriptions": [
+        {
+          "topic": "belt_control/voice/module7/control",
+          "qos": 1
+        }
+      ],
+      "publish": {
+        "topic": "belt_control/voice/module7/status",
+        "qos": 1,
+        "retain": false,
+        "payload": {
+          "module": 7,
+          "type": "voice",
+          "timestamp": 1707456789,
+          "data": {
+            "status": "idle",
+            "last_command": null
+          },
+          "quality": "good"
+        }
+      }
+    },
+    {
+      "id": "module8_reserved",
+      "name": "预留模块",
+      "client_id": "belt_control_module8",
+      "host": "192.168.10.142",
+      "port": 1883,
+      "protocol": "mqtt",
+      "clean_session": true,
+      "keepalive": 60,
+      "subscriptions": [
+        {
+          "topic": "belt_control/module8/control",
+          "qos": 1
+        }
+      ],
+      "publish": {
+        "topic": "belt_control/module8/status",
+        "qos": 1,
+        "retain": false,
+        "payload": {
+          "module": 8,
+          "type": "heartbeat",
+          "timestamp": 1707456789,
+          "data": {
+            "uptime": 3600,
+            "status": "online"
+          },
+          "quality": "good"
+        }
+      }
+    }
+  ],
+  "scripts": [
+    {
+      "name": "DI_Module1_Random",
+      "description": "开关量输入1 - 随机翻转模式",
+      "interval": 100,
+      "code": "let bits = [0, 0, 0, 0, 0, 0, 0, 0];\n\nfunction generator(faker, options) {\n  if (Math.random() < 0.1) {\n    const bitIndex = Math.floor(Math.random() * 8);\n    bits[bitIndex] = 1 - bits[bitIndex];\n  }\n  const byteValue = bits.reduce((sum, bit, i) => sum + (bit << i), 0);\n  return JSON.stringify({\n    module: 1,\n    type: 'di',\n    timestamp: Math.floor(Date.now() / 1000),\n    data: {\n      bits: bits,\n      byte: byteValue\n    },\n    quality: 'good'\n  });\n}\n\nmodule.exports = { name: 'DI_Module1_Random', generator };"
+    },
+    {
+      "name": "DI_Module2_Periodic",
+      "description": "开关量输入2 - 周期性方波模式",
+      "interval": 100,
+      "code": "let counter = 0;\nconst period = 20;\n\nfunction generator(faker, options) {\n  counter++;\n  const bits = counter % period < period / 2 ? [1,1,1,1,1,1,1,1] : [0,0,0,0,0,0,0,0];\n  const byteValue = bits.reduce((sum, bit, i) => sum + (bit << i), 0);\n  return JSON.stringify({\n    module: 2,\n    type: 'di',\n    timestamp: Math.floor(Date.now() / 1000),\n    data: {\n      bits: bits,\n      byte: byteValue\n    },\n    quality: 'good'\n  });\n}\n\nmodule.exports = { name: 'DI_Module2_Periodic', generator };"
+    },
+    {
+      "name": "AI_Module3_Sine",
+      "description": "模拟量输入1 - 正弦波模式",
+      "interval": 500,
+      "code": "let timeOffset = 0;\nconst frequency = 0.1;\n\nfunction generator(faker, options) {\n  timeOffset += 0.5;\n  const channels = [];\n  for (let ch = 0; ch < 8; ch++) {\n    const phase = ch * Math.PI / 4;\n    let value = Math.floor(32768 + 32768 * Math.sin(2 * Math.PI * frequency * timeOffset + phase));\n    value = Math.max(0, Math.min(65535, value));\n    const voltage = (value * 20.0 / 65535).toFixed(2);\n    channels.push({ ch: ch, value: value, voltage: parseFloat(voltage) });\n  }\n  return JSON.stringify({\n    module: 3,\n    type: 'ai',\n    timestamp: Math.floor(Date.now() / 1000),\n    data: { channels: channels },\n    quality: 'good'\n  });\n}\n\nmodule.exports = { name: 'AI_Module3_Sine', generator };"
+    },
+    {
+      "name": "AI_Module4_SineNoise",
+      "description": "模拟量输入2 - 正弦波+噪声模式",
+      "interval": 500,
+      "code": "let timeOffset = 0;\nconst frequency = 0.1;\nconst noiseAmplitude = 1000;\n\nfunction generator(faker, options) {\n  timeOffset += 0.5;\n  const channels = [];\n  for (let ch = 0; ch < 8; ch++) {\n    const phase = ch * Math.PI / 4;\n    const sineValue = 32768 + 32768 * Math.sin(2 * Math.PI * frequency * timeOffset + phase);\n    const noise = (Math.random() - 0.5) * 2 * noiseAmplitude;\n    let value = Math.floor(sineValue + noise);\n    value = Math.max(0, Math.min(65535, value));\n    const voltage = (value * 20.0 / 65535).toFixed(2);\n    channels.push({ ch: ch, value: value, voltage: parseFloat(voltage) });\n  }\n  return JSON.stringify({\n    module: 4,\n    type: 'ai',\n    timestamp: Math.floor(Date.now() / 1000),\n    data: { channels: channels },\n    quality: 'good'\n  });\n}\n\nmodule.exports = { name: 'AI_Module4_SineNoise', generator };"
+    },
+    {
+      "name": "CS_Module5_Random",
+      "description": "CS1 - 随机急停触发",
+      "interval": 1000,
+      "code": "let emergencyStop = false;\n\nfunction generator(faker, options) {\n  if (Math.random() < 0.05) {\n    emergencyStop = !emergencyStop;\n  }\n  return JSON.stringify({\n    module: 5,\n    type: 'cs',\n    timestamp: Math.floor(Date.now() / 1000),\n    data: {\n      emergency_stop: emergencyStop,\n      stop_positions: [\n        { id: 1, status: emergencyStop },\n        { id: 2, status: false },\n        { id: 3, status: false }\n      ],\n      comm_status: 'online',\n      signal_strength: Math.floor(Math.random() * 30) + 70\n    },\n    quality: 'good'\n  });\n}\n\nmodule.exports = { name: 'CS_Module5_Random', generator };"
+    }
+  ]
+}

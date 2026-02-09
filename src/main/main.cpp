@@ -35,6 +35,9 @@
 #include "control/S7ServerController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器头文件
 #ifdef MQTT_ENABLED
 #include "mqtt/MQTTController.h"  // ✅ 2026-02-08 [Phase 7.43]: 添加MQTT控制器头文件
+#include "mqtt/MQTTAutoManager.h"  // ✅ 2026-02-09 [Phase 7.44.1]: 添加MQTT自动管理器头文件
+#include "mqtt/DIDataManager.h"  // ✅ 2026-02-09 [Phase 7.44.3]: 添加开关量数据管理器头文件
+#include "mqtt/AIDataManager.h"  // ✅ 2026-02-09 [Phase 7.44.4]: 添加模拟量数据管理器头文件
 #endif
 #include "network/NetworkTask.h"
 
@@ -197,6 +200,27 @@ int main(int argc, char *argv[]) {
         // ✅ 2026-02-08 [Phase 7.43]: 初始化MQTT控制器
         MQTTController mqttController;
         logMessage("MQTTController initialized");
+
+        // ✅ 2026-02-09 [Phase 7.44]: 初始化MQTT自动管理器和数据管理器
+        MQTTAutoManager mqttAutoManager(&mqttController);
+        DIDataManager diDataManager;
+        AIDataManager aiDataManager;
+
+        // 连接信号：自动管理器 → 数据管理器
+        QObject::connect(&mqttAutoManager, &MQTTAutoManager::moduleDataReceived,
+                        [&diDataManager, &aiDataManager](int moduleIndex, const QString &topic, const QByteArray &payload) {
+            if (moduleIndex < 2) {
+                // 开关量模块（0, 1）
+                diDataManager.parseData(moduleIndex, payload);
+            } else if (moduleIndex < 4) {
+                // 模拟量模块（2, 3）
+                aiDataManager.parseData(moduleIndex, payload);
+            }
+        });
+
+        // 启动自动管理器
+        mqttAutoManager.start();
+        logMessage("MQTT Auto Manager started");
 #endif
 
         NetworkTask networkTask;
@@ -267,6 +291,10 @@ int main(int argc, char *argv[]) {
 #ifdef MQTT_ENABLED
         // ✅ 2026-02-08 [Phase 7.43]: 注册MQTT控制器到QML
         engine.rootContext()->setContextProperty("mqttController", &mqttController);
+        // ✅ 2026-02-09 [Phase 7.44]: 注册MQTT自动管理器和数据管理器到QML
+        engine.rootContext()->setContextProperty("mqttAutoManager", &mqttAutoManager);
+        engine.rootContext()->setContextProperty("diDataManager", &diDataManager);
+        engine.rootContext()->setContextProperty("aiDataManager", &aiDataManager);
 #endif
         // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 注册MODBUS从站控制器到QML（6个串口，每个串口一个从站）
         engine.rootContext()->setContextProperty("modbusSlaveController1", &modbusSlaveController1);
