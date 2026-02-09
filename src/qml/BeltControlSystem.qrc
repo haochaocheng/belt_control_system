@@ -114,6 +114,7 @@
         <file>components/device_info/IndustrialTheme.qml</file>
         <file>components/device_info/NavigationManager.qml</file>
         <file>components/device_info/NavigationTest.qml</file>
+        <file>components/device_info/pages/AIModulePanel.qml</file>
         <file>components/device_info/pages/AnalogInputPage.qml</file>
         <file>components/device_info/pages/BasicConfigPage.qml</file>
         <file>components/device_info/pages/BasicConfigTab.qml</file>
@@ -126,7 +127,9 @@
         <file>components/device_info/pages/CANParamsTab.qml</file>
         <file>components/device_info/pages/CANReceiveTab.qml</file>
         <file>components/device_info/pages/CANSendTab.qml</file>
+        <file>components/device_info/pages/CSModulePanel.qml</file>
         <file>components/device_info/pages/CurrentProtectionTab.qml</file>
+        <file>components/device_info/pages/DIModulePanel.qml</file>
         <file>components/device_info/pages/FrontBearingTempTab.qml</file>
         <file>components/device_info/pages/ModbusRegisterTab.qml</file>
         <file>components/device_info/pages/ModbusTCPMasterTab.qml</file>
@@ -137,6 +140,7 @@
         <file>components/device_info/pages/MotorListPanel.qml</file>
         <file>components/device_info/pages/MotorListPanel_QDS.qml</file>
         <file>components/device_info/pages/MotorTempTab.qml</file>
+        <file>components/device_info/pages/MQTTAutoControlTab.qml</file>
         <file>components/device_info/pages/MQTTConfigPanel.qml</file>
         <file>components/device_info/pages/MQTTConnectionTab.qml</file>
         <file>components/device_info/pages/MQTTControlPage.qml</file>
@@ -149,6 +153,7 @@
         <file>components/device_info/pages/PhaseBWindingTab.qml</file>
         <file>components/device_info/pages/PhaseCWindingTab.qml</file>
         <file>components/device_info/pages/RearBearingTempTab.qml</file>
+        <file>components/device_info/pages/ReservedModulePanel.qml</file>
         <file>components/device_info/pages/S7MasterTab.qml</file>
         <file>components/device_info/pages/S7SlaveTab.qml</file>
         <file>components/device_info/pages/SerialPortConfigPanel.qml</file>
@@ -165,6 +170,7 @@
         <file>components/device_info/pages/TensionControlConfigPanel.qml</file>
         <file>components/device_info/pages/TensionControlListPanel.qml</file>
         <file>components/device_info/pages/TensionControlPage.qml</file>
+        <file>components/device_info/pages/VoiceModulePanel.qml</file>
         <file>components/device_info/pages/XAxisVibrationTab.qml</file>
         <file>components/device_info/pages/YAxisVibrationTab.qml</file>
         <file>components/device_info/qmldir</file>

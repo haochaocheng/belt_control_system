@@ -39,27 +39,6 @@ Rectangle {
             }
 
             Item { Layout.fillWidth: true }
-
-            // 连接状态指示
-            Rectangle {
-                width: 20
-                height: 20
-                radius: 10
-                color: getConnectionStatus() ? "#27AE60" : "#E74C3C"
-
-                SequentialAnimation on opacity {
-                    running: getConnectionStatus()
-                    loops: Animation.Infinite
-                    NumberAnimation { from: 1.0; to: 0.3; duration: 800 }
-                    NumberAnimation { from: 0.3; to: 1.0; duration: 800 }
-                }
-            }
-
-            Text {
-                text: getConnectionStatus() ? "已连接" : "未连接"
-                font.pixelSize: 14
-                color: getConnectionStatus() ? "#27AE60" : "#E74C3C"
-            }
         }
 
         // 通道数据显示

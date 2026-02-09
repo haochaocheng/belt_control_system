@@ -228,6 +228,7 @@ Rectangle {
 
             // Tab 4: 自动控制
             // ✅ 2026-02-09 [Phase 7.44.7]: 添加自动控制Tab
+            // ✅ 2026-02-09 [Phase 7.44.8]: 传递currentModule和currentModuleIndex
             Loader {
                 id: autoControlTabLoader
                 source: "MQTTAutoControlTab.qml"
@@ -235,6 +236,11 @@ Rectangle {
                 onLoaded: {
                     console.log("✅ [MQTTConfigPanel] MQTTAutoControlTab 加载成功")
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                    item.currentModule = Qt.binding(function() { return root.currentModule })
+                    // 从currentModule获取模块索引
+                    if (root.currentModule && root.currentModule.index !== undefined) {
+                        item.currentModuleIndex = Qt.binding(function() { return root.currentModule.index })
+                    }
                 }
             }
         }
