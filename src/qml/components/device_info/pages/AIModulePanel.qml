@@ -1,7 +1,7 @@
-// AIModulePanel.qml
-// 模拟量模块显示面板 - 数值显示8通道模拟量数据
-// 创建日期: 2026-02-09
-// ✅ 2026-02-09 [Phase 7.44.7]: 模拟量显示组件
+// AIModulePanel.qml - 科技风格版本
+// 模拟量模块显示面板 - 深色科技风格数值显示
+// ✅ 2026-02-09 [Phase 7.44.22]: 重新设计为深色科技风格
+// 使用方法：将此文件内容复制到 src/qml/components/device_info/pages/AIModulePanel.qml
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -9,42 +9,92 @@ import QtQuick.Layouts 1.15
 
 Rectangle {
     id: root
-    color: "#ECF0F1"
+    color: "#1a1f2e"
     radius: 8
     border.width: 2
-    border.color: "#BDC3C7"
-    height: 250
+    border.color: "#00d4ff"
+    // ✅ 2026-02-09 [Phase 7.44.23]: 移除固定高度，让面板填充整个可用空间
+    // height: 300  // 注释掉固定高度
 
-    // ========== 公开属性 ==========
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: "transparent"
+        border.width: 1
+        border.color: "#00d4ff"
+        opacity: 0.3
+        z: -1
+    }
+
     property int moduleIndex: 0
     property string moduleName: "模拟量输入"
-    property var channelsData: []  // 8通道数据数组
+    property var channelsData: []
 
-    // ========== 布局 ==========
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 15
-        spacing: 10
+        anchors.margins: 15  // ✅ 2026-02-09 [Phase 7.44.23]: 20 → 15，减少边距
+        spacing: 12  // ✅ 2026-02-09 [Phase 7.44.23]: 15 → 12，减少间距
 
         // 标题行
-        RowLayout {
+        Rectangle {
             Layout.fillWidth: true
-            spacing: 10
+            Layout.preferredHeight: 40  // ✅ 2026-02-09 [Phase 7.44.23]: 45 → 40，减少标题行高度
+            color: "transparent"
 
-            Text {
-                text: moduleName
-                font.pixelSize: 18
-                font.bold: true
-                color: "#2C3E50"
+            Rectangle {
+                anchors.fill: parent
+                radius: 4
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "#2a3f5f" }
+                    GradientStop { position: 1.0; color: "#1a2f4f" }
+                }
+                opacity: 0.5
             }
 
-            Item { Layout.fillWidth: true }
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 8
+                spacing: 10
+
+                Rectangle {
+                    width: 4
+                    Layout.fillHeight: true
+                    color: "#00d4ff"
+                    radius: 2
+                }
+
+                Text {
+                    text: moduleName
+                    font.pixelSize: 24  // ✅ 2026-02-09 [Phase 7.44.23]: 18 → 24，增大标题字体
+                    font.bold: true
+                    font.family: "Microsoft YaHei"
+                    color: "#00d4ff"
+                    style: Text.Outline
+                    styleColor: "#00d4ff"
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Rectangle {
+                    width: 12
+                    height: 12
+                    radius: 6
+                    color: "#00ff00"
+
+                    SequentialAnimation on opacity {
+                        running: true
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1.0; to: 0.3; duration: 1000 }
+                        NumberAnimation { from: 0.3; to: 1.0; duration: 1000 }
+                    }
+                }
+            }
         }
 
         // 通道数据显示
         GridLayout {
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            Layout.fillHeight: true  // ✅ 填充剩余空间
             columns: 4
             rowSpacing: 10
             columnSpacing: 10
@@ -54,105 +104,113 @@ Rectangle {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 80
-                    color: "white"
+                    Layout.preferredHeight: 165  // ✅ 2026-02-09 [Phase 7.44.23]: 150 → 165，再次增加10%
+                    color: "#0a0f1e"
                     radius: 6
                     border.width: 2
-                    border.color: getChannelValid(index) ? "#3498DB" : "#BDC3C7"
+                    border.color: getChannelValid(index) ? "#00d4ff" : "#2a3f5f"
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 2
+                        radius: 4
+                        color: "transparent"
+                        border.width: 1
+                        border.color: "#00d4ff"
+                        opacity: 0.1
+                    }
 
                     ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: 10
-                        spacing: 5
+                        anchors.margins: 15  // ✅ 2026-02-09 [Phase 7.44.23]: 12 → 15，再次增加内边距
+                        spacing: 10  // ✅ 2026-02-09 [Phase 7.44.23]: 8 → 10，再次增加间距
 
-                        // 通道编号
+                        // ✅ 2026-02-09 [Phase 7.44.23]: 调整字体大小和粗细
                         Text {
                             text: "通道 " + index
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "#7F8C8D"
+                            font.pixelSize: 18  // 15 → 18，增大通道标题字体
+                            font.bold: false  // ✅ 移除粗体，提高可读性
+                            font.family: "Microsoft YaHei"
+                            color: "#00d4ff"
                             Layout.alignment: Qt.AlignHCenter
                         }
 
-                        // AD值
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 5
 
                             Text {
                                 text: "AD:"
-                                font.pixelSize: 12
-                                color: "#95A5A6"
+                                font.pixelSize: 16  // 14 → 16，增大标签字体
+                                font.family: "Consolas"
+                                color: "#5a6f8f"
+                                verticalAlignment: Text.AlignVCenter  // ✅ 垂直居中对齐
                             }
 
                             Text {
                                 text: getChannelADValue(index).toString()
-                                font.pixelSize: 16
-                                font.bold: true
-                                font.family: "Courier New"
-                                color: "#2C3E50"
+                                font.pixelSize: 22  // 18 → 22，增大数值字体
+                                font.bold: false  // ✅ 2026-02-09 [Phase 7.44.23]: 移除粗体，提高可读性
+                                font.family: "Consolas"
+                                color: "#00d4ff"
                                 Layout.fillWidth: true
+                                verticalAlignment: Text.AlignVCenter  // ✅ 垂直居中对齐
                             }
                         }
 
-                        // 电压值
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 5
 
                             Text {
                                 text: "电压:"
-                                font.pixelSize: 12
-                                color: "#95A5A6"
+                                font.pixelSize: 16  // 14 → 16，增大标签字体
+                                font.family: "Microsoft YaHei"
+                                color: "#5a6f8f"
+                                verticalAlignment: Text.AlignVCenter  // ✅ 垂直居中对齐
                             }
 
                             Text {
                                 text: getChannelVoltage(index).toFixed(2) + " V"
-                                font.pixelSize: 18
-                                font.bold: true
-                                font.family: "Courier New"
+                                font.pixelSize: 24  // 20 → 24，增大电压值字体
+                                font.bold: false  // ✅ 2026-02-09 [Phase 7.44.23]: 移除粗体，提高可读性
+                                font.family: "Consolas"
                                 color: getVoltageColor(index)
+                                style: Text.Outline
+                                styleColor: getVoltageColor(index)
                                 Layout.fillWidth: true
+                                verticalAlignment: Text.AlignVCenter  // ✅ 垂直居中对齐
                             }
                         }
 
                         // 进度条
-                        ProgressBar {
+                        Rectangle {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 8
-                            from: 0
-                            to: 65535
-                            value: getChannelADValue(index)
+                            Layout.preferredHeight: 10
+                            color: "#0a0f1e"
+                            radius: 5
+                            border.width: 1
+                            border.color: "#2a3f5f"
 
-                            background: Rectangle {
-                                implicitWidth: 200
-                                implicitHeight: 8
-                                color: "#E0E0E0"
-                                radius: 4
-                            }
+                            Rectangle {
+                                width: Math.max(parent.width * (getChannelADValue(index) / 65535.0), 2)
+                                height: parent.height
+                                radius: 5
 
-                            contentItem: Item {
-                                implicitWidth: 200
-                                implicitHeight: 8
-
-                                Rectangle {
-                                    width: parent.width * (parent.parent.value / parent.parent.to)
-                                    height: parent.height
-                                    radius: 4
-                                    color: getVoltageColor(index)
+                                gradient: Gradient {
+                                    GradientStop { position: 0.0; color: getVoltageColor(index) }
+                                    GradientStop { position: 1.0; color: Qt.darker(getVoltageColor(index), 1.5) }
                                 }
                             }
                         }
                     }
 
-                    // 数据变化闪烁效果
                     Rectangle {
+                        id: flashRect
                         anchors.fill: parent
-                        color: "#3498DB"
+                        color: "#00d4ff"
                         opacity: 0
                         radius: 6
-
-                        id: flashRect
 
                         SequentialAnimation {
                             id: flashAnimation
@@ -170,39 +228,104 @@ Rectangle {
         }
 
         // 统计信息
-        RowLayout {
+        Rectangle {
             Layout.fillWidth: true
-            spacing: 20
+            Layout.preferredHeight: 45  // ✅ 2026-02-09 [Phase 7.44.23]: 50 → 45，减少统计信息区域高度
+            color: "#0a0f1e"
+            radius: 6
+            border.width: 2
+            border.color: "#00d4ff"
 
-            Text {
-                text: "最小值: " + getMinValue().toFixed(2) + " V"
-                font.pixelSize: 14
-                color: "#7F8C8D"
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 2
+                radius: 4
+                color: "transparent"
+                border.width: 1
+                border.color: "#00d4ff"
+                opacity: 0.2
             }
 
-            Text {
-                text: "最大值: " + getMaxValue().toFixed(2) + " V"
-                font.pixelSize: 14
-                color: "#7F8C8D"
-            }
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 20
 
-            Text {
-                text: "平均值: " + getAvgValue().toFixed(2) + " V"
-                font.pixelSize: 14
-                color: "#7F8C8D"
-            }
+                // ✅ 2026-02-09 [Phase 7.44.23]: 调整统计信息字体大小和粗细
+                RowLayout {
+                    spacing: 5
 
-            Item { Layout.fillWidth: true }
+                    Text {
+                        text: "最小值:"
+                        font.pixelSize: 18  // 15 → 18，增大标签字体
+                        font.family: "Microsoft YaHei"
+                        color: "#5a6f8f"
+                    }
 
-            Text {
-                text: "变化阈值: " + (aiDataManager ? aiDataManager.changeThreshold : 10)
-                font.pixelSize: 14
-                color: "#7F8C8D"
+                    Text {
+                        text: getMinValue().toFixed(2) + " V"
+                        font.pixelSize: 22  // 17 → 22，增大数值字体
+                        font.bold: false  // ✅ 2026-02-09 [Phase 7.44.23]: 移除粗体，提高可读性
+                        font.family: "Consolas"
+                        color: "#3498DB"
+                    }
+                }
+
+                Rectangle {
+                    width: 2
+                    Layout.fillHeight: true
+                    color: "#2a3f5f"
+                }
+
+                RowLayout {
+                    spacing: 5
+
+                    Text {
+                        text: "最大值:"
+                        font.pixelSize: 18  // 15 → 18，增大标签字体
+                        font.family: "Microsoft YaHei"
+                        color: "#5a6f8f"
+                    }
+
+                    Text {
+                        text: getMaxValue().toFixed(2) + " V"
+                        font.pixelSize: 22  // 17 → 22，增大数值字体
+                        font.bold: false  // ✅ 2026-02-09 [Phase 7.44.23]: 移除粗体，提高可读性
+                        font.family: "Consolas"
+                        color: "#E74C3C"
+                    }
+                }
+
+                Rectangle {
+                    width: 2
+                    Layout.fillHeight: true
+                    color: "#2a3f5f"
+                }
+
+                RowLayout {
+                    spacing: 5
+
+                    Text {
+                        text: "平均值:"
+                        font.pixelSize: 18  // 15 → 18，增大标签字体
+                        font.family: "Microsoft YaHei"
+                        color: "#5a6f8f"
+                    }
+
+                    Text {
+                        text: getAvgValue().toFixed(2) + " V"
+                        font.pixelSize: 22  // 17 → 22，增大数值字体
+                        font.bold: false  // ✅ 2026-02-09 [Phase 7.44.23]: 移除粗体，提高可读性
+                        font.family: "Consolas"
+                        color: "#27AE60"
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
             }
         }
     }
 
-    // ========== 辅助函数 ==========
     function getChannelData(index) {
         if (!channelsData || index < 0 || index >= channelsData.length) {
             return { adValue: 0, voltage: 0.0, valid: false }
@@ -227,10 +350,10 @@ Rectangle {
 
     function getVoltageColor(index) {
         var voltage = getChannelVoltage(index)
-        if (voltage < 5.0) return "#3498DB"      // 蓝色：低电压
-        if (voltage < 10.0) return "#27AE60"     // 绿色：中电压
-        if (voltage < 15.0) return "#F39C12"     // 橙色：高电压
-        return "#E74C3C"                         // 红色：很高电压
+        if (voltage < 1.0) return "#3498DB"
+        if (voltage < 3.0) return "#27AE60"
+        if (voltage < 4.5) return "#F39C12"
+        return "#E74C3C"
     }
 
     function getMinValue() {
@@ -270,16 +393,12 @@ Rectangle {
         return false
     }
 
-    // ========== 数据变化监听 ==========
     Connections {
         target: aiDataManager
         function onChannelChanged(modIndex, channelIndex, data) {
             if (modIndex === moduleIndex) {
                 console.log("🔄 [AIModulePanel] 模块" + moduleIndex + "通道" + channelIndex +
                            "变化:" + data.voltage + "V")
-
-                // 触发闪烁效果
-                // flashAnimation.start()  // 暂时注释，避免过于频繁
             }
         }
     }

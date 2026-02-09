@@ -93,8 +93,8 @@ Rectangle {
     // ========== 布局 ==========
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 20
+        anchors.margins: 10  // ✅ 2026-02-09 [Phase 7.44.23]: 20 → 10，减少边距，让面板更靠近底部
+        spacing: 15  // ✅ 2026-02-09 [Phase 7.44.23]: 20 → 15，减少间距
 
         // 标题栏
         Rectangle {
@@ -240,77 +240,78 @@ Rectangle {
         }
 
         // 主内容区域 - 根据模块类型显示不同内容
-        ScrollView {
+        // ✅ 2026-02-09 [Phase 7.44.23]: 移除ScrollView，直接使用StackLayout
+        StackLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
+            currentIndex: {
+                var type = getModuleType()
+                if (type === "di") return 0
+                if (type === "ai") return 1
+                if (type === "cs") return 2
+                if (type === "voice") return 3
+                return 4  // reserved
+            }
 
-            StackLayout {
-                width: parent.width
-                currentIndex: {
-                    var type = getModuleType()
-                    if (type === "di") return 0
-                    if (type === "ai") return 1
-                    if (type === "cs") return 2
-                    if (type === "voice") return 3
-                    return 4  // reserved
-                }
-
-                // 开关量显示 (模块1-2)
-                DIModulePanel {
-                    Layout.fillWidth: true
-                    moduleIndex: currentModuleIndex
-                    moduleName: getModuleName()
-                    bitsData: {
-                        if (!diDataManager) return []
-                        if (currentModuleIndex === 0) {
-                            return diDataManager.module1Data
-                        } else if (currentModuleIndex === 1) {
-                            return diDataManager.module2Data
-                        }
-                        return []
+            // 开关量显示 (模块1-2)
+            DIModulePanel {
+                Layout.fillWidth: true
+                Layout.fillHeight: true  // ✅ 2026-02-09 [Phase 7.44.23]: 填充整个可用高度
+                moduleIndex: currentModuleIndex
+                moduleName: getModuleName()
+                bitsData: {
+                    if (!diDataManager) return []
+                    if (currentModuleIndex === 0) {
+                        return diDataManager.module1Data
+                    } else if (currentModuleIndex === 1) {
+                        return diDataManager.module2Data
                     }
-                }
-
-                // 模拟量显示 (模块3-4)
-                AIModulePanel {
-                    Layout.fillWidth: true
-                    moduleIndex: currentModuleIndex
-                    moduleName: getModuleName()
-                    channelsData: {
-                        if (!aiDataManager) return []
-                        if (currentModuleIndex === 2) {
-                            return aiDataManager.module3Data
-                        } else if (currentModuleIndex === 3) {
-                            return aiDataManager.module4Data
-                        }
-                        return []
-                    }
-                }
-
-                // CS模块显示 (模块5-6)
-                CSModulePanel {
-                    Layout.fillWidth: true
-                    moduleIndex: currentModuleIndex
-                    moduleName: getModuleName()
-                }
-
-                // 语音模块显示 (模块7)
-                VoiceModulePanel {
-                    Layout.fillWidth: true
-                    moduleIndex: currentModuleIndex
-                    moduleName: getModuleName()
-                }
-
-                // 预留模块显示 (模块8)
-                ReservedModulePanel {
-                    Layout.fillWidth: true
-                    moduleIndex: currentModuleIndex
-                    moduleName: getModuleName()
+                    return []
                 }
             }
-        }
-    }
+
+            // 模拟量显示 (模块3-4)
+            AIModulePanel {
+                Layout.fillWidth: true
+                Layout.fillHeight: true  // ✅ 2026-02-09 [Phase 7.44.23]: 填充整个可用高度
+                moduleIndex: currentModuleIndex
+                moduleName: getModuleName()
+                channelsData: {
+                    if (!aiDataManager) return []
+                    if (currentModuleIndex === 2) {
+                        return aiDataManager.module3Data
+                    } else if (currentModuleIndex === 3) {
+                        return aiDataManager.module4Data
+                    }
+                    return []
+                }
+            }
+
+            // CS模块显示 (模块5-6)
+            CSModulePanel {
+                Layout.fillWidth: true
+                Layout.fillHeight: true  // ✅ 2026-02-09 [Phase 7.44.23]: 填充整个可用高度
+                moduleIndex: currentModuleIndex
+                moduleName: getModuleName()
+            }
+
+            // 语音模块显示 (模块7)
+            VoiceModulePanel {
+                Layout.fillWidth: true
+                Layout.fillHeight: true  // ✅ 2026-02-09 [Phase 7.44.23]: 填充整个可用高度
+                moduleIndex: currentModuleIndex
+                moduleName: getModuleName()
+            }
+
+            // 预留模块显示 (模块8)
+            ReservedModulePanel {
+                Layout.fillWidth: true
+                Layout.fillHeight: true  // ✅ 2026-02-09 [Phase 7.44.23]: 填充整个可用高度
+                moduleIndex: currentModuleIndex
+                moduleName: getModuleName()
+            }
+        }  // StackLayout 结束
+    }  // ColumnLayout 结束
 
     // ========== 键盘导航 ==========
     Keys.onPressed: {

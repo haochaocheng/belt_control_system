@@ -1,7 +1,7 @@
-// DIModulePanel.qml
-// 开关量模块显示面板 - LED指示灯显示8位开关量状态
-// 创建日期: 2026-02-09
-// ✅ 2026-02-09 [Phase 7.44.7]: 开关量显示组件
+// DIModulePanel.qml - 科技风格版本
+// 开关量模块显示面板 - 深色科技风格LED指示灯显示
+// ✅ 2026-02-09 [Phase 7.44.22]: 重新设计为深色科技风格
+// 使用方法：将此文件内容复制到 src/qml/components/device_info/pages/DIModulePanel.qml
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -9,36 +9,89 @@ import QtQuick.Layouts 1.15
 
 Rectangle {
     id: root
-    color: "#ECF0F1"
+    color: "#1a1f2e"  // 深色背景
     radius: 8
     border.width: 2
-    border.color: "#BDC3C7"
-    height: 150
+    border.color: "#00d4ff"  // 青色发光边框
+    // ✅ 2026-02-09 [Phase 7.44.23]: 移除固定高度，让面板填充整个可用空间
+    // height: 220  // 注释掉固定高度
+
+    // 外层发光效果
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: "transparent"
+        border.width: 1
+        border.color: "#00d4ff"
+        opacity: 0.3
+        z: -1
+    }
 
     // ========== 公开属性 ==========
     property int moduleIndex: 0
     property string moduleName: "开关量输入"
-    property var bitsData: []  // 8位布尔值数组
+    property var bitsData: []
 
     // ========== 布局 ==========
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 15
-        spacing: 10
+        anchors.margins: 20
+        spacing: 15
 
         // 标题行
-        RowLayout {
+        Rectangle {
             Layout.fillWidth: true
-            spacing: 10
+            Layout.preferredHeight: 35
+            color: "transparent"
 
-            Text {
-                text: moduleName
-                font.pixelSize: 18
-                font.bold: true
-                color: "#2C3E50"
+            Rectangle {
+                anchors.fill: parent
+                radius: 4
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "#2a3f5f" }
+                    GradientStop { position: 1.0; color: "#1a2f4f" }
+                }
+                opacity: 0.5
             }
 
-            Item { Layout.fillWidth: true }
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 8
+                spacing: 10
+
+                Rectangle {
+                    width: 4
+                    Layout.fillHeight: true
+                    color: "#00d4ff"
+                    radius: 2
+                }
+
+                Text {
+                    text: moduleName
+                    font.pixelSize: 18
+                    font.bold: true
+                    font.family: "Microsoft YaHei"
+                    color: "#00d4ff"
+                    style: Text.Outline
+                    styleColor: "#00d4ff"
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Rectangle {
+                    width: 12
+                    height: 12
+                    radius: 6
+                    color: "#00ff00"
+
+                    SequentialAnimation on opacity {
+                        running: true
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1.0; to: 0.3; duration: 1000 }
+                        NumberAnimation { from: 0.3; to: 1.0; duration: 1000 }
+                    }
+                }
+            }
         }
 
         // LED指示灯行
@@ -46,8 +99,8 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             columns: 8
-            rowSpacing: 5
-            columnSpacing: 10
+            rowSpacing: 8
+            columnSpacing: 12
 
             Repeater {
                 model: 8
@@ -55,95 +108,207 @@ Rectangle {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    spacing: 5
+                    spacing: 8
 
-                    // 位编号
-                    Text {
-                        text: "位" + index
-                        font.pixelSize: 14
-                        color: "#7F8C8D"
+                    Rectangle {
+                        Layout.preferredWidth: 60
+                        Layout.preferredHeight: 22
                         Layout.alignment: Qt.AlignHCenter
+                        color: "#0a0f1e"
+                        radius: 3
+                        border.width: 1
+                        border.color: "#00d4ff"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "BIT " + index
+                            font.pixelSize: 11
+                            font.bold: true
+                            font.family: "Consolas"
+                            color: "#00d4ff"
+                        }
                     }
 
-                    // LED指示灯
                     Rectangle {
-                        Layout.preferredWidth: 50
-                        Layout.preferredHeight: 50
+                        Layout.preferredWidth: 60
+                        Layout.preferredHeight: 60
                         Layout.alignment: Qt.AlignHCenter
-                        radius: 25
-                        color: getBitValue(index) ? "#27AE60" : "#95A5A6"
-                        border.width: 3
-                        border.color: getBitValue(index) ? "#229954" : "#7F8C8D"
+                        color: "#0a0f1e"
+                        radius: 30
+                        border.width: 2
+                        border.color: getBitValue(index) ? "#00ff00" : "#2a3f5f"
 
-                        // 发光效果
                         Rectangle {
                             anchors.centerIn: parent
-                            width: parent.width * 0.6
-                            height: parent.height * 0.6
-                            radius: width / 2
-                            color: "white"
-                            opacity: getBitValue(index) ? 0.6 : 0.2
+                            width: parent.width + 8
+                            height: parent.height + 8
+                            radius: (parent.width + 8) / 2
+                            color: "transparent"
+                            border.width: 2
+                            border.color: getBitValue(index) ? "#00ff00" : "transparent"
+                            opacity: 0.3
                         }
 
-                        // 闪烁动画（仅在状态为1时）
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: parent.width * 0.7
+                            height: parent.height * 0.7
+                            radius: width / 2
+
+                            gradient: Gradient {
+                                GradientStop {
+                                    position: 0.0
+                                    color: getBitValue(index) ? "#00ff00" : "#2a3f5f"
+                                }
+                                GradientStop {
+                                    position: 1.0
+                                    color: getBitValue(index) ? "#00aa00" : "#1a2f4f"
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            anchors.verticalCenterOffset: -8
+                            width: parent.width * 0.4
+                            height: parent.height * 0.4
+                            radius: width / 2
+                            color: "white"
+                            opacity: getBitValue(index) ? 0.8 : 0.1
+                        }
+
                         SequentialAnimation on opacity {
                             running: getBitValue(index)
                             loops: Animation.Infinite
-                            NumberAnimation { from: 1.0; to: 0.7; duration: 500 }
-                            NumberAnimation { from: 0.7; to: 1.0; duration: 500 }
+                            NumberAnimation { from: 1.0; to: 0.6; duration: 600 }
+                            NumberAnimation { from: 0.6; to: 1.0; duration: 600 }
                         }
                     }
 
-                    // 状态文本
-                    Text {
-                        text: getBitValue(index) ? "ON" : "OFF"
-                        font.pixelSize: 14
-                        font.bold: true
-                        color: getBitValue(index) ? "#27AE60" : "#7F8C8D"
+                    Rectangle {
+                        Layout.preferredWidth: 60
+                        Layout.preferredHeight: 22
                         Layout.alignment: Qt.AlignHCenter
+                        color: "#0a0f1e"
+                        radius: 3
+                        border.width: 1
+                        border.color: getBitValue(index) ? "#00ff00" : "#2a3f5f"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: getBitValue(index) ? "ON" : "OFF"
+                            font.pixelSize: 12
+                            font.bold: true
+                            font.family: "Consolas"
+                            color: getBitValue(index) ? "#00ff00" : "#5a6f8f"
+                        }
                     }
                 }
             }
         }
 
         // 字节值显示
-        RowLayout {
+        Rectangle {
             Layout.fillWidth: true
-            spacing: 10
+            Layout.preferredHeight: 45
+            color: "#0a0f1e"
+            radius: 6
+            border.width: 2
+            border.color: "#00d4ff"
 
-            Text {
-                text: "字节值:"
-                font.pixelSize: 14
-                color: "#7F8C8D"
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 2
+                radius: 4
+                color: "transparent"
+                border.width: 1
+                border.color: "#00d4ff"
+                opacity: 0.2
             }
 
-            Text {
-                text: getByteValue().toString(16).toUpperCase().padStart(2, '0') + "h (" + getByteValue() + ")"
-                font.pixelSize: 16
-                font.bold: true
-                font.family: "Courier New"
-                color: "#2C3E50"
-            }
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 20
 
-            Item { Layout.fillWidth: true }
+                RowLayout {
+                    spacing: 8
 
-            Text {
-                text: "二进制:"
-                font.pixelSize: 14
-                color: "#7F8C8D"
-            }
+                    Text {
+                        text: "HEX:"
+                        font.pixelSize: 14
+                        font.bold: true
+                        font.family: "Consolas"
+                        color: "#5a6f8f"
+                    }
 
-            Text {
-                text: getBinaryString()
-                font.pixelSize: 16
-                font.bold: true
-                font.family: "Courier New"
-                color: "#2C3E50"
+                    Text {
+                        text: "0x" + getByteValue().toString(16).toUpperCase().padStart(2, '0')
+                        font.pixelSize: 20
+                        font.bold: true
+                        font.family: "Consolas"
+                        color: "#00d4ff"
+                        style: Text.Outline
+                        styleColor: "#00d4ff"
+                    }
+                }
+
+                Rectangle {
+                    width: 2
+                    Layout.fillHeight: true
+                    color: "#2a3f5f"
+                }
+
+                RowLayout {
+                    spacing: 8
+
+                    Text {
+                        text: "DEC:"
+                        font.pixelSize: 14
+                        font.bold: true
+                        font.family: "Consolas"
+                        color: "#5a6f8f"
+                    }
+
+                    Text {
+                        text: getByteValue().toString().padStart(3, '0')
+                        font.pixelSize: 20
+                        font.bold: true
+                        font.family: "Consolas"
+                        color: "#00d4ff"
+                        style: Text.Outline
+                        styleColor: "#00d4ff"
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+
+                RowLayout {
+                    spacing: 8
+
+                    Text {
+                        text: "BIN:"
+                        font.pixelSize: 14
+                        font.bold: true
+                        font.family: "Consolas"
+                        color: "#5a6f8f"
+                    }
+
+                    Text {
+                        text: getBinaryString()
+                        font.pixelSize: 18
+                        font.bold: true
+                        font.family: "Consolas"
+                        font.letterSpacing: 2
+                        color: "#00ff00"
+                        style: Text.Outline
+                        styleColor: "#00ff00"
+                    }
+                }
             }
         }
     }
 
-    // ========== 辅助函数 ==========
     function getBitValue(index) {
         if (!bitsData || index < 0 || index >= bitsData.length) {
             return false
@@ -165,7 +330,7 @@ Rectangle {
         var str = ""
         for (var i = 7; i >= 0; i--) {
             str += getBitValue(i) ? "1" : "0"
-            if (i === 4) str += " "  // 中间加空格
+            if (i === 4) str += " "
         }
         return str
     }
@@ -181,7 +346,6 @@ Rectangle {
         return false
     }
 
-    // ========== 数据变化监听 ==========
     Connections {
         target: diDataManager
         function onBitChanged(modIndex, bitIndex, value) {

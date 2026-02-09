@@ -2219,9 +2219,16 @@ Item {
                 anchors.leftMargin: 2
                 anchors.rightMargin: 19
                 anchors.topMargin: 19
-                // ✅ 2026-01-26 [FIX 100.300.25.19]: 为底部按钮留出空间
-                // bottomButtonsContainer 高度 60 + bottomMargin 20 - contentArea bottomMargin 8 = 72
-                anchors.bottomMargin: 72
+                // ✅ 2026-02-09 [Phase 7.44.23]: 根据当前类别动态调整底部边距
+                // 对于没有底部按钮的类别（串口、CAN、TCP、MQTT），使用较小的边距
+                anchors.bottomMargin: {
+                    var buttons = root.getBottomButtons(root.currentCategory)
+                    if (buttons.length === 0) {
+                        return 20  // 没有底部按钮，只保留20px边距
+                    } else {
+                        return 72  // 有底部按钮，保留72px空间（60px按钮高度 + 12px间距）
+                    }
+                }
                 currentIndex: root.currentCategory  // 自动切换页面
 
                 // ✅ 2026-01-26 [FIX 100.300.25.9]: 添加调试输出
@@ -3276,7 +3283,9 @@ Item {
             return []  // ✅ 2026-02-07 [Phase 7.39.10]: CAN控制按钮已在 CANControlPage 内部实现
         case 8: // TCP控制
             return []  // ✅ 2026-02-08 [Phase 7.42]: TCP控制按钮已在 TCPControlPage 内部实现
-        case 9: // 逻辑控制
+        case 9: // MQTT控制
+            return []  // ✅ 2026-02-09 [Phase 7.44.23]: MQTT控制按钮已在 MQTTAutoControlTab 内部实现
+        case 10: // 逻辑控制
             return ["添加逻辑", "删除逻辑", "测试逻辑"]
         default:
             return []
