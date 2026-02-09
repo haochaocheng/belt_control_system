@@ -14,11 +14,17 @@ message(STATUS "Building MQTT module with Qt6::Mqtt")
 # 源文件
 set(MQTT_SOURCES
     MQTTController.cpp
+    MQTTAutoManager.cpp      # ✅ 2026-02-09 [Phase 7.44]: MQTT自动管理器
+    DIDataManager.cpp        # ✅ 2026-02-09 [Phase 7.44]: 开关量数据管理器
+    AIDataManager.cpp        # ✅ 2026-02-09 [Phase 7.44]: 模拟量数据管理器
 )
 
 # 头文件
 set(MQTT_HEADERS
     MQTTController.h
+    MQTTAutoManager.h        # ✅ 2026-02-09 [Phase 7.44]: MQTT自动管理器
+    DIDataManager.h          # ✅ 2026-02-09 [Phase 7.44]: 开关量数据管理器
+    AIDataManager.h          # ✅ 2026-02-09 [Phase 7.44]: 模拟量数据管理器
 )
 
 # 创建静态库
