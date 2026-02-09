@@ -430,6 +430,7 @@ Rectangle {
             onLoaded: {
                 console.log("✅ [MQTTControlPage] MQTTConfigPanel 加载成功")
                 item.currentModule = Qt.binding(function() { return root.currentModule })
+                item.currentModuleIndex = Qt.binding(function() { return root.currentModuleIndex })  // ✅ 2026-02-09 [Phase 7.44.8]: 传递currentModuleIndex
                 item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
                 item.focusTabIndex = Qt.binding(function() { return root.focusTabIndex })
                 item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
