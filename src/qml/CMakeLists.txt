@@ -127,6 +127,13 @@ qt_add_qml_module(qml_module
         components/device_info/pages/MQTTSubscribeTab.qml
         components/device_info/pages/MQTTPublishTab.qml
         components/device_info/pages/MQTTMonitorTab.qml
+        # ✅ 2026-02-09 [Phase 7.44]: MQTT自动控制页面组件
+        components/device_info/pages/MQTTAutoControlTab.qml
+        components/device_info/pages/DIModulePanel.qml
+        components/device_info/pages/AIModulePanel.qml
+        components/device_info/pages/CSModulePanel.qml
+        components/device_info/pages/VoiceModulePanel.qml
+        components/device_info/pages/ReservedModulePanel.qml
         components/device_info/pages/CurrentProtectionTab.qml
         components/device_info/pages/MotorTempTab.qml
         components/device_info/pages/FrontBearingTempTab.qml
