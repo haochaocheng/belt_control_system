@@ -66,7 +66,7 @@ private:
     void detectChanges(int moduleIndex, const QVector<bool> &newData);
 
     // 字节转位数组
-    QVector<bool> byteToB its(quint8 byte) const;
+    QVector<bool> byteToBits(quint8 byte) const;
 
     // 位数组转字节
     quint8 bitsToByte(const QVector<bool> &bits) const;

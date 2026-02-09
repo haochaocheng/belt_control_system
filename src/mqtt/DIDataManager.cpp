@@ -144,7 +144,7 @@ bool DIDataManager::parseJsonData(int moduleIndex, const QByteArray &payload)
     } else if (dataObj.contains("byte")) {
         // 从byte解析
         quint8 byte = static_cast<quint8>(dataObj["byte"].toInt());
-        newData = byteToB its(byte);
+        newData = byteToBits(byte);
     } else {
         qWarning() << "⚠️ [DIDataManager] 缺少bits或byte字段";
         return false;
@@ -195,7 +195,7 @@ void DIDataManager::detectChanges(int moduleIndex, const QVector<bool> &newData)
     }
 }
 
-QVector<bool> DIDataManager::byteToB its(quint8 byte) const
+QVector<bool> DIDataManager::byteToBits(quint8 byte) const
 {
     QVector<bool> bits(8);
     for (int i = 0; i < 8; ++i) {
