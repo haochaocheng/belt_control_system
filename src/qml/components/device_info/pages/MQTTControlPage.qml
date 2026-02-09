@@ -249,7 +249,7 @@ Rectangle {
             skipTabArea = false
             skipButtonArea = true  // ✅ 跳过按钮区域（MQTT页面没有底部按钮）
             lastMotorIndex = 7  // 8个模块 (0-7)
-            lastTabIndex = 3    // 4个Tab (0-3)
+            lastTabIndex = 4    // 5个Tab (0-4)  // ✅ 2026-02-09 [Phase 7.44.7]: 更新为5个Tab
 
             Qt.callLater(function() {
                 var paramCount = root.getParamFieldCount()

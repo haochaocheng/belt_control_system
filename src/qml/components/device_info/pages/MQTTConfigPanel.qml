@@ -40,6 +40,8 @@ Rectangle {
             return publishTabLoader.item
         case 3:
             return monitorTabLoader.item
+        case 4:  // ✅ 2026-02-09 [Phase 7.44.7]: 添加自动控制Tab
+            return autoControlTabLoader.item
         default:
             return null
         }
@@ -88,7 +90,7 @@ Rectangle {
             width: childrenRect.width
 
             Repeater {
-                model: ["连接配置", "订阅主题", "发布消息", "数据监控"]
+                model: ["连接配置", "订阅主题", "发布消息", "数据监控", "自动控制"]  // ✅ 2026-02-09 [Phase 7.44.7]: 添加自动控制Tab
 
                 Rectangle {
                     width: 110
@@ -221,6 +223,18 @@ Rectangle {
                     item.requestFocusParamIndex.connect(function(paramIndex) {
                         root.requestFocusParamIndex(paramIndex)
                     })
+                }
+            }
+
+            // Tab 4: 自动控制
+            // ✅ 2026-02-09 [Phase 7.44.7]: 添加自动控制Tab
+            Loader {
+                id: autoControlTabLoader
+                source: "MQTTAutoControlTab.qml"
+
+                onLoaded: {
+                    console.log("✅ [MQTTConfigPanel] MQTTAutoControlTab 加载成功")
+                    item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                 }
             }
         }
