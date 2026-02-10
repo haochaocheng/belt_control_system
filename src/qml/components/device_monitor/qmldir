@@ -1,7 +1,4 @@
-singleton Theme 1.0 Theme.qml
-AnimatedCounter 1.0 AnimatedCounter.qml
 BeltConnectionDiagram 1.0 BeltConnectionDiagram.qml
-CircularProgress 1.0 CircularProgress.qml
 CornerDecoration 1.0 CornerDecoration.qml
 DeviceStatusCard 1.0 DeviceStatusCard.qml
 GlowLed 1.0 GlowLed.qml

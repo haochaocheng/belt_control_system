@@ -175,9 +175,7 @@
         <file>components/device_info/pages/YAxisVibrationTab.qml</file>
         <file>components/device_info/qmldir</file>
         <file>components/device_info/VirtualKeyboardManager.qml</file>
-        <file>components/device_monitor/AnimatedCounter.qml</file>
         <file>components/device_monitor/BeltConnectionDiagram.qml</file>
-        <file>components/device_monitor/CircularProgress.qml</file>
         <file>components/device_monitor/CornerDecoration.qml</file>
         <file>components/device_monitor/DeviceStatusCard.qml</file>
         <file>components/device_monitor/GlowLed.qml</file>
@@ -188,7 +186,6 @@
         <file>components/device_monitor/SmoothLineChart.qml</file>
         <file>components/device_monitor/StationCard.qml</file>
         <file>components/device_monitor/StatusBadge.qml</file>
-        <file>components/device_monitor/Theme.qml</file>
         <file>components/MotorControlBtn.qml</file>
         <file>components/MotorControlPanel.qml</file>
         <file>components/parameter_settings/BasicParametersSection.qml</file>
@@ -414,6 +411,10 @@
         <file>pages/Input1Page.qml</file>
         <file>pages/ParameterSettings.qml</file>
         <file>pages/VoiceManagement.qml</file>
+        <file>theme/qmldir</file>
+        <file>theme/Theme.qml</file>
+        <file>theme/AnimatedCounter.qml</file>
+        <file>theme/CircularProgress.qml</file>
         <file>qtquickcontrols2.conf</file>
         <file>sounds/ringtone.wav</file>
         <file>VirtualKeyboardSettings.qml</file>
