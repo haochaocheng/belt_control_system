@@ -68,6 +68,10 @@ Item {
     property int currentCategory: 0               // 当前选中的参数类别
     property int currentBottomButtonIndex: 0      // ✅ 2026-01-24 [FIX]: 当前选中的底部按钮索引
 
+    // ✅ 2026-02-10 [Phase 7.45.4]: 权限控制属性
+    property bool hasPermission: true             // 是否有修改权限（默认true，在打开时更新）
+    property bool isReadOnly: false               // 是否只读模式
+
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统
     property int currentFocusArea: 1              // 当前焦点区域 (0:顶部 1:左侧类别 2:右侧内容 3:底部)
     property int currentTopButtonIndex: 0         // 顶部按钮索引 (0:关闭 1:保存 2:重置)
@@ -166,8 +170,24 @@ Item {
 
     // ✅ 2026-01-29 [Qt 虚拟键盘]: 初始化
     // ✅ 2026-01-28 [FIX 100.300.100]: 强制获取焦点
+    // ✅ 2026-02-10 [Phase 7.45.4]: 添加权限检查
     Component.onCompleted: {
         console.log("✅ [DeviceSettingsDialog] Qt 虚拟键盘已初始化")
+
+        // ✅ 2026-02-10 [Phase 7.45.4]: 检查权限
+        if (typeof deviceRoleManager !== 'undefined') {
+            hasPermission = deviceRoleManager.hasPermission(deviceId)
+            isReadOnly = !hasPermission
+            console.log("🔒 [DeviceSettingsDialog] 设备ID:", deviceId, "权限检查:", hasPermission ? "可编辑" : "只读")
+
+            if (isReadOnly) {
+                console.log("⚠️ [DeviceSettingsDialog] 只读模式：当前设备不是本机，无法修改参数")
+            }
+        } else {
+            console.warn("⚠️ [DeviceSettingsDialog] deviceRoleManager 未定义，默认允许编辑")
+            hasPermission = true
+            isReadOnly = false
+        }
 
         // 强制 FocusScope 和对话框获取焦点
         dialogFocusScope.forceActiveFocus()
@@ -1957,18 +1977,20 @@ Item {
 
                 // ✅ 2026-01-25 [工业科技感设计]: 保存按钮
                 // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器
+                // ✅ 2026-02-10 [Phase 7.45.4]: 只读模式时禁用
                 Button {
                     id: saveButton
                     text: "保存"
                     width: 80
                     height: 35
                     flat: true
+                    enabled: !root.isReadOnly  // 只读模式时禁用
                     background: Rectangle {
-                        color: "#2196F3"  // ✅ 科技蓝背景
-                        border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 1) ? "#FFFFFF" : "#42A5F5"
+                        color: root.isReadOnly ? "#757575" : "#2196F3"  // 禁用时灰色
+                        border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 1) ? "#FFFFFF" : (root.isReadOnly ? "#9E9E9E" : "#42A5F5")
                         border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 1) ? 3 : 1
                         radius: 2
-                        opacity: 1.0
+                        opacity: root.isReadOnly ? 0.5 : 1.0  // 禁用时半透明
                     }
                     contentItem: Text {
                         text: parent.text
@@ -2016,18 +2038,20 @@ Item {
 
                 // ✅ 2026-01-25 [工业科技感设计]: 重置按钮
                 // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器
+                // ✅ 2026-02-10 [Phase 7.45.4]: 只读模式时禁用
                 Button {
                     id: resetButton
                     text: "重置"
                     width: 80
                     height: 35
                     flat: true
+                    enabled: !root.isReadOnly  // 只读模式时禁用
                     background: Rectangle {
-                        color: "#FF9800"  // ✅ 橙色背景
-                        border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 2) ? "#FFFFFF" : "#FF9800"
+                        color: root.isReadOnly ? "#757575" : "#FF9800"  // 禁用时灰色
+                        border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 2) ? "#FFFFFF" : (root.isReadOnly ? "#9E9E9E" : "#FF9800")
                         border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 2) ? 3 : 1
                         radius: 2
-                        opacity: 1.0
+                        opacity: root.isReadOnly ? 0.5 : 1.0  // 禁用时半透明
                     }
                     contentItem: Text {
                         text: parent.text
@@ -2046,8 +2070,56 @@ Item {
             }
         }
 
+        // ✅ 2026-02-10 [Phase 7.45.4]: 只读提示横幅
+        Rectangle {
+            id: readOnlyBanner
+            visible: root.isReadOnly
+            anchors.top: topButtonsContainer.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.topMargin: 5
+            anchors.leftMargin: 2
+            anchors.rightMargin: 2
+            height: 50
+            color: "#F39C12"
+            radius: 5
+            z: 1000  // 确保在最上层
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 15
+
+                // 警告图标
+                Text {
+                    text: "⚠️"
+                    font.pixelSize: 24
+                    color: "#FFFFFF"
+                }
+
+                // 提示文字
+                Text {
+                    text: "只读模式：当前设备不是本机，无法修改参数"
+                    font.pixelSize: 18
+                    font.bold: true
+                    font.family: "Microsoft YaHei"
+                    color: "#FFFFFF"
+                    Layout.fillWidth: true
+                }
+
+                // 本机设备信息
+                Text {
+                    text: "本机设备: " + (typeof deviceRoleManager !== 'undefined' ? deviceRoleManager.localDeviceName : "未知")
+                    font.pixelSize: 16
+                    font.family: "Microsoft YaHei"
+                    color: "#FFFFFF"
+                }
+            }
+        }
+
         // ========== 左侧按钮列 ==========
         // ✅ 2026-01-24 [FIX 100.301]: 使用 Rectangle 容器，042.png 作为背景
+        // ✅ 2026-02-10 [Phase 7.45.4]: 调整topMargin，为只读横幅腾出空间
         Rectangle {
             id: leftButtonsContainer
             anchors.left: parent.left
@@ -2055,7 +2127,7 @@ Item {
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.leftMargin: 0
-            anchors.topMargin: 65
+            anchors.topMargin: root.isReadOnly ? 120 : 65  // 只读模式时增加topMargin
             anchors.bottomMargin: 8
             width: 142
             color: "transparent"
@@ -2174,6 +2246,7 @@ Item {
         }
 
         // ========== 中间参数显示区域 ==========
+        // ✅ 2026-02-10 [Phase 7.45.4]: 调整topMargin，为只读横幅腾出空间
         Rectangle {
             id: contentArea
             anchors.left: leftButtonsContainer.right  // ✅ 2026-01-24 [FIX]: 更新锚点引用
@@ -2182,7 +2255,7 @@ Item {
             anchors.bottom: parent.bottom  // ✅ 2026-01-26 [FIX 100.300.25.8]: 延伸到底部，覆盖底部按钮区域
             anchors.leftMargin: 2
             anchors.rightMargin: 2
-            anchors.topMargin: 2
+            anchors.topMargin: root.isReadOnly ? 57 : 2  // 只读模式时增加topMargin
             anchors.bottomMargin: 8
             color: "transparent"  // 透明，显示背景图片
 

@@ -80,27 +80,67 @@ void loadFromConfig();
 
 ## 🚧 进行中工作
 
-### Phase 7.45.3：创建设备监控界面组件
-**状态**: 🔄 进行中
+**无**
 
-**待创建文件**：
-1. `src/qml/components/device_monitor/DeviceMonitorDialog.qml` - 设备监控对话框
-2. `src/qml/components/device_monitor/DeviceStatusCard.qml` - 设备状态卡片
-3. `src/qml/components/device_monitor/StationCard.qml` - 集控设备卡片
-4. `src/qml/components/device_monitor/InterlockDiagram.qml` - 连锁关系图
+---
+
+## ✅ 已完成工作（新增）
+
+### 4. Phase 7.45.4：添加权限控制
+**状态**: ✅ 已完成
+
+**修改文件**：
+- `src/qml/components/device_info/DeviceSettingsDialog.qml`
+
+**新增功能**：
+1. **权限属性**：
+   - `hasPermission`: 是否有修改权限
+   - `isReadOnly`: 是否只读模式
+
+2. **权限检查逻辑**（Component.onCompleted）：
+   ```qml
+   if (typeof deviceRoleManager !== 'undefined') {
+       hasPermission = deviceRoleManager.hasPermission(deviceId)
+       isReadOnly = !hasPermission
+   }
+   ```
+
+3. **只读提示横幅**：
+   - 橙色背景（#F39C12）
+   - 警告图标 ⚠️
+   - 提示文字："只读模式：当前设备不是本机，无法修改参数"
+   - 显示本机设备信息
+   - 高度：50px
+   - 位置：顶部按钮栏下方
+
+4. **布局调整**：
+   - 左侧按钮列：`topMargin: root.isReadOnly ? 120 : 65`
+   - 中间内容区域：`topMargin: root.isReadOnly ? 57 : 2`
+   - 确保横幅显示时不遮挡其他内容
+
+5. **按钮禁用**：
+   - 保存按钮：`enabled: !root.isReadOnly`
+   - 重置按钮：`enabled: !root.isReadOnly`
+   - 禁用时显示灰色（#757575）
+   - 禁用时半透明（opacity: 0.5）
+
+**界面效果**：
+```
+┌───────────────────────────────────────────────────────────────────┐
+│  设备名称                                    [关闭] [保存] [重置]  │
+├───────────────────────────────────────────────────────────────────┤
+│  ⚠️ 只读模式：当前设备不是本机，无法修改参数  本机设备: 1号皮带  │
+├───────────────────────────────────────────────────────────────────┤
+│  [类别]  │  [参数内容区域]                                        │
+│  ...     │  ...                                                   │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+**Git 提交**: 待提交
 
 ---
 
 ## 📋 待完成工作
-
-### Phase 7.45.4：添加权限控制
-**文件**: `src/qml/components/device_info/DeviceSettingsDialog.qml`
-
-**功能**：
-- 打开对话框时检查权限
-- 如果不是本机设备，显示只读提示
-- 禁用所有输入控件
-- 禁用保存按钮
 
 ### Phase 7.45.5：集成到主屏幕
 **文件**: `src/qml/Input1/Input1Content/Screen01.qml`
@@ -130,43 +170,36 @@ void loadFromConfig();
 ## 📊 进度统计
 
 **总任务数**: 7个阶段
-**已完成**: 2个阶段（28.6%）
-**进行中**: 1个阶段（14.3%）
-**待完成**: 4个阶段（57.1%）
+**已完成**: 4个阶段（57.1%）
+**进行中**: 0个阶段（0%）
+**待完成**: 3个阶段（42.9%）
 
 **代码统计**：
 - 新增 C++ 文件：2个（DeviceRoleManager.h/cpp）
-- 修改 QML 文件：1个（BasicConfigPage.qml）
-- 新增代码行数：约630行
-- Git 提交：3次
+- 新增 QML 文件：4个（设备监控界面组件）
+- 修改 QML 文件：2个（BasicConfigPage.qml, DeviceSettingsDialog.qml）
+- 新增代码行数：约900行
+- Git 提交：4次（待提交最后一次）
 
 ---
 
 ## 🎯 下一步计划
 
-1. **优先级1**：完成 Phase 7.45.3（创建设备监控界面组件）
-   - 创建 device_monitor 目录
-   - 实现 StationCard.qml（集控设备卡片）
-   - 实现 DeviceStatusCard.qml（设备状态卡片）
-   - 实现 InterlockDiagram.qml（连锁关系图）
-   - 实现 DeviceMonitorDialog.qml（主对话框）
-
-2. **优先级2**：完成 Phase 7.45.4（权限控制）
-   - 修改 DeviceSettingsDialog.qml
-   - 添加权限检查逻辑
-   - 添加只读提示横幅
-
-3. **优先级3**：完成 Phase 7.45.5（主屏幕集成）
+1. **优先级1**：完成 Phase 7.45.5（主屏幕集成）
    - 修改 Screen01.qml
    - 添加设备监控按钮
+   - 位置：首页后面、参数设置前面
 
-4. **优先级4**：完成 Phase 7.45.6（MQTT 集成）
+2. **优先级2**：完成 Phase 7.45.6（MQTT 集成）
    - 修改 MQTTAutoManager
    - 实现状态发布和订阅
+   - 集控设备状态发布（`station/status/{stationId}`）
+   - 设备状态发布（`device/status/{deviceId}`）
 
-5. **优先级5**：完成 Phase 7.45.7（测试和优化）
+3. **优先级3**：完成 Phase 7.45.7（测试和优化）
    - 完整功能测试
    - 性能优化
+   - 文档完善
 
 ---
 
