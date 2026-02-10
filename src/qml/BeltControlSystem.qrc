@@ -185,6 +185,7 @@
         <file>components/device_monitor/MiniTrendChart.qml</file>
         <file>components/device_monitor/ModernButton.qml</file>
         <file>components/device_monitor/qmldir</file>
+        <file>components/device_monitor/SmoothLineChart.qml</file>
         <file>components/device_monitor/StationCard.qml</file>
         <file>components/device_monitor/StatusBadge.qml</file>
         <file>components/device_monitor/Theme.qml</file>

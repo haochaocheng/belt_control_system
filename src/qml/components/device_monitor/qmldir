@@ -8,5 +8,6 @@ GlowLed 1.0 GlowLed.qml
 InterlockDiagram 1.0 InterlockDiagram.qml
 MiniTrendChart 1.0 MiniTrendChart.qml
 ModernButton 1.0 ModernButton.qml
+SmoothLineChart 1.0 SmoothLineChart.qml
 StationCard 1.0 StationCard.qml
 StatusBadge 1.0 StatusBadge.qml
