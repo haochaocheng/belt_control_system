@@ -27,6 +27,8 @@ ApplicationWindow {
     // ✅ 2026-01-28 [FIX 100.300.66]: 添加 runtimeTracker 和 deviceConfigMgr
     property alias runtimeTracker: mockBackend.runtimeTracker
     property alias deviceConfigMgr: mockBackend.deviceConfigMgr
+    // ✅ 2026-02-10 [Phase 7.45]: 添加 deviceRoleManager
+    property alias deviceRoleManager: mockBackend.deviceRoleManager
 
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.12.3]: 暴露虚拟键盘高度为全局属性
     // 让CustomSpinBox可以获取实际的虚拟键盘高度，而不是估算

@@ -336,6 +336,68 @@ QtObject {
         }
     }
 
+    // ✅ 2026-02-10 [Phase 7.45]: 添加 deviceRoleManager 模拟对象
+    property QtObject deviceRoleManager: QtObject {
+        // 本机角色和设备
+        property string stationRole: "master"  // "master" 或 "sub"
+        property string stationName: "主站"
+        property int localDeviceId: 1
+        property string localDeviceName: "1号皮带"
+
+        // 所有设备信息（12个设备）
+        property var allDevices: [
+            { deviceId: 1, deviceName: "1号皮带", deviceType: "Belt", isLocal: true, isOnline: true, status: "运行中", speed: 1.2, controlStation: "主站" },
+            { deviceId: 2, deviceName: "2号皮带", deviceType: "Belt", isLocal: false, isOnline: true, status: "运行中", speed: 1.3, controlStation: "分站1" },
+            { deviceId: 3, deviceName: "3号皮带", deviceType: "Belt", isLocal: false, isOnline: true, status: "停止", speed: 0.0, controlStation: "分站2" },
+            { deviceId: 4, deviceName: "4号皮带", deviceType: "Belt", isLocal: false, isOnline: false, status: "", speed: 0.0, controlStation: "分站3" },
+            { deviceId: 5, deviceName: "5号皮带", deviceType: "Belt", isLocal: false, isOnline: false, status: "", speed: 0.0, controlStation: "" },
+            { deviceId: 6, deviceName: "6号皮带", deviceType: "Belt", isLocal: false, isOnline: false, status: "", speed: 0.0, controlStation: "" },
+            { deviceId: 7, deviceName: "7号皮带", deviceType: "Belt", isLocal: false, isOnline: false, status: "", speed: 0.0, controlStation: "" },
+            { deviceId: 8, deviceName: "8号皮带", deviceType: "Belt", isLocal: false, isOnline: false, status: "", speed: 0.0, controlStation: "" },
+            { deviceId: 9, deviceName: "转载机", deviceType: "Loader", isLocal: false, isOnline: true, status: "运行中", speed: 0.8, controlStation: "主站" },
+            { deviceId: 10, deviceName: "破碎机", deviceType: "Crusher", isLocal: false, isOnline: true, status: "停止", speed: 0.0, controlStation: "主站" },
+            { deviceId: 11, deviceName: "前刮板", deviceType: "FrontScraper", isLocal: false, isOnline: false, status: "", speed: 0.0, controlStation: "分站1" },
+            { deviceId: 12, deviceName: "后刮板", deviceType: "RearScraper", isLocal: false, isOnline: true, status: "运行中", speed: 0.9, controlStation: "分站1" }
+        ]
+
+        // 所有集控设备信息
+        property var allStations: [
+            { stationId: 1, stationRole: "master", stationName: "主站", controlDevice: "1号皮带", controlDeviceId: 1, ip: "192.168.10.188", isOnline: true, isLocal: true, status: "运行中" },
+            { stationId: 2, stationRole: "sub", stationName: "分站1", controlDevice: "2号皮带", controlDeviceId: 2, ip: "192.168.10.189", isOnline: true, isLocal: false, status: "运行中" },
+            { stationId: 3, stationRole: "sub", stationName: "分站2", controlDevice: "3号皮带", controlDeviceId: 3, ip: "192.168.10.190", isOnline: true, isLocal: false, status: "停止" },
+            { stationId: 4, stationRole: "sub", stationName: "分站3", controlDevice: "4号皮带", controlDeviceId: 4, ip: "", isOnline: false, isLocal: false, status: "" }
+        ]
+
+        // 方法
+        function setLocalDeviceId(deviceId) {
+            console.log("✅ [MockBackend] 设置本机设备ID:", deviceId)
+            localDeviceId = deviceId
+            localDeviceName = deviceId + "号皮带"
+        }
+
+        function setStationRole(role) {
+            console.log("✅ [MockBackend] 设置本机角色:", role)
+            stationRole = role
+            stationName = role === "master" ? "主站" : "分站"
+        }
+
+        function isLocalDevice(deviceId) {
+            return deviceId === localDeviceId
+        }
+
+        function hasPermission(deviceId) {
+            return deviceId === localDeviceId
+        }
+
+        function saveToConfig() {
+            console.log("✅ [MockBackend] 保存设备角色配置")
+        }
+
+        function loadFromConfig() {
+            console.log("✅ [MockBackend] 加载设备角色配置")
+        }
+    }
+
     // ========== 初始化日志 ==========
     Component.onCompleted: {
         console.log("✅ QDS 后端模拟已加载")
