@@ -174,7 +174,46 @@ void loadFromConfig();
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Git 提交**: 待提交
+**Git 提交**: `a3cc5a43`
+
+### 6. Phase 7.45.5（补充）：修复设备监控按钮
+**状态**: ✅ 已完成
+
+**问题**：
+- 设备监控按钮点击后对话框无法打开
+- 原因：Dialog组件应使用`open()`方法，而不是`visible`属性
+
+**修改**：
+- 简化Loader结构，直接加载DeviceMonitorDialog.qml
+- 在onClicked中使用`Qt.callLater()`调用`item.open()`
+- 在onLoaded中调用`item.open()`
+- 添加详细的控制台日志
+
+**代码示例**：
+```qml
+Button {
+    onClicked: {
+        deviceMonitorDialogLoader.active = true
+        Qt.callLater(function() {
+            if (deviceMonitorDialogLoader.item) {
+                deviceMonitorDialogLoader.item.open()
+            }
+        })
+    }
+}
+
+Loader {
+    id: deviceMonitorDialogLoader
+    source: "../../components/device_monitor/DeviceMonitorDialog.qml"
+    onLoaded: {
+        if (item) {
+            item.open()
+        }
+    }
+}
+```
+
+**Git 提交**: `b0f3aea4`
 
 ---
 
@@ -206,10 +245,10 @@ void loadFromConfig();
 
 **代码统计**：
 - 新增 C++ 文件：2个（DeviceRoleManager.h/cpp）
-- 新增 QML 文件：4个（设备监控界面组件）
-- 修改 QML 文件：3个（BasicConfigPage.qml, DeviceSettingsDialog.qml, Screen01.qml）
-- 新增代码行数：约1000行
-- Git 提交：5次（待提交最后一次）
+- 新增 QML 文件：5个（设备监控界面组件 + MockBackend更新）
+- 修改 QML 文件：4个（BasicConfigPage.qml, DeviceSettingsDialog.qml, Screen01.qml, main_qds.qml）
+- 新增代码行数：约1200行
+- Git 提交：6次
 
 ---
 
