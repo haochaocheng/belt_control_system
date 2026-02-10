@@ -2,6 +2,7 @@ import QtQuick 2.15
 
 // ✅ 2026-02-10 [Phase 7.45.11]: 迷你趋势图组件
 // 显示实时数据趋势，带有动画效果
+// ✅ 2026-02-10 [Phase 7.45.14]: 优化样式，应用 Theme 主题系统
 Item {
     id: root
 
@@ -9,8 +10,8 @@ Item {
     property int maxDataPoints: 20
     property real minValue: 0
     property real maxValue: 100
-    property color lineColor: "#00d4ff"
-    property color fillColor: "#1a2f3e"
+    property color lineColor: Theme.accent
+    property color fillColor: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
     property int lineWidth: 2
 
     width: 200
@@ -19,10 +20,10 @@ Item {
     // 背景
     Rectangle {
         anchors.fill: parent
-        color: "#0a0f1e"
-        border.width: 1
-        border.color: "#2a3f5f"
-        radius: 3
+        color: Theme.primary
+        border.width: Theme.borderWidthThin
+        border.color: Theme.borderSecondary
+        radius: Theme.radiusSmall
     }
 
     // 网格线
@@ -34,8 +35,9 @@ Item {
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
-            ctx.strokeStyle = "#2a3f5f"
+            ctx.strokeStyle = Theme.borderSecondary
             ctx.lineWidth = 0.5
+            ctx.globalAlpha = 0.3
 
             // 水平网格线（3条）
             for (var i = 0; i < 4; i++) {
@@ -87,6 +89,8 @@ Item {
             // 绘制线条
             ctx.strokeStyle = root.lineColor
             ctx.lineWidth = root.lineWidth
+            ctx.lineCap = "round"
+            ctx.lineJoin = "round"
             ctx.beginPath()
 
             for (var j = 0; j < root.dataPoints.length; j++) {
