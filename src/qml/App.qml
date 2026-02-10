@@ -168,14 +168,15 @@ Item {
         currentIndex: 0
 
         // ✅ 2026-01-31 [FIX 100.300.112.8.17]: 监听页面切换，恢复焦点
+        // ✅ 2026-02-10 [Phase 7.45.12]: 更新 Input1Page 索引（从 4 变成 5）
         onCurrentIndexChanged: {
             console.log("[SwipeView] 页面切换到索引:", currentIndex)
 
-            // 当切换到 Input1Page（索引4）时，将焦点转移到 Screen01
-            if (currentIndex === 4) {
+            // 当切换到 Input1Page（索引5）时，将焦点转移到 Screen01
+            if (currentIndex === 5) {
                 console.log("[SwipeView] 切换到 Input1Page，恢复 Screen01 焦点")
                 Qt.callLater(function() {
-                    var input1Page = swipeView.itemAt(4)
+                    var input1Page = swipeView.itemAt(5)
                     if (input1Page && input1Page.children[0]) {
                         var screenLoader = input1Page.children[0]
                         if (screenLoader && screenLoader.item) {
@@ -200,20 +201,24 @@ Item {
             onCurrentSpeedChanged: app.currentSpeed = currentSpeed
         }
 
-        // Page 2: Parameter Settings (unchanged)
+        // ✅ 2026-02-10 [Phase 7.45.12]: Page 2: Device Monitor - 设备监控（数字孪生）
+        DeviceMonitorPage {
+        }
+
+        // Page 3: Parameter Settings (unchanged)
         ParameterSettings {
         }
 
-        // Page 3: Alarm Page (unchanged)
+        // Page 4: Alarm Page (unchanged)
         AlarmPage {
         }
 
-        // Page 4: Device Operation Log - 设备运行信息
+        // Page 5: Device Operation Log - 设备运行信息
         DeviceOperationLog {
         }
 
-        // ✅ 2026-01-31 [FIX 100.300.112.8.9]: 添加 Input1Page（第5个页面）
-        // Page 5: Input1 Page - QDS 设计的输入界面
+        // ✅ 2026-01-31 [FIX 100.300.112.8.9]: 添加 Input1Page（第6个页面）
+        // Page 6: Input1 Page - QDS 设计的输入界面
         Input1Page {
         }
     }
