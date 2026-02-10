@@ -39,8 +39,37 @@ Rectangle {
         return "#00ff00"  // 分站在线：绿色
     }
 
-    color: "#1a1f2e"
+    // ✅ 科技感：渐变背景
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: "#1a2f3e" }
+        GradientStop { position: 1.0; color: "#0a1f2e" }
+    }
+
     opacity: isOnline ? 1.0 : 0.6
+
+    // ✅ 科技感：外层发光效果
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: -3
+        color: "transparent"
+        border.width: 2
+        border.color: root.border.color
+        radius: root.radius + 3
+        opacity: 0.4
+        visible: isOnline
+    }
+
+    // ✅ 科技感：内层光晕
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 2
+        color: "transparent"
+        border.width: 1
+        border.color: root.border.color
+        radius: root.radius - 2
+        opacity: 0.6
+        visible: isOnline
+    }
 
     // ========== 内容布局 ==========
     ColumnLayout {
@@ -69,6 +98,40 @@ Rectangle {
                     loops: Animation.Infinite
                     NumberAnimation { from: 1.0; to: 0.3; duration: 800 }
                     NumberAnimation { from: 0.3; to: 1.0; duration: 800 }
+                }
+
+                // ✅ 科技感：光晕效果（3层）
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width + 8
+                    height: parent.height + 8
+                    radius: (parent.width + 8) / 2
+                    color: "transparent"
+                    border.width: 2
+                    border.color: parent.color
+                    opacity: 0.5
+                }
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width + 16
+                    height: parent.height + 16
+                    radius: (parent.width + 16) / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: parent.color
+                    opacity: 0.3
+                }
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width + 24
+                    height: parent.height + 24
+                    radius: (parent.width + 24) / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: parent.color
+                    opacity: 0.1
                 }
             }
 
