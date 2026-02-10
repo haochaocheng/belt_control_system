@@ -63,6 +63,136 @@ Rectangle {
                 Layout.leftMargin: 10
             }
 
+            // ✅ 2026-02-10 [Phase 7.45.2]: 本机角色配置区域
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 200
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                color: "#1a1f2e"
+                border.width: 2
+                border.color: "#00d4ff"
+                radius: 8
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 20
+                    spacing: 15
+
+                    // 标题
+                    Text {
+                        text: "【本机角色配置】"
+                        font.pixelSize: 20
+                        font.bold: true
+                        font.family: "Microsoft YaHei"
+                        color: "#00d4ff"
+                    }
+
+                    // 本机角色选择
+                    RowLayout {
+                        spacing: 15
+
+                        Text {
+                            text: "本机角色:"
+                            font.pixelSize: 16
+                            font.family: "Microsoft YaHei"
+                            color: "#00d4ff"
+                            Layout.preferredWidth: 100
+                        }
+
+                        ComboBox {
+                            id: stationRoleSelector
+                            Layout.preferredWidth: 200
+                            Layout.preferredHeight: 40
+
+                            model: ["主站", "分站"]
+                            currentIndex: 0  // 默认主站
+
+                            onCurrentIndexChanged: {
+                                if (typeof deviceRoleManager !== 'undefined') {
+                                    deviceRoleManager.setStationRole(
+                                        currentIndex === 0 ? "master" : "sub"
+                                    )
+                                }
+                            }
+
+                            // 科技风格样式
+                            delegate: ItemDelegate {
+                                width: stationRoleSelector.width
+                                contentItem: Text {
+                                    text: modelData
+                                    color: highlighted ? "#00ff00" : "#00d4ff"
+                                    font.pixelSize: 16
+                                    font.family: "Microsoft YaHei"
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                highlighted: stationRoleSelector.highlightedIndex === index
+                                background: Rectangle {
+                                    color: highlighted ? "#2a3f5f" : "#0a0f1e"
+                                }
+                            }
+                        }
+                    }
+
+                    // 本机设备选择
+                    RowLayout {
+                        spacing: 15
+
+                        Text {
+                            text: "本机设备:"
+                            font.pixelSize: 16
+                            font.family: "Microsoft YaHei"
+                            color: "#00d4ff"
+                            Layout.preferredWidth: 100
+                        }
+
+                        ComboBox {
+                            id: localDeviceSelector
+                            Layout.preferredWidth: 200
+                            Layout.preferredHeight: 40
+
+                            model: [
+                                "1号皮带", "2号皮带", "3号皮带", "4号皮带",
+                                "5号皮带", "6号皮带", "7号皮带", "8号皮带"
+                            ]
+                            currentIndex: 0  // 默认1号皮带
+
+                            onCurrentIndexChanged: {
+                                if (currentIndex >= 0 && typeof deviceRoleManager !== 'undefined') {
+                                    deviceRoleManager.setLocalDeviceId(currentIndex + 1)
+                                }
+                            }
+
+                            // 科技风格样式
+                            delegate: ItemDelegate {
+                                width: localDeviceSelector.width
+                                contentItem: Text {
+                                    text: modelData
+                                    color: highlighted ? "#00ff00" : "#00d4ff"
+                                    font.pixelSize: 16
+                                    font.family: "Microsoft YaHei"
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                highlighted: localDeviceSelector.highlightedIndex === index
+                                background: Rectangle {
+                                    color: highlighted ? "#2a3f5f" : "#0a0f1e"
+                                }
+                            }
+                        }
+                    }
+
+                    // 说明文字
+                    Text {
+                        text: "💡 说明: 选择本机角色和控制的设备后，只能修改本机设备的参数"
+                        font.pixelSize: 14
+                        font.family: "Microsoft YaHei"
+                        color: "#5a6f8f"
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                    }
+                }
+            }
+
             // ✅ 复用基本参数组件
             Loader {
                 id: basicParamsLoader
