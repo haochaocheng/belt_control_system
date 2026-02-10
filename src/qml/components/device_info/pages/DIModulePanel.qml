@@ -35,13 +35,13 @@ Rectangle {
     // ========== 布局 ==========
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 15
+        anchors.margins: 15  // ✅ 2026-02-09 [Phase 7.44.23]: 20 → 15，减少边距
+        spacing: 12  // ✅ 2026-02-09 [Phase 7.44.23]: 15 → 12，减少间距
 
         // 标题行
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 35
+            Layout.preferredHeight: 40  // ✅ 2026-02-09 [Phase 7.44.23]: 35 → 40，增加标题行高度
             color: "transparent"
 
             Rectangle {
@@ -68,7 +68,7 @@ Rectangle {
 
                 Text {
                     text: moduleName
-                    font.pixelSize: 18
+                    font.pixelSize: 24  // ✅ 2026-02-09 [Phase 7.44.23]: 18 → 24，增大标题字体
                     font.bold: true
                     font.family: "Microsoft YaHei"
                     color: "#00d4ff"
@@ -99,8 +99,8 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             columns: 8
-            rowSpacing: 8
-            columnSpacing: 12
+            rowSpacing: 10  // ✅ 2026-02-09 [Phase 7.44.23]: 8 → 10，增加行间距
+            columnSpacing: 15  // ✅ 2026-02-09 [Phase 7.44.23]: 12 → 15，增加列间距
 
             Repeater {
                 model: 8
@@ -108,11 +108,11 @@ Rectangle {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    spacing: 8
+                    spacing: 10  // ✅ 2026-02-09 [Phase 7.44.23]: 8 → 10，增加内部间距
 
                     Rectangle {
-                        Layout.preferredWidth: 60
-                        Layout.preferredHeight: 22
+                        Layout.preferredWidth: 70  // ✅ 2026-02-09 [Phase 7.44.23]: 60 → 70，增加标签宽度
+                        Layout.preferredHeight: 26  // ✅ 2026-02-09 [Phase 7.44.23]: 22 → 26，增加标签高度
                         Layout.alignment: Qt.AlignHCenter
                         color: "#0a0f1e"
                         radius: 3
@@ -122,7 +122,7 @@ Rectangle {
                         Text {
                             anchors.centerIn: parent
                             text: "BIT " + index
-                            font.pixelSize: 11
+                            font.pixelSize: 14  // ✅ 2026-02-09 [Phase 7.44.23]: 11 → 14，增大BIT标签字体
                             font.bold: true
                             font.family: "Consolas"
                             color: "#00d4ff"
@@ -130,11 +130,11 @@ Rectangle {
                     }
 
                     Rectangle {
-                        Layout.preferredWidth: 60
-                        Layout.preferredHeight: 60
+                        Layout.preferredWidth: 80  // ✅ 2026-02-09 [Phase 7.44.23]: 60 → 80，增加LED尺寸
+                        Layout.preferredHeight: 80  // ✅ 2026-02-09 [Phase 7.44.23]: 60 → 80，增加LED尺寸
                         Layout.alignment: Qt.AlignHCenter
                         color: "#0a0f1e"
-                        radius: 30
+                        radius: 40  // ✅ 2026-02-09 [Phase 7.44.23]: 30 → 40，调整圆角
                         border.width: 2
                         border.color: getBitValue(index) ? "#00ff00" : "#2a3f5f"
 
@@ -186,8 +186,8 @@ Rectangle {
                     }
 
                     Rectangle {
-                        Layout.preferredWidth: 60
-                        Layout.preferredHeight: 22
+                        Layout.preferredWidth: 70  // ✅ 2026-02-09 [Phase 7.44.23]: 60 → 70，增加状态标签宽度
+                        Layout.preferredHeight: 26  // ✅ 2026-02-09 [Phase 7.44.23]: 22 → 26，增加状态标签高度
                         Layout.alignment: Qt.AlignHCenter
                         color: "#0a0f1e"
                         radius: 3
@@ -197,8 +197,8 @@ Rectangle {
                         Text {
                             anchors.centerIn: parent
                             text: getBitValue(index) ? "ON" : "OFF"
-                            font.pixelSize: 12
-                            font.bold: true
+                            font.pixelSize: 14  // ✅ 2026-02-09 [Phase 7.44.23]: 12 → 14，增大状态字体
+                            font.bold: false  // ✅ 2026-02-09 [Phase 7.44.23]: 移除粗体，提高可读性
                             font.family: "Consolas"
                             color: getBitValue(index) ? "#00ff00" : "#5a6f8f"
                         }
@@ -210,7 +210,7 @@ Rectangle {
         // 字节值显示
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 45
+            Layout.preferredHeight: 50  // ✅ 2026-02-09 [Phase 7.44.23]: 45 → 50，增加字节值显示区域高度
             color: "#0a0f1e"
             radius: 6
             border.width: 2
@@ -232,11 +232,11 @@ Rectangle {
                 spacing: 20
 
                 RowLayout {
-                    spacing: 8
+                    spacing: 10  // ✅ 2026-02-09 [Phase 7.44.23]: 8 → 10，增加间距
 
                     Text {
                         text: "HEX:"
-                        font.pixelSize: 14
+                        font.pixelSize: 16  // ✅ 2026-02-09 [Phase 7.44.23]: 14 → 16，增大标签字体
                         font.bold: true
                         font.family: "Consolas"
                         color: "#5a6f8f"
@@ -244,8 +244,8 @@ Rectangle {
 
                     Text {
                         text: "0x" + getByteValue().toString(16).toUpperCase().padStart(2, '0')
-                        font.pixelSize: 20
-                        font.bold: true
+                        font.pixelSize: 24  // ✅ 2026-02-09 [Phase 7.44.23]: 20 → 24，增大数值字体
+                        font.bold: false  // ✅ 2026-02-09 [Phase 7.44.23]: 移除粗体，提高可读性
                         font.family: "Consolas"
                         color: "#00d4ff"
                         style: Text.Outline
@@ -260,11 +260,11 @@ Rectangle {
                 }
 
                 RowLayout {
-                    spacing: 8
+                    spacing: 10  // ✅ 2026-02-09 [Phase 7.44.23]: 8 → 10，增加间距
 
                     Text {
                         text: "DEC:"
-                        font.pixelSize: 14
+                        font.pixelSize: 16  // ✅ 2026-02-09 [Phase 7.44.23]: 14 → 16，增大标签字体
                         font.bold: true
                         font.family: "Consolas"
                         color: "#5a6f8f"
@@ -272,8 +272,8 @@ Rectangle {
 
                     Text {
                         text: getByteValue().toString().padStart(3, '0')
-                        font.pixelSize: 20
-                        font.bold: true
+                        font.pixelSize: 24  // ✅ 2026-02-09 [Phase 7.44.23]: 20 → 24，增大数值字体
+                        font.bold: false  // ✅ 2026-02-09 [Phase 7.44.23]: 移除粗体，提高可读性
                         font.family: "Consolas"
                         color: "#00d4ff"
                         style: Text.Outline
@@ -284,11 +284,11 @@ Rectangle {
                 Item { Layout.fillWidth: true }
 
                 RowLayout {
-                    spacing: 8
+                    spacing: 10  // ✅ 2026-02-09 [Phase 7.44.23]: 8 → 10，增加间距
 
                     Text {
                         text: "BIN:"
-                        font.pixelSize: 14
+                        font.pixelSize: 16  // ✅ 2026-02-09 [Phase 7.44.23]: 14 → 16，增大标签字体
                         font.bold: true
                         font.family: "Consolas"
                         color: "#5a6f8f"
@@ -296,8 +296,8 @@ Rectangle {
 
                     Text {
                         text: getBinaryString()
-                        font.pixelSize: 18
-                        font.bold: true
+                        font.pixelSize: 22  // ✅ 2026-02-09 [Phase 7.44.23]: 18 → 22，增大二进制字体
+                        font.bold: false  // ✅ 2026-02-09 [Phase 7.44.23]: 移除粗体，提高可读性
                         font.family: "Consolas"
                         font.letterSpacing: 2
                         color: "#00ff00"
