@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "../components/device_monitor"  // ✅ 2026-02-10 [Phase 7.45.7]: 导入设备监控组件
 
 // ✅ 2026-02-10 [Phase 7.45.7]: 设备监控页面
 // 显示所有设备和集控设备的实时状态
