@@ -2,11 +2,13 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import "../components/device_monitor"  // ✅ 2026-02-10 [Phase 7.45.7]: 导入设备监控组件
+import "../Input1/Input1Content"  // ✅ 2026-02-10 [Phase 7.45.8]: 导入统一背景和头部组件
 
 // ✅ 2026-02-10 [Phase 7.45.7]: 设备监控页面
 // 显示所有设备和集控设备的实时状态
 // 作为独立页面，而不是Dialog弹窗
-Rectangle {
+// ✅ 2026-02-10 [Phase 7.45.8]: 使用统一的 Back 和 Head 组件
+Item {
     id: root
 
     // ✅ 2026-02-10 [QDS设计尺寸]: 设置固定设计尺寸，便于在QDS中设计
@@ -17,110 +19,56 @@ Rectangle {
     // 运行时填充父容器
     anchors.fill: parent
 
-    color: "#0a0f1e"
+    // ✅ 2026-02-10 [Phase 7.45.8]: 使用统一的 Back 背景组件（与其他页面一致）
+    Back {
+        anchors.fill: parent
+        z: 0  // 确保在最底层
+        enabled: false  // 不接收鼠标事件，只作为视觉背景
+    }
+
+    // ✅ 2026-02-10 [Phase 7.45.8]: 使用统一的 Head 头部组件（与其他页面一致）
+    // 使用 Item 容器包裹 Head，应用缩放变换
+    Item {
+        id: headerContainer
+        anchors.top: parent.top
+        anchors.left: parent.left
+        width: 1920
+        height: 80
+        clip: true
+        z: 10  // 确保在内容之上
+
+        transform: Scale {
+            property real scaleFactor: root.width / 1920  // 缩放比例
+            xScale: scaleFactor
+            yScale: scaleFactor  // 等比缩放
+            origin.x: 0
+            origin.y: 0
+        }
+
+        Head {
+            id: header
+            width: 1920
+            height: 80
+            currentPageIndex: 1  // 设备监控是第2个页面（索引从0开始）
+        }
+    }
 
     // ========== 主内容区域 ==========
+    // ✅ 2026-02-10 [Phase 7.45.8]: 调整布局，为 Head 组件留出空间
+    // 2026-02-10: 注释掉原来的自定义标题栏，改用统一的 Head 组件
+    // Rectangle {
+    //     Layout.fillWidth: true
+    //     Layout.preferredHeight: 80
+    //     color: "#1a1f2e"
+    //     ...
+    // }
     ColumnLayout {
-        anchors.fill: parent
+        anchors.top: headerContainer.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
         anchors.margins: 20
         spacing: 20
-
-        // ========== 标题栏 ==========
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 80
-            color: "#1a1f2e"
-            border.width: 3
-            border.color: "#00d4ff"
-            radius: 10
-
-            // ✅ 科技感：外层发光效果
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: -3
-                color: "transparent"
-                border.width: 2
-                border.color: "#00d4ff"
-                radius: 12
-                opacity: 0.3
-            }
-
-            // ✅ 科技感：内层光晕
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: 2
-                color: "transparent"
-                border.width: 1
-                border.color: "#00d4ff"
-                radius: 8
-                opacity: 0.5
-            }
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 15
-                spacing: 20
-
-                Text {
-                    text: "【设备监控】"
-                    font.pixelSize: 32
-                    font.bold: true
-                    font.family: "Microsoft YaHei"
-                    color: "#00d4ff"
-                    style: Text.Outline
-                    styleColor: "#00d4ff"
-
-                    // ✅ 科技感：文字发光动画
-                    SequentialAnimation on opacity {
-                        running: true
-                        loops: Animation.Infinite
-                        NumberAnimation { from: 1.0; to: 0.7; duration: 1500 }
-                        NumberAnimation { from: 0.7; to: 1.0; duration: 1500 }
-                    }
-                }
-
-                Item { Layout.fillWidth: true }
-
-                // 刷新按钮
-                Button {
-                    text: "🔄 刷新"
-                    Layout.preferredWidth: 120
-                    Layout.preferredHeight: 50
-
-                    background: Rectangle {
-                        color: parent.pressed ? "#2a3f5f" : (parent.hovered ? "#1a2f4f" : "#0a0f1e")
-                        border.width: 2
-                        border.color: "#00d4ff"
-                        radius: 5
-
-                        // ✅ 科技感：按钮发光效果
-                        Rectangle {
-                            anchors.fill: parent
-                            anchors.margins: -2
-                            color: "transparent"
-                            border.width: 1
-                            border.color: "#00d4ff"
-                            radius: 7
-                            opacity: parent.parent.hovered ? 0.6 : 0.3
-                        }
-                    }
-
-                    contentItem: Text {
-                        text: parent.text
-                        font.pixelSize: 18
-                        font.family: "Microsoft YaHei"
-                        color: "#00d4ff"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    onClicked: {
-                        console.log("🔄 [DeviceMonitorPage] 刷新设备状态")
-                        refreshDeviceStatus()
-                    }
-                }
-            }
-        }
 
         // ========== 滚动内容区域 ==========
         ScrollView {
