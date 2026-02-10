@@ -5,6 +5,7 @@ set(CONTROL_SOURCES
     SystemConfig.cpp
     DeviceDatabase.cpp
     DeviceConfigManager.cpp  # ✅ 2026-02-02 [FIX 100.300.112.8.20]: 添加设备配置管理器源文件
+    DeviceRoleManager.cpp  # ✅ 2026-02-10 [Phase 7.45.1]: 添加设备角色管理器源文件
     belt_controller.cpp
     MaintenanceControl.cpp
     LocalControl.cpp
@@ -29,6 +30,7 @@ set(CONTROL_HEADERS
     SystemConfig.h
     DeviceDatabase.h
     DeviceConfigManager.h  # ✅ 2026-02-02 [FIX 100.300.112.8.20]: 添加设备配置管理器头文件
+    DeviceRoleManager.h  # ✅ 2026-02-10 [Phase 7.45.1]: 添加设备角色管理器头文件
     belt_controller.h
     MaintenanceControl.h
     LocalControl.h
