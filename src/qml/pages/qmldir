@@ -1,0 +1,7 @@
+AlarmPage 1.0 AlarmPage.qml
+ControlPanel 1.0 ControlPanel.qml
+DeviceMonitorPage 1.0 DeviceMonitorPage.qml
+DeviceOperationLog 1.0 DeviceOperationLog.qml
+Input1Page 1.0 Input1Page.qml
+ParameterSettings 1.0 ParameterSettings.qml
+VoiceManagement 1.0 VoiceManagement.qml

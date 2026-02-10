@@ -356,6 +356,7 @@
         <file>main.qml</file>
         <file>main_qds.qml</file>
         <file>MockBackend.qml</file>
+        <file>pages/qmldir</file>
         <file>pages/AlarmPage.qml</file>
         <file>pages/ControlPanel.qml</file>
         <file>pages/DeviceMonitorPage.qml</file>
