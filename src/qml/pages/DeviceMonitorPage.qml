@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import "../components/device_monitor"
 import "../Input1/Input1Content"
+import "../theme"  // ✅ 2026-02-10 [Phase 7.45.15]: 添加 Theme 导入
 
 // ✅ 2026-02-10 [Phase 7.45.9]: 设备监控页面 - 数字孪生布局
 // 参考工业监控系统界面，添加 3D 数字孪生效果
