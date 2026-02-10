@@ -7,6 +7,7 @@ import "../Input1/Input1Content"
 // ✅ 2026-02-10 [Phase 7.45.9]: 设备监控页面 - 数字孪生布局
 // 参考工业监控系统界面，添加 3D 数字孪生效果
 // 布局：左侧信息面板 + 中央数字孪生区域 + 右侧控制面板 + 底部数据面板
+// ✅ 2026-02-10 [Phase 7.45.13]: 应用 Theme 主题系统和现代化组件
 Item {
     id: root
 
@@ -59,10 +60,10 @@ Item {
         Rectangle {
             Layout.preferredWidth: 280
             Layout.fillHeight: true
-            color: "#0a0f1e"
-            border.width: 2
-            border.color: "#00d4ff"
-            radius: 8
+            color: Theme.primary
+            border.width: Theme.borderWidth
+            border.color: Theme.borderPrimary
+            radius: Theme.radius
             opacity: 0.95
 
             ColumnLayout {
@@ -75,12 +76,12 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 140
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#1a2f3e" }
-                        GradientStop { position: 1.0; color: "#0a1f2e" }
+                        GradientStop { position: 0.0; color: Theme.lighter(Theme.surface, 1.1) }
+                        GradientStop { position: 1.0; color: Theme.surface }
                     }
-                    border.width: 1
-                    border.color: "#00d4ff"
-                    radius: 5
+                    border.width: Theme.borderWidthThin
+                    border.color: Theme.accent
+                    radius: Theme.radiusSmall
 
                     // ✅ 角落装饰
                     CornerDecoration {
@@ -106,16 +107,16 @@ Item {
 
                         Text {
                             text: "设备总览"
-                            font.pixelSize: 16
+                            font.pixelSize: Theme.fontSizeLarge
                             font.bold: true
-                            font.family: "Microsoft YaHei"
-                            color: "#00d4ff"
+                            font.family: Theme.fontFamily
+                            color: Theme.accent
                         }
 
                         Rectangle {
                             Layout.fillWidth: true
                             height: 1
-                            color: "#00d4ff"
+                            color: Theme.accent
                             opacity: 0.3
                         }
 
@@ -127,57 +128,57 @@ Item {
 
                             Text {
                                 text: "总设备:"
-                                font.pixelSize: 12
-                                font.family: "Microsoft YaHei"
-                                color: "#5a6f8f"
+                                font.pixelSize: Theme.fontSizeNormal
+                                font.family: Theme.fontFamily
+                                color: Theme.textSecondary
                             }
                             AnimatedCounter {
                                 targetValue: 12
                                 decimals: 0
-                                fontSize: 14
-                                textColor: "#00d4ff"
+                                fontSize: Theme.fontSizeMedium
+                                textColor: Theme.accent
                             }
 
                             Text {
                                 text: "在线:"
-                                font.pixelSize: 12
-                                font.family: "Microsoft YaHei"
-                                color: "#5a6f8f"
+                                font.pixelSize: Theme.fontSizeNormal
+                                font.family: Theme.fontFamily
+                                color: Theme.textSecondary
                             }
                             AnimatedCounter {
                                 targetValue: 8
                                 decimals: 0
-                                fontSize: 14
-                                textColor: "#2ECC71"
+                                fontSize: Theme.fontSizeMedium
+                                textColor: Theme.success
                             }
 
                             Text {
                                 text: "运行中:"
-                                font.pixelSize: 12
-                                font.family: "Microsoft YaHei"
-                                color: "#5a6f8f"
+                                font.pixelSize: Theme.fontSizeNormal
+                                font.family: Theme.fontFamily
+                                color: Theme.textSecondary
                             }
                             AnimatedCounter {
                                 targetValue: 5
                                 decimals: 0
-                                fontSize: 14
-                                textColor: "#00ff00"
+                                fontSize: Theme.fontSizeMedium
+                                textColor: Theme.success
                             }
                         }
                     }
                 }
 
-                // 本机信息
+                // 本机信息（使用 GlowLed）
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 100
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#1a3f1e" }
-                        GradientStop { position: 1.0; color: "#0a2f0e" }
+                        GradientStop { position: 0.0; color: Theme.lighter(Theme.success, 1.3) }
+                        GradientStop { position: 1.0; color: Theme.darker(Theme.success, 1.5) }
                     }
-                    border.width: 2
-                    border.color: "#00ff00"
-                    radius: 5
+                    border.width: Theme.borderWidth
+                    border.color: Theme.success
+                    radius: Theme.radiusSmall
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -187,49 +188,44 @@ Item {
                         RowLayout {
                             spacing: 5
 
-                            Rectangle {
+                            // ✅ 使用 GlowLed 替换普通指示灯
+                            GlowLed {
                                 width: 12
                                 height: 12
-                                radius: 6
-                                color: "#00ff00"
-
-                                SequentialAnimation on opacity {
-                                    running: true
-                                    loops: Animation.Infinite
-                                    NumberAnimation { from: 1.0; to: 0.3; duration: 800 }
-                                    NumberAnimation { from: 0.3; to: 1.0; duration: 800 }
-                                }
+                                isActive: true
+                                activeColor: Theme.success
+                                blinkEnabled: true
                             }
 
                             Text {
                                 text: "本机设备"
-                                font.pixelSize: 14
+                                font.pixelSize: Theme.fontSizeMedium
                                 font.bold: true
-                                font.family: "Microsoft YaHei"
-                                color: "#00ff00"
+                                font.family: Theme.fontFamily
+                                color: Theme.success
                             }
                         }
 
                         Rectangle {
                             Layout.fillWidth: true
                             height: 1
-                            color: "#00ff00"
+                            color: Theme.success
                             opacity: 0.3
                         }
 
                         Text {
                             text: "1号皮带"
-                            font.pixelSize: 16
+                            font.pixelSize: Theme.fontSizeLarge
                             font.bold: true
-                            font.family: "Microsoft YaHei"
-                            color: "#00ff00"
+                            font.family: Theme.fontFamily
+                            color: Theme.success
                         }
 
                         Text {
                             text: "状态: 运行中"
-                            font.pixelSize: 12
-                            font.family: "Microsoft YaHei"
-                            color: "#2ECC71"
+                            font.pixelSize: Theme.fontSizeNormal
+                            font.family: Theme.fontFamily
+                            color: Theme.success
                         }
                     }
                 }
@@ -239,12 +235,12 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 280
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#1a2f3e" }
-                        GradientStop { position: 1.0; color: "#0a1f2e" }
+                        GradientStop { position: 0.0; color: Theme.lighter(Theme.surface, 1.1) }
+                        GradientStop { position: 1.0; color: Theme.surface }
                     }
-                    border.width: 1
-                    border.color: "#00d4ff"
-                    radius: 5
+                    border.width: Theme.borderWidthThin
+                    border.color: Theme.accent
+                    radius: Theme.radiusSmall
 
                     // ✅ 角落装饰
                     CornerDecoration {
@@ -270,16 +266,16 @@ Item {
 
                         Text {
                             text: "关键指标"
-                            font.pixelSize: 14
+                            font.pixelSize: Theme.fontSizeMedium
                             font.bold: true
-                            font.family: "Microsoft YaHei"
-                            color: "#00d4ff"
+                            font.family: Theme.fontFamily
+                            color: Theme.accent
                         }
 
                         Rectangle {
                             Layout.fillWidth: true
                             height: 1
-                            color: "#00d4ff"
+                            color: Theme.accent
                             opacity: 0.3
                         }
 
@@ -291,44 +287,44 @@ Item {
 
                             Text {
                                 text: "总产量:"
-                                font.pixelSize: 11
-                                font.family: "Microsoft YaHei"
-                                color: "#5a6f8f"
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.family: Theme.fontFamily
+                                color: Theme.textSecondary
                             }
                             AnimatedCounter {
                                 targetValue: 5863
                                 decimals: 0
                                 suffix: " t"
-                                fontSize: 13
-                                textColor: "#00d4ff"
+                                fontSize: Theme.fontSizeMedium
+                                textColor: Theme.accent
                             }
 
                             Text {
                                 text: "运行时长:"
-                                font.pixelSize: 11
-                                font.family: "Microsoft YaHei"
-                                color: "#5a6f8f"
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.family: Theme.fontFamily
+                                color: Theme.textSecondary
                             }
                             Text {
                                 text: "127h 56m"
-                                font.pixelSize: 13
+                                font.pixelSize: Theme.fontSizeMedium
                                 font.bold: true
                                 font.family: "Consolas"
-                                color: "#00d4ff"
+                                color: Theme.accent
                             }
 
                             Text {
                                 text: "效率:"
-                                font.pixelSize: 11
-                                font.family: "Microsoft YaHei"
-                                color: "#5a6f8f"
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.family: Theme.fontFamily
+                                color: Theme.textSecondary
                             }
                             AnimatedCounter {
                                 targetValue: 100
                                 decimals: 0
                                 suffix: "%"
-                                fontSize: 13
-                                textColor: "#2ECC71"
+                                fontSize: Theme.fontSizeMedium
+                                textColor: Theme.success
                             }
                         }
 
@@ -338,8 +334,8 @@ Item {
                             targetProgress: 1.0
                             size: 90
                             lineWidth: 8
-                            startColor: "#00d4ff"
-                            endColor: "#00ff00"
+                            startColor: Theme.accent
+                            endColor: Theme.success
                         }
 
                         // ✅ 迷你趋势图
@@ -349,9 +345,9 @@ Item {
 
                             Text {
                                 text: "产量趋势"
-                                font.pixelSize: 10
-                                font.family: "Microsoft YaHei"
-                                color: "#5a6f8f"
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.family: Theme.fontFamily
+                                color: Theme.textSecondary
                             }
 
                             MiniTrendChart {
@@ -361,7 +357,7 @@ Item {
                                 dataPoints: [45, 48, 52, 50, 55, 58, 60, 62, 65, 63, 68, 70, 72, 75, 78, 80, 82, 85, 88, 90]
                                 minValue: 0
                                 maxValue: 100
-                                lineColor: "#00d4ff"
+                                lineColor: Theme.accent
                             }
                         }
                     }
@@ -375,10 +371,10 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: "#0a0f1e"
-            border.width: 2
-            border.color: "#00d4ff"
-            radius: 8
+            color: Theme.primary
+            border.width: Theme.borderWidth
+            border.color: Theme.accent
+            radius: Theme.radius
             opacity: 0.95
 
             ColumnLayout {
@@ -393,10 +389,10 @@ Item {
 
                     Text {
                         text: "【皮带输送系统 - 数字孪生】"
-                        font.pixelSize: 20
+                        font.pixelSize: Theme.fontSizeXLarge
                         font.bold: true
-                        font.family: "Microsoft YaHei"
-                        color: "#00d4ff"
+                        font.family: Theme.fontFamily
+                        color: Theme.accent
 
                         SequentialAnimation on opacity {
                             running: true
@@ -410,16 +406,16 @@ Item {
 
                     Text {
                         text: "更新: " + Qt.formatTime(new Date(), "hh:mm:ss")
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fontSizeNormal
                         font.family: "Consolas"
-                        color: "#5a6f8f"
+                        color: Theme.textSecondary
                     }
                 }
 
                 Rectangle {
                     Layout.fillWidth: true
                     height: 2
-                    color: "#00d4ff"
+                    color: Theme.accent
                     opacity: 0.3
                 }
 
@@ -435,10 +431,10 @@ Item {
         Rectangle {
             Layout.preferredWidth: 280
             Layout.fillHeight: true
-            color: "#0a0f1e"
-            border.width: 2
-            border.color: "#00d4ff"
-            radius: 8
+            color: Theme.primary
+            border.width: Theme.borderWidth
+            border.color: Theme.accent
+            radius: Theme.radius
             opacity: 0.95
 
             ColumnLayout {
@@ -451,12 +447,12 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 200
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#1a2f3e" }
-                        GradientStop { position: 1.0; color: "#0a1f2e" }
+                        GradientStop { position: 0.0; color: Theme.lighter(Theme.surface, 1.1) }
+                        GradientStop { position: 1.0; color: Theme.surface }
                     }
-                    border.width: 1
-                    border.color: "#00d4ff"
-                    radius: 5
+                    border.width: Theme.borderWidthThin
+                    border.color: Theme.accent
+                    radius: Theme.radiusSmall
 
                     // ✅ 角落装饰
                     CornerDecoration {
@@ -474,16 +470,16 @@ Item {
 
                         Text {
                             text: "快速操作"
-                            font.pixelSize: 14
+                            font.pixelSize: Theme.fontSizeMedium
                             font.bold: true
-                            font.family: "Microsoft YaHei"
-                            color: "#00d4ff"
+                            font.family: Theme.fontFamily
+                            color: Theme.accent
                         }
 
                         Rectangle {
                             Layout.fillWidth: true
                             height: 1
-                            color: "#00d4ff"
+                            color: Theme.accent
                             opacity: 0.3
                         }
 
@@ -496,14 +492,14 @@ Item {
                                 Layout.fillWidth: true
                                 statusText: "系统正常"
                                 statusIcon: "●"
-                                statusColor: "#2ECC71"
+                                statusColor: Theme.success
                             }
 
                             StatusBadge {
                                 Layout.fillWidth: true
                                 statusText: "MQTT连接"
                                 statusIcon: "◉"
-                                statusColor: "#00d4ff"
+                                statusColor: Theme.accent
                             }
                         }
 
@@ -513,66 +509,19 @@ Item {
                             rowSpacing: 8
                             columnSpacing: 8
 
-                            Button {
+                            // ✅ 使用 ModernButton 替换普通按钮
+                            ModernButton {
                                 text: "全部启动"
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 35
-                                background: Rectangle {
-                                    color: parent.pressed ? "#2a3f5f" : (parent.hovered ? "#1a2f4f" : "#0a0f1e")
-                                    border.width: 1
-                                    border.color: "#00d4ff"
-                                    radius: 3
-
-                                    // ✅ 发光效果
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        anchors.margins: -2
-                                        color: "transparent"
-                                        border.width: 1
-                                        border.color: "#00d4ff"
-                                        radius: parent.radius + 2
-                                        opacity: parent.parent.hovered ? 0.5 : 0.2
-                                    }
-                                }
-                                contentItem: Text {
-                                    text: parent.text
-                                    font.pixelSize: 12
-                                    font.family: "Microsoft YaHei"
-                                    color: "#00d4ff"
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
+                                buttonColor: Theme.success
                             }
 
-                            Button {
+                            ModernButton {
                                 text: "全部停止"
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 35
-                                background: Rectangle {
-                                    color: parent.pressed ? "#3f2a2a" : (parent.hovered ? "#2f1a1a" : "#0a0f1e")
-                                    border.width: 1
-                                    border.color: "#E74C3C"
-                                    radius: 3
-
-                                    // ✅ 发光效果
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        anchors.margins: -2
-                                        color: "transparent"
-                                        border.width: 1
-                                        border.color: "#E74C3C"
-                                        radius: parent.radius + 2
-                                        opacity: parent.parent.hovered ? 0.5 : 0.2
-                                    }
-                                }
-                                contentItem: Text {
-                                    text: parent.text
-                                    font.pixelSize: 12
-                                    font.family: "Microsoft YaHei"
-                                    color: "#E74C3C"
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
+                                buttonColor: Theme.error
                             }
                         }
                     }
@@ -583,12 +532,12 @@ Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#1a2f3e" }
-                        GradientStop { position: 1.0; color: "#0a1f2e" }
+                        GradientStop { position: 0.0; color: Theme.lighter(Theme.surface, 1.1) }
+                        GradientStop { position: 1.0; color: Theme.surface }
                     }
-                    border.width: 1
-                    border.color: "#00d4ff"
-                    radius: 5
+                    border.width: Theme.borderWidthThin
+                    border.color: Theme.accent
+                    radius: Theme.radiusSmall
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -597,16 +546,16 @@ Item {
 
                         Text {
                             text: "设备列表"
-                            font.pixelSize: 14
+                            font.pixelSize: Theme.fontSizeMedium
                             font.bold: true
-                            font.family: "Microsoft YaHei"
-                            color: "#00d4ff"
+                            font.family: Theme.fontFamily
+                            color: Theme.accent
                         }
 
                         Rectangle {
                             Layout.fillWidth: true
                             height: 1
-                            color: "#00d4ff"
+                            color: Theme.accent
                             opacity: 0.3
                         }
 
@@ -622,21 +571,23 @@ Item {
                                 delegate: Rectangle {
                                     width: parent.width
                                     height: 40
-                                    color: index === 0 ? "#1a3f1e" : "#0a1f2e"
-                                    border.width: 1
-                                    border.color: index === 0 ? "#00ff00" : "#2a3f5f"
-                                    radius: 3
+                                    color: index === 0 ? Theme.darker(Theme.success, 1.8) : Theme.surface
+                                    border.width: Theme.borderWidthThin
+                                    border.color: index === 0 ? Theme.success : Theme.borderSecondary
+                                    radius: Theme.radiusSmall
 
                                     RowLayout {
                                         anchors.fill: parent
                                         anchors.margins: 8
                                         spacing: 8
 
-                                        Rectangle {
+                                        // ✅ 使用 GlowLed 替换普通指示灯
+                                        GlowLed {
                                             width: 8
                                             height: 8
-                                            radius: 4
-                                            color: index < 8 ? "#2ECC71" : "#E74C3C"
+                                            isActive: index < 8
+                                            activeColor: Theme.success
+                                            inactiveColor: Theme.error
                                         }
 
                                         Text {
@@ -644,17 +595,17 @@ Item {
                                                   (index === 8 ? "转载机" :
                                                    index === 9 ? "破碎机" :
                                                    index === 10 ? "前刮板" : "后刮板")
-                                            font.pixelSize: 11
-                                            font.family: "Microsoft YaHei"
-                                            color: index === 0 ? "#00ff00" : "#00d4ff"
+                                            font.pixelSize: Theme.fontSizeSmall
+                                            font.family: Theme.fontFamily
+                                            color: index === 0 ? Theme.success : Theme.accent
                                             Layout.fillWidth: true
                                         }
 
                                         Text {
                                             text: index < 5 ? "运行" : "停止"
-                                            font.pixelSize: 10
-                                            font.family: "Microsoft YaHei"
-                                            color: index < 5 ? "#2ECC71" : "#E74C3C"
+                                            font.pixelSize: Theme.fontSizeSmall
+                                            font.family: Theme.fontFamily
+                                            color: index < 5 ? Theme.success : Theme.error
                                         }
                                     }
 
@@ -692,10 +643,10 @@ Item {
         anchors.bottom: parent.bottom
         anchors.margins: 10
         height: 200
-        color: "#0a0f1e"
-        border.width: 2
-        border.color: "#00d4ff"
-        radius: 8
+        color: Theme.primary
+        border.width: Theme.borderWidth
+        border.color: Theme.accent
+        radius: Theme.radius
         opacity: 0.95
 
         RowLayout {
@@ -708,12 +659,12 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: "#1a2f3e" }
-                    GradientStop { position: 1.0; color: "#0a1f2e" }
+                    GradientStop { position: 0.0; color: Theme.lighter(Theme.surface, 1.1) }
+                    GradientStop { position: 1.0; color: Theme.surface }
                 }
-                border.width: 1
-                border.color: "#00d4ff"
-                radius: 5
+                border.width: Theme.borderWidthThin
+                border.color: Theme.accent
+                radius: Theme.radiusSmall
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -722,16 +673,16 @@ Item {
 
                     Text {
                         text: "实时运行数据"
-                        font.pixelSize: 14
+                        font.pixelSize: Theme.fontSizeMedium
                         font.bold: true
-                        font.family: "Microsoft YaHei"
-                        color: "#00d4ff"
+                        font.family: Theme.fontFamily
+                        color: Theme.accent
                     }
 
                     Rectangle {
                         Layout.fillWidth: true
                         height: 1
-                        color: "#00d4ff"
+                        color: Theme.accent
                         opacity: 0.3
                     }
 
@@ -742,37 +693,37 @@ Item {
 
                         Text {
                             text: "设备"
-                            font.pixelSize: 11
-                            font.family: "Microsoft YaHei"
-                            color: "#5a6f8f"
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.family: Theme.fontFamily
+                            color: Theme.textSecondary
                             Layout.preferredWidth: 80
                         }
                         Text {
                             text: "速度"
-                            font.pixelSize: 11
-                            font.family: "Microsoft YaHei"
-                            color: "#5a6f8f"
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.family: Theme.fontFamily
+                            color: Theme.textSecondary
                             Layout.preferredWidth: 60
                         }
                         Text {
                             text: "电流"
-                            font.pixelSize: 11
-                            font.family: "Microsoft YaHei"
-                            color: "#5a6f8f"
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.family: Theme.fontFamily
+                            color: Theme.textSecondary
                             Layout.preferredWidth: 60
                         }
                         Text {
                             text: "温度"
-                            font.pixelSize: 11
-                            font.family: "Microsoft YaHei"
-                            color: "#5a6f8f"
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.family: Theme.fontFamily
+                            color: Theme.textSecondary
                             Layout.preferredWidth: 60
                         }
                         Text {
                             text: "状态"
-                            font.pixelSize: 11
-                            font.family: "Microsoft YaHei"
-                            color: "#5a6f8f"
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.family: Theme.fontFamily
+                            color: Theme.textSecondary
                             Layout.preferredWidth: 60
                         }
                     }
@@ -792,37 +743,37 @@ Item {
 
                                 Text {
                                     text: (index + 1) + "号皮带"
-                                    font.pixelSize: 10
-                                    font.family: "Microsoft YaHei"
-                                    color: "#00d4ff"
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    font.family: Theme.fontFamily
+                                    color: Theme.accent
                                     Layout.preferredWidth: 80
                                 }
                                 Text {
                                     text: (1.2 + index * 0.1).toFixed(1) + " m/s"
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fontSizeSmall
                                     font.family: "Consolas"
-                                    color: "#2ECC71"
+                                    color: Theme.success
                                     Layout.preferredWidth: 60
                                 }
                                 Text {
                                     text: (45 + index * 5) + " A"
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fontSizeSmall
                                     font.family: "Consolas"
-                                    color: "#F39C12"
+                                    color: Theme.warning
                                     Layout.preferredWidth: 60
                                 }
                                 Text {
                                     text: (35 + index * 2) + " °C"
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fontSizeSmall
                                     font.family: "Consolas"
-                                    color: "#00d4ff"
+                                    color: Theme.accent
                                     Layout.preferredWidth: 60
                                 }
                                 Text {
                                     text: "运行中"
-                                    font.pixelSize: 10
-                                    font.family: "Microsoft YaHei"
-                                    color: "#2ECC71"
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    font.family: Theme.fontFamily
+                                    color: Theme.success
                                     Layout.preferredWidth: 60
                                 }
                             }
@@ -836,12 +787,12 @@ Item {
                 Layout.preferredWidth: 250
                 Layout.fillHeight: true
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: "#1a2f3e" }
-                    GradientStop { position: 1.0; color: "#0a1f2e" }
+                    GradientStop { position: 0.0; color: Theme.lighter(Theme.surface, 1.1) }
+                    GradientStop { position: 1.0; color: Theme.surface }
                 }
-                border.width: 1
-                border.color: "#00d4ff"
-                radius: 5
+                border.width: Theme.borderWidthThin
+                border.color: Theme.accent
+                radius: Theme.radiusSmall
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -850,16 +801,16 @@ Item {
 
                     Text {
                         text: "故障统计"
-                        font.pixelSize: 14
+                        font.pixelSize: Theme.fontSizeMedium
                         font.bold: true
-                        font.family: "Microsoft YaHei"
-                        color: "#00d4ff"
+                        font.family: Theme.fontFamily
+                        color: Theme.accent
                     }
 
                     Rectangle {
                         Layout.fillWidth: true
                         height: 1
-                        color: "#00d4ff"
+                        color: Theme.accent
                         opacity: 0.3
                     }
 
@@ -871,44 +822,44 @@ Item {
 
                         Text {
                             text: "今日故障:"
-                            font.pixelSize: 11
-                            font.family: "Microsoft YaHei"
-                            color: "#5a6f8f"
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.family: Theme.fontFamily
+                            color: Theme.textSecondary
                         }
                         Text {
                             text: "0"
-                            font.pixelSize: 13
+                            font.pixelSize: Theme.fontSizeMedium
                             font.bold: true
                             font.family: "Consolas"
-                            color: "#2ECC71"
+                            color: Theme.success
                         }
 
                         Text {
                             text: "本周故障:"
-                            font.pixelSize: 11
-                            font.family: "Microsoft YaHei"
-                            color: "#5a6f8f"
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.family: Theme.fontFamily
+                            color: Theme.textSecondary
                         }
                         Text {
                             text: "2"
-                            font.pixelSize: 13
+                            font.pixelSize: Theme.fontSizeMedium
                             font.bold: true
                             font.family: "Consolas"
-                            color: "#F39C12"
+                            color: Theme.warning
                         }
 
                         Text {
                             text: "本月故障:"
-                            font.pixelSize: 11
-                            font.family: "Microsoft YaHei"
-                            color: "#5a6f8f"
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.family: Theme.fontFamily
+                            color: Theme.textSecondary
                         }
                         Text {
                             text: "5"
-                            font.pixelSize: 13
+                            font.pixelSize: Theme.fontSizeMedium
                             font.bold: true
                             font.family: "Consolas"
-                            color: "#E74C3C"
+                            color: Theme.error
                         }
                     }
 
@@ -916,9 +867,9 @@ Item {
 
                     Text {
                         text: "平均故障间隔: 127h"
-                        font.pixelSize: 10
-                        font.family: "Microsoft YaHei"
-                        color: "#5a6f8f"
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.family: Theme.fontFamily
+                        color: Theme.textSecondary
                         Layout.alignment: Qt.AlignHCenter
                     }
                 }
@@ -929,12 +880,12 @@ Item {
                 Layout.preferredWidth: 300
                 Layout.fillHeight: true
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: "#1a2f3e" }
-                    GradientStop { position: 1.0; color: "#0a1f2e" }
+                    GradientStop { position: 0.0; color: Theme.lighter(Theme.surface, 1.1) }
+                    GradientStop { position: 1.0; color: Theme.surface }
                 }
-                border.width: 1
-                border.color: "#00d4ff"
-                radius: 5
+                border.width: Theme.borderWidthThin
+                border.color: Theme.accent
+                radius: Theme.radiusSmall
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -943,16 +894,16 @@ Item {
 
                     Text {
                         text: "最近报警"
-                        font.pixelSize: 14
+                        font.pixelSize: Theme.fontSizeMedium
                         font.bold: true
-                        font.family: "Microsoft YaHei"
-                        color: "#00d4ff"
+                        font.family: Theme.fontFamily
+                        color: Theme.accent
                     }
 
                     Rectangle {
                         Layout.fillWidth: true
                         height: 1
-                        color: "#00d4ff"
+                        color: Theme.accent
                         opacity: 0.3
                     }
 
@@ -968,10 +919,10 @@ Item {
                             delegate: Rectangle {
                                 width: parent.width
                                 height: 40
-                                color: "#0a1f2e"
-                                border.width: 1
-                                border.color: "#2a3f5f"
-                                radius: 3
+                                color: Theme.surface
+                                border.width: Theme.borderWidthThin
+                                border.color: Theme.borderSecondary
+                                radius: Theme.radiusSmall
 
                                 ColumnLayout {
                                     anchors.fill: parent
@@ -981,16 +932,16 @@ Item {
                                     Text {
                                         text: index === 0 ? "3号皮带速度异常" :
                                               index === 1 ? "5号皮带温度过高" : "转载机电流波动"
-                                        font.pixelSize: 10
-                                        font.family: "Microsoft YaHei"
-                                        color: "#F39C12"
+                                        font.pixelSize: Theme.fontSizeSmall
+                                        font.family: Theme.fontFamily
+                                        color: Theme.warning
                                     }
 
                                     Text {
                                         text: "2026-02-10 " + (15 - index) + ":30:00"
-                                        font.pixelSize: 9
+                                        font.pixelSize: Theme.fontSizeSmall
                                         font.family: "Consolas"
-                                        color: "#5a6f8f"
+                                        color: Theme.textSecondary
                                     }
                                 }
                             }
