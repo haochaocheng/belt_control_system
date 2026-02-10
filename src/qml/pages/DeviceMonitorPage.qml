@@ -8,7 +8,15 @@ import "../components/device_monitor"  // ✅ 2026-02-10 [Phase 7.45.7]: 导入�
 // 作为独立页面，而不是Dialog弹窗
 Rectangle {
     id: root
+
+    // ✅ 2026-02-10 [QDS设计尺寸]: 设置固定设计尺寸，便于在QDS中设计
+    // 运行时会自动填充父容器（通过 anchors.fill）
+    width: 1920
+    height: 1080
+
+    // 运行时填充父容器
     anchors.fill: parent
+
     color: "#0a0f1e"
 
     // ========== 主内容区域 ==========
