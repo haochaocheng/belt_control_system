@@ -1,33 +1,27 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
-import "../components/device_monitor"  // ✅ 2026-02-10 [Phase 7.45.7]: 导入设备监控组件
-import "../Input1/Input1Content"  // ✅ 2026-02-10 [Phase 7.45.8]: 导入统一背景和头部组件
+import "../components/device_monitor"
+import "../Input1/Input1Content"
 
-// ✅ 2026-02-10 [Phase 7.45.7]: 设备监控页面
-// 显示所有设备和集控设备的实时状态
-// 作为独立页面，而不是Dialog弹窗
-// ✅ 2026-02-10 [Phase 7.45.8]: 使用统一的 Back 和 Head 组件
+// ✅ 2026-02-10 [Phase 7.45.9]: 设备监控页面 - 数字孪生布局
+// 参考工业监控系统界面，添加 3D 数字孪生效果
+// 布局：左侧信息面板 + 中央数字孪生区域 + 右侧控制面板 + 底部数据面板
 Item {
     id: root
 
-    // ✅ 2026-02-10 [QDS设计尺寸]: 设置固定设计尺寸，便于在QDS中设计
-    // 运行时会自动填充父容器（通过 anchors.fill）
     width: 1920
     height: 1080
-
-    // 运行时填充父容器
     anchors.fill: parent
 
-    // ✅ 2026-02-10 [Phase 7.45.8]: 使用统一的 Back 背景组件（与其他页面一致）
+    // ========== 背景 ==========
     Back {
         anchors.fill: parent
-        z: 0  // 确保在最底层
-        enabled: false  // 不接收鼠标事件，只作为视觉背景
+        z: 0
+        enabled: false
     }
 
-    // ✅ 2026-02-10 [Phase 7.45.8]: 使用统一的 Head 头部组件（与其他页面一致）
-    // 使用 Item 容器包裹 Head，应用缩放变换
+    // ========== 头部 ==========
     Item {
         id: headerContainer
         anchors.top: parent.top
@@ -35,128 +29,167 @@ Item {
         width: 1920
         height: 80
         clip: true
-        z: 10  // 确保在内容之上
+        z: 10
 
         transform: Scale {
-            property real scaleFactor: root.width / 1920  // 缩放比例
+            property real scaleFactor: root.width / 1920
             xScale: scaleFactor
-            yScale: scaleFactor  // 等比缩放
+            yScale: scaleFactor
             origin.x: 0
             origin.y: 0
         }
 
         Head {
-            id: header
             width: 1920
             height: 80
-            currentPageIndex: 1  // 设备监控是第2个页面（索引从0开始）
+            currentPageIndex: 1
         }
     }
 
-    // ========== 主内容区域 ==========
-    // ✅ 2026-02-10 [Phase 7.45.8]: 调整布局，为 Head 组件留出空间
-    // 2026-02-10: 注释掉原来的自定义标题栏，改用统一的 Head 组件
-    // Rectangle {
-    //     Layout.fillWidth: true
-    //     Layout.preferredHeight: 80
-    //     color: "#1a1f2e"
-    //     ...
-    // }
-    ColumnLayout {
+    // ========== 主内容区域（三栏布局）==========
+    RowLayout {
         anchors.top: headerContainer.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.margins: 20
-        spacing: 20
+        anchors.bottom: bottomPanel.top
+        anchors.margins: 10
+        spacing: 10
 
-        // ========== 滚动内容区域 ==========
-        ScrollView {
-            Layout.fillWidth: true
+        // ========== 左侧信息面板 ==========
+        Rectangle {
+            Layout.preferredWidth: 280
             Layout.fillHeight: true
-            clip: true
+            color: "#0a0f1e"
+            border.width: 2
+            border.color: "#00d4ff"
+            radius: 8
+            opacity: 0.95
 
             ColumnLayout {
-                width: parent.width
-                spacing: 20
+                anchors.fill: parent
+                anchors.margins: 15
+                spacing: 15
 
-                // 本机信息栏
+                // 设备总览
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 80
-                    Layout.margins: 10
-
-                    // ✅ 科技感：渐变背景
+                    Layout.preferredHeight: 120
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#1a2f1e" }
-                        GradientStop { position: 1.0; color: "#0a1f0e" }
+                        GradientStop { position: 0.0; color: "#1a2f3e" }
+                        GradientStop { position: 1.0; color: "#0a1f2e" }
                     }
+                    border.width: 1
+                    border.color: "#00d4ff"
+                    radius: 5
 
-                    border.width: 3
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 5
+
+                        Text {
+                            text: "设备总览"
+                            font.pixelSize: 16
+                            font.bold: true
+                            font.family: "Microsoft YaHei"
+                            color: "#00d4ff"
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: "#00d4ff"
+                            opacity: 0.3
+                        }
+
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: 2
+                            rowSpacing: 8
+                            columnSpacing: 10
+
+                            Text {
+                                text: "总设备:"
+                                font.pixelSize: 12
+                                font.family: "Microsoft YaHei"
+                                color: "#5a6f8f"
+                            }
+                            Text {
+                                text: "12"
+                                font.pixelSize: 14
+                                font.bold: true
+                                font.family: "Consolas"
+                                color: "#00d4ff"
+                            }
+
+                            Text {
+                                text: "在线:"
+                                font.pixelSize: 12
+                                font.family: "Microsoft YaHei"
+                                color: "#5a6f8f"
+                            }
+                            Text {
+                                text: "8"
+                                font.pixelSize: 14
+                                font.bold: true
+                                font.family: "Consolas"
+                                color: "#2ECC71"
+                            }
+
+                            Text {
+                                text: "运行中:"
+                                font.pixelSize: 12
+                                font.family: "Microsoft YaHei"
+                                color: "#5a6f8f"
+                            }
+                            Text {
+                                text: "5"
+                                font.pixelSize: 14
+                                font.bold: true
+                                font.family: "Consolas"
+                                color: "#00ff00"
+                            }
+                        }
+                    }
+                }
+
+                // 本机信息
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 100
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#1a3f1e" }
+                        GradientStop { position: 1.0; color: "#0a2f0e" }
+                    }
+                    border.width: 2
                     border.color: "#00ff00"
-                    radius: 8
+                    radius: 5
 
-                    // ✅ 科技感：外层发光效果
-                    Rectangle {
+                    ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: -3
-                        color: "transparent"
-                        border.width: 2
-                        border.color: "#00ff00"
-                        radius: 11
-                        opacity: 0.4
-                    }
+                        anchors.margins: 10
+                        spacing: 5
 
-                    // ✅ 科技感：内层光晕
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: 2
-                        color: "transparent"
-                        border.width: 1
-                        border.color: "#00ff00"
-                        radius: 6
-                        opacity: 0.6
-                    }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 15
-                        spacing: 30
-
-                        // 本机角色
                         RowLayout {
-                            spacing: 10
+                            spacing: 5
 
                             Rectangle {
-                                width: 16
-                                height: 16
-                                radius: 8
-                                color: "#0080ff"
+                                width: 12
+                                height: 12
+                                radius: 6
+                                color: "#00ff00"
 
-                                // ✅ 科技感：呼吸灯效果
                                 SequentialAnimation on opacity {
                                     running: true
                                     loops: Animation.Infinite
                                     NumberAnimation { from: 1.0; to: 0.3; duration: 800 }
                                     NumberAnimation { from: 0.3; to: 1.0; duration: 800 }
                                 }
-
-                                // ✅ 科技感：光晕效果
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: parent.width + 8
-                                    height: parent.height + 8
-                                    radius: (parent.width + 8) / 2
-                                    color: "transparent"
-                                    border.width: 2
-                                    border.color: "#0080ff"
-                                    opacity: 0.3
-                                }
                             }
 
                             Text {
-                                text: "本机角色: " + (typeof deviceRoleManager !== 'undefined' ? deviceRoleManager.stationName : "主站")
-                                font.pixelSize: 18
+                                text: "本机设备"
+                                font.pixelSize: 14
                                 font.bold: true
                                 font.family: "Microsoft YaHei"
                                 color: "#00ff00"
@@ -164,388 +197,716 @@ Item {
                         }
 
                         Rectangle {
-                            width: 2
-                            Layout.fillHeight: true
-
-                            // ✅ 科技感：分隔线渐变
-                            gradient: Gradient {
-                                GradientStop { position: 0.0; color: "transparent" }
-                                GradientStop { position: 0.5; color: "#2a3f5f" }
-                                GradientStop { position: 1.0; color: "transparent" }
-                            }
+                            Layout.fillWidth: true
+                            height: 1
+                            color: "#00ff00"
+                            opacity: 0.3
                         }
 
-                        // 本机设备
                         Text {
-                            text: "本机设备: " + (typeof deviceRoleManager !== 'undefined' ? deviceRoleManager.localDeviceName : "1号皮带")
-                            font.pixelSize: 18
+                            text: "1号皮带"
+                            font.pixelSize: 16
                             font.bold: true
                             font.family: "Microsoft YaHei"
                             color: "#00ff00"
                         }
 
-                        Rectangle { width: 2; Layout.fillHeight: true; color: "#2a3f5f" }
-
-                        // 在线集控
                         Text {
-                            text: "在线集控: 3/5"
-                            font.pixelSize: 16
+                            text: "状态: 运行中"
+                            font.pixelSize: 12
+                            font.family: "Microsoft YaHei"
+                            color: "#2ECC71"
+                        }
+                    }
+                }
+
+                // 关键指标
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 150
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#1a2f3e" }
+                        GradientStop { position: 1.0; color: "#0a1f2e" }
+                    }
+                    border.width: 1
+                    border.color: "#00d4ff"
+                    radius: 5
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 8
+
+                        Text {
+                            text: "关键指标"
+                            font.pixelSize: 14
+                            font.bold: true
                             font.family: "Microsoft YaHei"
                             color: "#00d4ff"
                         }
 
-                        Item { Layout.fillWidth: true }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: "#00d4ff"
+                            opacity: 0.3
+                        }
 
-                        // 最后更新时间
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: 2
+                            rowSpacing: 6
+                            columnSpacing: 8
+
+                            Text {
+                                text: "总产量:"
+                                font.pixelSize: 11
+                                font.family: "Microsoft YaHei"
+                                color: "#5a6f8f"
+                            }
+                            Text {
+                                text: "5863 t"
+                                font.pixelSize: 13
+                                font.bold: true
+                                font.family: "Consolas"
+                                color: "#00d4ff"
+                            }
+
+                            Text {
+                                text: "运行时长:"
+                                font.pixelSize: 11
+                                font.family: "Microsoft YaHei"
+                                color: "#5a6f8f"
+                            }
+                            Text {
+                                text: "127h 56m"
+                                font.pixelSize: 13
+                                font.bold: true
+                                font.family: "Consolas"
+                                color: "#00d4ff"
+                            }
+
+                            Text {
+                                text: "效率:"
+                                font.pixelSize: 11
+                                font.family: "Microsoft YaHei"
+                                color: "#5a6f8f"
+                            }
+                            Text {
+                                text: "100%"
+                                font.pixelSize: 13
+                                font.bold: true
+                                font.family: "Consolas"
+                                color: "#2ECC71"
+                            }
+                        }
+
+                        // 圆形进度指示器
+                        Rectangle {
+                            Layout.alignment: Qt.AlignHCenter
+                            width: 80
+                            height: 80
+                            radius: 40
+                            color: "transparent"
+                            border.width: 6
+                            border.color: "#00d4ff"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "100%"
+                                font.pixelSize: 18
+                                font.bold: true
+                                font.family: "Consolas"
+                                color: "#00d4ff"
+                            }
+                        }
+                    }
+                }
+
+                Item { Layout.fillHeight: true }
+            }
+        }
+
+        // ========== 中央数字孪生区域 ==========
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "#0a0f1e"
+            border.width: 2
+            border.color: "#00d4ff"
+            radius: 8
+            opacity: 0.95
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 15
+                spacing: 10
+
+                // 标题
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Text {
+                        text: "【皮带输送系统 - 数字孪生】"
+                        font.pixelSize: 20
+                        font.bold: true
+                        font.family: "Microsoft YaHei"
+                        color: "#00d4ff"
+
+                        SequentialAnimation on opacity {
+                            running: true
+                            loops: Animation.Infinite
+                            NumberAnimation { from: 1.0; to: 0.7; duration: 1500 }
+                            NumberAnimation { from: 0.7; to: 1.0; duration: 1500 }
+                        }
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Text {
+                        text: "更新: " + Qt.formatTime(new Date(), "hh:mm:ss")
+                        font.pixelSize: 12
+                        font.family: "Consolas"
+                        color: "#5a6f8f"
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 2
+                    color: "#00d4ff"
+                    opacity: 0.3
+                }
+
+                // 皮带连接关系图
+                BeltConnectionDiagram {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                }
+            }
+        }
+
+        // ========== 右侧控制面板 ==========
+        Rectangle {
+            Layout.preferredWidth: 280
+            Layout.fillHeight: true
+            color: "#0a0f1e"
+            border.width: 2
+            border.color: "#00d4ff"
+            radius: 8
+            opacity: 0.95
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 15
+                spacing: 15
+
+                // 快速操作
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 120
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#1a2f3e" }
+                        GradientStop { position: 1.0; color: "#0a1f2e" }
+                    }
+                    border.width: 1
+                    border.color: "#00d4ff"
+                    radius: 5
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 8
+
                         Text {
-                            id: updateTimeText
-                            text: "更新: " + Qt.formatTime(new Date(), "hh:mm:ss")
+                            text: "快速操作"
                             font.pixelSize: 14
-                            font.family: "Consolas"
-                            color: "#5a6f8f"
+                            font.bold: true
+                            font.family: "Microsoft YaHei"
+                            color: "#00d4ff"
                         }
-                    }
-                }
 
-                // 集控设备区域
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 280
-                    Layout.margins: 10
-
-                    // ✅ 科技感：深色渐变背景
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#0f1a2e" }
-                        GradientStop { position: 1.0; color: "#0a0f1e" }
-                    }
-
-                    border.width: 2
-                    border.color: "#00d4ff"
-                    radius: 8
-
-                    // ✅ 科技感：外层发光
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: -2
-                        color: "transparent"
-                        border.width: 1
-                        border.color: "#00d4ff"
-                        radius: 10
-                        opacity: 0.3
-                    }
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 15
-                        spacing: 15
-
-                        // ✅ 科技感：标题带下划线
-                        ColumnLayout {
+                        Rectangle {
                             Layout.fillWidth: true
-                            spacing: 5
-
-                            Text {
-                                text: "【集控设备】"
-                                font.pixelSize: 20
-                                font.bold: true
-                                font.family: "Microsoft YaHei"
-                                color: "#00d4ff"
-                            }
-
-                            Rectangle {
-                                Layout.preferredWidth: 150
-                                Layout.preferredHeight: 2
-                                color: "#00d4ff"
-                                opacity: 0.5
-                            }
+                            height: 1
+                            color: "#00d4ff"
+                            opacity: 0.3
                         }
 
                         GridLayout {
                             Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            columns: 4
-                            rowSpacing: 15
-                            columnSpacing: 15
+                            columns: 2
+                            rowSpacing: 8
+                            columnSpacing: 8
 
-                            // 主站
-                            StationCard {
-                                stationId: 1
-                                stationRole: "master"
-                                stationName: "主站"
-                                controlDevice: "1号皮带"
-                                controlDeviceId: 1
-                                ip: "192.168.10.188"
-                                isOnline: true
-                                isLocal: true
-                                status: "运行中"
+                            Button {
+                                text: "全部启动"
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 30
+                                background: Rectangle {
+                                    color: parent.pressed ? "#2a3f5f" : (parent.hovered ? "#1a2f4f" : "#0a0f1e")
+                                    border.width: 1
+                                    border.color: "#00d4ff"
+                                    radius: 3
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    font.pixelSize: 11
+                                    font.family: "Microsoft YaHei"
+                                    color: "#00d4ff"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
                             }
 
-                            // 分站1
-                            StationCard {
-                                stationId: 2
-                                stationRole: "sub"
-                                stationName: "分站1"
-                                controlDevice: "2号皮带"
-                                controlDeviceId: 2
-                                ip: "192.168.10.189"
-                                isOnline: true
-                                isLocal: false
-                                status: "运行中"
-                            }
-
-                            // 分站2
-                            StationCard {
-                                stationId: 3
-                                stationRole: "sub"
-                                stationName: "分站2"
-                                controlDevice: "3号皮带"
-                                controlDeviceId: 3
-                                ip: "192.168.10.190"
-                                isOnline: true
-                                isLocal: false
-                                status: "停止"
-                            }
-
-                            // 分站3（离线）
-                            StationCard {
-                                stationId: 4
-                                stationRole: "sub"
-                                stationName: "分站3"
-                                controlDevice: "4号皮带"
-                                controlDeviceId: 4
-                                ip: ""
-                                isOnline: false
-                                isLocal: false
-                                status: ""
-                            }
-                        }
-                    }
-                }
-
-                // 皮带输送机区域
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 450
-                    Layout.margins: 10
-
-                    // ✅ 科技感：深色渐变背景
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#0f1a2e" }
-                        GradientStop { position: 1.0; color: "#0a0f1e" }
-                    }
-
-                    border.width: 2
-                    border.color: "#00d4ff"
-                    radius: 8
-
-                    // ✅ 科技感：外层发光
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: -2
-                        color: "transparent"
-                        border.width: 1
-                        border.color: "#00d4ff"
-                        radius: 10
-                        opacity: 0.3
-                    }
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 15
-                        spacing: 15
-
-                        // ✅ 科技感：标题带下划线
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 5
-
-                            Text {
-                                text: "【皮带输送机】"
-                                font.pixelSize: 20
-                                font.bold: true
-                                font.family: "Microsoft YaHei"
-                                color: "#00d4ff"
-                            }
-
-                            Rectangle {
-                                Layout.preferredWidth: 150
-                                Layout.preferredHeight: 2
-                                color: "#00d4ff"
-                                opacity: 0.5
-                            }
-                        }
-
-                        GridLayout {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            columns: 4
-                            rowSpacing: 15
-                            columnSpacing: 15
-
-                            Repeater {
-                                model: 8
-
-                                DeviceStatusCard {
-                                    deviceId: index + 1
-                                    deviceName: (index + 1) + "号皮带"
-                                    deviceType: "Belt"
-                                    controlStation: index === 0 ? "主站" : ("分站" + index)
-                                    isLocal: index === 0
-                                    isOnline: index < 3
-                                    status: index === 0 ? "运行中" : (index === 1 ? "运行中" : "停止")
-                                    speed: index === 0 ? 1.2 : (index === 1 ? 1.3 : 0.0)
+                            Button {
+                                text: "全部停止"
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 30
+                                background: Rectangle {
+                                    color: parent.pressed ? "#3f2a2a" : (parent.hovered ? "#2f1a1a" : "#0a0f1e")
+                                    border.width: 1
+                                    border.color: "#E74C3C"
+                                    radius: 3
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    font.pixelSize: 11
+                                    font.family: "Microsoft YaHei"
+                                    color: "#E74C3C"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
                                 }
                             }
                         }
                     }
                 }
 
-                // 辅助设备区域
+                // 设备列表
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 250
-                    Layout.margins: 10
-
-                    // ✅ 科技感：深色渐变背景
+                    Layout.fillHeight: true
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#0f1a2e" }
-                        GradientStop { position: 1.0; color: "#0a0f1e" }
+                        GradientStop { position: 0.0; color: "#1a2f3e" }
+                        GradientStop { position: 1.0; color: "#0a1f2e" }
                     }
-
-                    border.width: 2
+                    border.width: 1
                     border.color: "#00d4ff"
-                    radius: 8
-
-                    // ✅ 科技感：外层发光
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: -2
-                        color: "transparent"
-                        border.width: 1
-                        border.color: "#00d4ff"
-                        radius: 10
-                        opacity: 0.3
-                    }
+                    radius: 5
 
                     ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: 15
-                        spacing: 15
+                        anchors.margins: 10
+                        spacing: 8
 
-                        // ✅ 科技感：标题带下划线
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 5
-
-                            Text {
-                                text: "【辅助设备】"
-                                font.pixelSize: 20
-                                font.bold: true
-                                font.family: "Microsoft YaHei"
-                                color: "#00d4ff"
-                            }
-
-                            Rectangle {
-                                Layout.preferredWidth: 150
-                                Layout.preferredHeight: 2
-                                color: "#00d4ff"
-                                opacity: 0.5
-                            }
+                        Text {
+                            text: "设备列表"
+                            font.pixelSize: 14
+                            font.bold: true
+                            font.family: "Microsoft YaHei"
+                            color: "#00d4ff"
                         }
 
-                        GridLayout {
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: "#00d4ff"
+                            opacity: 0.3
+                        }
+
+                        ScrollView {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            columns: 4
-                            rowSpacing: 15
-                            columnSpacing: 15
+                            clip: true
 
-                            // 转载机
-                            DeviceStatusCard {
-                                deviceId: 9
-                                deviceName: "转载机"
-                                deviceType: "Loader"
-                                controlStation: "主站"
-                                isLocal: false
-                                isOnline: true
-                                status: "运行中"
-                                speed: 0.8
-                            }
+                            ListView {
+                                model: 12
+                                spacing: 5
 
-                            // 破碎机
-                            DeviceStatusCard {
-                                deviceId: 10
-                                deviceName: "破碎机"
-                                deviceType: "Crusher"
-                                controlStation: "主站"
-                                isLocal: false
-                                isOnline: true
-                                status: "停止"
-                                speed: 0.0
-                            }
+                                delegate: Rectangle {
+                                    width: parent.width
+                                    height: 40
+                                    color: index === 0 ? "#1a3f1e" : "#0a1f2e"
+                                    border.width: 1
+                                    border.color: index === 0 ? "#00ff00" : "#2a3f5f"
+                                    radius: 3
 
-                            // 前刮板
-                            DeviceStatusCard {
-                                deviceId: 11
-                                deviceName: "前刮板"
-                                deviceType: "FrontScraper"
-                                controlStation: "分站1"
-                                isLocal: false
-                                isOnline: false
-                                status: ""
-                                speed: 0.0
-                            }
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: 8
+                                        spacing: 8
 
-                            // 后刮板
-                            DeviceStatusCard {
-                                deviceId: 12
-                                deviceName: "后刮板"
-                                deviceType: "RearScraper"
-                                controlStation: "分站1"
-                                isLocal: false
-                                isOnline: true
-                                status: "运行中"
-                                speed: 0.9
+                                        Rectangle {
+                                            width: 8
+                                            height: 8
+                                            radius: 4
+                                            color: index < 8 ? "#2ECC71" : "#E74C3C"
+                                        }
+
+                                        Text {
+                                            text: index < 8 ? ((index + 1) + "号皮带") :
+                                                  (index === 8 ? "转载机" :
+                                                   index === 9 ? "破碎机" :
+                                                   index === 10 ? "前刮板" : "后刮板")
+                                            font.pixelSize: 11
+                                            font.family: "Microsoft YaHei"
+                                            color: index === 0 ? "#00ff00" : "#00d4ff"
+                                            Layout.fillWidth: true
+                                        }
+
+                                        Text {
+                                            text: index < 5 ? "运行" : "停止"
+                                            font.pixelSize: 10
+                                            font.family: "Microsoft YaHei"
+                                            color: index < 5 ? "#2ECC71" : "#E74C3C"
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+
+                                        onEntered: {
+                                            parent.scale = 1.05
+                                        }
+
+                                        onExited: {
+                                            parent.scale = 1.0
+                                        }
+                                    }
+
+                                    Behavior on scale {
+                                        NumberAnimation { duration: 150 }
+                                    }
+                                }
                             }
                         }
                     }
-                }
-
-                // 连锁关系图
-                InterlockDiagram {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 200
-                    Layout.margins: 10
-                }
-
-                // 底部填充
-                Item {
-                    Layout.fillHeight: true
-                    Layout.preferredHeight: 20
                 }
             }
         }
     }
 
-    // ========== 定时刷新 ==========
-    Timer {
-        id: refreshTimer
-        interval: 1000  // 1秒刷新一次
-        running: true
-        repeat: true
-        onTriggered: {
-            updateTimeText.text = "更新: " + Qt.formatTime(new Date(), "hh:mm:ss")
-            // TODO: 更新设备状态
+    // ========== 底部数据面板 ==========
+    Rectangle {
+        id: bottomPanel
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 10
+        height: 200
+        color: "#0a0f1e"
+        border.width: 2
+        border.color: "#00d4ff"
+        radius: 8
+        opacity: 0.95
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 15
+            spacing: 15
+
+            // 实时数据表格
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "#1a2f3e" }
+                    GradientStop { position: 1.0; color: "#0a1f2e" }
+                }
+                border.width: 1
+                border.color: "#00d4ff"
+                radius: 5
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 5
+
+                    Text {
+                        text: "实时运行数据"
+                        font.pixelSize: 14
+                        font.bold: true
+                        font.family: "Microsoft YaHei"
+                        color: "#00d4ff"
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 1
+                        color: "#00d4ff"
+                        opacity: 0.3
+                    }
+
+                    // 表格头
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Text {
+                            text: "设备"
+                            font.pixelSize: 11
+                            font.family: "Microsoft YaHei"
+                            color: "#5a6f8f"
+                            Layout.preferredWidth: 80
+                        }
+                        Text {
+                            text: "速度"
+                            font.pixelSize: 11
+                            font.family: "Microsoft YaHei"
+                            color: "#5a6f8f"
+                            Layout.preferredWidth: 60
+                        }
+                        Text {
+                            text: "电流"
+                            font.pixelSize: 11
+                            font.family: "Microsoft YaHei"
+                            color: "#5a6f8f"
+                            Layout.preferredWidth: 60
+                        }
+                        Text {
+                            text: "温度"
+                            font.pixelSize: 11
+                            font.family: "Microsoft YaHei"
+                            color: "#5a6f8f"
+                            Layout.preferredWidth: 60
+                        }
+                        Text {
+                            text: "状态"
+                            font.pixelSize: 11
+                            font.family: "Microsoft YaHei"
+                            color: "#5a6f8f"
+                            Layout.preferredWidth: 60
+                        }
+                    }
+
+                    ScrollView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+
+                        ListView {
+                            model: 5
+                            spacing: 3
+
+                            delegate: RowLayout {
+                                width: parent.width
+                                spacing: 10
+
+                                Text {
+                                    text: (index + 1) + "号皮带"
+                                    font.pixelSize: 10
+                                    font.family: "Microsoft YaHei"
+                                    color: "#00d4ff"
+                                    Layout.preferredWidth: 80
+                                }
+                                Text {
+                                    text: (1.2 + index * 0.1).toFixed(1) + " m/s"
+                                    font.pixelSize: 10
+                                    font.family: "Consolas"
+                                    color: "#2ECC71"
+                                    Layout.preferredWidth: 60
+                                }
+                                Text {
+                                    text: (45 + index * 5) + " A"
+                                    font.pixelSize: 10
+                                    font.family: "Consolas"
+                                    color: "#F39C12"
+                                    Layout.preferredWidth: 60
+                                }
+                                Text {
+                                    text: (35 + index * 2) + " °C"
+                                    font.pixelSize: 10
+                                    font.family: "Consolas"
+                                    color: "#00d4ff"
+                                    Layout.preferredWidth: 60
+                                }
+                                Text {
+                                    text: "运行中"
+                                    font.pixelSize: 10
+                                    font.family: "Microsoft YaHei"
+                                    color: "#2ECC71"
+                                    Layout.preferredWidth: 60
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 故障统计
+            Rectangle {
+                Layout.preferredWidth: 250
+                Layout.fillHeight: true
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "#1a2f3e" }
+                    GradientStop { position: 1.0; color: "#0a1f2e" }
+                }
+                border.width: 1
+                border.color: "#00d4ff"
+                radius: 5
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 5
+
+                    Text {
+                        text: "故障统计"
+                        font.pixelSize: 14
+                        font.bold: true
+                        font.family: "Microsoft YaHei"
+                        color: "#00d4ff"
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 1
+                        color: "#00d4ff"
+                        opacity: 0.3
+                    }
+
+                    GridLayout {
+                        Layout.fillWidth: true
+                        columns: 2
+                        rowSpacing: 6
+                        columnSpacing: 10
+
+                        Text {
+                            text: "今日故障:"
+                            font.pixelSize: 11
+                            font.family: "Microsoft YaHei"
+                            color: "#5a6f8f"
+                        }
+                        Text {
+                            text: "0"
+                            font.pixelSize: 13
+                            font.bold: true
+                            font.family: "Consolas"
+                            color: "#2ECC71"
+                        }
+
+                        Text {
+                            text: "本周故障:"
+                            font.pixelSize: 11
+                            font.family: "Microsoft YaHei"
+                            color: "#5a6f8f"
+                        }
+                        Text {
+                            text: "2"
+                            font.pixelSize: 13
+                            font.bold: true
+                            font.family: "Consolas"
+                            color: "#F39C12"
+                        }
+
+                        Text {
+                            text: "本月故障:"
+                            font.pixelSize: 11
+                            font.family: "Microsoft YaHei"
+                            color: "#5a6f8f"
+                        }
+                        Text {
+                            text: "5"
+                            font.pixelSize: 13
+                            font.bold: true
+                            font.family: "Consolas"
+                            color: "#E74C3C"
+                        }
+                    }
+
+                    Item { Layout.fillHeight: true }
+
+                    Text {
+                        text: "平均故障间隔: 127h"
+                        font.pixelSize: 10
+                        font.family: "Microsoft YaHei"
+                        color: "#5a6f8f"
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+                }
+            }
+
+            // 报警信息
+            Rectangle {
+                Layout.preferredWidth: 300
+                Layout.fillHeight: true
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "#1a2f3e" }
+                    GradientStop { position: 1.0; color: "#0a1f2e" }
+                }
+                border.width: 1
+                border.color: "#00d4ff"
+                radius: 5
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 5
+
+                    Text {
+                        text: "最近报警"
+                        font.pixelSize: 14
+                        font.bold: true
+                        font.family: "Microsoft YaHei"
+                        color: "#00d4ff"
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 1
+                        color: "#00d4ff"
+                        opacity: 0.3
+                    }
+
+                    ScrollView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+
+                        ListView {
+                            model: 3
+                            spacing: 5
+
+                            delegate: Rectangle {
+                                width: parent.width
+                                height: 40
+                                color: "#0a1f2e"
+                                border.width: 1
+                                border.color: "#2a3f5f"
+                                radius: 3
+
+                                ColumnLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 6
+                                    spacing: 2
+
+                                    Text {
+                                        text: index === 0 ? "3号皮带速度异常" :
+                                              index === 1 ? "5号皮带温度过高" : "转载机电流波动"
+                                        font.pixelSize: 10
+                                        font.family: "Microsoft YaHei"
+                                        color: "#F39C12"
+                                    }
+
+                                    Text {
+                                        text: "2026-02-10 " + (15 - index) + ":30:00"
+                                        font.pixelSize: 9
+                                        font.family: "Consolas"
+                                        color: "#5a6f8f"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
-    // ========== 函数 ==========
-    function refreshDeviceStatus() {
-        console.log("🔄 [DeviceMonitorPage] 刷新所有设备状态")
-        // TODO: 从 deviceRoleManager 获取最新状态
-    }
-
     Component.onCompleted: {
-        console.log("✅ [DeviceMonitorPage] 设备监控页面已加载")
+        console.log("✅ [DeviceMonitorPage] 数字孪生设备监控页面已加载")
     }
 }
