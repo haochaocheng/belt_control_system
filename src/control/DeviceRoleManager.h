@@ -27,8 +27,9 @@ enum class DeviceType {
     RearScraper     // 后刮板
 };
 
-// 设备信息结构
-struct DeviceInfo {
+// ✅ 2026-02-10 [Phase 7.45.7]: 重命名结构体避免与 DeviceDatabase.h 冲突
+// 设备状态信息结构（用于设备监控）
+struct DeviceStatusInfo {
     int deviceId;           // 设备ID（1-12）
     QString deviceName;     // 设备名称
     DeviceType deviceType;  // 设备类型
@@ -41,8 +42,8 @@ struct DeviceInfo {
     QVariantMap toVariantMap() const;
 };
 
-// 集控设备信息结构
-struct StationInfo {
+// 集控设备状态信息结构
+struct StationStatusInfo {
     int stationId;          // 集控ID
     QString stationRole;    // "master" 或 "sub"
     QString stationName;    // "主站" 或 "分站1"
@@ -147,8 +148,8 @@ private:
     int m_localDeviceId;                    // 本机设备ID（1-8）
     QString m_stationRole;                  // 本机角色（"master" 或 "sub"）
     int m_stationId;                        // 本机集控ID
-    QMap<int, DeviceInfo> m_devices;        // 所有设备信息（12个设备）
-    QMap<int, StationInfo> m_stations;      // 所有集控设备信息
+    QMap<int, DeviceStatusInfo> m_devices;  // 所有设备信息（12个设备）
+    QMap<int, StationStatusInfo> m_stations; // 所有集控设备信息
     QString m_configFilePath;               // 配置文件路径
 
     // ✅ 2026-02-10 [Phase 7.45.6]: MQTT 相关成员

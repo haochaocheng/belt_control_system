@@ -14,8 +14,8 @@
 #include <QDir>
 #include <QDebug>
 
-// DeviceInfo 转换为 QVariantMap
-QVariantMap DeviceInfo::toVariantMap() const
+// DeviceStatusInfo 转换为 QVariantMap
+QVariantMap DeviceStatusInfo::toVariantMap() const
 {
     QVariantMap map;
     map["deviceId"] = deviceId;
@@ -28,8 +28,8 @@ QVariantMap DeviceInfo::toVariantMap() const
     return map;
 }
 
-// StationInfo 转换为 QVariantMap
-QVariantMap StationInfo::toVariantMap() const
+// StationStatusInfo 转换为 QVariantMap
+QVariantMap StationStatusInfo::toVariantMap() const
 {
     QVariantMap map;
     map["stationId"] = stationId;
@@ -102,7 +102,7 @@ QString DeviceRoleManager::stationName() const
 QVariantList DeviceRoleManager::allDevices() const
 {
     QVariantList list;
-    for (const DeviceInfo &device : m_devices) {
+    for (const DeviceStatusInfo &device : m_devices) {
         list.append(device.toVariantMap());
     }
     return list;
@@ -111,7 +111,7 @@ QVariantList DeviceRoleManager::allDevices() const
 QVariantList DeviceRoleManager::allStations() const
 {
     QVariantList list;
-    for (const StationInfo &station : m_stations) {
+    for (const StationStatusInfo &station : m_stations) {
         list.append(station.toVariantMap());
     }
     return list;
@@ -182,7 +182,7 @@ bool DeviceRoleManager::hasPermission(int deviceId) const
 void DeviceRoleManager::updateDeviceStatus(int deviceId, bool isOnline, const QString &status)
 {
     if (m_devices.contains(deviceId)) {
-        DeviceInfo &device = m_devices[deviceId];
+        DeviceStatusInfo &device = m_devices[deviceId];
         device.isOnline = isOnline;
         device.status = status;
         device.lastUpdate = QDateTime::currentDateTime();
@@ -198,7 +198,7 @@ void DeviceRoleManager::updateDeviceStatus(int deviceId, bool isOnline, const QS
 void DeviceRoleManager::updateStationStatus(int stationId, bool isOnline, const QString &status)
 {
     if (m_stations.contains(stationId)) {
-        StationInfo &station = m_stations[stationId];
+        StationStatusInfo &station = m_stations[stationId];
         station.isOnline = isOnline;
         station.status = status;
         station.lastUpdate = QDateTime::currentDateTime();
@@ -294,7 +294,7 @@ void DeviceRoleManager::initializeDevices()
 
     // 初始化12个设备
     for (int i = 1; i <= 12; i++) {
-        DeviceInfo device;
+        DeviceStatusInfo device;
         device.deviceId = i;
         device.deviceName = getDeviceName(i);
         device.deviceType = getDeviceType(i);
@@ -314,7 +314,7 @@ void DeviceRoleManager::initializeStations()
     qDebug() << "🔧 [DeviceRoleManager] 初始化集控设备列表";
 
     // 初始化本机集控
-    StationInfo localStation;
+    StationStatusInfo localStation;
     localStation.stationId = m_stationId;
     localStation.stationRole = m_stationRole;
     localStation.stationName = stationName();
@@ -520,7 +520,7 @@ void DeviceRoleManager::publishDeviceStatus()
         return;
     }
 
-    const DeviceInfo &device = m_devices[m_localDeviceId];
+    const DeviceStatusInfo &device = m_devices[m_localDeviceId];
 
     // 构建设备状态消息
     QJsonObject json;
@@ -583,7 +583,7 @@ void DeviceRoleManager::parseStationStatusMessage(const QString &topic, const QB
     QJsonObject json = doc.object();
 
     // 更新或创建集控设备信息
-    StationInfo station;
+    StationStatusInfo station;
     station.stationId = json["stationId"].toInt();
     station.stationRole = json["stationRole"].toString();
     station.stationName = json["stationName"].toString();
@@ -631,7 +631,7 @@ void DeviceRoleManager::parseDeviceStatusMessage(const QString &topic, const QBy
 
     // 更新设备信息
     if (m_devices.contains(deviceId)) {
-        DeviceInfo &device = m_devices[deviceId];
+        DeviceStatusInfo &device = m_devices[deviceId];
         device.isOnline = json["isOnline"].toBool();
         device.status = json["status"].toString();
         device.lastUpdate = QDateTime::currentDateTime();
