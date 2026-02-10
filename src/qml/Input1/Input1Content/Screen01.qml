@@ -61,6 +61,86 @@ Item {
         }
     }
 
+    // ✅ 2026-02-10 [Phase 7.45.5]: 设备监控按钮
+    Button {
+        id: deviceMonitorButton
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: 90
+        anchors.rightMargin: 20
+        width: 150
+        height: 50
+        z: 100  // 确保在最上层
+
+        background: Rectangle {
+            color: parent.pressed ? "#1976D2" : (parent.hovered ? "#1E88E5" : "#2196F3")
+            border.width: 2
+            border.color: "#00d4ff"
+            radius: 8
+
+            // 发光效果
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -2
+                color: "transparent"
+                border.width: 1
+                border.color: "#00d4ff"
+                radius: 10
+                opacity: 0.3
+            }
+        }
+
+        contentItem: Text {
+            text: "📊 设备监控"
+            font.pixelSize: 18
+            font.bold: true
+            font.family: "Microsoft YaHei"
+            color: "#FFFFFF"
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+        }
+
+        onClicked: {
+            console.log("🖱️ [Screen01] 点击设备监控按钮")
+            deviceMonitorDialog.visible = true
+        }
+    }
+
+    // ✅ 2026-02-10 [Phase 7.45.5]: 设备监控对话框
+    Loader {
+        id: deviceMonitorDialogLoader
+        active: false
+        sourceComponent: Component {
+            Item {
+                id: deviceMonitorDialog
+                anchors.fill: parent
+                visible: false
+                z: 2000  // 确保在最顶层
+
+                // 加载 DeviceMonitorDialog
+                Loader {
+                    id: dialogLoader
+                    anchors.fill: parent
+                    source: "../../components/device_monitor/DeviceMonitorDialog.qml"
+
+                    onLoaded: {
+                        console.log("✅ [Screen01] DeviceMonitorDialog 加载成功")
+                    }
+                }
+
+                // 监听 visible 变化
+                onVisibleChanged: {
+                    if (visible) {
+                        console.log("✅ [Screen01] 设备监控对话框打开")
+                        deviceMonitorDialogLoader.active = true
+                    } else {
+                        console.log("✅ [Screen01] 设备监控对话框关闭")
+                    }
+                }
+            }
+        }
+    }
+
     // ✅ 2026-01-28 [FIX 100.300.62]: 直接访问 Screen01Form 的子组件
     function getDataItems() {
         return [
