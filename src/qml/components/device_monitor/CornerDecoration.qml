@@ -2,6 +2,7 @@ import QtQuick 2.15
 
 // ✅ 2026-02-10 [Phase 7.45.11]: 角落装饰元素组件
 // 科技感的角落装饰线条
+// ✅ 2026-02-10 [Phase 7.45.14]: 修复 opacity 属性冲突
 Item {
     id: root
 
@@ -9,7 +10,7 @@ Item {
     property int lineLength: 20
     property int lineWidth: 2
     property color lineColor: "#00d4ff"
-    property real opacity: 0.6
+    property real lineOpacity: 0.6  // 改名避免与 Item.opacity 冲突
 
     width: lineLength
     height: lineLength
@@ -19,7 +20,7 @@ Item {
         width: root.lineLength
         height: root.lineWidth
         color: root.lineColor
-        opacity: root.opacity
+        opacity: root.lineOpacity
 
         anchors {
             left: root.corner === "topLeft" || root.corner === "bottomLeft" ? parent.left : undefined
@@ -32,8 +33,8 @@ Item {
         SequentialAnimation on opacity {
             running: true
             loops: Animation.Infinite
-            NumberAnimation { from: root.opacity; to: root.opacity * 0.3; duration: 1500 }
-            NumberAnimation { from: root.opacity * 0.3; to: root.opacity; duration: 1500 }
+            NumberAnimation { from: root.lineOpacity; to: root.lineOpacity * 0.3; duration: 1500 }
+            NumberAnimation { from: root.lineOpacity * 0.3; to: root.lineOpacity; duration: 1500 }
         }
     }
 
@@ -42,7 +43,7 @@ Item {
         width: root.lineWidth
         height: root.lineLength
         color: root.lineColor
-        opacity: root.opacity
+        opacity: root.lineOpacity
 
         anchors {
             left: root.corner === "topLeft" || root.corner === "bottomLeft" ? parent.left : undefined
@@ -56,8 +57,8 @@ Item {
             running: true
             loops: Animation.Infinite
             PauseAnimation { duration: 200 }
-            NumberAnimation { from: root.opacity; to: root.opacity * 0.3; duration: 1500 }
-            NumberAnimation { from: root.opacity * 0.3; to: root.opacity; duration: 1500 }
+            NumberAnimation { from: root.lineOpacity; to: root.lineOpacity * 0.3; duration: 1500 }
+            NumberAnimation { from: root.lineOpacity * 0.3; to: root.lineOpacity; duration: 1500 }
         }
     }
 
@@ -67,7 +68,7 @@ Item {
         height: 4
         radius: 2
         color: root.lineColor
-        opacity: root.opacity
+        opacity: root.lineOpacity
 
         anchors {
             left: root.corner === "topLeft" || root.corner === "bottomLeft" ? parent.left : undefined
