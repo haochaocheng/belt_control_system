@@ -102,41 +102,39 @@ Item {
 
         onClicked: {
             console.log("🖱️ [Screen01] 点击设备监控按钮")
-            deviceMonitorDialog.visible = true
+            deviceMonitorDialogLoader.active = true
+            // 延迟调用 open()，确保 Loader 已加载完成
+            Qt.callLater(function() {
+                if (deviceMonitorDialogLoader.item) {
+                    console.log("✅ [Screen01] 调用 DeviceMonitorDialog.open()")
+                    deviceMonitorDialogLoader.item.open()
+                } else {
+                    console.error("❌ [Screen01] deviceMonitorDialogLoader.item 为 null")
+                }
+            })
         }
     }
 
     // ✅ 2026-02-10 [Phase 7.45.5]: 设备监控对话框
+    // ✅ 2026-02-10 [修复]: 简化 Loader 结构，直接加载 DeviceMonitorDialog
     Loader {
         id: deviceMonitorDialogLoader
+        anchors.fill: parent
         active: false
-        sourceComponent: Component {
-            Item {
-                id: deviceMonitorDialog
-                anchors.fill: parent
-                visible: false
-                z: 2000  // 确保在最顶层
+        z: 2000  // 确保在最顶层
+        source: "../../components/device_monitor/DeviceMonitorDialog.qml"
 
-                // 加载 DeviceMonitorDialog
-                Loader {
-                    id: dialogLoader
-                    anchors.fill: parent
-                    source: "../../components/device_monitor/DeviceMonitorDialog.qml"
+        onLoaded: {
+            console.log("✅ [Screen01] DeviceMonitorDialog 加载成功")
+            if (item) {
+                console.log("✅ [Screen01] 自动打开对话框")
+                item.open()
+            }
+        }
 
-                    onLoaded: {
-                        console.log("✅ [Screen01] DeviceMonitorDialog 加载成功")
-                    }
-                }
-
-                // 监听 visible 变化
-                onVisibleChanged: {
-                    if (visible) {
-                        console.log("✅ [Screen01] 设备监控对话框打开")
-                        deviceMonitorDialogLoader.active = true
-                    } else {
-                        console.log("✅ [Screen01] 设备监控对话框关闭")
-                    }
-                }
+        onStatusChanged: {
+            if (status === Loader.Error) {
+                console.error("❌ [Screen01] DeviceMonitorDialog 加载失败:", errorString())
             }
         }
     }
