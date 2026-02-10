@@ -54,15 +54,15 @@ ApplicationWindow {
                 anchors.centerIn: parent
                 spacing: 20
 
-                // ✅ 2026-02-10 [Phase 7.45.7]: 添加设备监控页面到导航栏
+                // ✅ 2026-02-10 [Phase 7.45.7]: 调整页面顺序，设备监控放在第2位
                 Repeater {
                     model: [
                         "控制面板",
+                        "设备监控",
                         "参数设置",
                         "报警页面",
                         "Input1",
-                        "语音管理",
-                        "设备监控"
+                        "语音管理"
                     ]
 
                     Rectangle {
@@ -90,14 +90,14 @@ ApplicationWindow {
         }
 
         // ========== 页面切换视图 ==========
-        // ✅ 2026-01-28 [FIX 100.300.65]: 移除第 4 页（设备信息），默认显示第 3 页（Input1）
+        // ✅ 2026-02-10 [Phase 7.45.7]: 调整页面顺序，设备监控放在第2位
         SwipeView {
             id: swipeView
             anchors.top: header.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            currentIndex: 3  // 默认显示第 4 页（Input1，索引从 0 开始）
+            currentIndex: 4  // 默认显示第 5 页（Input1，索引从 0 开始）
 
             // 页面 1: 控制面板
             Loader {
@@ -112,7 +112,20 @@ ApplicationWindow {
                 }
             }
 
-            // 页面 2: 参数设置
+            // ✅ 2026-02-10 [Phase 7.45.7]: 页面 2: 设备监控
+            Loader {
+                source: "pages/DeviceMonitorPage.qml"
+                onLoaded: {
+                    console.log("✅ 设备监控页面加载成功")
+                }
+                onStatusChanged: {
+                    if (status === Loader.Error) {
+                        console.log("❌ 设备监控页面加载失败")
+                    }
+                }
+            }
+
+            // 页面 3: 参数设置
             Loader {
                 source: "pages/ParameterSettings.qml"
                 onLoaded: {
@@ -125,7 +138,7 @@ ApplicationWindow {
                 }
             }
 
-            // 页面 3: 报警页面
+            // 页面 4: 报警页面
             Loader {
                 source: "pages/AlarmPage.qml"
                 onLoaded: {
@@ -138,10 +151,7 @@ ApplicationWindow {
                 }
             }
 
-            // ✅ 2026-01-28 [FIX 100.300.65]: 移除第 4 页（设备信息 - 电机控制）
-            // 原因：用户不需要在主界面显示设备信息，改为通过 Input1 页面的回车键或双击打开
-
-            // 页面 4: Input1（✅ 2026-01-26 已移除 Input1 模块依赖，可在 QDS 中运行）
+            // 页面 5: Input1
             Loader {
                 source: "pages/Input1Page.qml"
                 onLoaded: {
@@ -154,7 +164,7 @@ ApplicationWindow {
                 }
             }
 
-            // 页面 5: 语音管理
+            // 页面 6: 语音管理
             Loader {
                 source: "pages/VoiceManagement.qml"
                 onLoaded: {
@@ -163,19 +173,6 @@ ApplicationWindow {
                 onStatusChanged: {
                     if (status === Loader.Error) {
                         console.log("❌ 语音管理加载失败")
-                    }
-                }
-            }
-
-            // ✅ 2026-02-10 [Phase 7.45.7]: 页面 6: 设备监控
-            Loader {
-                source: "pages/DeviceMonitorPage.qml"
-                onLoaded: {
-                    console.log("✅ 设备监控页面加载成功")
-                }
-                onStatusChanged: {
-                    if (status === Loader.Error) {
-                        console.log("❌ 设备监控页面加载失败")
                     }
                 }
             }
