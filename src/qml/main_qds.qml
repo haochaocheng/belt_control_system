@@ -54,14 +54,15 @@ ApplicationWindow {
                 anchors.centerIn: parent
                 spacing: 20
 
-                // ✅ 2026-01-28 [FIX 100.300.65]: 移除"设备信息"页面，保留 5 个主界面
+                // ✅ 2026-02-10 [Phase 7.45.7]: 添加设备监控页面到导航栏
                 Repeater {
                     model: [
                         "控制面板",
                         "参数设置",
                         "报警页面",
                         "Input1",
-                        "语音管理"
+                        "语音管理",
+                        "设备监控"
                     ]
 
                     Rectangle {
@@ -162,6 +163,19 @@ ApplicationWindow {
                 onStatusChanged: {
                     if (status === Loader.Error) {
                         console.log("❌ 语音管理加载失败")
+                    }
+                }
+            }
+
+            // ✅ 2026-02-10 [Phase 7.45.7]: 页面 6: 设备监控
+            Loader {
+                source: "pages/DeviceMonitorPage.qml"
+                onLoaded: {
+                    console.log("✅ 设备监控页面加载成功")
+                }
+                onStatusChanged: {
+                    if (status === Loader.Error) {
+                        console.log("❌ 设备监控页面加载失败")
                     }
                 }
             }

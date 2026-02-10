@@ -61,83 +61,24 @@ Item {
         }
     }
 
+    // ❌ 2026-02-10 [Phase 7.45.7]: 移除设备监控按钮和对话框
+    // 原因：设备监控已改为独立页面，在 main_qds.qml 的 SwipeView 中
+    // 用户可通过导航栏切换到设备监控页面
+    /*
     // ✅ 2026-02-10 [Phase 7.45.5]: 设备监控按钮
     Button {
         id: deviceMonitorButton
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.topMargin: 90
-        anchors.rightMargin: 20
-        width: 150
-        height: 50
-        z: 100  // 确保在最上层
-
-        background: Rectangle {
-            color: parent.pressed ? "#1976D2" : (parent.hovered ? "#1E88E5" : "#2196F3")
-            border.width: 2
-            border.color: "#00d4ff"
-            radius: 8
-
-            // 发光效果
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: -2
-                color: "transparent"
-                border.width: 1
-                border.color: "#00d4ff"
-                radius: 10
-                opacity: 0.3
-            }
-        }
-
-        contentItem: Text {
-            text: "📊 设备监控"
-            font.pixelSize: 18
-            font.bold: true
-            font.family: "Microsoft YaHei"
-            color: "#FFFFFF"
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
-
-        onClicked: {
-            console.log("🖱️ [Screen01] 点击设备监控按钮")
-            deviceMonitorDialogLoader.active = true
-            // 延迟调用 open()，确保 Loader 已加载完成
-            Qt.callLater(function() {
-                if (deviceMonitorDialogLoader.item) {
-                    console.log("✅ [Screen01] 调用 DeviceMonitorDialog.open()")
-                    deviceMonitorDialogLoader.item.open()
-                } else {
-                    console.error("❌ [Screen01] deviceMonitorDialogLoader.item 为 null")
-                }
-            })
-        }
+        ...
     }
 
     // ✅ 2026-02-10 [Phase 7.45.5]: 设备监控对话框
-    // ✅ 2026-02-10 [修复]: 简化 Loader 结构，直接加载 DeviceMonitorDialog
     Loader {
         id: deviceMonitorDialogLoader
-        anchors.fill: parent
-        active: false
-        z: 2000  // 确保在最顶层
-        source: "../../components/device_monitor/DeviceMonitorDialog.qml"
-
-        onLoaded: {
-            console.log("✅ [Screen01] DeviceMonitorDialog 加载成功")
-            if (item) {
-                console.log("✅ [Screen01] 自动打开对话框")
-                item.open()
-            }
-        }
-
-        onStatusChanged: {
-            if (status === Loader.Error) {
-                console.error("❌ [Screen01] DeviceMonitorDialog 加载失败:", errorString())
-            }
-        }
+        ...
     }
+    */
+
+    // ========== 页面内设备卡片点击处理 ==========
 
     // ✅ 2026-01-28 [FIX 100.300.62]: 直接访问 Screen01Form 的子组件
     function getDataItems() {
