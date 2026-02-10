@@ -180,10 +180,14 @@
         <file>components/device_monitor/CircularProgress.qml</file>
         <file>components/device_monitor/CornerDecoration.qml</file>
         <file>components/device_monitor/DeviceStatusCard.qml</file>
+        <file>components/device_monitor/GlowLed.qml</file>
         <file>components/device_monitor/InterlockDiagram.qml</file>
         <file>components/device_monitor/MiniTrendChart.qml</file>
+        <file>components/device_monitor/ModernButton.qml</file>
+        <file>components/device_monitor/qmldir</file>
         <file>components/device_monitor/StationCard.qml</file>
         <file>components/device_monitor/StatusBadge.qml</file>
+        <file>components/device_monitor/Theme.qml</file>
         <file>components/MotorControlBtn.qml</file>
         <file>components/MotorControlPanel.qml</file>
         <file>components/parameter_settings/BasicParametersSection.qml</file>
