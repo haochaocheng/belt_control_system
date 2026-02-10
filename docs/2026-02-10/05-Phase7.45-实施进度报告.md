@@ -374,17 +374,89 @@ Loader {
 - 符合实际设备的操作习惯
 - 科技感十足的视觉效果
 
-**Git 提交**: `22c9fff3` (页面重构), 待提交 (视觉优化)
+**Git 提交**: `22c9fff3` (页面重构), `bd39229b` (视觉优化)
+
+### 9. Phase 7.45.8：使用统一的Back和Head组件
+**状态**: ✅ 已完成
+
+**问题**：
+- 用户要求："背景图片和头部都有统一的组件，不需要使用默认的"
+- DeviceMonitorPage 使用自定义背景和标题栏
+- 与其他页面（ControlPanel, ParameterSettings）风格不一致
+
+**修改文件**：
+- `src/qml/pages/DeviceMonitorPage.qml` - 使用统一组件
+
+**修改内容**：
+
+1. **导入统一组件模块**：
+   ```qml
+   import "../Input1/Input1Content"  // Back 和 Head 组件
+   ```
+
+2. **替换背景**：
+   - 移除：`Rectangle { color: "#0a0f1e" }`
+   - 使用：`Back { anchors.fill: parent; z: 0; enabled: false }`
+   - Back 组件包含多层背景图片（back1.svg, back2.svg, back3.png, back_Lift.svg, back_Rrigt.png）
+
+3. **替换头部**：
+   - 移除：自定义标题栏 Rectangle（80px高，包含"【设备监控】"标题和刷新按钮）
+   - 使用：`Head { width: 1920; height: 80; currentPageIndex: 1 }`
+   - Head 组件包含装饰线和菜单按钮
+
+4. **头部缩放处理**：
+   ```qml
+   Item {
+       id: headerContainer
+       width: 1920
+       height: 80
+       clip: true
+       z: 10
+
+       transform: Scale {
+           property real scaleFactor: root.width / 1920
+           xScale: scaleFactor
+           yScale: scaleFactor  // 等比缩放
+           origin.x: 0
+           origin.y: 0
+       }
+
+       Head {
+           width: 1920
+           height: 80
+           currentPageIndex: 1  // 设备监控是第2个页面
+       }
+   }
+   ```
+
+5. **调整内容布局**：
+   - 原来：`ColumnLayout { anchors.fill: parent }`
+   - 现在：`ColumnLayout { anchors.top: headerContainer.bottom }`
+   - 为 Head 组件留出空间
+
+**技术细节**：
+- Back 组件：`enabled: false` 不接收鼠标事件，只作为视觉背景
+- Head 组件：支持 `currentPageIndex` 属性，用于高亮当前页面菜单
+- 缩放变换：确保 Head 在不同分辨率下正确显示
+- z-index 管理：Back (z:0) < 内容 < Head (z:10)
+
+**优势**：
+- ✅ 与其他页面（ControlPanel, ParameterSettings）保持一致
+- ✅ 符合 QDS 设计规范
+- ✅ 统一的视觉风格
+- ✅ 保持所有科技感视觉效果（渐变、发光、动画）
+
+**Git 提交**: `839cc077`
 
 ---
 
 ## 📋 待完成工作
 
-### Phase 7.45.7：测试和优化
+### Phase 7.45.9：测试和优化
 **功能**：
 - ✅ 本机选择功能验证
 - ✅ 权限控制验证
-- ✅ 设备监控界面验证（已完成视觉优化）
+- ✅ 设备监控界面验证（已完成视觉优化和组件统一）
 - ⏳ MQTT 集成验证（待在实际设备上测试）
 - ⏳ 在QDS中测试设备监控界面
 - ⏳ 多设备联调测试
@@ -393,18 +465,18 @@ Loader {
 
 ## 📊 进度统计
 
-**总任务数**: 7个阶段
-**已完成**: 7个阶段（100%）
+**总任务数**: 8个阶段
+**已完成**: 8个阶段（100%）
 **进行中**: 0个阶段（0%）
 **待完成**: 0个阶段（0%）
 
 **代码统计**：
 - 新增 C++ 文件：2个（DeviceRoleManager.h/cpp）
 - 新增 QML 文件：6个（设备监控界面组件 + DeviceMonitorPage + MockBackend更新）
-- 修改 QML 文件：4个（BasicConfigPage.qml, DeviceSettingsDialog.qml, Screen01.qml, main_qds.qml）
+- 修改 QML 文件：5个（BasicConfigPage.qml, DeviceSettingsDialog.qml, Screen01.qml, main_qds.qml, DeviceMonitorPage.qml）
 - 修改 C++ 文件：1个（main.cpp）
 - 新增代码行数：约2000行
-- Git 提交：8次（待提交视觉优化）
+- Git 提交：9次
 
 ---
 
