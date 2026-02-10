@@ -2,8 +2,10 @@
 // 设备角色管理器实现
 // 创建日期: 2026-02-10
 // Phase 7.45.1
+// ✅ 2026-02-10 [Phase 7.45.6]: 添加 MQTT 集成实现
 
 #include "DeviceRoleManager.h"
+#include "mqtt/MQTTController.h"
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -47,6 +49,9 @@ DeviceRoleManager::DeviceRoleManager(QObject *parent)
     , m_localDeviceId(1)  // 默认1号皮带
     , m_stationRole("master")  // 默认主站
     , m_stationId(1)  // 默认集控ID为1
+    , m_mqttController(nullptr)  // ✅ 2026-02-10 [Phase 7.45.6]: 初始化 MQTT 控制器
+    , m_publishTimer(nullptr)    // ✅ 2026-02-10 [Phase 7.45.6]: 初始化发布定时器
+    , m_mqttEnabled(false)       // ✅ 2026-02-10 [Phase 7.45.6]: 默认禁用 MQTT
 {
     // 设置配置文件路径
     QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
@@ -64,10 +69,18 @@ DeviceRoleManager::DeviceRoleManager(QObject *parent)
 
     // 从配置文件加载
     loadFromConfig();
+
+    // ✅ 2026-02-10 [Phase 7.45.6]: 创建发布定时器
+    m_publishTimer = new QTimer(this);
+    m_publishTimer->setInterval(1000);  // 1秒发布一次
+    connect(m_publishTimer, &QTimer::timeout, this, &DeviceRoleManager::onPublishTimerTimeout);
 }
 
 DeviceRoleManager::~DeviceRoleManager()
 {
+    // ✅ 2026-02-10 [Phase 7.45.6]: 停止 MQTT 发布
+    stopMQTTPublishing();
+
     // 保存配置
     saveToConfig();
 }
@@ -363,4 +376,271 @@ DeviceType DeviceRoleManager::getDeviceType(int deviceId) const
         return DeviceType::RearScraper;
     }
     return DeviceType::Belt;
+}
+
+// ========== ✅ 2026-02-10 [Phase 7.45.6]: MQTT 集成实现 ==========
+
+void DeviceRoleManager::setMQTTController(MQTTController *controller)
+{
+    if (m_mqttController == controller) {
+        return;
+    }
+
+    // 断开旧的连接
+    if (m_mqttController) {
+        disconnect(m_mqttController, nullptr, this, nullptr);
+    }
+
+    m_mqttController = controller;
+
+    // 连接新的信号
+    if (m_mqttController) {
+        connect(m_mqttController, &MQTTController::messageReceived,
+                this, &DeviceRoleManager::onMQTTMessageReceived);
+
+        qDebug() << "✅ [DeviceRoleManager] MQTT 控制器已设置";
+
+        // 订阅主题
+        subscribeMQTTTopics();
+    }
+}
+
+void DeviceRoleManager::startMQTTPublishing()
+{
+    if (!m_mqttController) {
+        qWarning() << "⚠️ [DeviceRoleManager] MQTT 控制器未设置，无法启动发布";
+        return;
+    }
+
+    if (m_mqttEnabled) {
+        qDebug() << "⚠️ [DeviceRoleManager] MQTT 发布已启动";
+        return;
+    }
+
+    m_mqttEnabled = true;
+    m_publishTimer->start();
+
+    qDebug() << "✅ [DeviceRoleManager] MQTT 发布已启动";
+    qDebug() << "   发布间隔: 1秒";
+    qDebug() << "   集控主题: station/status/" << m_stationId;
+    qDebug() << "   设备主题: device/status/" << m_localDeviceId;
+}
+
+void DeviceRoleManager::stopMQTTPublishing()
+{
+    if (!m_mqttEnabled) {
+        return;
+    }
+
+    m_mqttEnabled = false;
+    m_publishTimer->stop();
+
+    // 取消订阅
+    unsubscribeMQTTTopics();
+
+    qDebug() << "🛑 [DeviceRoleManager] MQTT 发布已停止";
+}
+
+void DeviceRoleManager::subscribeMQTTTopics()
+{
+    if (!m_mqttController) {
+        return;
+    }
+
+    // 订阅所有集控设备状态（station/status/+）
+    m_mqttController->subscribe("station/status/+", 1);
+    qDebug() << "📡 [DeviceRoleManager] 订阅主题: station/status/+";
+
+    // 订阅所有设备状态（device/status/+）
+    m_mqttController->subscribe("device/status/+", 1);
+    qDebug() << "📡 [DeviceRoleManager] 订阅主题: device/status/+";
+}
+
+void DeviceRoleManager::unsubscribeMQTTTopics()
+{
+    if (!m_mqttController) {
+        return;
+    }
+
+    m_mqttController->unsubscribe("station/status/+");
+    m_mqttController->unsubscribe("device/status/+");
+
+    qDebug() << "📡 [DeviceRoleManager] 取消订阅所有主题";
+}
+
+void DeviceRoleManager::onPublishTimerTimeout()
+{
+    if (!m_mqttEnabled || !m_mqttController) {
+        return;
+    }
+
+    // 发布集控设备状态
+    publishStationStatus();
+
+    // 发布本机设备状态
+    publishDeviceStatus();
+}
+
+void DeviceRoleManager::publishStationStatus()
+{
+    if (!m_mqttController) {
+        return;
+    }
+
+    // 构建集控状态消息
+    QJsonObject json;
+    json["stationId"] = m_stationId;
+    json["stationRole"] = m_stationRole;
+    json["stationName"] = stationName();
+    json["controlDevice"] = localDeviceName();
+    json["controlDeviceId"] = m_localDeviceId;
+    json["ip"] = "192.168.10.188";  // TODO: 从配置获取
+    json["isOnline"] = true;
+    json["status"] = "运行中";  // TODO: 从实际状态获取
+    json["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+
+    QJsonDocument doc(json);
+    QString topic = QString("station/status/%1").arg(m_stationId);
+    QString message = doc.toJson(QJsonDocument::Compact);
+
+    // 发布消息
+    m_mqttController->publish(topic, message, 1, false);
+
+    // qDebug() << "📤 [DeviceRoleManager] 发布集控状态:" << topic;
+}
+
+void DeviceRoleManager::publishDeviceStatus()
+{
+    if (!m_mqttController) {
+        return;
+    }
+
+    // 获取本机设备信息
+    if (!m_devices.contains(m_localDeviceId)) {
+        return;
+    }
+
+    const DeviceInfo &device = m_devices[m_localDeviceId];
+
+    // 构建设备状态消息
+    QJsonObject json;
+    json["deviceId"] = device.deviceId;
+    json["deviceName"] = device.deviceName;
+    json["deviceType"] = static_cast<int>(device.deviceType);
+    json["isOnline"] = device.isOnline;
+    json["status"] = device.status;
+    json["controlStation"] = stationName();
+    json["controlStationId"] = m_stationId;
+    json["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+
+    QJsonDocument doc(json);
+    QString topic = QString("device/status/%1").arg(m_localDeviceId);
+    QString message = doc.toJson(QJsonDocument::Compact);
+
+    // 发布消息
+    m_mqttController->publish(topic, message, 1, false);
+
+    // qDebug() << "📤 [DeviceRoleManager] 发布设备状态:" << topic;
+}
+
+void DeviceRoleManager::onMQTTMessageReceived(int moduleIndex, const QString &topic, const QByteArray &payload)
+{
+    Q_UNUSED(moduleIndex);
+
+    // 解析集控设备状态消息
+    if (topic.startsWith("station/status/")) {
+        parseStationStatusMessage(topic, payload);
+    }
+    // 解析设备状态消息
+    else if (topic.startsWith("device/status/")) {
+        parseDeviceStatusMessage(topic, payload);
+    }
+}
+
+void DeviceRoleManager::parseStationStatusMessage(const QString &topic, const QByteArray &payload)
+{
+    // 提取集控ID
+    QString stationIdStr = topic.mid(QString("station/status/").length());
+    bool ok;
+    int stationId = stationIdStr.toInt(&ok);
+    if (!ok) {
+        qWarning() << "⚠️ [DeviceRoleManager] 无效的集控ID:" << stationIdStr;
+        return;
+    }
+
+    // 跳过本机消息
+    if (stationId == m_stationId) {
+        return;
+    }
+
+    // 解析 JSON
+    QJsonDocument doc = QJsonDocument::fromJson(payload);
+    if (!doc.isObject()) {
+        qWarning() << "⚠️ [DeviceRoleManager] 无效的 JSON 消息:" << payload;
+        return;
+    }
+
+    QJsonObject json = doc.object();
+
+    // 更新或创建集控设备信息
+    StationInfo station;
+    station.stationId = json["stationId"].toInt();
+    station.stationRole = json["stationRole"].toString();
+    station.stationName = json["stationName"].toString();
+    station.controlDevice = json["controlDevice"].toString();
+    station.controlDeviceId = json["controlDeviceId"].toInt();
+    station.ip = json["ip"].toString();
+    station.isOnline = json["isOnline"].toBool();
+    station.status = json["status"].toString();
+    station.lastUpdate = QDateTime::currentDateTime();
+
+    m_stations[stationId] = station;
+
+    qDebug() << "📥 [DeviceRoleManager] 收到集控状态:" << station.stationName
+             << "在线:" << station.isOnline << "状态:" << station.status;
+
+    // 发送信号
+    emit stationStatusChanged(stationId, station.isOnline, station.status);
+    emit allStationsChanged();
+}
+
+void DeviceRoleManager::parseDeviceStatusMessage(const QString &topic, const QByteArray &payload)
+{
+    // 提取设备ID
+    QString deviceIdStr = topic.mid(QString("device/status/").length());
+    bool ok;
+    int deviceId = deviceIdStr.toInt(&ok);
+    if (!ok) {
+        qWarning() << "⚠️ [DeviceRoleManager] 无效的设备ID:" << deviceIdStr;
+        return;
+    }
+
+    // 跳过本机设备消息
+    if (deviceId == m_localDeviceId) {
+        return;
+    }
+
+    // 解析 JSON
+    QJsonDocument doc = QJsonDocument::fromJson(payload);
+    if (!doc.isObject()) {
+        qWarning() << "⚠️ [DeviceRoleManager] 无效的 JSON 消息:" << payload;
+        return;
+    }
+
+    QJsonObject json = doc.object();
+
+    // 更新设备信息
+    if (m_devices.contains(deviceId)) {
+        DeviceInfo &device = m_devices[deviceId];
+        device.isOnline = json["isOnline"].toBool();
+        device.status = json["status"].toString();
+        device.lastUpdate = QDateTime::currentDateTime();
+
+        qDebug() << "📥 [DeviceRoleManager] 收到设备状态:" << device.deviceName
+                 << "在线:" << device.isOnline << "状态:" << device.status;
+
+        // 发送信号
+        emit deviceStatusChanged(deviceId, device.isOnline, device.status);
+        emit allDevicesChanged();
+    }
 }

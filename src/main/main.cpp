@@ -247,6 +247,13 @@ int main(int argc, char *argv[]) {
         deviceRoleManager.loadFromConfig();  // 从配置文件加载
         logMessage("DeviceRoleManager initialized");
 
+#ifdef MQTT_ENABLED
+        // ✅ 2026-02-10 [Phase 7.45.6]: 设置 MQTT 控制器并启动发布
+        deviceRoleManager.setMQTTController(&mqttController);
+        deviceRoleManager.startMQTTPublishing();
+        logMessage("DeviceRoleManager MQTT publishing started");
+#endif
+
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）
         logMessage("Setting context properties...");
         engine.rootContext()->setContextProperty("controller", &controller);

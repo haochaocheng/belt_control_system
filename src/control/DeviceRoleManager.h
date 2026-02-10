@@ -2,6 +2,7 @@
 // 设备角色管理器 - 管理主站/分站角色和权限控制
 // 创建日期: 2026-02-10
 // Phase 7.45.1
+// ✅ 2026-02-10 [Phase 7.45.6]: 添加 MQTT 集成支持
 
 #ifndef DEVICEROLEMANAGER_H
 #define DEVICEROLEMANAGER_H
@@ -12,6 +13,10 @@
 #include <QVariantMap>
 #include <QDateTime>
 #include <QMap>
+#include <QTimer>
+
+// 前向声明
+class MQTTController;
 
 // 设备类型枚举
 enum class DeviceType {
@@ -92,6 +97,13 @@ public:
     void saveToConfig();
     void loadFromConfig();
 
+    // ✅ 2026-02-10 [Phase 7.45.6]: MQTT 集成方法
+    void setMQTTController(MQTTController *controller);
+    void startMQTTPublishing();
+    void stopMQTTPublishing();
+    void subscribeMQTTTopics();
+    void unsubscribeMQTTTopics();
+
 signals:
     void localDeviceIdChanged();
     void localDeviceNameChanged();
@@ -103,6 +115,11 @@ signals:
     void deviceRoleChanged(int deviceId, bool isLocal);
     void deviceStatusChanged(int deviceId, bool isOnline, const QString &status);
     void stationStatusChanged(int stationId, bool isOnline, const QString &status);
+
+private slots:
+    // ✅ 2026-02-10 [Phase 7.45.6]: MQTT 消息处理槽函数
+    void onPublishTimerTimeout();
+    void onMQTTMessageReceived(int moduleIndex, const QString &topic, const QByteArray &payload);
 
 private:
     // 初始化设备列表
@@ -120,6 +137,12 @@ private:
     // 获取设备类型
     DeviceType getDeviceType(int deviceId) const;
 
+    // ✅ 2026-02-10 [Phase 7.45.6]: MQTT 辅助方法
+    void publishStationStatus();
+    void publishDeviceStatus();
+    void parseStationStatusMessage(const QString &topic, const QByteArray &payload);
+    void parseDeviceStatusMessage(const QString &topic, const QByteArray &payload);
+
 private:
     int m_localDeviceId;                    // 本机设备ID（1-8）
     QString m_stationRole;                  // 本机角色（"master" 或 "sub"）
@@ -127,6 +150,11 @@ private:
     QMap<int, DeviceInfo> m_devices;        // 所有设备信息（12个设备）
     QMap<int, StationInfo> m_stations;      // 所有集控设备信息
     QString m_configFilePath;               // 配置文件路径
+
+    // ✅ 2026-02-10 [Phase 7.45.6]: MQTT 相关成员
+    MQTTController *m_mqttController;       // MQTT 控制器
+    QTimer *m_publishTimer;                 // 状态发布定时器（1秒）
+    bool m_mqttEnabled;                     // MQTT 是否启用
 };
 
 #endif // DEVICEROLEMANAGER_H
