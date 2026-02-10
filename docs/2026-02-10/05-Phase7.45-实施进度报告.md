@@ -217,15 +217,95 @@ Loader {
 
 ---
 
-## 📋 待完成工作
+## ✅ 已完成工作（新增 Phase 7.45.6）
 
-### Phase 7.45.6：MQTT 集成
-**功能**：
-- 集控设备状态发布（`station/status/{stationId}`）
-- 设备状态发布（`device/status/{deviceId}`）
-- 订阅所有集控设备状态（`station/status/+`）
-- 订阅所有设备状态（`device/status/+`）
-- 动态发现在线集控设备
+### 7. Phase 7.45.6：MQTT 集成
+**状态**: ✅ 已完成
+
+**修改文件**：
+- `src/control/DeviceRoleManager.h` - 添加MQTT相关方法和成员
+- `src/control/DeviceRoleManager.cpp` - 实现MQTT集成功能
+- `src/main/main.cpp` - 设置MQTT控制器并启动发布
+
+**新增功能**：
+
+1. **MQTT控制器集成**：
+   - `setMQTTController()` - 设置MQTT控制器
+   - `startMQTTPublishing()` - 启动状态发布
+   - `stopMQTTPublishing()` - 停止状态发布
+   - `subscribeMQTTTopics()` - 订阅主题
+   - `unsubscribeMQTTTopics()` - 取消订阅
+
+2. **MQTT主题设计**：
+   ```
+   station/status/{stationId}  # 集控状态发布
+   device/status/{deviceId}    # 设备状态发布
+   station/status/+            # 订阅所有集控
+   device/status/+             # 订阅所有设备
+   ```
+
+3. **状态发布（1秒间隔）**：
+   - `publishStationStatus()` - 发布集控设备状态
+   - `publishDeviceStatus()` - 发布本机设备状态
+   - JSON格式消息，包含完整状态信息
+
+4. **状态接收**：
+   - `onMQTTMessageReceived()` - 接收MQTT消息
+   - `parseStationStatusMessage()` - 解析集控状态
+   - `parseDeviceStatusMessage()` - 解析设备状态
+   - 自动更新设备和集控列表
+
+5. **main.cpp集成**：
+   ```cpp
+   #ifdef MQTT_ENABLED
+       deviceRoleManager.setMQTTController(&mqttController);
+       deviceRoleManager.startMQTTPublishing();
+   #endif
+   ```
+
+**消息格式示例**：
+
+集控状态消息：
+```json
+{
+  "stationId": 1,
+  "stationRole": "master",
+  "stationName": "主站",
+  "controlDevice": "1号皮带",
+  "controlDeviceId": 1,
+  "ip": "192.168.10.188",
+  "isOnline": true,
+  "status": "运行中",
+  "timestamp": "2026-02-10T15:30:00"
+}
+```
+
+设备状态消息：
+```json
+{
+  "deviceId": 1,
+  "deviceName": "1号皮带",
+  "deviceType": 0,
+  "isOnline": true,
+  "status": "运行中",
+  "controlStation": "主站",
+  "controlStationId": 1,
+  "timestamp": "2026-02-10T15:30:00"
+}
+```
+
+**技术细节**：
+- 使用QTimer定时发布（1秒间隔）
+- JSON格式消息（QJsonDocument）
+- 自动跳过本机消息（避免循环）
+- 实时更新设备在线状态
+- 发送信号通知QML界面更新
+
+**Git 提交**: `74e6083c`
+
+---
+
+## 📋 待完成工作
 
 ### Phase 7.45.7：测试和优化
 **功能**：
@@ -239,31 +319,34 @@ Loader {
 ## 📊 进度统计
 
 **总任务数**: 7个阶段
-**已完成**: 5个阶段（71.4%）
-**进行中**: 0个阶段（0%）
-**待完成**: 2个阶段（28.6%）
+**已完成**: 6个阶段（85.7%）
+**进行中**: 1个阶段（14.3%）
+**待完成**: 0个阶段（0%）
 
 **代码统计**：
 - 新增 C++ 文件：2个（DeviceRoleManager.h/cpp）
 - 新增 QML 文件：5个（设备监控界面组件 + MockBackend更新）
 - 修改 QML 文件：4个（BasicConfigPage.qml, DeviceSettingsDialog.qml, Screen01.qml, main_qds.qml）
-- 新增代码行数：约1200行
-- Git 提交：6次
+- 修改 C++ 文件：1个（main.cpp）
+- 新增代码行数：约1500行
+- Git 提交：7次
 
 ---
 
 ## 🎯 下一步计划
 
-1. **优先级1**：完成 Phase 7.45.6（MQTT 集成）
-   - 修改 MQTTAutoManager
-   - 实现状态发布和订阅
-   - 集控设备状态发布（`station/status/{stationId}`）
-   - 设备状态发布（`device/status/{deviceId}`）
+1. **优先级1**：完成 Phase 7.45.7（测试和优化）
+   - 在QDS中测试设备监控界面
+   - 验证本机角色选择功能
+   - 验证权限控制功能
+   - 使用MQTTX测试MQTT通信
+   - 性能优化和文档完善
 
-2. **优先级2**：完成 Phase 7.45.7（测试和优化）
-   - 完整功能测试
-   - 性能优化
-   - 文档完善
+2. **后续工作**：
+   - 在实际设备上测试MQTT通信
+   - 多设备联调测试
+   - 完善错误处理和异常情况
+   - 添加设备离线检测机制
 
 ---
 
