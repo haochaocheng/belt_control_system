@@ -25,6 +25,7 @@
 #include "control/AlarmHistoryDatabase.h"
 #include "control/DataPathConfig.h"
 #include "control/DeviceConfigManager.h"  // ✅ 2026-02-02 [FIX 100.300.112.8.20]: 添加设备配置管理器头文件
+#include "control/DeviceRoleManager.h"  // ✅ 2026-02-10 [Phase 7.45]: 添加设备角色管理器头文件
 #include "control/SerialPortController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口控制器头文件
 #include "control/ModbusController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS控制器头文件
 #include "control/ModbusSlaveController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 添加MODBUS从站控制器头文件
@@ -241,6 +242,11 @@ int main(int argc, char *argv[]) {
         AlarmPlaybackService alarmPlayback;
         logMessage("All control modules created");
 
+        // ✅ 2026-02-10 [Phase 7.45]: 初始化设备角色管理器
+        DeviceRoleManager deviceRoleManager;
+        deviceRoleManager.loadFromConfig();  // 从配置文件加载
+        logMessage("DeviceRoleManager initialized");
+
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）
         logMessage("Setting context properties...");
         engine.rootContext()->setContextProperty("controller", &controller);
@@ -252,6 +258,7 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("alarmHistoryDB", &alarmHistoryDB);
         engine.rootContext()->setContextProperty("protectionConfigMgr", &protectionConfigMgr);
         engine.rootContext()->setContextProperty("deviceConfigMgr", &deviceConfigMgr);  // ✅ 2026-02-02 [FIX 100.300.112.8.20]: 注册设备配置管理器到QML
+        engine.rootContext()->setContextProperty("deviceRoleManager", &deviceRoleManager);  // ✅ 2026-02-10 [Phase 7.45]: 注册设备角色管理器到QML
         engine.rootContext()->setContextProperty("serialPortController", &serialPortController);  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 注册串口控制器到QML
         engine.rootContext()->setContextProperty("modbusController", &modbusController);  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 注册MODBUS控制器到QML
         engine.rootContext()->setContextProperty("canController", &canController);  // ✅ 2026-02-07 [Phase 7.39.1]: 注册CAN控制器到QML
