@@ -26,6 +26,28 @@ Rectangle {
             border.color: "#00d4ff"
             radius: 10
 
+            // ✅ 科技感：外层发光效果
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -3
+                color: "transparent"
+                border.width: 2
+                border.color: "#00d4ff"
+                radius: 12
+                opacity: 0.3
+            }
+
+            // ✅ 科技感：内层光晕
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 2
+                color: "transparent"
+                border.width: 1
+                border.color: "#00d4ff"
+                radius: 8
+                opacity: 0.5
+            }
+
             RowLayout {
                 anchors.fill: parent
                 anchors.margins: 15
@@ -39,6 +61,14 @@ Rectangle {
                     color: "#00d4ff"
                     style: Text.Outline
                     styleColor: "#00d4ff"
+
+                    // ✅ 科技感：文字发光动画
+                    SequentialAnimation on opacity {
+                        running: true
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1.0; to: 0.7; duration: 1500 }
+                        NumberAnimation { from: 0.7; to: 1.0; duration: 1500 }
+                    }
                 }
 
                 Item { Layout.fillWidth: true }
@@ -54,6 +84,17 @@ Rectangle {
                         border.width: 2
                         border.color: "#00d4ff"
                         radius: 5
+
+                        // ✅ 科技感：按钮发光效果
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -2
+                            color: "transparent"
+                            border.width: 1
+                            border.color: "#00d4ff"
+                            radius: 7
+                            opacity: parent.parent.hovered ? 0.6 : 0.3
+                        }
                     }
 
                     contentItem: Text {
@@ -88,10 +129,38 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 80
                     Layout.margins: 10
-                    color: "#1a1f2e"
+
+                    // ✅ 科技感：渐变背景
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#1a2f1e" }
+                        GradientStop { position: 1.0; color: "#0a1f0e" }
+                    }
+
                     border.width: 3
                     border.color: "#00ff00"
                     radius: 8
+
+                    // ✅ 科技感：外层发光效果
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: -3
+                        color: "transparent"
+                        border.width: 2
+                        border.color: "#00ff00"
+                        radius: 11
+                        opacity: 0.4
+                    }
+
+                    // ✅ 科技感：内层光晕
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 2
+                        color: "transparent"
+                        border.width: 1
+                        border.color: "#00ff00"
+                        radius: 6
+                        opacity: 0.6
+                    }
 
                     RowLayout {
                         anchors.fill: parent
@@ -108,11 +177,24 @@ Rectangle {
                                 radius: 8
                                 color: "#0080ff"
 
+                                // ✅ 科技感：呼吸灯效果
                                 SequentialAnimation on opacity {
                                     running: true
                                     loops: Animation.Infinite
                                     NumberAnimation { from: 1.0; to: 0.3; duration: 800 }
                                     NumberAnimation { from: 0.3; to: 1.0; duration: 800 }
+                                }
+
+                                // ✅ 科技感：光晕效果
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: parent.width + 8
+                                    height: parent.height + 8
+                                    radius: (parent.width + 8) / 2
+                                    color: "transparent"
+                                    border.width: 2
+                                    border.color: "#0080ff"
+                                    opacity: 0.3
                                 }
                             }
 
@@ -125,7 +207,17 @@ Rectangle {
                             }
                         }
 
-                        Rectangle { width: 2; Layout.fillHeight: true; color: "#2a3f5f" }
+                        Rectangle {
+                            width: 2
+                            Layout.fillHeight: true
+
+                            // ✅ 科技感：分隔线渐变
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: "transparent" }
+                                GradientStop { position: 0.5; color: "#2a3f5f" }
+                                GradientStop { position: 1.0; color: "transparent" }
+                            }
+                        }
 
                         // 本机设备
                         Text {
@@ -164,22 +256,52 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 280
                     Layout.margins: 10
-                    color: "transparent"
+
+                    // ✅ 科技感：深色渐变背景
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#0f1a2e" }
+                        GradientStop { position: 1.0; color: "#0a0f1e" }
+                    }
+
                     border.width: 2
                     border.color: "#00d4ff"
                     radius: 8
+
+                    // ✅ 科技感：外层发光
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: -2
+                        color: "transparent"
+                        border.width: 1
+                        border.color: "#00d4ff"
+                        radius: 10
+                        opacity: 0.3
+                    }
 
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 15
                         spacing: 15
 
-                        Text {
-                            text: "【集控设备】"
-                            font.pixelSize: 20
-                            font.bold: true
-                            font.family: "Microsoft YaHei"
-                            color: "#00d4ff"
+                        // ✅ 科技感：标题带下划线
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 5
+
+                            Text {
+                                text: "【集控设备】"
+                                font.pixelSize: 20
+                                font.bold: true
+                                font.family: "Microsoft YaHei"
+                                color: "#00d4ff"
+                            }
+
+                            Rectangle {
+                                Layout.preferredWidth: 150
+                                Layout.preferredHeight: 2
+                                color: "#00d4ff"
+                                opacity: 0.5
+                            }
                         }
 
                         GridLayout {
@@ -249,22 +371,52 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 450
                     Layout.margins: 10
-                    color: "transparent"
+
+                    // ✅ 科技感：深色渐变背景
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#0f1a2e" }
+                        GradientStop { position: 1.0; color: "#0a0f1e" }
+                    }
+
                     border.width: 2
                     border.color: "#00d4ff"
                     radius: 8
+
+                    // ✅ 科技感：外层发光
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: -2
+                        color: "transparent"
+                        border.width: 1
+                        border.color: "#00d4ff"
+                        radius: 10
+                        opacity: 0.3
+                    }
 
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 15
                         spacing: 15
 
-                        Text {
-                            text: "【皮带输送机】"
-                            font.pixelSize: 20
-                            font.bold: true
-                            font.family: "Microsoft YaHei"
-                            color: "#00d4ff"
+                        // ✅ 科技感：标题带下划线
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 5
+
+                            Text {
+                                text: "【皮带输送机】"
+                                font.pixelSize: 20
+                                font.bold: true
+                                font.family: "Microsoft YaHei"
+                                color: "#00d4ff"
+                            }
+
+                            Rectangle {
+                                Layout.preferredWidth: 150
+                                Layout.preferredHeight: 2
+                                color: "#00d4ff"
+                                opacity: 0.5
+                            }
                         }
 
                         GridLayout {
@@ -297,22 +449,52 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 250
                     Layout.margins: 10
-                    color: "transparent"
+
+                    // ✅ 科技感：深色渐变背景
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#0f1a2e" }
+                        GradientStop { position: 1.0; color: "#0a0f1e" }
+                    }
+
                     border.width: 2
                     border.color: "#00d4ff"
                     radius: 8
+
+                    // ✅ 科技感：外层发光
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: -2
+                        color: "transparent"
+                        border.width: 1
+                        border.color: "#00d4ff"
+                        radius: 10
+                        opacity: 0.3
+                    }
 
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 15
                         spacing: 15
 
-                        Text {
-                            text: "【辅助设备】"
-                            font.pixelSize: 20
-                            font.bold: true
-                            font.family: "Microsoft YaHei"
-                            color: "#00d4ff"
+                        // ✅ 科技感：标题带下划线
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 5
+
+                            Text {
+                                text: "【辅助设备】"
+                                font.pixelSize: 20
+                                font.bold: true
+                                font.family: "Microsoft YaHei"
+                                color: "#00d4ff"
+                            }
+
+                            Rectangle {
+                                Layout.preferredWidth: 150
+                                Layout.preferredHeight: 2
+                                color: "#00d4ff"
+                                opacity: 0.5
+                            }
                         }
 
                         GridLayout {
