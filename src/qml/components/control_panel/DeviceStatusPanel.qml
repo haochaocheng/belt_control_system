@@ -7,7 +7,7 @@ import QtQuick.Layouts 6.5
 // 2026-02-11: 使用图片作为背景，图片包含标题栏和内容区域
 Item {
     id: root
-    width: 280
+    width: 360
     height: 320
 
     // 背景图片 - 拉伸填充整个区域
@@ -107,22 +107,31 @@ Item {
                     color: "#95a5a6"
                 }
 
-                Rectangle {
+                // 2026-02-11: 使用自定义图片输入框组件
+                ImageInputField {
                     Layout.preferredWidth: 80
                     Layout.preferredHeight: 28
-                    radius: 5
-                    color: getModeColor(root.operationMode)
-                    border.color: "#00d4ff"
-                    border.width: 1
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: root.operationMode
-                        font.pixelSize: 14
-                        font.bold: true
-                        color: "white"
-                    }
+                    text: root.operationMode
+                    useSecondaryImage: false  // 使用 input1.png
                 }
+
+                // 2026-02-11: 注释掉原有的 Rectangle 输入框
+                // Rectangle {
+                //     Layout.preferredWidth: 80
+                //     Layout.preferredHeight: 28
+                //     radius: 5
+                //     color: getModeColor(root.operationMode)
+                //     border.color: "#00d4ff"
+                //     border.width: 1
+                //
+                //     Text {
+                //         anchors.centerIn: parent
+                //         text: root.operationMode
+                //         font.pixelSize: 14
+                //         font.bold: true
+                //         color: "white"
+                //     }
+                // }
             }
 
             // Right column - Device Name
@@ -135,22 +144,31 @@ Item {
                     color: "#95a5a6"
                 }
 
-                Rectangle {
+                // 2026-02-11: 使用自定义图片输入框组件
+                ImageInputField {
                     Layout.preferredWidth: 80
                     Layout.preferredHeight: 28
-                    radius: 5
-                    color: "#3498db"
-                    border.color: "#00d4ff"
-                    border.width: 1
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: root.deviceName
-                        font.pixelSize: 14
-                        font.bold: true
-                        color: "white"
-                    }
+                    text: root.deviceName
+                    useSecondaryImage: true  // 使用 input2.png
                 }
+
+                // 2026-02-11: 注释掉原有的 Rectangle 输入框
+                // Rectangle {
+                //     Layout.preferredWidth: 80
+                //     Layout.preferredHeight: 28
+                //     radius: 5
+                //     color: "#3498db"
+                //     border.color: "#00d4ff"
+                //     border.width: 1
+                //
+                //     Text {
+                //         anchors.centerIn: parent
+                //         text: root.deviceName
+                //         font.pixelSize: 14
+                //         font.bold: true
+                //         color: "white"
+                //     }
+                // }
             }
         }
 
