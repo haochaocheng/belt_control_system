@@ -40,6 +40,7 @@ qt_add_qml_module(qml_module
         components/control_panel/BeltScene3D.qml
         components/control_panel/DeviceStatusPanel.qml
         components/control_panel/ImageInputField.qml  # 2026-02-11: 图片背景输入框组件
+        components/control_panel/StateInputField.qml  # 2026-02-11: 状态显示输入框组件
         components/control_panel/ProtectionPanel.qml
         components/control_panel/ProtectionSettingsPopup.qml
         components/control_panel/OutputDevicePanel.qml

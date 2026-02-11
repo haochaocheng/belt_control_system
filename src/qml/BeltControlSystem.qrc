@@ -13,6 +13,7 @@
         <file>components/control_panel/DeviceStatusBar.qml</file>
         <file>components/control_panel/DeviceStatusPanel.qml</file>
         <file>components/control_panel/ImageInputField.qml</file>
+        <file>components/control_panel/StateInputField.qml</file>
         <file>components/control_panel/ModuleConnectionPanel.qml</file>
         <file>components/control_panel/OperationLogPanel.qml</file>
         <file>components/control_panel/OutputDevicePanel.qml</file>
@@ -235,6 +236,7 @@
         <file>images/dvList2.png</file>
         <file>images/header.png</file>
         <file>images/info_lift.png</file>
+        <file>images/infostate.png</file>
         <file>images/input1.png</file>
         <file>images/input2.png</file>
         <file>images/inputData_Zhuangshi.png</file>

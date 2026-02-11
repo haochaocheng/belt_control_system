@@ -181,13 +181,11 @@ Item {
                 color: "#95a5a6"
             }
 
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 40
-                radius: 5
-                color: getDetailedStatusColor()
-                border.color: "#00d4ff"
-                border.width: 2
+            // 2026-02-11: 使用 StateInputField 组件（infostate.png 背景）
+            StateInputField {
+                Layout.preferredWidth: 278
+                Layout.preferredHeight: 66
+                text: root.detailedStatus
 
                 // 根据状态添加动画效果
                 SequentialAnimation on opacity {
@@ -196,15 +194,43 @@ Item {
                     NumberAnimation { to: 0.7; duration: 800 }
                     NumberAnimation { to: 1.0; duration: 800 }
                 }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: root.detailedStatus
-                    font.pixelSize: 16
-                    font.bold: true
-                    color: "white"
-                }
             }
+
+            // 2026-02-11: 注释掉原有的 Rectangle + Image 结构
+            // Rectangle {
+            //     Layout.fillWidth: true
+            //     Layout.preferredHeight: 40
+            //     radius: 5
+            //     color: getDetailedStatusColor()
+            //     border.color: "#00d4ff"
+            //     border.width: 2
+            //
+            //     // 根据状态添加动画效果
+            //     SequentialAnimation on opacity {
+            //         running: root.isRunning && !root.isFault
+            //         loops: Animation.Infinite
+            //         NumberAnimation { to: 0.7; duration: 800 }
+            //         NumberAnimation { to: 1.0; duration: 800 }
+            //     }
+            //
+            //     Text {
+            //         anchors.centerIn: parent
+            //         text: root.detailedStatus
+            //         font.pixelSize: 16
+            //         font.bold: true
+            //         color: "white"
+            //     }
+            //
+            //     Image {
+            //         id: infostate
+            //         x: 0
+            //         y: 0
+            //         width: 278
+            //         height: 66
+            //         source: "../../images/infostate.png"
+            //         fillMode: Image.PreserveAspectFit
+            //     }
+            // }
         }
 
         Rectangle {
