@@ -107,12 +107,11 @@ Item {
                     color: "#95a5a6"
                 }
 
-                // 2026-02-11: 使用自定义图片输入框组件
+                // 2026-02-11: 使用自定义图片输入框组件（input1 + input2 叠加）
                 ImageInputField {
                     Layout.preferredWidth: 80
                     Layout.preferredHeight: 28
                     text: root.operationMode
-                    useSecondaryImage: false  // 使用 input1.png
                 }
 
                 // 2026-02-11: 注释掉原有的 Rectangle 输入框
@@ -144,12 +143,11 @@ Item {
                     color: "#95a5a6"
                 }
 
-                // 2026-02-11: 使用自定义图片输入框组件
+                // 2026-02-11: 使用自定义图片输入框组件（input1 + input2 叠加）
                 ImageInputField {
                     Layout.preferredWidth: 80
                     Layout.preferredHeight: 28
                     text: root.deviceName
-                    useSecondaryImage: true  // 使用 input2.png
                 }
 
                 // 2026-02-11: 注释掉原有的 Rectangle 输入框
