@@ -4,18 +4,18 @@ import QtQuick.Layouts 6.5
 
 // Device Status Panel - Left Top Corner
 // Shows: Mode, Status, Runtime Statistics, Communication Status
-// 2026-02-11: 使用图片作为背景，移除原有的矩形边框和颜色
+// 2026-02-11: 使用图片作为背景，图片包含标题栏和内容区域
 Item {
     id: root
     width: 280
     height: 320
 
-    // 背景图片
+    // 背景图片 - 拉伸填充整个区域
     Image {
         id: backgroundImage
         anchors.fill: parent
         source: "../../images/info_lift.png"
-        fillMode: Image.PreserveAspectFit
+        fillMode: Image.Stretch  // 2026-02-11: 改为拉伸模式，让图片填充整个面板
     }
 
     // 2026-02-11: 注释掉原有的矩形背景和边框
@@ -61,10 +61,19 @@ Item {
         }
     }
 
+    // 2026-02-11: 内容区域 - 从标题栏下方开始，避开图片的标题区域
     ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 15
-        spacing: 12
+        anchors {
+            left: parent.left
+            right: parent.right
+            top: parent.top
+            bottom: parent.bottom
+            leftMargin: 15
+            rightMargin: 15
+            topMargin: 50  // 2026-02-11: 增加顶部边距，避开图片的标题栏区域（约40-50px）
+            bottomMargin: 15
+        }
+        spacing: 10  // 2026-02-11: 减小间距以适应更紧凑的布局
 
         // 2026-02-11: 注释掉标题和分隔线，图片背景已包含
         // // Title
