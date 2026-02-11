@@ -357,6 +357,74 @@ property alias color: textLabel.color
 | Phase 7.45.18.1 | 11fcd020 | 调整布局适应图片尺寸 |
 | - | a835dfd2 | 增强同步脚本支持 src/qml/images 目录 |
 | Phase 7.45.19 | 145f4ebd | 创建图片背景输入框组件 |
+| Phase 7.45.19.1 | 38010055 | 修正 ImageInputField 为双图片叠加 |
+
+---
+
+## Phase 7.45.19.1 - 修正双图片叠加（2026-02-11）
+
+### 问题发现
+之前理解错误，ImageInputField 应该同时使用两张图片叠加显示，而不是二选一。
+
+### 修改内容
+
+**修改前（错误理解）**：
+```qml
+// 使用 useSecondaryImage 属性选择使用哪张图片
+Image {
+    id: backgroundImage
+    source: root.useSecondaryImage ? "../../images/input2.png" : "../../images/input1.png"
+    fillMode: Image.Stretch
+}
+```
+
+**修改后（正确实现）**：
+```qml
+// 底层背景图片 - input1.png
+Image {
+    id: backgroundImage1
+    anchors.fill: parent
+    source: "../../images/input1.png"
+    fillMode: Image.Stretch
+}
+
+// 顶层背景图片 - input2.png（叠加在 input1 上方）
+Image {
+    id: backgroundImage2
+    anchors.fill: parent
+    source: "../../images/input2.png"
+    fillMode: Image.Stretch
+}
+
+// 文本显示（在最上层）
+Text {
+    id: textLabel
+    anchors.centerIn: parent
+    text: root.text
+}
+```
+
+### 效果说明
+- **input1.png** 作为底层背景（灰蓝色）
+- **input2.png** 作为顶层背景（蓝色，叠加在 input1 上方）
+- **文本** 显示在最上层
+- 两张图片叠加形成最终的视觉效果
+
+### DeviceStatusPanel 调用更新
+```qml
+// 修改前
+ImageInputField {
+    text: root.operationMode
+    useSecondaryImage: false  // ❌ 不需要此属性
+}
+
+// 修改后
+ImageInputField {
+    text: root.operationMode  // ✅ 自动叠加两张图片
+}
+```
+
+**Git 提交**：`38010055` - fix: Phase 7.45.19.1 - 修正 ImageInputField 为双图片叠加
 
 ---
 
