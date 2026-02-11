@@ -4,14 +4,30 @@ import QtQuick.Layouts 6.5
 
 // Device Status Panel - Left Top Corner
 // Shows: Mode, Status, Runtime Statistics, Communication Status
-Rectangle {
+// 2026-02-11: 使用图片作为背景，移除原有的矩形边框和颜色
+Item {
     id: root
     width: 280
     height: 320
-    color: "#dd1a2332"
-    radius: 10
-    border.color: "#00d4ff"
-    border.width: 2
+
+    // 背景图片
+    Image {
+        id: backgroundImage
+        anchors.fill: parent
+        source: "../../images/info_lift.png"
+        fillMode: Image.PreserveAspectFit
+    }
+
+    // 2026-02-11: 注释掉原有的矩形背景和边框
+    // Rectangle {
+    //     id: root
+    //     width: 280
+    //     height: 320
+    //     color: "#dd1a2332"
+    //     radius: 10
+    //     border.color: "#00d4ff"
+    //     border.width: 2
+    // }
 
     // 从SystemConfig和RuntimeTracker获取数据
     property string operationMode: getWorkModeName()
@@ -50,21 +66,22 @@ Rectangle {
         anchors.margins: 15
         spacing: 12
 
-        // Title
-        Text {
-            text: "设备信息"
-            font.pixelSize: 18
-            font.bold: true
-            color: "#00d4ff"
-            Layout.alignment: Qt.AlignHCenter
-        }
+        // 2026-02-11: 注释掉标题和分隔线，图片背景已包含
+        // // Title
+        // Text {
+        //     text: "设备信息"
+        //     font.pixelSize: 18
+        //     font.bold: true
+        //     color: "#00d4ff"
+        //     Layout.alignment: Qt.AlignHCenter
+        // }
 
-        Rectangle {
-            Layout.fillWidth: true
-            height: 2
-            color: "#00d4ff"
-            opacity: 0.5
-        }
+        // Rectangle {
+        //     Layout.fillWidth: true
+        //     height: 2
+        //     color: "#00d4ff"
+        //     opacity: 0.5
+        // }
 
         // Mode and Name - Side by side
         RowLayout {
