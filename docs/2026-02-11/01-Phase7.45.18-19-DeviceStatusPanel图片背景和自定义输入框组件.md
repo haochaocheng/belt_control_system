@@ -1,4 +1,4 @@
-# Phase 7.45.18-19 - DeviceStatusPanel 图片背景和自定义输入框组件
+# Phase 7.45.18-20 - DeviceStatusPanel 图片背景和自定义输入框组件
 
 ## 修改时间
 2026-02-11
@@ -358,6 +358,7 @@ property alias color: textLabel.color
 | - | a835dfd2 | 增强同步脚本支持 src/qml/images 目录 |
 | Phase 7.45.19 | 145f4ebd | 创建图片背景输入框组件 |
 | Phase 7.45.19.1 | 38010055 | 修正 ImageInputField 为双图片叠加 |
+| Phase 7.45.20 | 1e20c8e7 | 创建状态显示输入框组件 |
 
 ---
 
@@ -425,6 +426,159 @@ ImageInputField {
 ```
 
 **Git 提交**：`38010055` - fix: Phase 7.45.19.1 - 修正 ImageInputField 为双图片叠加
+
+---
+
+## Phase 7.45.20 - 创建状态显示输入框组件（2026-02-11）
+
+### 需求
+为 DeviceStatusPanel 的"状态"显示区域创建专用的输入框组件，使用 infostate.png 作为背景图片。
+
+### infostate.png 图片特点
+- **尺寸**：278 x 66 像素（宽横向）
+- **样式**：
+  - 圆角边框
+  - 左右两侧三角形装饰
+  - 渐变蓝色背景
+  - 适合显示较长的状态文本
+
+### 创建 StateInputField 组件
+
+**文件**：`src/qml/components/control_panel/StateInputField.qml`（新建）
+
+```qml
+import QtQuick 6.5
+import QtQuick.Controls 6.5
+
+// Large Image-based Input Field Component for Status Display
+// 2026-02-11: 使用 infostate.png 作为背景的宽输入框组件
+Item {
+    id: root
+
+    // 可配置属性
+    property string text: ""
+    property alias horizontalAlignment: textLabel.horizontalAlignment
+    property alias font: textLabel.font
+    property alias color: textLabel.color
+
+    implicitWidth: 278
+    implicitHeight: 66
+
+    // 背景图片 - infostate.png
+    Image {
+        id: backgroundImage
+        anchors.fill: parent
+        source: "../../images/infostate.png"
+        fillMode: Image.Stretch
+    }
+
+    // 文本显示（在图片上方）
+    Text {
+        id: textLabel
+        anchors.centerIn: parent
+        text: root.text
+        font.pixelSize: 16
+        font.bold: true
+        color: "white"
+    }
+}
+```
+
+### 在 DeviceStatusPanel 中使用
+
+**修改前**：
+```qml
+Rectangle {
+    Layout.fillWidth: true
+    Layout.preferredHeight: 40
+    radius: 5
+    color: getDetailedStatusColor()
+    border.color: "#00d4ff"
+    border.width: 2
+
+    SequentialAnimation on opacity {
+        running: root.isRunning && !root.isFault
+        loops: Animation.Infinite
+        NumberAnimation { to: 0.7; duration: 800 }
+        NumberAnimation { to: 1.0; duration: 800 }
+    }
+
+    Text {
+        anchors.centerIn: parent
+        text: root.detailedStatus
+        font.pixelSize: 16
+        font.bold: true
+        color: "white"
+    }
+
+    Image {
+        id: infostate
+        x: 0
+        y: 0
+        width: 278
+        height: 66
+        source: "../../images/infostate.png"
+        fillMode: Image.PreserveAspectFit
+    }
+}
+```
+
+**问题**：
+- Rectangle 和 Image 混合使用，层次不清
+- Image 可能覆盖文本
+- Rectangle 的颜色和边框不需要了
+
+**修改后**：
+```qml
+// 2026-02-11: 使用 StateInputField 组件（infostate.png 背景）
+StateInputField {
+    Layout.preferredWidth: 278
+    Layout.preferredHeight: 66
+    text: root.detailedStatus
+
+    // 根据状态添加动画效果
+    SequentialAnimation on opacity {
+        running: root.isRunning && !root.isFault
+        loops: Animation.Infinite
+        NumberAnimation { to: 0.7; duration: 800 }
+        NumberAnimation { to: 1.0; duration: 800 }
+    }
+}
+```
+
+**优点**：
+- 结构清晰，层次分明
+- 图片作为背景，文本显示在上方
+- 保留了动画效果
+- 代码简洁
+
+### 更新构建系统
+
+**CMakeLists.txt**：
+```cmake
+components/control_panel/ImageInputField.qml  # 2026-02-11: 图片背景输入框组件
+components/control_panel/StateInputField.qml  # 2026-02-11: 状态显示输入框组件
+```
+
+**BeltControlSystem.qrc**：
+```xml
+<file>components/control_panel/ImageInputField.qml</file>
+<file>components/control_panel/StateInputField.qml</file>
+```
+
+### 对比：三种输入框组件
+
+| 组件 | 图片 | 尺寸 | 用途 |
+|------|------|------|------|
+| **ImageInputField** | input1.png + input2.png 叠加 | 80 x 28 | 模式、名称输入框 |
+| **StateInputField** | infostate.png | 278 x 66 | 状态显示输入框 |
+
+**设计原则**：
+- 小输入框（80x28）：使用 ImageInputField
+- 大输入框（278x66）：使用 StateInputField
+- 根据图片样式和尺寸选择合适的组件
+
+**Git 提交**：`1e20c8e7` - feat: Phase 7.45.20 - 创建状态显示输入框组件
 
 ---
 
