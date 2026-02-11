@@ -8,6 +8,7 @@ qt_add_qml_module(qml_module
         main.qml
         App.qml
         pages/ControlPanel.qml
+        pages/DeviceMonitorPage.qml  # ✅ 2026-02-11 [Phase 7.45.21]: 设备监控页面
         pages/ParameterSettings.qml
         pages/AlarmPage.qml
         pages/DeviceOperationLog.qml
