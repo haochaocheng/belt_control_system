@@ -317,16 +317,17 @@ target_link_libraries(input1_qml_module PRIVATE
 # 这些文件已经在上面的 qt_add_qml_module 中通过 RESOURCE_PREFIX 自动包含
 # ✅ 2026-01-31 [FIX 100.300.112.8.7] 修复 CMake 解析错误 - 注释掉孤立的文件列表
 # ✅ 2026-02-02 [FIX 100.300.112.8.19.4] 修复 CMake 解析错误 - 注释掉第 270-278 行的孤立文件列表
-        # 2026-01-19: Input1 模块 QML 组件（9 个，自动检测）
-        Input1/Input1Content/Back.ui.qml
-        Input1/Input1Content/BHState.ui.qml
-        Input1/Input1Content/DataShow.ui.qml
-        Input1/Input1Content/Head_MiddleMenu.ui.qml
-        Input1/Input1Content/Head.ui.qml
-        Input1/Input1Content/MyIN_Data.ui.qml
-        Input1/Input1Content/MyIN_State.ui.qml
-        Input1/Input1Content/Screen01.ui.qml
-        Input1/Input1Content/Screen01Form.ui.qml
+# ✅ 2026-02-11 [Phase 7.45.21] 修复 CMake 解析错误 - 注释掉第 320-329 行的孤立文件列表
+#        # 2026-01-19: Input1 模块 QML 组件（9 个，自动检测）
+#        Input1/Input1Content/Back.ui.qml
+#        Input1/Input1Content/BHState.ui.qml
+#        Input1/Input1Content/DataShow.ui.qml
+#        Input1/Input1Content/Head_MiddleMenu.ui.qml
+#        Input1/Input1Content/Head.ui.qml
+#        Input1/Input1Content/MyIN_Data.ui.qml
+#        Input1/Input1Content/MyIN_State.ui.qml
+#        Input1/Input1Content/Screen01.ui.qml
+#        Input1/Input1Content/Screen01Form.ui.qml
 #        Input1/Input1Content/Back.ui.qml
 #        Input1/Input1Content/BHState.ui.qml
 #        Input1/Input1Content/DataShow.ui.qml
