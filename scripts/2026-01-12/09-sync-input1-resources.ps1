@@ -20,6 +20,7 @@ $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 $ProjectRoot = "E:\2025\3_gongkongji\belt_control_system"
 $Input1ContentDir = "$ProjectRoot\src\qml\Input1\Input1Content"
 $ImagesDir = "$Input1ContentDir\images"
+$QmlImagesDir = "$ProjectRoot\src\qml\images"  # 2026-02-11: 添加 src/qml/images 目录
 $CMakeListsPath = "$ProjectRoot\src\qml\CMakeLists.txt"
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -66,17 +67,26 @@ Write-Host ""
 # ============================================================
 Write-Host "📋 [步骤 2/2] 扫描图片资源文件..." -ForegroundColor Yellow
 
-# 检查图片目录
+# 2026-02-11: 扫描 Input1/Input1Content/images 目录
 if (-not (Test-Path $ImagesDir)) {
-    Write-Host "⚠️ 警告：images 目录不存在，跳过图片扫描" -ForegroundColor Yellow
-    $imageFiles = @()
+    Write-Host "⚠️ 警告：Input1 images 目录不存在，跳过图片扫描" -ForegroundColor Yellow
+    $input1ImageFiles = @()
 } else {
-    # 扫描所有图片文件（排除 .txt 文件）
-    $imageFiles = Get-ChildItem -Path $ImagesDir -File |
-                  Where-Object { $_.Extension -match '\.(svg|png|jpg|jpeg)$' } |
-                  Sort-Object Name
+    $input1ImageFiles = Get-ChildItem -Path $ImagesDir -File |
+                        Where-Object { $_.Extension -match '\.(svg|png|jpg|jpeg)$' } |
+                        Sort-Object Name
+    Write-Host "   找到 $($input1ImageFiles.Count) 个 Input1 图片文件" -ForegroundColor Green
+}
 
-    Write-Host "   找到 $($imageFiles.Count) 个图片文件" -ForegroundColor Green
+# 2026-02-11: 扫描 src/qml/images 目录
+if (-not (Test-Path $QmlImagesDir)) {
+    Write-Host "⚠️ 警告：src/qml/images 目录不存在，跳过图片扫描" -ForegroundColor Yellow
+    $qmlImageFiles = @()
+} else {
+    $qmlImageFiles = Get-ChildItem -Path $QmlImagesDir -File |
+                     Where-Object { $_.Extension -match '\.(svg|png|jpg|jpeg)$' } |
+                     Sort-Object Name
+    Write-Host "   找到 $($qmlImageFiles.Count) 个 src/qml/images 图片文件" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -87,17 +97,29 @@ Write-Host ""
 Write-Host "📝 生成 CMakeLists.txt 内容..." -ForegroundColor Yellow
 Write-Host ""
 
-# 生成 RESOURCES 列表
+# 2026-02-11: 生成 RESOURCES 列表，包含 src/qml/images 和 Input1/Input1Content/images
 $resourcesList = @"
     RESOURCES
-        images/header.png
-        sounds/ringtone.wav
-        # 2026-01-12: Input1 模块资源文件（$($imageFiles.Count) 个图片，全英文文件名）
 "@
 
-foreach ($file in $imageFiles) {
+# 2026-02-11: 添加 src/qml/images 目录的图片（不包含 header.png，因为下面会单独添加）
+foreach ($file in $qmlImageFiles) {
+    if ($file.Name -ne "header.png") {
+        $resourcesList += "`n        images/$($file.Name)"
+    }
+}
+
+# 添加固定的资源文件
+$resourcesList += "`n        images/header.png"
+$resourcesList += "`n        sounds/ringtone.wav"
+
+# 添加 Input1 模块资源文件
+$resourcesList += "`n        # 2026-01-12: Input1 模块资源文件（$($input1ImageFiles.Count) 个图片，全英文文件名）"
+foreach ($file in $input1ImageFiles) {
     $resourcesList += "`n        Input1/Input1Content/images/$($file.Name)"
 }
+
+$totalImageCount = $qmlImageFiles.Count + $input1ImageFiles.Count
 
 # ============================================================
 # 显示预览
@@ -112,7 +134,7 @@ Write-Host $qmlFilesList -ForegroundColor White
 Write-Host ""
 
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "预览 - 图片资源列表（共 $($imageFiles.Count) 个）：" -ForegroundColor Green
+Write-Host "预览 - 图片资源列表（共 $totalImageCount 个）：" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host $resourcesList -ForegroundColor White
 Write-Host "    RESOURCE_PREFIX /qt/qml" -ForegroundColor White
@@ -230,7 +252,7 @@ if ($choice -eq 'Y' -or $choice -eq 'y') {
     Write-Host ""
     Write-Host "   ✅ CMakeLists.txt 已更新" -ForegroundColor Green
     Write-Host "      - 更新了 $($qmlFiles.Count) 个 QML 组件" -ForegroundColor Gray
-    Write-Host "      - 更新了 $($imageFiles.Count) 个图片资源" -ForegroundColor Gray
+    Write-Host "      - 更新了 $totalImageCount 个图片资源（src/qml/images: $($qmlImageFiles.Count), Input1: $($input1ImageFiles.Count)）" -ForegroundColor Gray
     Write-Host ""
     Write-Host "下一步：运行编译" -ForegroundColor Yellow
     Write-Host "  .\build-ubuntu24-apt.ps1 188" -ForegroundColor Gray
