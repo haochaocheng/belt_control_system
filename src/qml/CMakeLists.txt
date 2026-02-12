@@ -168,6 +168,14 @@ qt_add_qml_module(qml_module
     RESOURCES
         images/header.png
         sounds/ringtone.wav
+        # ✅ 2026-02-12 [Phase 7.45.32]: 添加 DeviceSettingsDialog 使用的图片资源
+        # 原因：这些图片在 BeltControlSystem.qrc 中但未在 CMakeLists.txt 中，导致部署后不显示
+        images/036.png
+        images/dvList.png
+        images/dvList2.png
+        components/device_info/images/deviceInfo40.png
+        components/device_info/images/351.png
+        components/device_info/images/042.png
         # 2026-01-12: Input1 模块资源文件（102 个图片，全英文文件名）
         Input1/Input1Content/images/082.png
         Input1/Input1Content/images/15823432333.svg
