@@ -17,8 +17,10 @@ import com.belt.control 1.0  // ✅ 2026-01-23 11:00 [FIX 100.299] 导入 TTSCon
  */
 Rectangle {
     id: root
-    anchors.fill: parent  // ✅ 2026-02-11 [Phase 7.45.25]: 添加anchors.fill，确保在SwipeView中正确填充
+    // ✅ SwipeView 子页由 SwipeView 自动管理几何，不要在根节点设置 anchors
     color: "#1a1a1a"
+    // 后端控制器可能未注册，统一做空值兜底，避免 ReferenceError
+    property var audioController: (typeof audioManagementController !== "undefined") ? audioManagementController : null
 
     // 页面标题
     Rectangle {
@@ -202,7 +204,9 @@ Rectangle {
 
                         onClicked: {
                             // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端扫描目录
-                            audioManagementController.scanDirectory(dirPathInput.text)
+                            if (root.audioController) {
+                                root.audioController.scanDirectory(dirPathInput.text)
+                            }
                         }
                     }
                 }
@@ -250,7 +254,9 @@ Rectangle {
 
                         onClicked: {
                             // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端批量识别
-                            audioManagementController.recognizeAll()
+                            if (root.audioController) {
+                                root.audioController.recognizeAll()
+                            }
                         }
                     }
 
@@ -276,7 +282,9 @@ Rectangle {
 
                         onClicked: {
                             // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端批量生成
-                            audioManagementController.generateAllTts()
+                            if (root.audioController) {
+                                root.audioController.generateAllTts()
+                            }
                         }
                     }
 
@@ -302,7 +310,9 @@ Rectangle {
 
                         onClicked: {
                             // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端停止处理
-                            audioManagementController.stopProcessing()
+                            if (root.audioController) {
+                                root.audioController.stopProcessing()
+                            }
                         }
                     }
                 }
@@ -322,7 +332,7 @@ Rectangle {
                         id: progressBar
                         Layout.fillWidth: true
                         // ✅ 2026-01-23 11:00 [FIX 100.299] 绑定后端进度
-                        value: audioManagementController.progress / 100
+                        value: root.audioController ? (root.audioController.progress / 100) : 0
 
                         background: Rectangle {
                             implicitWidth: 200
@@ -347,9 +357,11 @@ Rectangle {
                     Text {
                         id: progressText
                         // ✅ 2026-01-23 11:00 [FIX 100.299] 绑定后端进度文本
-                        text: audioManagementController.processedFiles + " / " +
-                              audioManagementController.totalFiles + " (" +
-                              audioManagementController.progress + "%)"
+                        text: root.audioController
+                              ? (root.audioController.processedFiles + " / " +
+                                 root.audioController.totalFiles + " (" +
+                                 root.audioController.progress + "%)")
+                              : "0 / 0 (0%)"
                         font.pixelSize: 14
                         color: "#00d4ff"
                         Layout.preferredWidth: 120

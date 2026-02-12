@@ -537,6 +537,7 @@ Page {
 
                     // Mute microphone button (only during call)
                     RisipButton {
+                        id: micMuteButton
                         Layout.preferredWidth: 45
                         Layout.preferredHeight: 45
                         buttonRadius: 22
@@ -548,7 +549,7 @@ Page {
                         property bool micMuted: false
 
                         contentItem: Text {
-                            text: micMuted ? "🔇" : "🎤"
+                            text: micMuteButton.micMuted ? "🔇" : "🎤"
                             font.pixelSize: 20
                             color: "#ffffff"
                             horizontalAlignment: Text.AlignHCenter

@@ -17,29 +17,17 @@ import QtQuick.Controls
 // 2026-01-12: Input1 模块文件已打包到 BeltControlQml 模块中
 // 直接引用 Input1/Input1Content/Screen01 即可，无需单独 import
 
-    Item {
-        id: input1Page
-        // 2026-01-12: 移除 anchors.fill - SwipeView 子项不能使用 anchors
-        // SwipeView 会自动管理子项的尺寸和位置
-        // anchors.fill: parent  // ❌ 与 SwipeView 冲突，导致 polish() 循环
-        // ✅ 防止初始尺寸为 0，导致缩放为 0 看不到界面
-        width: parent ? parent.width : 0
-        height: parent ? parent.height : 0
+Item {
+    id: input1Page
+    // 2026-01-12: 移除 anchors.fill - SwipeView 子项不能使用 anchors
+    // SwipeView 会自动管理子项的尺寸和位置
+    // anchors.fill: parent  // ❌ 与 SwipeView 冲突，导致 polish() 循环
+    // ⚠️ 不要再绑定 parent.width/height，SwipeView 下会形成尺寸正反馈
+    // 仅使用 SwipeView 分配给当前页的 width/height
 
-        // ✅ 2026-02-12 [Phase 7.45.29]: 监听尺寸变化，确保窗口初始化后正确显示
-        onWidthChanged: {
-            if (width > 0 && height > 0) {
-                console.log("🔄 [Input1Page] 尺寸变化:", width, "x", height)
-                console.log("   xScale:", (width / 1920).toFixed(3))
-                console.log("   yScale:", (height / 1080).toFixed(3))
-            }
-        }
-
-        onHeightChanged: {
-            if (width > 0 && height > 0) {
-                console.log("🔄 [Input1Page] 高度变化:", width, "x", height)
-            }
-        }
+    // ✅ 2026-02-12 [Phase 7.45.30]
+    // 历史问题：在 SwipeView 中额外绑定 parent.width/height + 尺寸监听，触发尺寸正反馈
+    // 现方案：不绑定 parent 尺寸，且只在尺寸就绪后激活 Loader
 
     // 页面属性
     property string pageTitle: "输入监控"
@@ -84,16 +72,18 @@ import QtQuick.Controls
         // ✅ 固定原始尺寸（QDS 设计尺寸）
         width: 1920
         height: 1080
-        // ✅ 避免在 0 尺寸时加载，导致 scale=0
-        active: input1Page.width > 0 && input1Page.height > 0
+        // ✅ 2026-02-12 [Phase 7.45.31]: 提高阈值，确保尺寸接近最终值时才加载
+        // 原因：height=16 时就激活，导致 yScale=0.015，Canvas 绘制失败
+        // 解决：要求尺寸至少达到设计尺寸的 50%（960x540）
+        active: input1Page.width >= 960 && input1Page.height >= 540
 
         source: "../Input1/Input1Content/Screen01.qml"  // ✅ 2026-01-27 [FIX 100.300.57]: 使用相对路径以支持 QDS
 
         // ✅ 2026-01-20 [FIX 100.262]: 改为非等比缩放（填满整个屏幕）
         transform: Scale {
             id: scaleTransform
-            xScale: input1Page.width / 1920   // 1280 / 1920 = 0.667
-            yScale: input1Page.height / 1080  // 800 / 1080 = 0.741
+            xScale: Math.max(1, Math.min(input1Page.width, 3840)) / 1920
+            yScale: Math.max(1, Math.min(input1Page.height, 2160)) / 1080
             origin.x: 0  // ✅ 左上角缩放
             origin.y: 0  // ✅ 左上角缩放
         }
@@ -102,9 +92,9 @@ import QtQuick.Controls
             console.log("✅ Input1 Screen01 加载成功")
             console.log("   [布局] 屏幕尺寸:", input1Page.width.toFixed(0), "x", input1Page.height.toFixed(0))
             console.log("🔍 [Input1Page] 缩放调试:")
-            console.log("   xScale (宽度缩放):", (input1Page.width / 1920).toFixed(3))
-            console.log("   yScale (高度缩放):", (input1Page.height / 1080).toFixed(3))
-            console.log("   预期显示尺寸:", (1920 * input1Page.width / 1920).toFixed(0), "x", (1080 * input1Page.height / 1080).toFixed(0))
+            console.log("   xScale (宽度缩放):", (Math.max(1, Math.min(input1Page.width, 3840)) / 1920).toFixed(3))
+            console.log("   yScale (高度缩放):", (Math.max(1, Math.min(input1Page.height, 2160)) / 1080).toFixed(3))
+            console.log("   预期显示尺寸:", Math.max(1, Math.min(input1Page.width, 3840)).toFixed(0), "x", Math.max(1, Math.min(input1Page.height, 2160)).toFixed(0))
 
             // ✅ 2026-01-20 [FIX 100.257]: 传递 currentPageIndex 到 Screen01
             // ✅ 2026-01-20 [FIX 100.269]: 添加调试日志验证绑定

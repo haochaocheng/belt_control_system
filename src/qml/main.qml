@@ -29,6 +29,7 @@ ApplicationWindow {
     // Windows platform: Use windowed mode (1920x1080) for development
     // Use screen width to detect device: 1280=Device155(X11), 1920=Device151(EGLFS)
     Component.onCompleted: {
+        console.log("[BUILD MARKER] Phase7.45.31-SwipeViewRootAnchorFix-2026-02-12")
         console.log("[FULLSCREEN DEBUG] Screen size:", Screen.width, "x", Screen.height)
         console.log("[FULLSCREEN DEBUG] Window size:", width, "x", height)
         console.log("[FULLSCREEN DEBUG] Current visibility:", visibility)
@@ -86,12 +87,15 @@ ApplicationWindow {
         active: true  // Always active to ensure initialization
         asynchronous: false  // Synchronous loading to ensure immediate availability
 
-        sourceComponent: Item {
-            id: keyboardContainerItem
-            // Wrapper Item containing both keyboard overlay and InputPanel
-            parent: Overlay.overlay
-            anchors.fill: parent ? parent : undefined
-            z: 1  // ✅ 默认 z 值，会动态调整
+            sourceComponent: Item {
+                id: keyboardContainerItem
+                // Wrapper Item containing both keyboard overlay and InputPanel
+                parent: Overlay.overlay
+                // 当 Overlay.overlay 尺寸尚未就绪时，避免 width/height=0
+                anchors.fill: (parent && parent.width > 0 && parent.height > 0) ? parent : undefined
+                width: root.width
+                height: root.height
+                z: 1  // ✅ 默认 z 值，会动态调整
 
             Component.onCompleted: {
                 console.log("========================================")
@@ -234,10 +238,11 @@ ApplicationWindow {
 
             // ✅ InputPanel - the actual virtual keyboard
             Item {
-                anchors.left: parent ? parent.left : undefined
-                anchors.right: parent ? parent.right : undefined
+                anchors.left: (parent && parent.width > 0) ? parent.left : undefined
+                anchors.right: (parent && parent.width > 0) ? parent.right : undefined
                 anchors.bottom: parent ? parent.bottom : undefined
                 height: 600  // Fixed height for keyboard
+                width: (parent && parent.width > 0) ? parent.width : root.width
                 z: 2  // Above keyboardOverlay (z:1)
                 visible: Qt.inputMethod.visible
 
@@ -299,8 +304,10 @@ ApplicationWindow {
                     id: virtualKeyboard
                     anchors.fill: parent
                     z: 1  // Above the debug MouseArea
-                    visible: Qt.inputMethod.visible
-                    enabled: true
+                    // 仅在真正需要显示时激活，避免隐藏状态下触发内部绘制
+                    active: Qt.inputMethod.visible
+                    visible: active
+                    enabled: active
 
                     Component.onCompleted: {
                         console.log("========================================")
@@ -397,6 +404,7 @@ ApplicationWindow {
 
         // Tooltip
         ToolTip {
+            id: sipPhoneToolTip
             visible: sipPhoneButton.isHovered
             text: "SIP 语音电话"
             delay: 500
@@ -409,7 +417,7 @@ ApplicationWindow {
             }
 
             contentItem: Text {
-                text: parent.text
+                text: sipPhoneToolTip.text
                 color: "#00d4ff"
                 font.pixelSize: 12
             }

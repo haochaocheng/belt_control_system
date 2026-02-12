@@ -16,7 +16,8 @@ Rectangle {
 
     // ✅ 2026-01-27 [FIX 100.300.53]: 重新设计布局 - 3行4列 MyIN_Data 网格
     // 移除 MyIN_State 组件，使用 12 个 MyIN_Data 组件
-    color: Constants.backgroundColor
+    // 部分运行环境 Constants 未注入，使用固定背景色避免 [undefined] QColor 告警
+    color: "#0a1628"
 
     // ✅ 接收外部传入的当前页面索引
     property int currentPageIndex: 0

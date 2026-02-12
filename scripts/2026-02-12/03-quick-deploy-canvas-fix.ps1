@@ -20,7 +20,7 @@ Write-Host "`n📋 修复内容:" -ForegroundColor Yellow
 Write-Host "  ✅ App.qml - 背景网格 Canvas (添加 Timer)" -ForegroundColor Green
 Write-Host "  ✅ IndustrialContainer.qml - 4 个装饰 Canvas (添加 Timer)" -ForegroundColor Green
 Write-Host "  ✅ 所有 Canvas 添加 available 和尺寸检查" -ForegroundColor Green
-Write-Host "  ✅ Input1Page.qml - 添加尺寸变化监听" -ForegroundColor Green
+Write-Host "  ✅ Input1Page.qml - 修复 SwipeView 尺寸正反馈" -ForegroundColor Green
 
 Write-Host "`n🎯 预期效果:" -ForegroundColor Yellow
 Write-Host "  ✅ QPainter 警告: 从 205,032 条减少到 0 条" -ForegroundColor Green
@@ -49,8 +49,8 @@ Write-Host "  3. 搜索 QPainter: grep QPainter /tmp/voip.log | wc -l" -Foregrou
 Write-Host "  4. 应该看到: 0 (没有 QPainter 警告)" -ForegroundColor Green
 
 Write-Host "`n🔍 调试信息:" -ForegroundColor Yellow
-Write-Host "  - 应该看到: 🔄 [Input1Page] 尺寸变化: 1280 x 800" -ForegroundColor White
-Write-Host "  - 应该看到: xScale: 0.667" -ForegroundColor White
-Write-Host "  - 应该看到: yScale: 0.741" -ForegroundColor White
+Write-Host "  - 不应再看到: 🔄 [Input1Page] 尺寸变化: 3937500 x 1019" -ForegroundColor White
+Write-Host "  - 应该看到: xScale (宽度缩放): 0.667" -ForegroundColor White
+Write-Host "  - 应该看到: yScale (高度缩放): 0.741" -ForegroundColor White
 
 Write-Host "`n✅ 完成！" -ForegroundColor Green

@@ -18,7 +18,7 @@ Item {
     // ✅ 2026-02-11 [Phase 7.45.25]: 移除固定尺寸，避免与SwipeView冲突导致polish()循环
     // width: 1920   // ❌ 注释掉，SwipeView会自动管理尺寸
     // height: 1080  // ❌ 注释掉，SwipeView会自动管理尺寸
-    anchors.fill: parent  // ✅ 使用anchors.fill自动填充
+    // ✅ SwipeView 子页由 SwipeView 自动管理几何，不要在根节点设置 anchors
 
     // 监听数据库新日志添加信号
     Connections {
