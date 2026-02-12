@@ -175,6 +175,10 @@ qt_add_qml_module(qml_module
         images/dvList2.png
         images/bhNameBK.png
         images/bhNameBK1.png
+        images/infostate.png
+        images/input1.png
+        images/input2.png
+        images/info_lift.png
         components/device_info/images/deviceInfo40.png
         components/device_info/images/351.png
         components/device_info/images/042.png
