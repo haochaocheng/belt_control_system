@@ -173,9 +173,16 @@ qt_add_qml_module(qml_module
         images/036.png
         images/dvList.png
         images/dvList2.png
+        images/bhNameBK.png
+        images/bhNameBK1.png
         components/device_info/images/deviceInfo40.png
         components/device_info/images/351.png
         components/device_info/images/042.png
+        components/device_info/images/034.png
+        components/device_info/images/059.png
+        components/device_info/images/33.png
+        components/device_info/images/DJHeadbutton1.png
+        components/device_info/images/DJHeadbutton2.png
         # 2026-01-12: Input1 模块资源文件（102 个图片，全英文文件名）
         Input1/Input1Content/images/082.png
         Input1/Input1Content/images/15823432333.svg

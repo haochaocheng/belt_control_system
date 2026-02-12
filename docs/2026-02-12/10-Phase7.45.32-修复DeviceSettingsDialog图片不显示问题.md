@@ -1,40 +1,41 @@
-# Phase 7.45.32 - 修复 DeviceSettingsDialog 图片不显示问题
+# Phase 7.45.32 - 修复设备设置对话框图片不显示问题
 
-**修复时间**: 2026-02-12 17:30
+**修复时间**: 2026-02-12 17:30（更新：18:00）
 **问题类型**: CMakeLists.txt 资源配置缺失
-**严重程度**: 中等（界面图片全部不显示）
+**严重程度**: 中等（多个界面图片不显示）
 
 ## 1. 问题现象
 
 ### 用户反馈
-- DeviceSettingsDialog.qml 中所有图片都不显示
-- 在 QDS（Qt Design Studio）中能正常显示
+- 多个 QML 组件中的图片在 QDS 中能正常显示
 - 部署到设备后不显示
+
+### voip.md 日志警告
+```
+Cannot open: qrc:/qt/qml/BeltControlQml/images/bhNameBK.png
+Cannot open: qrc:/qt/qml/BeltControlQml/images/bhNameBK1.png
+Cannot open: qrc:/qt/qml/BeltControlQml/components/device_info/images/034.png
+Cannot open: qrc:/qt/qml/BeltControlQml/components/device_info/images/059.png
+Cannot open: qrc:/qt/qml/BeltControlQml/components/device_info/images/33.png
+Cannot open: qrc:/qt/qml/BeltControlQml/components/device_info/images/DJHeadbutton1.png
+Cannot open: qrc:/qt/qml/BeltControlQml/components/device_info/images/DJHeadbutton2.png
+```
+
+### 受影响的组件
+- `MyMotorListPanel.qml` - 电机列表面板
+- `BrakeListPanel.qml` - 制动器列表面板
+- `BrakeConfigPanel.qml` - 制动器配置面板
+- `MotorConfigPanel.qml` - 电机配置面板
+- `AnalogInputPage.qml` - 模拟量输入页面
+- `CustomTextField.qml` - 自定义文本框
+- `CustomSpinBox.qml` - 自定义数字框
+- `CustomComboBox.qml` - 自定义下拉框
+- `DeviceSettingsDialog.qml` - 设备设置对话框
 
 ## 2. 根因分析
 
 ### 问题原因
-DeviceSettingsDialog 使用的图片**只在 BeltControlSystem.qrc 中定义**，但 **CMakeLists.txt 没有引用这个 .qrc 文件**，也没有在 RESOURCES 部分包含这些图片。
-
-### 资源配置对比
-
-**BeltControlSystem.qrc**（QDS 使用）：
-```xml
-<file>components/device_info/images/deviceInfo40.png</file>
-<file>components/device_info/images/351.png</file>
-<file>components/device_info/images/042.png</file>
-<file>images/dvList.png</file>
-<file>images/dvList2.png</file>
-<file>images/036.png</file>
-```
-
-**CMakeLists.txt**（部署使用）- 修改前：
-```cmake
-RESOURCES
-    images/header.png
-    sounds/ringtone.wav
-    # ❌ 缺少 DeviceSettingsDialog 使用的图片
-```
+图片**只在 BeltControlSystem.qrc 中定义**，但 **CMakeLists.txt 没有在 RESOURCES 部分包含这些图片**。
 
 ### 为什么 QDS 能显示而部署后不能？
 
@@ -43,33 +44,51 @@ RESOURCES
 
 ## 3. 解决方案
 
-将缺失的图片添加到 CMakeLists.txt 的 RESOURCES 部分：
-
-```cmake
-RESOURCES
-    images/header.png
-    sounds/ringtone.wav
-    # ✅ 2026-02-12 [Phase 7.45.32]: 添加 DeviceSettingsDialog 使用的图片资源
-    images/036.png
-    images/dvList.png
-    images/dvList2.png
-    components/device_info/images/deviceInfo40.png
-    components/device_info/images/351.png
-    components/device_info/images/042.png
-```
+将所有缺失的图片添加到 CMakeLists.txt 的 RESOURCES 部分。
 
 ## 4. 修改文件
 
 **文件**: `src/qml/CMakeLists.txt`
 
-### 修改内容
-在 RESOURCES 部分添加 6 个图片文件：
-- `images/036.png` - 内容区域背景
-- `images/dvList.png` - 类别按钮默认背景
-- `images/dvList2.png` - 类别按钮选中背景
-- `components/device_info/images/deviceInfo40.png` - 对话框背景
-- `components/device_info/images/351.png` - 顶部按钮栏背景
-- `components/device_info/images/042.png` - 左侧按钮栏背景
+### 添加的图片（共 13 个）
+
+| 图片路径 | 用途 |
+|----------|------|
+| `images/036.png` | 内容区域背景 |
+| `images/dvList.png` | 类别按钮默认背景 |
+| `images/dvList2.png` | 类别按钮选中背景 |
+| `images/bhNameBK.png` | 电机/制动器/模拟量列表项背景 |
+| `images/bhNameBK1.png` | 电机/制动器/模拟量列表项选中背景 |
+| `components/device_info/images/deviceInfo40.png` | 对话框背景 |
+| `components/device_info/images/351.png` | 顶部按钮栏背景 |
+| `components/device_info/images/042.png` | 左侧按钮栏背景 |
+| `components/device_info/images/034.png` | 输入框背景 |
+| `components/device_info/images/059.png` | 配置面板背景 |
+| `components/device_info/images/33.png` | 列表面板背景 |
+| `components/device_info/images/DJHeadbutton1.png` | 电机配置按钮默认 |
+| `components/device_info/images/DJHeadbutton2.png` | 电机配置按钮选中 |
+
+### 修改后的 CMakeLists.txt
+
+```cmake
+RESOURCES
+    images/header.png
+    sounds/ringtone.wav
+    # ✅ 2026-02-12 [Phase 7.45.32]: 添加设备设置对话框使用的图片资源
+    images/036.png
+    images/dvList.png
+    images/dvList2.png
+    images/bhNameBK.png
+    images/bhNameBK1.png
+    components/device_info/images/deviceInfo40.png
+    components/device_info/images/351.png
+    components/device_info/images/042.png
+    components/device_info/images/034.png
+    components/device_info/images/059.png
+    components/device_info/images/33.png
+    components/device_info/images/DJHeadbutton1.png
+    components/device_info/images/DJHeadbutton2.png
+```
 
 ## 5. 技术要点
 
@@ -105,10 +124,11 @@ qt_add_qml_module(qml_module
 
 ### QML 图片路径规则
 
-DeviceSettingsDialog.qml 中使用相对路径引用图片：
+QML 文件中使用相对路径引用图片：
 ```qml
 source: "images/deviceInfo40.png"
 source: "../../images/dvList.png"
+source: "../../../images/bhNameBK.png"
 ```
 
 这种相对路径在 QDS 和部署后都能工作，**前提是资源文件被正确包含在编译中**。
@@ -117,12 +137,12 @@ source: "../../images/dvList.png"
 
 1. 编译部署到设备
 2. 打开设备设置对话框
-3. 检查以下图片是否正常显示：
-   - 对话框背景图片（deviceInfo40.png）
-   - 顶部按钮栏背景（351.png）
-   - 左侧类别按钮背景（042.png）
-   - 类别按钮默认/选中背景（dvList.png/dvList2.png）
-   - 右侧内容区域背景（036.png）
+3. 检查以下页面的图片是否正常显示：
+   - 电机控制页面（电机列表、配置面板）
+   - 制动器控制页面（制动器列表、配置面板）
+   - 模拟量输入页面
+   - 各种输入框（文本框、数字框、下拉框）
+4. 日志中不应再出现 `Cannot open: qrc:/qt/qml/BeltControlQml/...` 警告
 
 ## 7. 相关修复
 
