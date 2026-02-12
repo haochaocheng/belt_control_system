@@ -149,6 +149,7 @@ Item {
 
         // 小三角形（左上角）
         Canvas {
+            id: topLeftCanvas
             x: root.decorationLineWidth + 2
             y: root.decorationLineWidth + 2
             width: 8
@@ -156,6 +157,7 @@ Item {
 
             onPaint: {
                 // ✅ 2026-02-12 [Phase 7.45.27]: 检查Canvas尺寸
+                if (!available) return  // ✅ 2026-02-12 11:51:51 +08:00: 避免Canvas不可用导致QPainter告警
                 if (width <= 0 || height <= 0) return
                 var ctx = getContext("2d")
                 if (!ctx) return
@@ -169,8 +171,13 @@ Item {
                 ctx.fill()
             }
 
-            // ✅ 2026-02-12 [Phase 7.45.27 补充]: 延迟绘制，确保Canvas引擎已初始化
-            Component.onCompleted: Qt.callLater(requestPaint)
+            // ✅ 2026-02-12 [Phase 7.45.28]: 使用Timer延迟绘制，确保Canvas引擎已初始化
+            Timer {
+                interval: 1
+                running: true
+                repeat: false
+                onTriggered: topLeftCanvas.requestPaint()
+            }
         }
     }
 
@@ -204,6 +211,7 @@ Item {
 
         // 小三角形（右上角）
         Canvas {
+            id: topRightCanvas
             x: root.decorationSize - 8 - root.decorationLineWidth - 2
             y: root.decorationLineWidth + 2
             width: 8
@@ -211,6 +219,7 @@ Item {
 
             onPaint: {
                 // ✅ 2026-02-12 [Phase 7.45.27]: 检查Canvas尺寸
+                if (!available) return  // ✅ 2026-02-12 11:51:51 +08:00: 避免Canvas不可用导致QPainter告警
                 if (width <= 0 || height <= 0) return
                 var ctx = getContext("2d")
                 if (!ctx) return
@@ -224,7 +233,13 @@ Item {
                 ctx.fill()
             }
 
-            Component.onCompleted: requestPaint()
+            // ✅ 2026-02-12 [Phase 7.45.28]: 使用Timer延迟绘制，确保Canvas引擎已初始化
+            Timer {
+                interval: 1
+                running: true
+                repeat: false
+                onTriggered: topRightCanvas.requestPaint()
+            }
         }
     }
 
@@ -258,6 +273,7 @@ Item {
 
         // 小三角形（左下角）
         Canvas {
+            id: bottomLeftCanvas
             x: root.decorationLineWidth + 2
             y: root.decorationSize - 8 - root.decorationLineWidth - 2
             width: 8
@@ -265,6 +281,7 @@ Item {
 
             onPaint: {
                 // ✅ 2026-02-12 [Phase 7.45.27]: 检查Canvas尺寸
+                if (!available) return  // ✅ 2026-02-12 11:51:51 +08:00: 避免Canvas不可用导致QPainter告警
                 if (width <= 0 || height <= 0) return
                 var ctx = getContext("2d")
                 if (!ctx) return
@@ -278,7 +295,13 @@ Item {
                 ctx.fill()
             }
 
-            Component.onCompleted: requestPaint()
+            // ✅ 2026-02-12 [Phase 7.45.28]: 使用Timer延迟绘制，确保Canvas引擎已初始化
+            Timer {
+                interval: 1
+                running: true
+                repeat: false
+                onTriggered: bottomLeftCanvas.requestPaint()
+            }
         }
     }
 
@@ -312,6 +335,7 @@ Item {
 
         // 小三角形（右下角）
         Canvas {
+            id: bottomRightCanvas
             x: root.decorationSize - 8 - root.decorationLineWidth - 2
             y: root.decorationSize - 8 - root.decorationLineWidth - 2
             width: 8
@@ -319,6 +343,7 @@ Item {
 
             onPaint: {
                 // ✅ 2026-02-12 [Phase 7.45.27]: 检查Canvas尺寸
+                if (!available) return  // ✅ 2026-02-12 11:51:51 +08:00: 避免Canvas不可用导致QPainter告警
                 if (width <= 0 || height <= 0) return
                 var ctx = getContext("2d")
                 if (!ctx) return
@@ -332,7 +357,13 @@ Item {
                 ctx.fill()
             }
 
-            Component.onCompleted: requestPaint()
+            // ✅ 2026-02-12 [Phase 7.45.28]: 使用Timer延迟绘制，确保Canvas引擎已初始化
+            Timer {
+                interval: 1
+                running: true
+                repeat: false
+                onTriggered: bottomRightCanvas.requestPaint()
+            }
         }
     }
 
