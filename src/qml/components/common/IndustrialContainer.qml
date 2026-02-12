@@ -169,7 +169,8 @@ Item {
                 ctx.fill()
             }
 
-            Component.onCompleted: requestPaint()
+            // ✅ 2026-02-12 [Phase 7.45.27 补充]: 延迟绘制，确保Canvas引擎已初始化
+            Component.onCompleted: Qt.callLater(requestPaint)
         }
     }
 
