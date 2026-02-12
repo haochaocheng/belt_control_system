@@ -142,7 +142,11 @@ Item {
         anchors.fill: parent
         opacity: 0.1
         onPaint: {
+            // ✅ 2026-02-12 [Phase 7.45.27]: 检查Canvas尺寸
+            if (width <= 0 || height <= 0) return
             var ctx = getContext("2d")
+            if (!ctx) return
+
             ctx.strokeStyle = "#00d4ff"
             ctx.lineWidth = 0.5
             var gridSize = 40

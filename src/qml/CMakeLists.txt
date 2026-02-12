@@ -161,6 +161,7 @@ qt_add_qml_module(qml_module
         # ✅ 2026-02-11 [Phase 7.45.22]: voice_management 组件（语音管理页面）
         components/voice_management/TTSConfigSection.qml
         # ✅ 2026-02-11 [Phase 7.45.23]: theme 组件（主题系统）
+        theme/qmldir  # ✅ 2026-02-12 [Phase 7.45.27]: 添加 qmldir 以支持 Theme singleton
         theme/Theme.qml
         theme/AnimatedCounter.qml
         theme/CircularProgress.qml

@@ -15,7 +15,7 @@ Rectangle {
         opacity: 0.15
 
         onPaint: {
-            // ✅ 2026-02-11 [Phase 7.45.26]: 检查Canvas尺寸，避免"Painter not active"警告
+            // ✅ 2026-02-12 [Phase 7.45.26]: 检查Canvas尺寸，避免"Painter not active"警告
             if (width <= 0 || height <= 0) return
 
             var ctx = getContext("2d")
@@ -90,7 +90,7 @@ Rectangle {
         anchors.fill: parent
 
         onPaint: {
-            // ✅ 2026-02-11 [Phase 7.45.26]: 检查Canvas尺寸，避免"Painter not active"警告
+            // ✅ 2026-02-12 [Phase 7.45.26]: 检查Canvas尺寸，避免"Painter not active"警告
             if (width <= 0 || height <= 0) return
 
             var ctx = getContext("2d")

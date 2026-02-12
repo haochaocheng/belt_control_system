@@ -50,7 +50,11 @@ Rectangle {
                 anchors.margins: 40
 
                 onPaint: {
+                    // ✅ 2026-02-12 [Phase 7.45.27]: 检查Canvas尺寸
+                    if (width <= 0 || height <= 0) return
                     var ctx = getContext("2d")
+                    if (!ctx) return
+
                     ctx.clearRect(0, 0, width, height)
 
                     if (root.dataPoints.length < 2) return
