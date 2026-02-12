@@ -26,6 +26,7 @@
 #include "control/DataPathConfig.h"
 #include "control/DeviceConfigManager.h"  // ✅ 2026-02-02 [FIX 100.300.112.8.20]: 添加设备配置管理器头文件
 #include "control/DeviceRoleManager.h"  // ✅ 2026-02-10 [Phase 7.45]: 添加设备角色管理器头文件
+#include "control/TTSConfigManager.h"  // ✅ 2026-02-11 [Phase 7.45.24]: 添加TTS配置管理器头文件
 #include "control/SerialPortController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 添加串口控制器头文件
 #include "control/ModbusController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.4]: 添加MODBUS控制器头文件
 #include "control/ModbusSlaveController.h"  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 添加MODBUS从站控制器头文件
@@ -104,6 +105,16 @@ int main(int argc, char *argv[]) {
         logMessage("Registering SipPhoneManager...");
         SipPhoneManager::registerToQml();
         logMessage("SipPhoneManager registered to QML");
+
+        // ✅ 2026-02-11 [Phase 7.45.24]: 注册 TTSConfigManager 单例到 QML
+        logMessage("Registering TTSConfigManager...");
+        qmlRegisterSingletonType<TTSConfigManager>("com.belt.control", 1, 0, "TTSConfig",
+            [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
+                Q_UNUSED(engine)
+                Q_UNUSED(scriptEngine)
+                return TTSConfigManager::instance();
+            });
+        logMessage("TTSConfigManager registered to QML");
 
         // 根据平台选择硬件抽象层（Windows用模拟，Linux用真实）
         logMessage("Creating hardware HAL...");

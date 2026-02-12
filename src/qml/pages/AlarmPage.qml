@@ -4,10 +4,10 @@ import QtQuick.Layouts 6.5
 
 Item {
     id: root
-    // ✅ 2026-01-20 [FIX 100.273]: 添加默认尺寸，方便可视化设计
-    // 实际运行时，SwipeView 会自动覆盖这些值，不影响运行
-    width: 1920   // 默认宽度（设计尺寸 1920x1080）
-    height: 1080  // 默认高度（设计尺寸 1920x1080）
+    // ✅ 2026-02-11 [Phase 7.45.25]: 移除固定尺寸，避免与SwipeView冲突导致polish()循环
+    // width: 1920   // ❌ 注释掉，SwipeView会自动管理尺寸
+    // height: 1080  // ❌ 注释掉，SwipeView会自动管理尺寸
+    anchors.fill: parent  // ✅ 使用anchors.fill自动填充
 
     // Main container
     Rectangle {

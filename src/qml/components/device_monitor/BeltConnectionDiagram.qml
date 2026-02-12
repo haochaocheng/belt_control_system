@@ -15,7 +15,12 @@ Rectangle {
         opacity: 0.15
 
         onPaint: {
+            // ✅ 2026-02-11 [Phase 7.45.26]: 检查Canvas尺寸，避免"Painter not active"警告
+            if (width <= 0 || height <= 0) return
+
             var ctx = getContext("2d")
+            if (!ctx) return  // ✅ 确保context有效
+
             ctx.clearRect(0, 0, width, height)
 
             ctx.strokeStyle = "#00d4ff"
@@ -85,7 +90,12 @@ Rectangle {
         anchors.fill: parent
 
         onPaint: {
+            // ✅ 2026-02-11 [Phase 7.45.26]: 检查Canvas尺寸，避免"Painter not active"警告
+            if (width <= 0 || height <= 0) return
+
             var ctx = getContext("2d")
+            if (!ctx) return  // ✅ 确保context有效
+
             ctx.clearRect(0, 0, width, height)
 
             // 绘制连接线
@@ -142,19 +152,23 @@ Rectangle {
     Repeater {
         model: beltPositions.length - 1
 
-        Repeater {
-            model: 3  // 每段皮带3个光点
+        // ✅ 2026-02-11 [Phase 7.45.25]: 使用Item包装，保存外层index
+        Item {
+            property int segmentIndex: index  // 保存外层Repeater的index
 
-            Rectangle {
-                id: materialDot
-                width: 10
-                height: 10
-                radius: 5
-                color: "#00ff00"
+            Repeater {
+                model: 3  // 每段皮带3个光点
 
-                property real progress: 0
-                property var fromPos: beltPositions[parent.index]
-                property var toPos: beltPositions[parent.index + 1]
+                Rectangle {
+                    id: materialDot
+                    width: 10
+                    height: 10
+                    radius: 5
+                    color: "#00ff00"
+
+                    property real progress: 0
+                    property var fromPos: beltPositions[parent.segmentIndex]  // ✅ 2026-02-11 [Phase 7.45.25]: 使用外层index
+                    property var toPos: beltPositions[parent.segmentIndex + 1]  // ✅ 2026-02-11 [Phase 7.45.25]: 使用外层index
 
                 visible: fromPos.status === "运行中"
 
@@ -198,7 +212,8 @@ Rectangle {
                     PauseAnimation { duration: 500 }
                 }
             }
-        }
+        }  // ✅ 2026-02-11 [Phase 7.45.25]: 内层Repeater结束
+        }  // ✅ 2026-02-11 [Phase 7.45.25]: Item包装结束
     }
 
     // ========== 皮带设备节点（显示详细信息）==========
@@ -454,7 +469,11 @@ Rectangle {
         Canvas {
             anchors.fill: parent
             onPaint: {
+                // ✅ 2026-02-11 [Phase 7.45.26]: 检查Canvas尺寸
+                if (width <= 0 || height <= 0) return
                 var ctx = getContext("2d")
+                if (!ctx) return
+
                 ctx.strokeStyle = "#00d4ff"
                 ctx.lineWidth = 4
                 ctx.beginPath()
@@ -506,7 +525,11 @@ Rectangle {
         Canvas {
             anchors.fill: parent
             onPaint: {
+                // ✅ 2026-02-11 [Phase 7.45.26]: 检查Canvas尺寸
+                if (width <= 0 || height <= 0) return
                 var ctx = getContext("2d")
+                if (!ctx) return
+
                 ctx.strokeStyle = "#5a6f8f"
                 ctx.lineWidth = 4
                 ctx.beginPath()

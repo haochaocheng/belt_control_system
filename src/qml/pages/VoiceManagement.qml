@@ -17,6 +17,7 @@ import com.belt.control 1.0  // ✅ 2026-01-23 11:00 [FIX 100.299] 导入 TTSCon
  */
 Rectangle {
     id: root
+    anchors.fill: parent  // ✅ 2026-02-11 [Phase 7.45.25]: 添加anchors.fill，确保在SwipeView中正确填充
     color: "#1a1a1a"
 
     // 页面标题

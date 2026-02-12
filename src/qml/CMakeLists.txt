@@ -13,6 +13,7 @@ qt_add_qml_module(qml_module
         pages/AlarmPage.qml
         pages/DeviceOperationLog.qml
         pages/Input1Page.qml
+        pages/VoiceManagement.qml  # ✅ 2026-02-11 [Phase 7.45.22]: 语音管理页面
         # ✅ 2026-01-31 [FIX 100.300.112.8.8] 删除重复的 Input1 文件列表（Line 16-24）
         # 保留 Line 27-35 的列表，因为它包含正确的 Screen01.qml
         # ✅ 2026-01-27 [FIX 100.300.52] 添加缺失的 Head 组件
@@ -146,6 +147,23 @@ qt_add_qml_module(qml_module
         components/device_info/pages/PhaseAWindingTab.qml
         components/device_info/pages/PhaseBWindingTab.qml
         components/device_info/pages/PhaseCWindingTab.qml
+        # ✅ 2026-02-11 [Phase 7.45.21]: device_monitor 组件（设备监控页面）
+        components/device_monitor/BeltConnectionDiagram.qml
+        components/device_monitor/CornerDecoration.qml
+        components/device_monitor/DeviceStatusCard.qml
+        components/device_monitor/GlowLed.qml
+        components/device_monitor/InterlockDiagram.qml
+        components/device_monitor/MiniTrendChart.qml
+        components/device_monitor/ModernButton.qml
+        components/device_monitor/SmoothLineChart.qml
+        components/device_monitor/StationCard.qml
+        components/device_monitor/StatusBadge.qml
+        # ✅ 2026-02-11 [Phase 7.45.22]: voice_management 组件（语音管理页面）
+        components/voice_management/TTSConfigSection.qml
+        # ✅ 2026-02-11 [Phase 7.45.23]: theme 组件（主题系统）
+        theme/Theme.qml
+        theme/AnimatedCounter.qml
+        theme/CircularProgress.qml
     RESOURCES
         images/header.png
         sounds/ringtone.wav

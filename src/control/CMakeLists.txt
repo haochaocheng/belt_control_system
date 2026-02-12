@@ -23,6 +23,7 @@ set(CONTROL_SOURCES
     ModbusTCPSlaveController.cpp  # ✅ 2026-02-08 [Phase 7.42]: 添加Modbus TCP从站控制器源文件
     S7ClientController.cpp  # ✅ 2026-02-08 [Phase 7.42]: 添加S7客户端控制器源文件
     S7ServerController.cpp  # ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器源文件
+    TTSConfigManager.cpp  # ✅ 2026-02-11 [Phase 7.45.24]: 添加TTS配置管理器源文件
 )
 
 set(CONTROL_HEADERS
@@ -49,6 +50,7 @@ set(CONTROL_HEADERS
     ModbusTCPSlaveController.h  # ✅ 2026-02-08 [Phase 7.42]: 添加Modbus TCP从站控制器头文件
     S7ClientController.h  # ✅ 2026-02-08 [Phase 7.42]: 添加S7客户端控制器头文件
     S7ServerController.h  # ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器头文件
+    TTSConfigManager.h  # ✅ 2026-02-11 [Phase 7.45.24]: 添加TTS配置管理器头文件
 )
 
 # ========== Sherpa-ONNX TTS 集成（可选） ==========

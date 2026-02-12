@@ -221,6 +221,11 @@ Item {
         // Page 6: Input1 Page - QDS 设计的输入界面
         Input1Page {
         }
+
+        // ✅ 2026-02-11 [Phase 7.45.22]: 添加 VoiceManagement（第7个页面）
+        // Page 7: Voice Management - 语音管理
+        VoiceManagement {
+        }
     }
 
     // Page indicator - Floating at bottom
