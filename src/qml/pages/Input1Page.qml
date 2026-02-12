@@ -17,11 +17,29 @@ import QtQuick.Controls
 // 2026-01-12: Input1 模块文件已打包到 BeltControlQml 模块中
 // 直接引用 Input1/Input1Content/Screen01 即可，无需单独 import
 
-Item {
-    id: input1Page
-    // 2026-01-12: 移除 anchors.fill - SwipeView 子项不能使用 anchors
-    // SwipeView 会自动管理子项的尺寸和位置
-    // anchors.fill: parent  // ❌ 与 SwipeView 冲突，导致 polish() 循环
+    Item {
+        id: input1Page
+        // 2026-01-12: 移除 anchors.fill - SwipeView 子项不能使用 anchors
+        // SwipeView 会自动管理子项的尺寸和位置
+        // anchors.fill: parent  // ❌ 与 SwipeView 冲突，导致 polish() 循环
+        // ✅ 防止初始尺寸为 0，导致缩放为 0 看不到界面
+        width: parent ? parent.width : 0
+        height: parent ? parent.height : 0
+
+        // ✅ 2026-02-12 [Phase 7.45.29]: 监听尺寸变化，确保窗口初始化后正确显示
+        onWidthChanged: {
+            if (width > 0 && height > 0) {
+                console.log("🔄 [Input1Page] 尺寸变化:", width, "x", height)
+                console.log("   xScale:", (width / 1920).toFixed(3))
+                console.log("   yScale:", (height / 1080).toFixed(3))
+            }
+        }
+
+        onHeightChanged: {
+            if (width > 0 && height > 0) {
+                console.log("🔄 [Input1Page] 高度变化:", width, "x", height)
+            }
+        }
 
     // 页面属性
     property string pageTitle: "输入监控"
@@ -66,6 +84,8 @@ Item {
         // ✅ 固定原始尺寸（QDS 设计尺寸）
         width: 1920
         height: 1080
+        // ✅ 避免在 0 尺寸时加载，导致 scale=0
+        active: input1Page.width > 0 && input1Page.height > 0
 
         source: "../Input1/Input1Content/Screen01.qml"  // ✅ 2026-01-27 [FIX 100.300.57]: 使用相对路径以支持 QDS
 
