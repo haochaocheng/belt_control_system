@@ -139,10 +139,13 @@ Item {
 
     // Tech grid overlay effect
     Canvas {
+        id: gridCanvas
         anchors.fill: parent
         opacity: 0.1
         onPaint: {
             // ✅ 2026-02-12 [Phase 7.45.27]: 检查Canvas尺寸
+            // ✅ 2026-02-12 11:51:51 +08:00: 先检查 available，避免 QPainter not active
+            if (!available) return
             if (width <= 0 || height <= 0) return
             var ctx = getContext("2d")
             if (!ctx) return
@@ -162,6 +165,14 @@ Item {
                 ctx.lineTo(width, y)
                 ctx.stroke()
             }
+        }
+
+        // ✅ 2026-02-12 [Phase 7.45.29]: 使用Timer延迟绘制，确保Canvas引擎已初始化
+        Timer {
+            interval: 1
+            running: true
+            repeat: false
+            onTriggered: gridCanvas.requestPaint()
         }
     }
 
