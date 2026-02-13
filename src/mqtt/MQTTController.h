@@ -217,9 +217,9 @@ private:
     // 订阅管理
     QVector<QMap<QString, QMqttSubscription*>> m_subscriptions;
 
-    // ✅ 2026-02-12 [Phase 7.45.33]: 添加连接状态跟踪，避免重复输出调试信息
-    // 原因：connectToModule 和 disconnectFromModule 被频繁调用，产生大量重复日志
-    QVector<QMqttClient::ClientState> m_lastStates;
+    // ✅ 2026-02-13 [Phase 7.45.33 修复]: 移除 m_lastStates
+    // 原因：connectToHost() 会改变状态，导致状态跟踪失效
+    // 状态变化通过信号在 MQTTAutoManager 中处理更合适
 #endif
 };
 
