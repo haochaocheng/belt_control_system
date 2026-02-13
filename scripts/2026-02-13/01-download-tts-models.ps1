@@ -57,15 +57,29 @@ Write-Host ""
 # ============================================================
 Write-Host "[1/5] 检查 Python 环境..." -ForegroundColor Yellow
 
-$pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+# ✅ 2026-02-13 18:30 [Phase 7.46.8 修复 3]: 优先使用 Python 3.11
+$pythonCmd = Get-Command python3.11 -ErrorAction SilentlyContinue
+if (-not $pythonCmd) {
+    $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+}
+
 if (-not $pythonCmd) {
     Write-Host "  ❌ 错误：未找到 Python" -ForegroundColor Red
-    Write-Host "  请先安装 Python 3.8+：https://www.python.org/downloads/" -ForegroundColor Yellow
+    Write-Host "  请先安装 Python 3.11：https://www.python.org/downloads/release/python-3119/" -ForegroundColor Yellow
     exit 1
 }
 
-$pythonVersion = & python --version 2>&1
+$pythonVersion = & $pythonCmd --version 2>&1
 Write-Host "  ✅ 找到 Python: $pythonVersion" -ForegroundColor Green
+
+# ⚠️ 2026-02-13 18:30 [Phase 7.46.8 修复 3]: 检查 Python 版本
+if ($pythonVersion -match "3\.13") {
+    Write-Host "  ⚠️  警告：Python 3.13 可能缺少预编译的 wheel" -ForegroundColor Yellow
+    Write-Host "  建议使用 Python 3.11 以获得更好的兼容性" -ForegroundColor Yellow
+    Write-Host "  下载地址：https://www.python.org/downloads/release/python-3119/" -ForegroundColor Yellow
+    Write-Host ""
+}
+
 Write-Host ""
 
 # ============================================================
@@ -79,7 +93,7 @@ if (Test-Path $venvDir) {
     Write-Host "  ⚠️  虚拟环境已存在，跳过创建" -ForegroundColor Yellow
 } else {
     try {
-        & python -m venv $venvDir
+        & $pythonCmd -m venv $venvDir
         Write-Host "  ✅ 虚拟环境创建成功" -ForegroundColor Green
     } catch {
         Write-Host "  ❌ 创建虚拟环境失败: $_" -ForegroundColor Red
@@ -96,27 +110,45 @@ Write-Host "[3/5] 安装 TTS 依赖..." -ForegroundColor Yellow
 $pipCmd = Join-Path $venvDir "Scripts\pip.exe"
 $pythonVenv = Join-Path $venvDir "Scripts\python.exe"
 
-# ❌ 2026-02-13 17:30 [Phase 7.46.8 修复]: 移除 --quiet 参数，显示详细错误信息
+# ✅ 2026-02-13 18:30 [Phase 7.46.8 修复 3]: 配置清华镜像源（加速下载，可能有预编译 wheel）
+Write-Host "  🔧 配置清华镜像源..." -ForegroundColor Cyan
+& $pipCmd config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+Write-Host "  ✅ 镜像源配置完成" -ForegroundColor Green
+Write-Host ""
+
+# ✅ 2026-02-13 18:30 [Phase 7.46.8 修复 3]: 尝试安装预编译的 onnx（避免编译）
+Write-Host "  📦 尝试安装预编译的 onnx..." -ForegroundColor Cyan
+& $pipCmd install onnx --only-binary :all: 2>&1 | Out-Host
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "  ✅ onnx 预编译版本安装成功" -ForegroundColor Green
+} else {
+    Write-Host "  ⚠️  onnx 预编译版本不可用，将尝试编译（可能失败）" -ForegroundColor Yellow
+}
+Write-Host ""
+
 Write-Host "  📦 安装 paddlepaddle..." -ForegroundColor Cyan
-try {
-    & $pipCmd install paddlepaddle 2>&1 | Out-Host
+& $pipCmd install paddlepaddle 2>&1 | Out-Host
+if ($LASTEXITCODE -eq 0) {
     Write-Host "  ✅ paddlepaddle 安装完成" -ForegroundColor Green
-} catch {
-    Write-Host "  ❌ paddlepaddle 安装失败: $_" -ForegroundColor Red
+} else {
+    Write-Host "  ❌ paddlepaddle 安装失败" -ForegroundColor Red
     Write-Host "  💡 提示：可能需要 Visual Studio C++ 编译工具" -ForegroundColor Yellow
     exit 1
 }
+Write-Host ""
 
 Write-Host "  📦 安装 paddlespeech..." -ForegroundColor Cyan
-try {
-    # ✅ 2026-02-13 18:00 [Phase 7.46.8 修复]: 先安装 paddlespeech（自动安装依赖）
-    # 然后单独处理可能失败的依赖
-    Write-Host "  正在安装 paddlespeech 及其依赖（可能需要几分钟）..." -ForegroundColor Gray
-    & $pipCmd install paddlespeech 2>&1 | Out-Host
+Write-Host "  正在安装 paddlespeech 及其依赖（可能需要几分钟）..." -ForegroundColor Gray
+& $pipCmd install paddlespeech 2>&1 | Out-Host
+if ($LASTEXITCODE -eq 0) {
     Write-Host "  ✅ paddlespeech 安装完成" -ForegroundColor Green
-} catch {
-    Write-Host "  ⚠️  paddlespeech 安装遇到问题，尝试继续..." -ForegroundColor Yellow
-    # 不退出，继续尝试下载模型
+} else {
+    Write-Host "  ❌ paddlespeech 安装失败" -ForegroundColor Red
+    Write-Host "  💡 可能原因：" -ForegroundColor Yellow
+    Write-Host "     1. Python 版本不兼容（建议使用 Python 3.11）" -ForegroundColor Yellow
+    Write-Host "     2. 缺少 C++ 编译工具" -ForegroundColor Yellow
+    Write-Host "     3. 网络问题" -ForegroundColor Yellow
+    exit 1
 }
 
 # ❌ 2026-02-13 17:30 [Phase 7.46.8 修复]: 移除 melo-tts 安装（PyPI 上不存在此包）
