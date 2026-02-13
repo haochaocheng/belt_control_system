@@ -1,26 +1,30 @@
-# Phase 7.45.33 - 优化 MQTTController 调试日志输出
+# Phase 7.45.33 - 优化 MQTT 调试日志输出
 
-**修复时间**: 2026-02-12 18:45
+**修复时间**: 2026-02-12 18:45（更新：19:00）
 **问题类型**: 日志优化
 **严重程度**: 低（日志过多影响调试）
 
 ## 1. 问题现象
 
 ### voip.md 日志分析
-MQTTController 的调试信息大量重复输出：
+MQTT 相关的调试信息大量重复输出，共 **2042 条**日志：
 
+**MQTTController 重复日志**：
 ```
 [DEBUG] ✅ [MQTTController] 连接模块: 0
 [DEBUG] ✅ [MQTTController] 连接模块: 1
-[DEBUG] ✅ [MQTTController] 连接模块: 2
-[DEBUG] ✅ [MQTTController] 连接模块: 3
 [DEBUG] ✅ [MQTTController] 断开模块: 0
 [DEBUG] ✅ [MQTTController] 断开模块: 1
-[DEBUG] ✅ [MQTTController] 断开模块: 2
-[DEBUG] ✅ [MQTTController] 断开模块: 3
-[DEBUG] ✅ [MQTTController] 连接模块: 0
-[DEBUG] ✅ [MQTTController] 连接模块: 1
 ...（重复数百次）
+```
+
+**MQTTAutoManager 重复日志**：
+```
+[DEBUG] 🔌 [MQTTAutoManager] 连接模块: 0  (64次)
+[DEBUG] 🔄 [MQTTAutoManager] 重连模块: 0  (63次)
+[DEBUG] 🔄 [MQTTAutoManager] 模块 0 断线，尝试重连  (63次)
+[DEBUG] ⚠️ [MQTTAutoManager] 模块 0 已断开  (63次)
+...
 ```
 
 ### 影响
@@ -31,10 +35,11 @@ MQTTController 的调试信息大量重复输出：
 ## 2. 根因分析
 
 ### 问题原因
-`connectToModule()` 和 `disconnectFromModule()` 被频繁调用，每次调用都输出调试信息，即使连接状态没有变化。
+1. **MQTTController**: `connectToModule()` 和 `disconnectFromModule()` 被频繁调用，每次都输出日志
+2. **MQTTAutoManager**: 重连定时器每 5 秒检查一次，每次都输出日志
 
 ### 调用场景
-- MQTT 连接管理定时器
+- MQTT 重连定时器（5秒间隔）
 - 配置更新时重新连接
 - 界面切换时的连接检查
 
@@ -43,9 +48,9 @@ MQTTController 的调试信息大量重复输出：
 添加状态跟踪机制，**只在连接状态变化时输出调试信息**。
 
 ### 实现方式
-1. 添加 `m_lastStates` 向量，记录每个模块的上次状态
-2. 在 `connectToModule()` 和 `disconnectFromModule()` 中比较当前状态与上次状态
-3. 只在状态变化时输出调试信息
+1. **MQTTController**: 添加 `m_lastStates` 向量，记录每个模块的 `QMqttClient::ClientState`
+2. **MQTTAutoManager**: 添加 `m_lastConnectedStates` 向量，记录每个模块的连接状态
+3. 在相关方法中比较当前状态与上次状态，只在变化时输出
 
 ## 4. 修改文件
 
@@ -55,107 +60,137 @@ MQTTController 的调试信息大量重复输出：
 
 ```cpp
 #ifdef MQTT_ENABLED
-    // 8 个 MQTT 客户端实例
     QVector<QMqttClient*> m_clients;
-
-    // 订阅管理
     QVector<QMap<QString, QMqttSubscription*>> m_subscriptions;
 
-    // ✅ 2026-02-12 [Phase 7.45.33]: 添加连接状态跟踪，避免重复输出调试信息
+    // ✅ 2026-02-12 [Phase 7.45.33]: 添加连接状态跟踪
     QVector<QMqttClient::ClientState> m_lastStates;
 #endif
 ```
 
 ### 文件 2: `src/mqtt/MQTTController.cpp`
 
-#### 修改 1：初始化状态跟踪（构造函数）
-
+#### 修改 1：初始化状态跟踪
 ```cpp
-#ifdef MQTT_ENABLED
-    // 初始化客户端和订阅容器
-    m_clients.resize(8);
-    m_subscriptions.resize(8);
-    // ✅ 2026-02-12 [Phase 7.45.33]: 初始化状态跟踪
-    m_lastStates.resize(8, QMqttClient::Disconnected);
-
-    for (int i = 0; i < 8; ++i) {
-        m_clients[i] = nullptr;
-    }
-#endif
+m_clients.resize(8);
+m_subscriptions.resize(8);
+m_lastStates.resize(8, QMqttClient::Disconnected);
 ```
 
 #### 修改 2：connectToModule() - 只在状态变化时输出
-
 ```cpp
-bool MQTTController::connectToModule(int moduleIndex)
-{
-#ifdef MQTT_ENABLED
-    int idx = getValidModuleIndex(moduleIndex);
+QMqttClient *client = m_clients[idx];
+QMqttClient::ClientState currentState = client ? client->state() : QMqttClient::Disconnected;
 
-    // ✅ 2026-02-12 [Phase 7.45.33]: 只在状态变化时输出调试信息
-    QMqttClient *client = m_clients[idx];
-    QMqttClient::ClientState currentState = client ? client->state() : QMqttClient::Disconnected;
-
-    // 只在状态变化时输出
-    if (currentState != m_lastStates[idx] || !client) {
-        qDebug() << "✅ [MQTTController] 连接模块:" << idx
-                 << "状态:" << (client ? QString::number(static_cast<int>(currentState)) : "无客户端");
-        m_lastStates[idx] = currentState;
-    }
-
-    // ... 其余代码不变
-#endif
+// 只在状态变化时输出
+if (currentState != m_lastStates[idx] || !client) {
+    qDebug() << "✅ [MQTTController] 连接模块:" << idx
+             << "状态:" << (client ? QString::number(static_cast<int>(currentState)) : "无客户端");
+    m_lastStates[idx] = currentState;
 }
 ```
 
 #### 修改 3：disconnectFromModule() - 只在状态变化时输出
+```cpp
+QMqttClient *client = m_clients[idx];
+if (client) {
+    QMqttClient::ClientState currentState = client->state();
+
+    if (currentState != m_lastStates[idx]) {
+        qDebug() << "✅ [MQTTController] 断开模块:" << idx
+                 << "状态:" << static_cast<int>(currentState);
+        m_lastStates[idx] = currentState;
+    }
+
+    client->disconnectFromHost();
+}
+```
+
+### 文件 3: `src/mqtt/MQTTAutoManager.h`
+
+添加状态跟踪成员变量：
 
 ```cpp
-void MQTTController::disconnectFromModule(int moduleIndex)
+// 健康状态
+QVector<ModuleHealthStatus> m_healthStatus;
+
+// ✅ 2026-02-12 [Phase 7.45.33]: 添加连接状态跟踪
+QVector<bool> m_lastConnectedStates;
+```
+
+### 文件 4: `src/mqtt/MQTTAutoManager.cpp`
+
+#### 修改 1：初始化状态跟踪
+```cpp
+void MQTTAutoManager::initializeHealthStatus()
 {
-#ifdef MQTT_ENABLED
-    int idx = getValidModuleIndex(moduleIndex);
+    m_healthStatus.resize(8);
+    m_lastConnectedStates.resize(8, false);
+    // ...
+}
+```
 
-    // ✅ 2026-02-12 [Phase 7.45.33]: 只在状态变化时输出调试信息
-    QMqttClient *client = m_clients[idx];
-    if (client) {
-        QMqttClient::ClientState currentState = client->state();
+#### 修改 2：onReconnectTimerTimeout() - 只在状态变化时输出
+```cpp
+for (int i = 0; i < 4; ++i) {
+    bool isConnected = m_mqttController->isModuleConnected(i);
 
-        // 只在状态变化时输出
-        if (currentState != m_lastStates[idx]) {
-            qDebug() << "✅ [MQTTController] 断开模块:" << idx
-                     << "状态:" << static_cast<int>(currentState);
-            m_lastStates[idx] = currentState;
+    // 只在状态变化时输出
+    if (isConnected != m_lastConnectedStates[i]) {
+        if (!isConnected) {
+            qDebug() << "🔄 [MQTTAutoManager] 模块" << i << "断线，尝试重连";
         }
-
-        client->disconnectFromHost();
+        m_lastConnectedStates[i] = isConnected;
     }
-#endif
+
+    if (!isConnected) {
+        reconnectModule(i);
+    }
+}
+```
+
+#### 修改 3：reconnectModule() - 移除重复日志
+```cpp
+// ✅ 2026-02-12 [Phase 7.45.33]: 移除重复日志，状态变化已在 onReconnectTimerTimeout 中输出
+// qDebug() << "🔄 [MQTTAutoManager] 重连模块:" << moduleIndex;
+```
+
+#### 修改 4：connectModule() - 移除重复日志
+```cpp
+// ✅ 2026-02-12 [Phase 7.45.33]: 移除重复日志，连接状态变化会在 MQTTController 中输出
+// qDebug() << "🔌 [MQTTAutoManager] 连接模块:" << moduleIndex;
+```
+
+#### 修改 5：onModuleConnected() - 只在状态变化时输出
+```cpp
+if (connected) {
+    // 只在状态变化时输出
+    if (!m_lastConnectedStates[moduleIndex]) {
+        qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "已连接";
+        m_lastConnectedStates[moduleIndex] = true;
+    }
+} else {
+    // 只在状态变化时输出
+    if (m_lastConnectedStates[moduleIndex]) {
+        qDebug() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "已断开";
+        m_lastConnectedStates[moduleIndex] = false;
+    }
 }
 ```
 
 ## 5. 技术要点
 
-### QMqttClient::ClientState 枚举值
+### 状态跟踪策略
 
-```cpp
-enum ClientState {
-    Disconnected = 0,
-    Connecting = 1,
-    Connected = 2
-};
-```
-
-### 状态变化检测逻辑
-
-1. **首次调用**：`m_lastStates[idx]` 初始化为 `Disconnected`，如果当前状态不同则输出
-2. **后续调用**：只有当 `currentState != m_lastStates[idx]` 时才输出
-3. **客户端创建**：`!client` 条件确保客户端创建时输出一次
+| 类 | 跟踪内容 | 数据类型 | 用途 |
+|----|----------|----------|------|
+| MQTTController | 客户端状态 | `QMqttClient::ClientState` | 跟踪连接/断开/连接中状态 |
+| MQTTAutoManager | 连接状态 | `bool` | 跟踪是否已连接 |
 
 ### 优化效果
 
-- **修改前**：每次调用都输出，可能产生数百条重复日志
-- **修改后**：只在状态变化时输出，日志量减少 90% 以上
+- **修改前**：2042 条 MQTT 日志（大量重复）
+- **修改后**：预计减少 95% 以上（只在状态变化时输出）
 
 ## 6. 验证步骤
 
@@ -172,17 +207,18 @@ enum ClientState {
 
 ### 修改前日志（重复输出）
 ```
-[DEBUG] ✅ [MQTTController] 连接模块: 0
-[DEBUG] ✅ [MQTTController] 连接模块: 0
-[DEBUG] ✅ [MQTTController] 连接模块: 0
-...（重复数十次）
+[DEBUG] 🔌 [MQTTAutoManager] 连接模块: 0
+[DEBUG] 🔌 [MQTTAutoManager] 连接模块: 0
+[DEBUG] 🔌 [MQTTAutoManager] 连接模块: 0
+...（重复 64 次）
 ```
 
 ### 修改后日志（只在变化时输出）
 ```
 [DEBUG] ✅ [MQTTController] 连接模块: 0 状态: 0
 [DEBUG] ✅ [MQTTController] 连接模块: 0 状态: 1
-[DEBUG] ✅ [MQTTController] 连接模块: 0 状态: 2
+[DEBUG] ✅ [MQTTAutoManager] 模块 0 已连接
+[DEBUG] ✅ [MQTTAutoManager] 模块 0 订阅主题: belt_control/di/module1/status
 ```
 
 ## 8. 相关修复

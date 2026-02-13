@@ -51,6 +51,9 @@ MQTTAutoManager::~MQTTAutoManager()
 void MQTTAutoManager::initializeHealthStatus()
 {
     m_healthStatus.resize(8);
+    // ✅ 2026-02-12 [Phase 7.45.33]: 初始化连接状态跟踪
+    m_lastConnectedStates.resize(8, false);
+
     for (int i = 0; i < 8; ++i) {
         m_healthStatus[i] = ModuleHealthStatus();
     }
@@ -241,7 +244,8 @@ void MQTTAutoManager::reconnectModule(int moduleIndex)
         return;
     }
 
-    qDebug() << "🔄 [MQTTAutoManager] 重连模块:" << moduleIndex;
+    // ✅ 2026-02-12 [Phase 7.45.33]: 移除重复日志，状态变化已在 onReconnectTimerTimeout 中输出
+    // qDebug() << "🔄 [MQTTAutoManager] 重连模块:" << moduleIndex;
 
     // 先断开
     m_mqttController->disconnectFromModule(moduleIndex);
@@ -262,33 +266,13 @@ void MQTTAutoManager::connectModule(int moduleIndex)
         return;
     }
 
-    qDebug() << "🔌 [MQTTAutoManager] 连接模块:" << moduleIndex;
+    // ✅ 2026-02-12 [Phase 7.45.33]: 移除重复日志，连接状态变化会在 MQTTController 中输出
+    // qDebug() << "🔌 [MQTTAutoManager] 连接模块:" << moduleIndex;
 
     // 连接到 Broker
-    bool success = m_mqttController->connectToModule(moduleIndex);
-
-    if (success) {
-        // 订阅状态主题
-        QString statusTopic;
-        if (moduleIndex < 2) {
-            // 开关量模块
-            statusTopic = QString("belt_control/di/module%1/status").arg(moduleIndex + 1);
-        } else if (moduleIndex < 4) {
-            // 模拟量模块
-            statusTopic = QString("belt_control/ai/module%1/status").arg(moduleIndex + 1);
-        } else {
-            // 其他模块（暂未实施）
-            return;
-        }
-
-        // 延迟订阅，等待连接建立
-        QTimer::singleShot(500, this, [this, moduleIndex, statusTopic]() {
-            if (m_mqttController->isModuleConnected(moduleIndex)) {
-                m_mqttController->subscribe(statusTopic, 1, moduleIndex);
-                qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "订阅主题:" << statusTopic;
-            }
-        });
-    }
+    // ✅ 2026-02-09 [Phase 7.44.20]: 订阅逻辑移到 onModuleConnected() 中
+    // 原因：连接是异步的，固定延迟500ms可能不够，应该在连接成功信号中订阅
+    m_mqttController->connectToModule(moduleIndex);
 }
 
 void MQTTAutoManager::startReconnectTimer()
@@ -451,10 +435,21 @@ void MQTTAutoManager::updateLastDataTime(int moduleIndex)
 
 void MQTTAutoManager::onReconnectTimerTimeout()
 {
+    // ✅ 2026-02-12 [Phase 7.45.33]: 只在连接状态变化时输出调试信息
     // 检查前4个模块的连接状态，断线自动重连
     for (int i = 0; i < 4; ++i) {
-        if (!m_mqttController->isModuleConnected(i)) {
-            qDebug() << "🔄 [MQTTAutoManager] 模块" << i << "断线，尝试重连";
+        bool isConnected = m_mqttController->isModuleConnected(i);
+
+        // 只在状态变化时输出
+        if (isConnected != m_lastConnectedStates[i]) {
+            if (!isConnected) {
+                qDebug() << "🔄 [MQTTAutoManager] 模块" << i << "断线，尝试重连";
+            }
+            m_lastConnectedStates[i] = isConnected;
+        }
+
+        // 断线时重连
+        if (!isConnected) {
             reconnectModule(i);
         }
     }
@@ -493,10 +488,43 @@ void MQTTAutoManager::onModuleConnected(int moduleIndex, bool connected)
 
         if (connected) {
             m_healthStatus[moduleIndex].status = "已连接";
-            qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "已连接";
+            // ✅ 2026-02-12 [Phase 7.45.33]: 只在状态变化时输出
+            if (!m_lastConnectedStates[moduleIndex]) {
+                qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "已连接";
+                m_lastConnectedStates[moduleIndex] = true;
+            }
+
+            // ✅ 2026-02-09 [Phase 7.44.20]: 连接成功后立即订阅主题
+            // 原因：修复订阅失败问题，之前使用固定延迟500ms可能不够
+            QString statusTopic;
+            if (moduleIndex < 2) {
+                // 开关量模块
+                statusTopic = QString("belt_control/di/module%1/status").arg(moduleIndex + 1);
+            } else if (moduleIndex < 4) {
+                // 模拟量模块
+                // ✅ 2026-02-09 [Phase 7.44.20]: 修复模拟量模块主题计算错误
+                // 原因：模块2应该是ai/module1，模块3应该是ai/module2
+                statusTopic = QString("belt_control/ai/module%1/status").arg(moduleIndex - 1);
+            } else {
+                // 其他模块（暂未实施）
+                emit healthStatusChanged();
+                return;
+            }
+
+            // 订阅状态主题
+            bool success = m_mqttController->subscribe(statusTopic, 1, moduleIndex);
+            if (success) {
+                qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "订阅主题:" << statusTopic;
+            } else {
+                qWarning() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "订阅失败:" << statusTopic;
+            }
         } else {
             m_healthStatus[moduleIndex].status = "未连接";
-            qDebug() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "已断开";
+            // ✅ 2026-02-12 [Phase 7.45.33]: 只在状态变化时输出
+            if (m_lastConnectedStates[moduleIndex]) {
+                qDebug() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "已断开";
+                m_lastConnectedStates[moduleIndex] = false;
+            }
         }
 
         emit healthStatusChanged();

@@ -160,6 +160,9 @@ private:
     // 健康状态
     QVector<ModuleHealthStatus> m_healthStatus;  // 8个模块的健康状态
 
+    // ✅ 2026-02-12 [Phase 7.45.33]: 添加连接状态跟踪，避免重复输出调试信息
+    QVector<bool> m_lastConnectedStates;  // 记录每个模块的上次连接状态
+
     // 常量
     static const int RECONNECT_CHECK_INTERVAL = 5000;  // 5秒
     static const int HEALTH_CHECK_INTERVAL = 1000;     // 1秒
