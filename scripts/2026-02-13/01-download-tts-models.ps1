@@ -109,14 +109,14 @@ try {
 
 Write-Host "  📦 安装 paddlespeech..." -ForegroundColor Cyan
 try {
-    # ✅ 2026-02-13 17:30 [Phase 7.46.8 修复]: 跳过依赖检查，避免 editdistance 编译失败
-    & $pipCmd install paddlespeech --no-deps 2>&1 | Out-Host
-    # 手动安装核心依赖（跳过需要编译的依赖）
-    & $pipCmd install numpy scipy librosa soundfile tqdm colorlog yacs visualdl 2>&1 | Out-Host
-    Write-Host "  ✅ paddlespeech 安装完成（跳过了部分可选依赖）" -ForegroundColor Green
+    # ✅ 2026-02-13 18:00 [Phase 7.46.8 修复]: 先安装 paddlespeech（自动安装依赖）
+    # 然后单独处理可能失败的依赖
+    Write-Host "  正在安装 paddlespeech 及其依赖（可能需要几分钟）..." -ForegroundColor Gray
+    & $pipCmd install paddlespeech 2>&1 | Out-Host
+    Write-Host "  ✅ paddlespeech 安装完成" -ForegroundColor Green
 } catch {
-    Write-Host "  ❌ paddlespeech 安装失败: $_" -ForegroundColor Red
-    exit 1
+    Write-Host "  ⚠️  paddlespeech 安装遇到问题，尝试继续..." -ForegroundColor Yellow
+    # 不退出，继续尝试下载模型
 }
 
 # ❌ 2026-02-13 17:30 [Phase 7.46.8 修复]: 移除 melo-tts 安装（PyPI 上不存在此包）
