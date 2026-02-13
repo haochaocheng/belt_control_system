@@ -28,6 +28,8 @@ MQTTController::MQTTController(QObject *parent)
     m_clients.resize(8);
     m_subscriptions.resize(8);
     // ✅ 2026-02-13 [Phase 7.45.33 修复]: 移除 m_lastStates 初始化
+    // ✅ 2026-02-13 [Phase 7.45.34]: 初始化错误状态跟踪
+    m_lastErrors.resize(8, QMqttClient::NoError);
 
     for (int i = 0; i < 8; ++i) {
         m_clients[i] = nullptr;
@@ -351,6 +353,12 @@ void MQTTController::connectClientSignals(int moduleIndex)
     });
 
     connect(client, &QMqttClient::errorChanged, this, [this, moduleIndex](QMqttClient::ClientError error) {
+        // ✅ 2026-02-13 [Phase 7.45.34]: 只在错误状态变化时输出日志
+        if (error == m_lastErrors[moduleIndex]) {
+            return;  // 错误状态未变化，不输出日志
+        }
+        m_lastErrors[moduleIndex] = error;
+
         QString errorStr;
         switch (error) {
         case QMqttClient::NoError:

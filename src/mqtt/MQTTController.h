@@ -220,6 +220,10 @@ private:
     // ✅ 2026-02-13 [Phase 7.45.33 修复]: 移除 m_lastStates
     // 原因：connectToHost() 会改变状态，导致状态跟踪失效
     // 状态变化通过信号在 MQTTAutoManager 中处理更合适
+
+    // ✅ 2026-02-13 [Phase 7.45.34]: 添加错误状态跟踪
+    // 用于避免重复输出相同的错误日志
+    QVector<QMqttClient::ClientError> m_lastErrors;
 #endif
 };
 
