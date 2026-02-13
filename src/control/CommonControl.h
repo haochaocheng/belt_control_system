@@ -140,6 +140,14 @@ public slots:
      */
     Q_INVOKABLE void testTTS(const QString &text, int speakerId = 0, double rate = 1.0, double volume = 0.8);
 
+    // ✅ 2026-02-13 [Phase 7.45.36]: 添加 TTS 模型切换方法
+    /**
+     * @brief 切换 TTS 模型
+     * @param modelIndex 模型索引（0-6）
+     * @return 切换是否成功
+     */
+    Q_INVOKABLE bool switchTTSModel(int modelIndex);
+
 private slots:
     void onMediaPlayerError(QMediaPlayer::Error error, const QString &errorString);
     void onPlaybackFinished();

@@ -100,8 +100,16 @@ ColumnLayout {
             }
 
             onCurrentIndexChanged: {
+                // ✅ 2026-02-13 [Phase 7.45.36]: 调用 CommonControl.switchTTSModel()
                 console.log("模型切换:", currentIndex)
-                // TODO: 调用 TTSConfigManager.setModelIndex()
+                if (currentIndex >= 0) {
+                    var success = commonControl.switchTTSModel(currentIndex)
+                    if (success) {
+                        console.log("✅ 模型切换成功:", modelComboBox.displayText)
+                    } else {
+                        console.log("❌ 模型切换失败:", modelComboBox.displayText)
+                    }
+                }
             }
         }
     }

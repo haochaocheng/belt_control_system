@@ -887,6 +887,60 @@ void CommonControl::testTTS(const QString &text, int speakerId, double rate, dou
     m_tts->testTTS(text);
 }
 
+// ✅ 2026-02-13 [Phase 7.45.36]: 实现 TTS 模型切换方法
+bool CommonControl::switchTTSModel(int modelIndex)
+{
+    if (!m_tts) {
+        qWarning() << "⚠️ [CommonControl] TTS 未初始化";
+        return false;
+    }
+
+    // 模型索引到路径的映射
+    static const QMap<int, QString> MODEL_PATHS = {
+        {0, "/app/tts_models/vits-zh-aishell3"},
+        {1, "/app/tts_models/vits-zh-hf-fanchen-wnj"},
+        {2, "/app/tts_models/vits-zh-hf-fanchen-C"},
+        {3, "/app/tts_models/vits-zh-hf-theresa"},
+        {4, "/app/tts_models/vits-zh-hf-eula"},
+        {5, "/app/tts_models/sherpa-onnx-vits-zh-ll"},
+        {6, "/app/tts_models/vits-melo-tts-zh_en"}
+    };
+
+    // 模型名称（用于日志）
+    static const QMap<int, QString> MODEL_NAMES = {
+        {0, "vits-zh-aishell3 (174说话人)"},
+        {1, "vits-zh-hf-fanchen-wnj (1说话人)"},
+        {2, "vits-zh-hf-fanchen-C (187说话人)"},
+        {3, "vits-zh-hf-theresa (804说话人)"},
+        {4, "vits-zh-hf-eula (804说话人)"},
+        {5, "sherpa-onnx-vits-zh-ll (5说话人)"},
+        {6, "vits-melo-tts-zh_en (1说话人)"}
+    };
+
+    if (!MODEL_PATHS.contains(modelIndex)) {
+        qWarning() << "⚠️ [CommonControl] 无效的模型索引:" << modelIndex;
+        return false;
+    }
+
+    QString modelPath = MODEL_PATHS[modelIndex];
+    QString modelName = MODEL_NAMES[modelIndex];
+
+    qDebug() << "🔄 [CommonControl] 切换 TTS 模型 - 索引:" << modelIndex
+             << "名称:" << modelName
+             << "路径:" << modelPath;
+
+    // 调用 TTS 切换模型
+    bool success = m_tts->switchModel(modelPath);
+
+    if (success) {
+        qDebug() << "✅ [CommonControl] TTS 模型切换成功:" << modelName;
+    } else {
+        qWarning() << "❌ [CommonControl] TTS 模型切换失败:" << modelName;
+    }
+
+    return success;
+}
+
 // 临时函数：根据设备名获取通道号（后续应从设备数据库读取）
 int CommonControl::getDeviceChannel(const QString &deviceName)
 {
