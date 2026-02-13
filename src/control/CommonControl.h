@@ -130,6 +130,16 @@ public slots:
     // 设置设备反馈参数（从QML调用）
     Q_INVOKABLE void setDeviceFeedbackConfig(const QString &deviceName, bool useFeedback, int feedbackChannel, int feedbackDelay);
 
+    // ✅ 2026-02-13 [Phase 7.45.35]: 添加 TTS 测试方法
+    /**
+     * @brief 测试 TTS 语音合成
+     * @param text 要合成的文本
+     * @param speakerId 说话人ID（默认：0）
+     * @param rate 语速（默认：1.0，范围：0.5-2.0）
+     * @param volume 音量（默认：0.8，范围：0.0-1.0）
+     */
+    Q_INVOKABLE void testTTS(const QString &text, int speakerId = 0, double rate = 1.0, double volume = 0.8);
+
 private slots:
     void onMediaPlayerError(QMediaPlayer::Error error, const QString &errorString);
     void onPlaybackFinished();

@@ -346,13 +346,15 @@ ColumnLayout {
         }
 
         Button {
+            id: testButton
             text: "🎙️ 生成测试语音"
             Layout.fillWidth: true
             Layout.preferredHeight: 40
+            enabled: testTextInput.text.length > 0  // ✅ 2026-02-13 [Phase 7.45.35]: 文本为空时禁用按钮
 
             background: Rectangle {
-                color: parent.pressed ? "#2980b9" : "#3498db"
-                border.color: "#3498db"
+                color: parent.enabled ? (parent.pressed ? "#2980b9" : "#3498db") : "#7f8c8d"
+                border.color: parent.enabled ? "#3498db" : "#95a5a6"
                 border.width: 1
                 radius: 5
             }
@@ -360,14 +362,44 @@ ColumnLayout {
             contentItem: Text {
                 text: parent.text
                 font.pixelSize: 14
-                color: "#ecf0f1"
+                color: parent.enabled ? "#ecf0f1" : "#bdc3c7"
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }
 
             onClicked: {
+                // ✅ 2026-02-13 [Phase 7.45.35]: 调用 CommonControl.testTTS()
                 console.log("生成测试语音:", testTextInput.text)
-                // TODO: 调用 SherpaOnnxTTS.testTTS()
+                console.log("  模型索引:", modelComboBox.currentIndex)
+                console.log("  说话人ID:", speakerIdSpinBox.value)
+                console.log("  语速:", rateSlider.value.toFixed(1))
+                console.log("  音量:", volumeSlider.value.toFixed(1))
+
+                // 禁用按钮，防止重复点击
+                testButton.enabled = false
+
+                // 调用后端 TTS 测试
+                commonControl.testTTS(
+                    testTextInput.text,
+                    speakerIdSpinBox.value,
+                    rateSlider.value,
+                    volumeSlider.value
+                )
+
+                // 3秒后重新启用按钮（假设 TTS 播放需要时间）
+                Qt.callLater(function() {
+                    testButtonTimer.start()
+                })
+            }
+
+            // ✅ 2026-02-13 [Phase 7.45.35]: 添加定时器，延迟重新启用按钮
+            Timer {
+                id: testButtonTimer
+                interval: 3000  // 3秒后重新启用
+                repeat: false
+                onTriggered: {
+                    testButton.enabled = testTextInput.text.length > 0
+                }
             }
         }
     }

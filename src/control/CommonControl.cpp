@@ -865,6 +865,28 @@ void CommonControl::setDeviceFeedbackConfig(const QString &deviceName, bool useF
              << "反馈延时:" << feedbackDelay << "秒";
 }
 
+// ✅ 2026-02-13 [Phase 7.45.35]: 实现 TTS 测试方法
+void CommonControl::testTTS(const QString &text, int speakerId, double rate, double volume)
+{
+    if (!m_tts) {
+        qWarning() << "⚠️ [CommonControl] TTS 未初始化";
+        return;
+    }
+
+    qDebug() << "🎙️ [CommonControl] 测试 TTS - 文本:" << text
+             << "说话人ID:" << speakerId
+             << "语速:" << rate
+             << "音量:" << volume;
+
+    // 设置 TTS 参数
+    m_tts->setSpeakerId(speakerId);
+    m_tts->setRate(rate);
+    m_tts->setVolume(volume);
+
+    // 播放测试语音
+    m_tts->testTTS(text);
+}
+
 // 临时函数：根据设备名获取通道号（后续应从设备数据库读取）
 int CommonControl::getDeviceChannel(const QString &deviceName)
 {
