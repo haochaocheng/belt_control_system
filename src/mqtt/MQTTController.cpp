@@ -326,7 +326,7 @@ void MQTTController::connectClientSignals(int moduleIndex)
 
     // 使用 lambda 捕获模块索引
     connect(client, &QMqttClient::connected, this, [this, moduleIndex]() {
-        qDebug() << "✅ [MQTTController] 模块" << moduleIndex << "已连接";
+        // ✅ 2026-02-13 [Phase 7.45.33 修复]: 移除日志，状态变化在 MQTTAutoManager 中输出
         emit connectedChanged(moduleIndex, true);
         if (moduleIndex == m_currentModuleIndex) {
             emit connectionStateChanged();
@@ -335,7 +335,7 @@ void MQTTController::connectClientSignals(int moduleIndex)
     });
 
     connect(client, &QMqttClient::disconnected, this, [this, moduleIndex]() {
-        qDebug() << "✅ [MQTTController] 模块" << moduleIndex << "已断开";
+        // ✅ 2026-02-13 [Phase 7.45.33 修复]: 移除日志，状态变化在 MQTTAutoManager 中输出
         emit connectedChanged(moduleIndex, false);
         if (moduleIndex == m_currentModuleIndex) {
             emit connectionStateChanged();
