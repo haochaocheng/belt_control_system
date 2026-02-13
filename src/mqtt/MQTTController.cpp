@@ -27,6 +27,8 @@ MQTTController::MQTTController(QObject *parent)
     // 初始化客户端和订阅容器
     m_clients.resize(8);
     m_subscriptions.resize(8);
+    // ✅ 2026-02-12 [Phase 7.45.33]: 初始化状态跟踪
+    m_lastStates.resize(8, QMqttClient::Disconnected);
 
     for (int i = 0; i < 8; ++i) {
         m_clients[i] = nullptr;
@@ -401,14 +403,25 @@ bool MQTTController::connectToModule(int moduleIndex)
 {
 #ifdef MQTT_ENABLED
     int idx = getValidModuleIndex(moduleIndex);
-    qDebug() << "✅ [MQTTController] 连接模块:" << idx;
 
-    // 创建客户端（如果不存在）
-    if (!m_clients[idx]) {
-        createClient(idx);
+    // ✅ 2026-02-12 [Phase 7.45.33]: 只在状态变化时输出调试信息
+    // 原因：connectToModule 被频繁调用，产生大量重复日志
+    QMqttClient *client = m_clients[idx];
+    QMqttClient::ClientState currentState = client ? client->state() : QMqttClient::Disconnected;
+
+    // 只在状态变化时输出
+    if (currentState != m_lastStates[idx] || !client) {
+        qDebug() << "✅ [MQTTController] 连接模块:" << idx
+                 << "状态:" << (client ? QString::number(static_cast<int>(currentState)) : "无客户端");
+        m_lastStates[idx] = currentState;
     }
 
-    QMqttClient *client = m_clients[idx];
+    // 创建客户端（如果不存在）
+    if (!client) {
+        createClient(idx);
+        client = m_clients[idx];
+    }
+
     if (!client) {
         m_lastError = "创建客户端失败";
         emit lastErrorChanged();
@@ -443,10 +456,20 @@ void MQTTController::disconnectFromModule(int moduleIndex)
 {
 #ifdef MQTT_ENABLED
     int idx = getValidModuleIndex(moduleIndex);
-    qDebug() << "✅ [MQTTController] 断开模块:" << idx;
 
-    if (idx >= 0 && idx < m_clients.size() && m_clients[idx]) {
-        m_clients[idx]->disconnectFromHost();
+    // ✅ 2026-02-12 [Phase 7.45.33]: 只在状态变化时输出调试信息
+    QMqttClient *client = m_clients[idx];
+    if (client) {
+        QMqttClient::ClientState currentState = client->state();
+
+        // 只在状态变化时输出
+        if (currentState != m_lastStates[idx]) {
+            qDebug() << "✅ [MQTTController] 断开模块:" << idx
+                     << "状态:" << static_cast<int>(currentState);
+            m_lastStates[idx] = currentState;
+        }
+
+        client->disconnectFromHost();
     }
 #else
     Q_UNUSED(moduleIndex)
