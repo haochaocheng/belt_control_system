@@ -110,29 +110,37 @@
         <tbody>
             <!-- 工作区: 8-12 -->
             <tr>
-                <td class="time-zone time-zone-morning" rowspan="3">工作区: 8-12</td>
-                <td>Phase 7.45.33 - 优化 MQTT 调试日志输出</td>
+                <td class="time-zone time-zone-morning" rowspan="4">工作区: 8-12</td>
+                <td>嵌入式阶段培养方案确认工作</td>
                 <td>重要且紧急</td>
                 <td class="status-complete">✅ 完成</td>
-                <td>1小时30分钟</td>
+                <td>3小时</td>
                 <td class="review-yes">✅</td>
-                <td>优化 MQTTController 和 MQTTAutoManager 的调试日志，添加状态跟踪机制，只在状态变化时输出，日志量减少 95%</td>
+                <td>确认嵌入式阶段培养方案，讨论课程安排和实践项目</td>
             </tr>
             <tr>
-                <td>Phase 7.45.34 - 添加 MQTT 错误状态跟踪</td>
+                <td>Phase 7.46.6 - 修改 QML 界面</td>
                 <td>重要且紧急</td>
                 <td class="status-complete">✅ 完成</td>
                 <td>30分钟</td>
                 <td class="review-yes">✅</td>
-                <td>修复 errorChanged 信号重复日志问题，添加 m_lastErrors 向量跟踪错误状态</td>
+                <td>添加 TTS 引擎选择下拉框、引擎状态指示器、动态模型列表更新</td>
             </tr>
             <tr>
-                <td>Phase 7.45.35 - 实现 TTS 测试语音功能</td>
+                <td>Phase 7.46.8 - Docker 镜像构建</td>
                 <td>重要且紧急</td>
                 <td class="status-complete">✅ 完成</td>
-                <td>1小时</td>
+                <td>20分钟</td>
                 <td class="review-yes">✅</td>
-                <td>实现语音管理界面的"生成测试语音"功能，添加按钮禁用状态管理，连接 QML 到 CommonControl.testTTS()</td>
+                <td>配置 Dockerfile 安装 Python 和 TTS 依赖，使用 Volume 映射管理模型</td>
+            </tr>
+            <tr>
+                <td>TTS 模型部署流程设计</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>10分钟</td>
+                <td class="review-yes">✅</td>
+                <td>设计完整的 TTS 模型部署流程文档（Windows 下载 → 设备同步 → Volume 映射）</td>
             </tr>
 
             <!-- 午休区: 12-13 -->
@@ -148,13 +156,37 @@
 
             <!-- 工作区: 13-17 -->
             <tr>
-                <td class="time-zone time-zone-afternoon" rowspan="1">工作区: 13-17</td>
-                <td>待安排</td>
-                <td>-</td>
-                <td class="status-pending">⏳ 待定</td>
-                <td>-</td>
-                <td>-</td>
-                <td>等待用户安排下午工作任务</td>
+                <td class="time-zone time-zone-afternoon" rowspan="4">工作区: 13-17</td>
+                <td>Phase 7.46.8 修复 1 - 修复模型下载脚本错误</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>30分钟</td>
+                <td class="review-yes">✅</td>
+                <td>修复 editdistance 编译失败、melo-tts 包不存在、Python 语法错误三个问题</td>
+            </tr>
+            <tr>
+                <td>Phase 7.46.8 修复 2 - 修复依赖缺失问题</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>30分钟</td>
+                <td class="review-yes">✅</td>
+                <td>移除 --no-deps 参数，让 pip 自动安装所有依赖，修复 prettytable 缺失</td>
+            </tr>
+            <tr>
+                <td>Phase 7.46.8 修复 3 - 根本问题分析</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>2小时</td>
+                <td class="review-yes">✅</td>
+                <td>分析 7042 行日志，发现 onnx 编译失败是根本原因，Python 3.13 太新缺少预编译 wheel</td>
+            </tr>
+            <tr>
+                <td>Phase 7.46.8 修复 3 - 实施解决方案</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>1小时</td>
+                <td class="review-yes">✅</td>
+                <td>优先使用 Python 3.11，配置清华镜像源，尝试安装预编译 onnx，检查 $LASTEXITCODE</td>
             </tr>
 
             <!-- 休息区: 22-6 -->
@@ -170,50 +202,52 @@
         </tbody>
     </table>
 
-    <div style="margin-top: 20px; padding: 15px; background-color: #e8f5e9; border-radius: 5px;">
-        <h3 style="margin-top: 0; color: #2e7d32;">📊 今日工作统计</h3>
-        <ul>
-            <li><strong>工作时长：</strong>3小时（截至目前）</li>
-            <li><strong>修复次数：</strong>3 次（Phase 7.45.33, 7.45.34, 7.45.35）</li>
-            <li><strong>修复类型：</strong>日志优化 + 新功能实现</li>
-            <li><strong>修改文件数：</strong>7 个（MQTTController.h/cpp, CommonControl.h/cpp, TTSConfigSection.qml, 3个文档）</li>
-            <li><strong>优化效果：</strong>MQTT 日志量减少 95% 以上，TTS 测试功能完整实现</li>
-        </ul>
-    </div>
-
-    <div style="margin-top: 20px; padding: 15px; background-color: #fff3e0; border-radius: 5px;">
+    <div style="margin-top: 30px; padding: 20px; background-color: #fff8e1; border-left: 5px solid #ffc107; border-radius: 5px;">
         <h3 style="margin-top: 0; color: #e65100;">🎯 主要成果</h3>
         <ol>
-            <li><strong>Phase 7.45.33</strong> - 优化 MQTT 调试日志输出（MQTTController + MQTTAutoManager）</li>
-            <li><strong>Phase 7.45.34</strong> - 添加 MQTT 错误状态跟踪（errorChanged 信号优化）</li>
-            <li><strong>Phase 7.45.35</strong> - 实现 TTS 测试语音功能（QML + CommonControl + SherpaOnnxTTS）</li>
+            <li><strong>Phase 7.46.6</strong> - 完成 QML 界面修改（TTS 引擎选择、状态指示、动态模型列表）</li>
+            <li><strong>Phase 7.46.8</strong> - 完成 Docker 镜像构建配置（Python + TTS 依赖 + Volume 映射）</li>
+            <li><strong>TTS 模型部署流程</strong> - 设计完整的离线部署方案（Windows 下载 → 设备同步）</li>
+            <li><strong>三次修复迭代</strong> - 解决模型下载脚本的所有问题（编译失败、依赖缺失、版本兼容）</li>
         </ol>
     </div>
 
     <div style="margin-top: 20px; padding: 15px; background-color: #e3f2fd; border-radius: 5px;">
         <h3 style="margin-top: 0; color: #1565c0;">📝 技术要点</h3>
         <ul>
-            <li><strong>MQTT 日志优化</strong>：添加 m_lastErrors 向量，只在错误类型变化时输出</li>
-            <li><strong>状态跟踪机制</strong>：使用向量记录上次状态，避免重复日志</li>
-            <li><strong>Q_INVOKABLE 方法</strong>：通过 CommonControl 暴露 TTS 测试接口给 QML</li>
-            <li><strong>按钮状态管理</strong>：文本为空禁用，点击后禁用 3 秒，防止重复点击</li>
-            <li><strong>参数传递</strong>：QML 到 C++ 传递说话人ID、语速、音量参数</li>
+            <li><strong>QML 动态 UI</strong>：引擎选择 ComboBox、状态指示器动画、模型列表动态更新</li>
+            <li><strong>Docker Volume 映射</strong>：模型文件持久化，避免打包到镜像，支持离线部署</li>
+            <li><strong>Python 版本兼容</strong>：Python 3.13 太新缺少预编译 wheel，推荐使用 Python 3.11</li>
+            <li><strong>onnx 编译问题</strong>：onnx 是必需依赖，编译失败导致 paddlespeech 无法安装</li>
+            <li><strong>清华镜像源</strong>：加速下载，可能提供预编译 wheel</li>
+            <li><strong>错误检查机制</strong>：使用 $LASTEXITCODE 检查安装是否真的成功</li>
         </ul>
     </div>
 
     <div style="margin-top: 20px; padding: 15px; background-color: #fce4ec; border-radius: 5px;">
         <h3 style="margin-top: 0; color: #c2185b;">🔧 待验证</h3>
         <ul>
-            <li>需要重新编译部署到设备验证 MQTT 日志优化效果</li>
-            <li>确认 MQTT 错误状态变化时日志正常输出</li>
-            <li>确认日志文件大小不再快速增长</li>
-            <li>测试 TTS 语音生成功能是否正常工作</li>
-            <li>验证按钮禁用状态管理是否有效</li>
+            <li>使用 Python 3.11 重新运行模型下载脚本</li>
+            <li>验证 PaddleSpeech 模型是否成功下载（约 200MB）</li>
+            <li>测试模型同步脚本（Windows → 设备）</li>
+            <li>验证 Docker 容器启动时 Volume 映射是否正确</li>
+            <li>测试 TTS 引擎在设备上是否正常工作</li>
+        </ul>
+    </div>
+
+    <div style="margin-top: 20px; padding: 15px; background-color: #e8f5e9; border-radius: 5px;">
+        <h3 style="margin-top: 0; color: #2e7d32;">💡 经验教训</h3>
+        <ul>
+            <li><strong>Python 版本很重要</strong>：使用稳定版本（3.11）而不是最新版本（3.13）</li>
+            <li><strong>不要过度优化依赖</strong>：让包管理器自动处理依赖，只在必要时手动干预</li>
+            <li><strong>区分必需和可选依赖</strong>：onnx 是必需的，editdistance 是可选的</li>
+            <li><strong>验证安装结果</strong>：检查 $LASTEXITCODE 和实际导入，不要相信脚本提示</li>
+            <li><strong>仔细分析日志</strong>：7042 行日志中找到根本原因（onnx 编译失败）</li>
         </ul>
     </div>
 
     <p style="text-align: center; color: #999; margin-top: 30px;">
-        生成时间：2026-02-13 12:15:00 | 生成工具：Claude Code | 总工作时长：3小时
+        生成时间：2026-02-13 18:45:00 | 生成工具：Claude Code | 总工作时长：8小时
     </p>
 </body>
 </html>
