@@ -148,6 +148,14 @@ public slots:
      */
     Q_INVOKABLE bool switchTTSModel(int modelIndex);
 
+    // ✅ 2026-02-13 [Phase 7.45.37]: 添加获取最大说话人ID的方法
+    /**
+     * @brief 获取指定模型的最大说话人ID
+     * @param modelIndex 模型索引（0-6）
+     * @return 最大说话人ID（如果模型索引无效，返回 0）
+     */
+    Q_INVOKABLE int getMaxSpeakerId(int modelIndex);
+
 private slots:
     void onMediaPlayerError(QMediaPlayer::Error error, const QString &errorString);
     void onPlaybackFinished();

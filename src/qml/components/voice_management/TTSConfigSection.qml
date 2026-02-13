@@ -106,6 +106,17 @@ ColumnLayout {
                     var success = commonControl.switchTTSModel(currentIndex)
                     if (success) {
                         console.log("✅ 模型切换成功:", modelComboBox.displayText)
+
+                        // ✅ 2026-02-13 [Phase 7.45.37]: 动态更新说话人ID范围
+                        var maxSpeakerId = commonControl.getMaxSpeakerId(currentIndex)
+                        speakerIdSpinBox.to = maxSpeakerId
+                        console.log("📊 更新说话人ID范围: 0 -", maxSpeakerId)
+
+                        // 如果当前说话人ID超出新范围，重置为0
+                        if (speakerIdSpinBox.value > maxSpeakerId) {
+                            speakerIdSpinBox.value = 0
+                            console.log("⚠️ 说话人ID超出范围，已重置为 0")
+                        }
                     } else {
                         console.log("❌ 模型切换失败:", modelComboBox.displayText)
                     }
@@ -187,7 +198,8 @@ ColumnLayout {
         }
 
         Text {
-            text: "范围: 0-173 (根据模型不同)"
+            id: speakerIdRangeText
+            text: "范围: 0-" + speakerIdSpinBox.to + " (根据模型不同)"
             font.pixelSize: 12
             color: "#95a5a6"
         }

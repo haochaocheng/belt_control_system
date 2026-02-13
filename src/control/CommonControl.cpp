@@ -941,6 +941,30 @@ bool CommonControl::switchTTSModel(int modelIndex)
     return success;
 }
 
+// ✅ 2026-02-13 [Phase 7.45.37]: 实现获取最大说话人ID的方法
+int CommonControl::getMaxSpeakerId(int modelIndex)
+{
+    // 模型最大说话人ID映射（与 TTSConfigManager 保持一致）
+    static const QMap<int, int> MODEL_MAX_SPEAKER_IDS = {
+        {0, 173},   // aishell3: 174 speakers (0-173)
+        {1, 0},     // fanchen-wnj: 1 speaker (0)
+        {2, 186},   // fanchen-C: 187 speakers (0-186)
+        {3, 803},   // theresa: 804 speakers (0-803)
+        {4, 803},   // eula: 804 speakers (0-803)
+        {5, 4},     // zh-ll: 5 speakers (0-4)
+        {6, 0}      // melo-tts: 1 speaker (0)
+    };
+
+    if (!MODEL_MAX_SPEAKER_IDS.contains(modelIndex)) {
+        qWarning() << "⚠️ [CommonControl] 无效的模型索引:" << modelIndex;
+        return 0;
+    }
+
+    int maxSpeakerId = MODEL_MAX_SPEAKER_IDS[modelIndex];
+    qDebug() << "📊 [CommonControl] 模型" << modelIndex << "最大说话人ID:" << maxSpeakerId;
+    return maxSpeakerId;
+}
+
 // 临时函数：根据设备名获取通道号（后续应从设备数据库读取）
 int CommonControl::getDeviceChannel(const QString &deviceName)
 {
