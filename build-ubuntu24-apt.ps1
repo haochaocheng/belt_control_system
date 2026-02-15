@@ -6,6 +6,7 @@
 #   .\build-ubuntu24-apt.ps1 151        # 部署到 192.168.10.151
 #   .\build-ubuntu24-apt.ps1 188        # 部署到 192.168.10.188
 #   .\build-ubuntu24-apt.ps1 192.168.10.200  # 部署到自定义IP
+#   .\build-ubuntu24-apt.ps1 simulator  # 启动模拟器（无需实体设备）
 
 param(
     [string]$Device = "151"  # 默认151设备
@@ -20,6 +21,16 @@ $DeviceUser = "linaro"
 $DevicePassword = "linaro"
 
 switch -Regex ($Device) {
+    "^simulator$" {
+        Write-Host "[Device] Target: Simulator Mode (Docker)" -ForegroundColor Magenta
+        Write-Host ""
+        Write-Host "🎮 启动模拟器模式..." -ForegroundColor Cyan
+        Write-Host ""
+
+        # 调用模拟器启动脚本
+        & "$PSScriptRoot\scripts\2026-02-15\30-start-simulator.ps1"
+        exit 0
+    }
     "^151$" {
         $DeviceIP = "192.168.10.151"
         Write-Host "[Device] Target: Device 151 ($DeviceIP)" -ForegroundColor Cyan
@@ -39,6 +50,7 @@ switch -Regex ($Device) {
         Write-Host "  .\build-ubuntu24-apt.ps1 151              # Deploy to 192.168.10.151" -ForegroundColor White
         Write-Host "  .\build-ubuntu24-apt.ps1 188              # Deploy to 192.168.10.188" -ForegroundColor White
         Write-Host "  .\build-ubuntu24-apt.ps1 192.168.10.200   # Deploy to custom IP" -ForegroundColor White
+        Write-Host "  .\build-ubuntu24-apt.ps1 simulator        # Start simulator (no device needed)" -ForegroundColor White
         Write-Host ""
         exit 1
     }
