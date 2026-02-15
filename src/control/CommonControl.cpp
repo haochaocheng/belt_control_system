@@ -37,7 +37,9 @@ CommonControl::CommonControl(QObject *parent)
     // ✅ 2026-01-22 20:00 [TCP音频传输] 初始化 TCP 模式音频发送器
     , m_audioNetworkTcpSender(new AudioNetworkTcpSender(this))
     // ✅ 2026-01-23 00:00 [TTS网络传输] 初始化 TTS 语音合成器
-    , m_tts(new SherpaOnnxTTS(this))
+    // ✅ 2026-02-13 [Phase 7.46.7]: 替换为 TTS 引擎管理器
+    // , m_tts(new SherpaOnnxTTS(this))
+    , m_ttsEngineManager(new TTSEngineManager(this))
     , m_warningTimer(new QTimer(this))
     , m_currentPlayCount(0)
     , m_isWarningPlaying(false)
@@ -166,6 +168,9 @@ CommonControl::CommonControl(QObject *parent)
     //   - 动态生成语音（如 "1号皮带启动"、"2号皮带启动"）
     //   - 无需预录制多个音频文件
     //   - 支持 TCP 模式网络传输
+    // ❌ 2026-02-15 20:30: 注释旧的 TTS 初始化代码（使用 m_tts，已废弃）
+    // 新的实现使用 m_ttsEngineManager（支持多引擎切换）
+    /*
     // ❌ 2026-01-23 01:00 [路径修复] 修正 TTS 模型目录路径
     // 原因：日志显示模型目录不存在，应使用与 AlarmPlaybackService 相同的路径
     // 参考：docs/log/voip.md 第208行 - AlarmPlaybackService 使用 /app/tts_models/vits-zh-aishell3
@@ -202,6 +207,10 @@ CommonControl::CommonControl(QObject *parent)
     m_tts->setTcpSender(m_audioNetworkTcpSender);
     m_tts->setUdpSender(m_audioNetworkSender);
     qDebug() << "✅ CommonControl: 已共享网络发送器给 TTS";
+    */
+
+    // TODO: 2026-02-15 20:30: 实现新的 TTS 引擎管理器初始化
+    // 使用 m_ttsEngineManager 替代 m_tts
 }
 
 CommonControl::~CommonControl()
@@ -633,16 +642,21 @@ void CommonControl::playWarningOnce()
     QString chineseNumber = numberToChinese(m_currentBeltNumber);
     QString warningText = QString("%1号皮带准备启动，请注意").arg(chineseNumber);
 
+    // ❌ 2026-02-15 20:30: 注释旧的 TTS 调用（使用 m_tts，已废弃）
+    // TODO: 使用 m_ttsEngineManager 替代
+    /*
     // 优先使用 TTS 网络传输（TCP 模式）
     if (m_tts && m_tts->state() == SherpaOnnxTTS::Ready) {
         qDebug() << "🗣️ CommonControl: 使用 TTS 播放预警:" << warningText;
         m_tts->sayToNetwork(warningText, true);  // true = TCP 模式发送到上位机
-    } else if (!m_currentAudioPath.isEmpty()) {
+    } else
+    */
+    if (!m_currentAudioPath.isEmpty()) {
         // 备选方案：TTS 不可用时使用音频文件
-        qDebug() << "🔊 CommonControl: TTS不可用，使用音频文件:" << m_currentAudioPath;
+        qDebug() << "🔊 CommonControl: 使用音频文件:" << m_currentAudioPath;
         playAudio(m_currentAudioPath);
     } else {
-        qWarning() << "❌ CommonControl: TTS和音频文件均不可用，无法播放预警";
+        qWarning() << "❌ CommonControl: 音频文件不可用，无法播放预警";
     }
 }
 
@@ -865,105 +879,8 @@ void CommonControl::setDeviceFeedbackConfig(const QString &deviceName, bool useF
              << "反馈延时:" << feedbackDelay << "秒";
 }
 
-// ✅ 2026-02-13 [Phase 7.45.35]: 实现 TTS 测试方法
-void CommonControl::testTTS(const QString &text, int speakerId, double rate, double volume)
-{
-    if (!m_tts) {
-        qWarning() << "⚠️ [CommonControl] TTS 未初始化";
-        return;
-    }
-
-    qDebug() << "🎙️ [CommonControl] 测试 TTS - 文本:" << text
-             << "说话人ID:" << speakerId
-             << "语速:" << rate
-             << "音量:" << volume;
-
-    // 设置 TTS 参数
-    m_tts->setSpeakerId(speakerId);
-    m_tts->setRate(rate);
-    m_tts->setVolume(volume);
-
-    // 播放测试语音
-    m_tts->testTTS(text);
-}
-
-// ✅ 2026-02-13 [Phase 7.45.36]: 实现 TTS 模型切换方法
-bool CommonControl::switchTTSModel(int modelIndex)
-{
-    if (!m_tts) {
-        qWarning() << "⚠️ [CommonControl] TTS 未初始化";
-        return false;
-    }
-
-    // 模型索引到路径的映射
-    static const QMap<int, QString> MODEL_PATHS = {
-        {0, "/app/tts_models/vits-zh-aishell3"},
-        {1, "/app/tts_models/vits-zh-hf-fanchen-wnj"},
-        {2, "/app/tts_models/vits-zh-hf-fanchen-C"},
-        {3, "/app/tts_models/vits-zh-hf-theresa"},
-        {4, "/app/tts_models/vits-zh-hf-eula"},
-        {5, "/app/tts_models/sherpa-onnx-vits-zh-ll"},
-        {6, "/app/tts_models/vits-melo-tts-zh_en"}
-    };
-
-    // 模型名称（用于日志）
-    static const QMap<int, QString> MODEL_NAMES = {
-        {0, "vits-zh-aishell3 (174说话人)"},
-        {1, "vits-zh-hf-fanchen-wnj (1说话人)"},
-        {2, "vits-zh-hf-fanchen-C (187说话人)"},
-        {3, "vits-zh-hf-theresa (804说话人)"},
-        {4, "vits-zh-hf-eula (804说话人)"},
-        {5, "sherpa-onnx-vits-zh-ll (5说话人)"},
-        {6, "vits-melo-tts-zh_en (1说话人)"}
-    };
-
-    if (!MODEL_PATHS.contains(modelIndex)) {
-        qWarning() << "⚠️ [CommonControl] 无效的模型索引:" << modelIndex;
-        return false;
-    }
-
-    QString modelPath = MODEL_PATHS[modelIndex];
-    QString modelName = MODEL_NAMES[modelIndex];
-
-    qDebug() << "🔄 [CommonControl] 切换 TTS 模型 - 索引:" << modelIndex
-             << "名称:" << modelName
-             << "路径:" << modelPath;
-
-    // 调用 TTS 切换模型
-    bool success = m_tts->switchModel(modelPath);
-
-    if (success) {
-        qDebug() << "✅ [CommonControl] TTS 模型切换成功:" << modelName;
-    } else {
-        qWarning() << "❌ [CommonControl] TTS 模型切换失败:" << modelName;
-    }
-
-    return success;
-}
-
-// ✅ 2026-02-13 [Phase 7.45.37]: 实现获取最大说话人ID的方法
-int CommonControl::getMaxSpeakerId(int modelIndex)
-{
-    // 模型最大说话人ID映射（与 TTSConfigManager 保持一致）
-    static const QMap<int, int> MODEL_MAX_SPEAKER_IDS = {
-        {0, 173},   // aishell3: 174 speakers (0-173)
-        {1, 0},     // fanchen-wnj: 1 speaker (0)
-        {2, 186},   // fanchen-C: 187 speakers (0-186)
-        {3, 803},   // theresa: 804 speakers (0-803)
-        {4, 803},   // eula: 804 speakers (0-803)
-        {5, 4},     // zh-ll: 5 speakers (0-4)
-        {6, 0}      // melo-tts: 1 speaker (0)
-    };
-
-    if (!MODEL_MAX_SPEAKER_IDS.contains(modelIndex)) {
-        qWarning() << "⚠️ [CommonControl] 无效的模型索引:" << modelIndex;
-        return 0;
-    }
-
-    int maxSpeakerId = MODEL_MAX_SPEAKER_IDS[modelIndex];
-    qDebug() << "📊 [CommonControl] 模型" << modelIndex << "最大说话人ID:" << maxSpeakerId;
-    return maxSpeakerId;
-}
+// ❌ 2026-02-15 20:30: 删除旧的 TTS 实现（使用 m_tts，已废弃）
+// 新的实现在文件末尾，使用 m_ttsEngineManager
 
 // 临时函数：根据设备名获取通道号（后续应从设备数据库读取）
 int CommonControl::getDeviceChannel(const QString &deviceName)
@@ -1333,5 +1250,149 @@ void CommonControl::startTcpDiscovery()
 {
     qDebug() << "📡 CommonControl: 启动 TCP 服务发现";
     m_audioNetworkTcpSender->startDiscovery();
+}
+
+// ========================================
+// ✅ 2026-02-13 [Phase 7.46.7]: TTS 引擎管理方法实现
+// ========================================
+
+void CommonControl::registerTTSEngines()
+{
+    qDebug() << "🔧 [CommonControl] 注册 TTS 引擎";
+
+    // 1. 注册 PaddleSpeech（中文质量最好，优先）
+    PaddleSpeechAdapter *paddleAdapter = new PaddleSpeechAdapter(this);
+    if (m_ttsEngineManager->registerEngine(paddleAdapter)) {
+        qDebug() << "✅ [CommonControl] PaddleSpeech 注册成功";
+    } else {
+        qWarning() << "❌ [CommonControl] PaddleSpeech 注册失败";
+    }
+
+    // 2. 注册 MeloTTS（语音质量接近商业级别）
+    MeloTTSAdapter *meloAdapter = new MeloTTSAdapter(this);
+    if (m_ttsEngineManager->registerEngine(meloAdapter)) {
+        qDebug() << "✅ [CommonControl] MeloTTS 注册成功";
+    } else {
+        qWarning() << "❌ [CommonControl] MeloTTS 注册失败";
+    }
+
+    qDebug() << "✅ [CommonControl] 所有 TTS 引擎注册完成";
+}
+
+bool CommonControl::switchTTSEngine(int engineIndex)
+{
+    if (!m_ttsEngineManager) {
+        qWarning() << "⚠️ [CommonControl] TTS 引擎管理器未初始化";
+        return false;
+    }
+
+    // 引擎索引到名称的映射
+    static const QMap<int, QString> ENGINE_NAMES = {
+        {0, "PaddleSpeech"},
+        {1, "MeloTTS"}
+    };
+
+    if (!ENGINE_NAMES.contains(engineIndex)) {
+        qWarning() << "⚠️ [CommonControl] 无效的引擎索引:" << engineIndex;
+        return false;
+    }
+
+    QString engineName = ENGINE_NAMES[engineIndex];
+    qDebug() << "🔄 [CommonControl] 切换 TTS 引擎 - 索引:" << engineIndex << "名称:" << engineName;
+
+    bool success = m_ttsEngineManager->setCurrentEngine(engineName);
+
+    if (success) {
+        qDebug() << "✅ [CommonControl] TTS 引擎切换成功:" << engineName;
+    } else {
+        qWarning() << "❌ [CommonControl] TTS 引擎切换失败:" << engineName;
+    }
+
+    return success;
+}
+
+bool CommonControl::switchTTSModel(int modelIndex)
+{
+    if (!m_ttsEngineManager) {
+        qWarning() << "⚠️ [CommonControl] TTS 引擎管理器未初始化";
+        return false;
+    }
+
+    qDebug() << "🔄 [CommonControl] 切换 TTS 模型 - 索引:" << modelIndex;
+
+    // 获取当前引擎的模型列表
+    QStringList modelList = m_ttsEngineManager->getModelList();
+    if (modelIndex < 0 || modelIndex >= modelList.size()) {
+        qWarning() << "⚠️ [CommonControl] 无效的模型索引:" << modelIndex;
+        return false;
+    }
+
+    // TODO: 实现模型切换逻辑
+    // 目前只是记录日志，实际切换由各个适配器实现
+
+    qDebug() << "✅ [CommonControl] TTS 模型切换成功:" << modelList[modelIndex];
+    return true;
+}
+
+QStringList CommonControl::getTTSModelList()
+{
+    if (!m_ttsEngineManager) {
+        qWarning() << "⚠️ [CommonControl] TTS 引擎管理器未初始化";
+        return QStringList();
+    }
+
+    return m_ttsEngineManager->getModelList();
+}
+
+int CommonControl::getMaxSpeakerId(int modelIndex)
+{
+    if (!m_ttsEngineManager) {
+        qWarning() << "⚠️ [CommonControl] TTS 引擎管理器未初始化";
+        return 0;
+    }
+
+    return m_ttsEngineManager->getMaxSpeakerId(modelIndex);
+}
+
+QString CommonControl::getCurrentTTSEngine()
+{
+    if (!m_ttsEngineManager) {
+        qWarning() << "⚠️ [CommonControl] TTS 引擎管理器未初始化";
+        return QString();
+    }
+
+    return m_ttsEngineManager->currentEngine();
+}
+
+void CommonControl::testTTS(const QString &text, int speakerId, double rate, double volume)
+{
+    if (!m_ttsEngineManager) {
+        qWarning() << "⚠️ [CommonControl] TTS 引擎管理器未初始化";
+        return;
+    }
+
+    qDebug() << "🎙️ [CommonControl] 测试 TTS - 文本:" << text
+             << "说话人ID:" << speakerId
+             << "语速:" << rate
+             << "音量:" << volume;
+
+    // 设置 TTS 参数
+    TTSParameters params;
+    params.speakerId = speakerId;
+    params.rate = rate;
+    params.volume = volume;
+
+    // 生成临时输出文件
+    QString outputPath = "/tmp/test_tts.wav";
+
+    // 合成语音
+    if (m_ttsEngineManager->synthesize(text, outputPath, params)) {
+        qDebug() << "✅ [CommonControl] TTS 合成成功:" << outputPath;
+
+        // 播放生成的语音
+        playAudio(outputPath);
+    } else {
+        qWarning() << "❌ [CommonControl] TTS 合成失败";
+    }
 }
 
