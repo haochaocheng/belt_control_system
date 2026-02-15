@@ -86,9 +86,9 @@ RUN pip install --no-cache-dir \
     librosa \
     soundfile
 
-# 安装MeloTTS
-RUN pip install --no-cache-dir \
-    git+https://github.com/myshell-ai/MeloTTS.git
+# 安装MeloTTS（使用PyPI，避免GitHub访问问题）
+RUN pip install --no-cache-dir melo-tts || \
+    pip install --no-cache-dir git+https://github.com/myshell-ai/MeloTTS.git
 
 # 设置工作目录
 WORKDIR /app

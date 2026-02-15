@@ -170,12 +170,12 @@ Write-Host "  🐳 启动Docker容器..." -ForegroundColor Cyan
 Write-Host ""
 
 try {
+    # 使用挂载Python脚本文件的方式
     & docker run --rm `
         -v "${ModelsDir}:/output" `
+        -v "${pythonScriptPath}:/app/download.py" `
         $ImageName `
-        python3 - <<'PYTHON_SCRIPT'
-$pythonScript
-PYTHON_SCRIPT
+        python3 /app/download.py
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
