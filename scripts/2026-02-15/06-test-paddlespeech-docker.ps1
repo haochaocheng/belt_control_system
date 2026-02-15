@@ -64,7 +64,11 @@ Write-Host "[3/4] 准备测试脚本..." -ForegroundColor Yellow
 $testScript = @"
 set -e
 
-echo '  📦 安装依赖...'
+echo '  📦 安装编译工具...'
+apt-get update -qq
+apt-get install -y build-essential -qq
+
+echo '  📦 安装Python依赖...'
 pip install paddlepaddle==3.0.0 -i https://pypi.tuna.tsinghua.edu.cn/simple --quiet
 pip install paddlespeech -i https://pypi.tuna.tsinghua.edu.cn/simple --quiet
 pip install soundfile -i https://pypi.tuna.tsinghua.edu.cn/simple --quiet
