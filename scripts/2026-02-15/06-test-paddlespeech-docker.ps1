@@ -100,10 +100,16 @@ frontend = Frontend(
 )
 print('  ✅ 前端初始化成功')
 
+# ✅ 2026-02-15 05:20 [修复]: 加载VITS模型配置
+from yacs.config import CfgNode
+config_path = os.path.join(model_dir, 'default.yaml')
+with open(config_path, 'r') as f:
+    am_config = CfgNode.load_cfg(f)
+
 # 加载VITS模型
 vits = get_am_inference(
     am='vits_csmsc',
-    am_config=os.path.join(model_dir, 'default.yaml'),
+    am_config=am_config,
     am_ckpt=os.path.join(model_dir, 'snapshot_iter_150000.pdz'),
     phones_dict=os.path.join(model_dir, 'phone_id_map.txt')
 )
