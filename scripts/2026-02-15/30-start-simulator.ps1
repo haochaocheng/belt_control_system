@@ -126,7 +126,8 @@ Write-Host ""
 
 # 等待服务启动
 Write-Host "[5/5] 等待服务启动..." -ForegroundColor Yellow
-Start-Sleep -Seconds 8
+Write-Host "  ⏳ VNC服务需要10-15秒启动..." -ForegroundColor Gray
+Start-Sleep -Seconds 15
 Write-Host "  ✅ 服务已就绪" -ForegroundColor Green
 Write-Host ""
 

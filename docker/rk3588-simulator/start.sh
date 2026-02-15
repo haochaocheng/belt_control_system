@@ -24,7 +24,7 @@ mkdir -p /var/log/supervisor
 /usr/bin/supervisord -c /etc/supervisor/supervisord.conf &
 
 # 等待服务启动
-sleep 5
+sleep 8
 
 echo ""
 echo "✅ 模拟环境已启动"
@@ -36,24 +36,18 @@ echo ""
 
 # 检查应用程序是否存在
 if [ -f "/app/belt_control_system" ]; then
-    echo "🚀 启动应用程序..."
-    supervisorctl start app
-    echo ""
-    echo "📝 日志位置："
-    echo "   应用日志: /var/log/supervisor/app.log"
-    echo "   错误日志: /var/log/supervisor/app_error.log"
-    echo ""
-    # 保持容器运行
-    tail -f /var/log/supervisor/app.log
+    echo "🚀 应用程序已找到，正在启动..."
+    supervisorctl start app 2>/dev/null || echo "⚠️  应用启动失败，但VNC环境可用"
 else
-    echo "⚠️  应用程序未找到: /app/belt_control_system"
-    echo "💡 请先编译应用程序，然后重启容器"
-    echo ""
-    echo "📝 VNC日志位置："
-    echo "   Xvfb: /var/log/supervisor/xvfb.log"
-    echo "   x11vnc: /var/log/supervisor/x11vnc.log"
-    echo "   noVNC: /var/log/supervisor/novnc.log"
-    echo ""
-    # 保持容器运行
-    tail -f /var/log/supervisor/novnc.log
+    echo "💡 应用程序未编译，仅VNC环境可用"
+    echo "   编译后重启容器即可运行应用"
 fi
+
+echo ""
+echo "📝 容器保持运行中..."
+echo ""
+
+# 保持容器运行（无限循环）
+while true; do
+    sleep 3600
+done
