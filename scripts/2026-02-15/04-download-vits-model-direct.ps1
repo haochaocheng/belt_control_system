@@ -85,8 +85,13 @@ Write-Host "  📦 模型大小: 约 1.1 GB" -ForegroundColor Cyan
 Write-Host "  ⏳ 预计时间: 5-10 分钟（取决于网络速度）" -ForegroundColor Cyan
 Write-Host ""
 
+# ✅ 2026-02-15 04:30 [修复]: 使用python:3.11-slim镜像（已存在，避免Docker Hub访问问题）
 $downloadScript = @"
 set -e
+
+echo '  📦 安装下载工具...'
+apt-get update -qq
+apt-get install -y wget unzip -qq
 
 echo '  📥 下载 VITS 模型...'
 cd /models
@@ -109,8 +114,8 @@ echo '  ✅ 模型下载完成'
 try {
     & docker run --rm `
         -v "${ModelsDir}:/models" `
-        debian:bookworm-slim `
-        bash -c "apt-get update -qq && apt-get install -y wget unzip -qq && $downloadScript"
+        python:3.11-slim `
+        bash -c $downloadScript
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
