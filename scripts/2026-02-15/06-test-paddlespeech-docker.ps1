@@ -85,50 +85,29 @@ def download(*args, **kwargs):
 hub.download = download
 print('  ✅ aistudio_sdk补丁已应用')
 
-import soundfile as sf
+# ✅ 2026-02-15 05:30 [修复]: 使用TTSExecutor而不是底层API
+from paddlespeech.cli.tts import TTSExecutor
 
-# 添加模型路径
-model_dir = '/models/vits_csmsc_ckpt_1.4.0'
-
-print('  📂 加载模型...')
-from paddlespeech.t2s.exps.syn_utils import get_am_inference
-from paddlespeech.t2s.frontend.zh_frontend import Frontend
-
-# 初始化前端
-frontend = Frontend(
-    phone_vocab_path=os.path.join(model_dir, 'phone_id_map.txt')
-)
-print('  ✅ 前端初始化成功')
-
-# ✅ 2026-02-15 05:20 [修复]: 加载VITS模型配置
-from yacs.config import CfgNode
-config_path = os.path.join(model_dir, 'default.yaml')
-with open(config_path, 'r') as f:
-    am_config = CfgNode.load_cfg(f)
-
-# 加载VITS模型
-vits = get_am_inference(
-    am='vits_csmsc',
-    am_config=am_config,
-    am_ckpt=os.path.join(model_dir, 'snapshot_iter_150000.pdz'),
-    phones_dict=os.path.join(model_dir, 'phone_id_map.txt')
-)
-print('  ✅ VITS模型加载成功')
+print('  📂 初始化TTS引擎...')
+tts = TTSExecutor()
 
 # 合成语音
 text = '你好，欢迎使用飞桨语音合成系统'
-print(f'  📝 合成文本: {text}')
-
-input_ids = frontend.get_input_ids(text, merge_sentences=True)
-phone_ids = input_ids['phone_ids']
-print(f'  📝 音素序列长度: {len(phone_ids[0])}')
-
-wav = vits(phone_ids)
-print(f'  🎵 生成音频长度: {len(wav)} 采样点')
-
-# 保存音频
 output_path = '/output/test_output.wav'
-sf.write(output_path, wav, samplerate=24000)
+
+print(f'  📝 合成文本: {text}')
+print('  🎵 开始合成...')
+
+# 使用默认模型合成
+tts(
+    text=text,
+    output=output_path,
+    am='fastspeech2_csmsc',
+    voc='pwgan_csmsc',
+    lang='zh',
+    sample_rate=24000
+)
+
 print(f'  ✅ 音频已保存: {output_path}')
 
 PYTHON_SCRIPT
