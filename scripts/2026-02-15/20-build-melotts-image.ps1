@@ -9,6 +9,8 @@
     .\20-build-melotts-image.ps1
 .NOTES
     2026-02-15 16:40: 创建 - 构建MeloTTS缓存镜像
+    2026-02-15 17:30: 添加 MeCab 和 unidic 依赖
+    2026-02-15 17:45: 使用本地源码安装，避免 GitHub 访问问题
 #>
 
 $ErrorActionPreference = "Stop"
@@ -33,10 +35,19 @@ Write-Host ""
 # ============================================================
 # 准备目录
 # ============================================================
-Write-Host "[1/3] 准备目录..." -ForegroundColor Yellow
+Write-Host "[1/4] 准备目录..." -ForegroundColor Yellow
 
 if (-not (Test-Path $TempDir)) {
     New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
+}
+
+# 检查 MeloTTS 源码是否存在
+$meloTTSDir = Join-Path $TempDir "MeloTTS"
+if (-not (Test-Path $meloTTSDir)) {
+    Write-Host "  ⚠️  未找到 MeloTTS 源码，开始下载..." -ForegroundColor Yellow
+    Push-Location $TempDir
+    git clone https://github.com/myshell-ai/MeloTTS.git
+    Pop-Location
 }
 
 Write-Host "  ✅ 目录准备完成" -ForegroundColor Green
@@ -45,7 +56,7 @@ Write-Host ""
 # ============================================================
 # 检查镜像是否已存在
 # ============================================================
-Write-Host "[2/3] 检查Docker镜像..." -ForegroundColor Yellow
+Write-Host "[2/4] 检查Docker镜像..." -ForegroundColor Yellow
 
 $imageExists = docker images -q $ImageName 2>$null
 
@@ -62,15 +73,16 @@ Write-Host ""
 # ============================================================
 # 创建Dockerfile
 # ============================================================
-Write-Host "[3/3] 构建Docker镜像..." -ForegroundColor Yellow
+Write-Host "[3/4] 创建Dockerfile..." -ForegroundColor Yellow
 Write-Host ""
 
 $dockerfile = @"
 FROM python:3.11-slim
 
-# 安装系统依赖
+# 安装系统依赖（包含 MeCab）
+# 2026-02-15 17:30: 添加 MeCab 依赖，修复 MeloTTS 初始化失败问题
 RUN apt-get update -qq && \
-    apt-get install -y git build-essential -qq && \
+    apt-get install -y git build-essential mecab libmecab-dev mecab-ipadic-utf8 -qq && \
     rm -rf /var/lib/apt/lists/*
 
 # 安装PyTorch（CPU版本）
@@ -86,9 +98,19 @@ RUN pip install --no-cache-dir \
     librosa \
     soundfile
 
-# 安装MeloTTS（使用PyPI，避免GitHub访问问题）
-RUN pip install --no-cache-dir melo-tts || \
-    pip install --no-cache-dir git+https://github.com/myshell-ai/MeloTTS.git
+# 安装 unidic 字典（MeloTTS 日语支持需要）
+# 2026-02-15 17:30: 添加 unidic 字典下载
+RUN pip install --no-cache-dir unidic && \
+    python -m unidic download
+
+# 复制 MeloTTS 源码到容器
+# 2026-02-15 17:45: 使用本地源码安装，避免 GitHub 访问问题
+COPY MeloTTS /tmp/MeloTTS
+
+# 安装 MeloTTS（从本地源码）
+RUN cd /tmp/MeloTTS && \
+    pip install --no-cache-dir . && \
+    rm -rf /tmp/MeloTTS
 
 # 设置工作目录
 WORKDIR /app
@@ -101,8 +123,14 @@ $dockerfile | Out-File -FilePath $dockerfilePath -Encoding utf8 -NoNewline
 
 Write-Host "  📝 Dockerfile已创建: $dockerfilePath" -ForegroundColor Gray
 Write-Host ""
+
+# ============================================================
+# 构建Docker镜像
+# ============================================================
+Write-Host "[4/4] 构建Docker镜像..." -ForegroundColor Yellow
+Write-Host ""
 Write-Host "  🐳 开始构建镜像（这可能需要10-15分钟）..." -ForegroundColor Cyan
-Write-Host "  💡 主要时间用于下载PyTorch（约500 MB）" -ForegroundColor Gray
+Write-Host "  💡 主要时间用于下载PyTorch（约500 MB）和 unidic 字典（约50 MB）" -ForegroundColor Gray
 Write-Host ""
 
 try {
