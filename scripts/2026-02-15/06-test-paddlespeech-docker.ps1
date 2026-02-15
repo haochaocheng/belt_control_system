@@ -104,8 +104,7 @@ tts(
     output=output_path,
     am='fastspeech2_csmsc',
     voc='pwgan_csmsc',
-    lang='zh',
-    sample_rate=24000
+    lang='zh'
 )
 
 print(f'  ✅ 音频已保存: {output_path}')
