@@ -77,6 +77,14 @@ echo '  🎤 测试语音合成...'
 python3 << 'PYTHON_SCRIPT'
 import sys
 import os
+
+# ✅ 2026-02-15 05:10 [修复]: 在导入paddlespeech前先修复aistudio_sdk
+import aistudio_sdk.hub as hub
+def download(*args, **kwargs):
+    return None
+hub.download = download
+print('  ✅ aistudio_sdk补丁已应用')
+
 import soundfile as sf
 
 # 添加模型路径
