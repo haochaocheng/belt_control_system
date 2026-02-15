@@ -35,15 +35,17 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装应用依赖
+# 2026-02-15 20:00: Ubuntu 24.04使用t64版本的库
 RUN apt-get update && apt-get install -y \
     libmosquitto1 \
     libmosquitto-dev \
-    libasound2 \
+    libasound2t64 \
     libpulse0 \
     && rm -rf /var/lib/apt/lists/*
 
-# 创建工作目录
+# 创建工作目录和挂载点
 WORKDIR /app
+RUN mkdir -p /app/lib /app/config
 
 # 创建VNC密码文件
 RUN mkdir -p ~/.vnc && \

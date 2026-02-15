@@ -68,17 +68,52 @@ Write-Host "[4/5] 启动模拟环境..." -ForegroundColor Yellow
 
 $ProjectRoot = "E:\2025\3_gongkongji\belt_control_system"
 
-docker run -d `
-    --name belt-control-sim `
-    -p 6080:6080 `
-    -p 5901:5901 `
-    -v "${ProjectRoot}/build_rk3588/bin_arm64:/app:ro" `
-    -v "${ProjectRoot}/docker/rk3588/lib:/app/lib:ro" `
-    -v "${ProjectRoot}/config:/app/config:ro" `
-    -v "${ProjectRoot}/docker/rk3588-simulator/supervisord.conf:/etc/supervisor/supervisord.conf:ro" `
-    -v "${ProjectRoot}/docker/rk3588-simulator/start.sh:/start.sh:ro" `
-    belt-control-simulator:latest `
-    /start.sh
+# 检查目录是否存在
+$binDir = Join-Path $ProjectRoot "build_rk3588\bin_arm64"
+$libDir = Join-Path $ProjectRoot "docker\rk3588\lib"
+$configDir = Join-Path $ProjectRoot "config"
+
+# 构建docker run命令
+$dockerArgs = @(
+    "run", "-d",
+    "--name", "belt-control-sim",
+    "-p", "6080:6080",
+    "-p", "5901:5901"
+)
+
+# 挂载到/mnt目录，避免/app冲突
+if (Test-Path $binDir) {
+    $dockerArgs += "-v"
+    $dockerArgs += "${binDir}:/mnt/app:ro"
+} else {
+    Write-Host "  ⚠️  应用程序目录不存在: $binDir" -ForegroundColor Yellow
+}
+
+if (Test-Path $libDir) {
+    $dockerArgs += "-v"
+    $dockerArgs += "${libDir}:/mnt/lib:ro"
+} else {
+    Write-Host "  ⚠️  库目录不存在: $libDir" -ForegroundColor Yellow
+}
+
+if (Test-Path $configDir) {
+    $dockerArgs += "-v"
+    $dockerArgs += "${configDir}:/mnt/config:ro"
+} else {
+    Write-Host "  ⚠️  配置目录不存在: $configDir" -ForegroundColor Yellow
+}
+
+# 挂载配置文件
+$dockerArgs += "-v"
+$dockerArgs += "${ProjectRoot}/docker/rk3588-simulator/supervisord.conf:/etc/supervisor/supervisord.conf:ro"
+$dockerArgs += "-v"
+$dockerArgs += "${ProjectRoot}/docker/rk3588-simulator/start.sh:/start.sh:ro"
+
+# 镜像和启动命令
+$dockerArgs += "belt-control-simulator:latest"
+$dockerArgs += "/start.sh"
+
+& docker @dockerArgs
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
