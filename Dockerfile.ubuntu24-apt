@@ -15,6 +15,12 @@ COPY lib /app/lib
 COPY plugins /app/plugins
 COPY qml /app/qml
 
+# ✅ 2026-02-16 00:20: 复制 TTS 引擎服务脚本到镜像
+# 原因：PaddleSpeech 和 MeloTTS 需要 Python 服务脚本
+# 路径：/app/tts_engines/paddlespeech/paddle_tts_service.py
+#       /app/tts_engines/melotts/melo_tts_service.py
+COPY tts_engines /app/tts_engines
+
 # ✅ 2026-01-23 16:15 [FIX 100.299] TTS/ASR 模型改用 Volume 挂载
 # 原因：模型文件大（~1.4GB），打包进镜像导致：
 #   1. 镜像体积大（2.5GB → 1.1GB，减少 56%）
