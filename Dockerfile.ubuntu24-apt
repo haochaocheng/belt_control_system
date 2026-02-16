@@ -52,6 +52,19 @@ COPY tts_engines /app/tts_engines
 COPY detect-audio-device.sh /app/detect-audio-device.sh
 COPY app-entrypoint.sh /app/app-entrypoint.sh
 
+# ✅ 2026-02-16 00:50: 安装 Python 和 TTS 引擎依赖
+# 原因：PaddleSpeech 和 MeloTTS 需要 Python 运行环境
+# 策略：安装 Python3 和 pip，然后安装各引擎的 requirements.txt
+# 效果：TTS 引擎可以正常初始化和合成语音
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --no-cache-dir --break-system-packages \
+        -r /app/tts_engines/paddlespeech/requirements.txt \
+        -r /app/tts_engines/melotts/requirements.txt
+
 # Setup application
 # ✅ 2026-01-08 17:50 [优化] GDB 已移至基础镜像，此处不再安装
 # 原因：基础镜像只构建一次，应用层频繁重建
