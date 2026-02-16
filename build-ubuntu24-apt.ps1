@@ -17,8 +17,8 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # Parse device parameter and setup configuration linaro
 # ============================================================
-$DeviceUser = "linaro"
-$DevicePassword = "linaro"
+$DeviceUser = "pi"
+$DevicePassword = "pi"
 
 switch -Regex ($Device) {
     "^simulator$" {
@@ -1197,6 +1197,17 @@ if (Test-Path $TtsServiceFile) {
     Write-Host "  [OK] TTS service copied" -ForegroundColor Green
 } else {
     Write-Host "  [!] TTS service not found at $TtsServiceFile (TTS disabled)" -ForegroundColor Yellow
+}
+
+# ✅ 2026-02-16 00:00: 复制 TTS 引擎服务脚本
+# 原因：PaddleSpeech 和 MeloTTS 需要 Python 服务脚本
+$TtsEnginesPath = "$ProjectRoot\docker\rk3588\tts_engines"
+if (Test-Path $TtsEnginesPath) {
+    Write-Host "  Copying TTS engine service scripts..." -ForegroundColor Yellow
+    Copy-Item $TtsEnginesPath "$DockerContextDir\tts_engines" -Recurse -Force
+    Write-Host "  [OK] TTS engine scripts copied" -ForegroundColor Green
+} else {
+    Write-Host "  [!] TTS engines not found at $TtsEnginesPath" -ForegroundColor Yellow
 }
 
 # Helper function for fast directory copying (resolving symlinks to real files)

@@ -209,8 +209,10 @@ CommonControl::CommonControl(QObject *parent)
     qDebug() << "✅ CommonControl: 已共享网络发送器给 TTS";
     */
 
-    // TODO: 2026-02-15 20:30: 实现新的 TTS 引擎管理器初始化
+    // ✅ 2026-02-15 22:10: 实现新的 TTS 引擎管理器初始化
     // 使用 m_ttsEngineManager 替代 m_tts
+    registerTTSEngines();
+    qDebug() << "✅ CommonControl: TTS 引擎管理器初始化完成";
 }
 
 CommonControl::~CommonControl()
@@ -1327,8 +1329,40 @@ bool CommonControl::switchTTSModel(int modelIndex)
         return false;
     }
 
-    // TODO: 实现模型切换逻辑
-    // 目前只是记录日志，实际切换由各个适配器实现
+    // ✅ 2026-02-15 22:40: 实现模型切换逻辑
+    // 获取当前引擎名称
+    QString engineName = m_ttsEngineManager->currentEngine();
+
+    // 提取模型名称（去掉括号中的描述）
+    QString modelDisplayName = modelList[modelIndex];
+    QString modelName = modelDisplayName.split(" ").first();  // 例如 "fastspeech2_csmsc (中文女声)" -> "fastspeech2_csmsc"
+
+    // 构建模型路径
+    QString modelPath;
+    if (engineName == "PaddleSpeech") {
+#ifdef Q_OS_LINUX
+        modelPath = QString("/home/pi/belt-control-data/models/tts_models/paddlespeech/%1").arg(modelName);
+#else
+        modelPath = QString("tts_models/paddlespeech/%1").arg(modelName);
+#endif
+    } else if (engineName == "MeloTTS") {
+#ifdef Q_OS_LINUX
+        modelPath = QString("/home/pi/belt-control-data/models/tts_models/melotts/%1").arg(modelName);
+#else
+        modelPath = QString("tts_models/melotts/%1").arg(modelName);
+#endif
+    } else {
+        qWarning() << "⚠️ [CommonControl] 不支持的引擎:" << engineName;
+        return false;
+    }
+
+    qDebug() << "   模型路径:" << modelPath;
+
+    // ✅ 2026-02-15 22:40: 调用引擎管理器初始化当前引擎
+    if (!m_ttsEngineManager->initialize(modelPath)) {
+        qWarning() << "❌ [CommonControl] TTS 引擎初始化失败";
+        return false;
+    }
 
     qDebug() << "✅ [CommonControl] TTS 模型切换成功:" << modelList[modelIndex];
     return true;
