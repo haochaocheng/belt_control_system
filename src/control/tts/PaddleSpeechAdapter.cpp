@@ -259,6 +259,12 @@ bool PaddleSpeechAdapter::sendCommand(const QJsonObject &command, QJsonObject &r
         return false;
     }
 
+    // ✅ 2026-02-16 02:50: 临时断开 readyReadStandardOutput 信号
+    // 原因：onProcessReadyRead() 会读取数据，导致 sendCommand() 读不到完整响应
+    // 效果：避免响应被其他槽函数读走
+    disconnect(m_process, &QProcess::readyReadStandardOutput,
+               this, &PaddleSpeechAdapter::onProcessReadyRead);
+
     // 清空响应缓冲区
     m_responseBuffer.clear();
 
@@ -284,6 +290,9 @@ bool PaddleSpeechAdapter::sendCommand(const QJsonObject &command, QJsonObject &r
 
     if (!timer.isActive()) {
         qWarning() << "⚠️ [PaddleSpeech] 命令超时";
+        // ✅ 2026-02-16 02:50: 恢复信号连接
+        connect(m_process, &QProcess::readyReadStandardOutput,
+                this, &PaddleSpeechAdapter::onProcessReadyRead);
         return false;
     }
 
@@ -297,6 +306,9 @@ bool PaddleSpeechAdapter::sendCommand(const QJsonObject &command, QJsonObject &r
     int newlineIndex = m_responseBuffer.indexOf('\n');
     if (newlineIndex == -1) {
         qWarning() << "⚠️ [PaddleSpeech] 响应不完整";
+        // ✅ 2026-02-16 02:50: 恢复信号连接
+        connect(m_process, &QProcess::readyReadStandardOutput,
+                this, &PaddleSpeechAdapter::onProcessReadyRead);
         return false;
     }
 
@@ -306,11 +318,18 @@ bool PaddleSpeechAdapter::sendCommand(const QJsonObject &command, QJsonObject &r
     QJsonDocument responseDoc = QJsonDocument::fromJson(responseLine.toUtf8());
     if (responseDoc.isNull() || !responseDoc.isObject()) {
         qWarning() << "⚠️ [PaddleSpeech] 响应格式错误:" << responseLine;
+        // ✅ 2026-02-16 02:50: 恢复信号连接
+        connect(m_process, &QProcess::readyReadStandardOutput,
+                this, &PaddleSpeechAdapter::onProcessReadyRead);
         return false;
     }
 
     response = responseDoc.object();
     qDebug() << "📥 [PaddleSpeech] 收到响应:" << response["status"].toString();
+
+    // ✅ 2026-02-16 02:50: 恢复信号连接
+    connect(m_process, &QProcess::readyReadStandardOutput,
+            this, &PaddleSpeechAdapter::onProcessReadyRead);
 
     return true;
 }
