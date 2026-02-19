@@ -69,7 +69,10 @@ bool PaddleSpeechAdapter::initialize(const QString &modelPath)
     emit initializationProgress("正在加载 PaddleSpeech 模型...");
 
     QJsonObject response;
-    if (!sendCommand(command, response, 120000)) {  // 初始化可能需要较长时间（2分钟）
+    // ✅ 2026-02-16 06:10: 增加超时时间到 10 分钟
+    // 原因：PaddleSpeech 首次加载模型需要 5-10 分钟（下载和初始化）
+    // 效果：避免初始化超时失败
+    if (!sendCommand(command, response, 600000)) {  // 初始化可能需要较长时间（10分钟）
         qWarning() << "❌ [PaddleSpeech] 初始化命令失败";
         emit errorOccurred("初始化命令失败");
         stopService();
