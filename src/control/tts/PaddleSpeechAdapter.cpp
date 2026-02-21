@@ -181,12 +181,23 @@ int PaddleSpeechAdapter::getMaxSpeakerId(int modelIndex) const
         << "fastspeech2_ljspeech"
         << "fastspeech2_vctk";
 
+    // ✅ 2026-02-21 22:10: 添加调试日志
+    // 原因：说话人ID范围不正确，需要确认查找逻辑
+    qDebug() << "🔍 [PaddleSpeech] getMaxSpeakerId - 模型索引:" << modelIndex;
+
     if (modelIndex < 0 || modelIndex >= models.size()) {
+        qWarning() << "   ⚠️ 索引超出范围，返回 0";
         return 0;
     }
 
     QString modelName = models[modelIndex];
-    return MODEL_SPEAKER_COUNTS.value(modelName, 0);
+    int maxSpeakerId = MODEL_SPEAKER_COUNTS.value(modelName, 0);
+
+    qDebug() << "   模型名称:" << modelName;
+    qDebug() << "   最大说话人ID:" << maxSpeakerId;
+    qDebug() << "   MODEL_SPEAKER_COUNTS 内容:" << MODEL_SPEAKER_COUNTS;
+
+    return maxSpeakerId;
 }
 
 void PaddleSpeechAdapter::stop()

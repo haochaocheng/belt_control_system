@@ -1385,7 +1385,15 @@ int CommonControl::getMaxSpeakerId(int modelIndex)
         return 0;
     }
 
-    return m_ttsEngineManager->getMaxSpeakerId(modelIndex);
+    // ✅ 2026-02-21 22:10: 添加调试日志
+    // 原因：说话人ID范围不正确，需要确认调用时的引擎和索引
+    qDebug() << "🔍 [CommonControl] getMaxSpeakerId - 模型索引:" << modelIndex
+             << "当前引擎:" << m_ttsEngineManager->currentEngine();
+
+    int maxSpeakerId = m_ttsEngineManager->getMaxSpeakerId(modelIndex);
+    qDebug() << "   返回最大说话人ID:" << maxSpeakerId;
+
+    return maxSpeakerId;
 }
 
 QString CommonControl::getCurrentTTSEngine()
