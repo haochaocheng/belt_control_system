@@ -68,16 +68,41 @@ bool PaddleSpeechAdapter::initialize(const QString &modelPath)
 
     emit initializationProgress("正在加载 PaddleSpeech 模型...");
 
+    // ✅ 2026-02-16 06:20: 添加进度更新定时器
+    // 原因：初始化需要 5-10 分钟，用户需要看到进度避免以为死机
+    // 效果：每 10 秒更新一次进度百分比
+    QTimer progressTimer;
+    int elapsedSeconds = 0;
+    const int totalSeconds = 600;  // 10 分钟
+
+    connect(&progressTimer, &QTimer::timeout, [&]() {
+        elapsedSeconds += 10;
+        int progress = (elapsedSeconds * 100) / totalSeconds;
+        if (progress > 95) progress = 95;  // 最多显示 95%，等待实际完成
+
+        QString progressMsg = QString("正在加载 PaddleSpeech 模型... %1% (%2/%3 秒)")
+                                .arg(progress)
+                                .arg(elapsedSeconds)
+                                .arg(totalSeconds);
+        emit initializationProgress(progressMsg);
+        qDebug() << "⏳ [PaddleSpeech]" << progressMsg;
+    });
+
+    progressTimer.start(10000);  // 每 10 秒触发一次
+
     QJsonObject response;
     // ✅ 2026-02-16 06:10: 增加超时时间到 10 分钟
     // 原因：PaddleSpeech 首次加载模型需要 5-10 分钟（下载和初始化）
     // 效果：避免初始化超时失败
     if (!sendCommand(command, response, 600000)) {  // 初始化可能需要较长时间（10分钟）
+        progressTimer.stop();
         qWarning() << "❌ [PaddleSpeech] 初始化命令失败";
         emit errorOccurred("初始化命令失败");
         stopService();
         return false;
     }
+
+    progressTimer.stop();
 
     if (response["status"].toString() != "success") {
         QString error = response["error"].toString();
