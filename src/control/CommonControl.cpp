@@ -213,6 +213,13 @@ CommonControl::CommonControl(QObject *parent)
     // 使用 m_ttsEngineManager 替代 m_tts
     registerTTSEngines();
     qDebug() << "✅ CommonControl: TTS 引擎管理器初始化完成";
+
+    // ✅ 2026-02-21 22:50: 连接 TTS 初始化进度信号
+    // 原因：PaddleSpeech 初始化需要 5-10 分钟，QML 需要显示进度
+    // 效果：将 TTSEngineManager 的进度信号转发到 QML
+    connect(m_ttsEngineManager, &TTSEngineManager::initializationProgress,
+            this, &CommonControl::ttsInitializationProgress);
+    qDebug() << "✅ CommonControl: TTS 初始化进度信号已连接";
 }
 
 CommonControl::~CommonControl()

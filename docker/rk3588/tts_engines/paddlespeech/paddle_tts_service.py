@@ -95,7 +95,7 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
     try:
         logger.info(f"🎙️ 合成语音 - 文本: {text}, 说话人ID: {speaker_id}, 语速: {speed}")
 
-        # ✅ 2026-02-21 21:30: 使用预定义模型名称（带语言后缀）
+        # ✅ 2026-02-21 22:30: 使用预定义模型名称（带语言后缀）
         # 原因：PaddleSpeech 期望 'fastspeech2_csmsc-zh' 而不是路径或不带后缀的名称
         # 效果：让 PaddleSpeech 使用预定义模型（自动下载）
         #
@@ -103,30 +103,53 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
         # 支持的参数：text, am, voc, lang, spk_id, output, device, use_onnx, cpu_threads, fs
         # 不支持的参数：am_dataset, voc_dataset, speed
         #
-        # 旧代码（错误）：
-        # am='fastspeech2_csmsc'  # 缺少语言后缀 -zh
-        # 或
-        # am='/home/pi/.../fastspeech2_csmsc'  # 使用路径而不是模型名称
+        # ⚠️ 2026-02-21 22:30: 修复重复添加语言后缀的问题
+        # 问题：如果 current_model 已经包含 -zh/-en/-mix 后缀，会重复添加
+        # 例如：fastspeech2_csmsc-zh → fastspeech2_csmsc-zh-zh（错误）
+        # 解决：先检查是否已经包含后缀
 
-        # 根据模型名称确定语言和声码器
-        if 'csmsc' in current_model or 'aishell3' in current_model or 'canton' in current_model:
-            # 中文模型
-            am_name = f"{current_model}-zh"  # 添加 -zh 后缀
+        # 检查是否已经包含语言后缀
+        if current_model.endswith('-zh') or current_model.endswith('-en') or current_model.endswith('-mix') or current_model.endswith('-canton'):
+            # 已经包含后缀，直接使用
+            am_name = current_model
+            logger.info(f"📝 模型名称已包含语言后缀: {am_name}")
+        else:
+            # 根据模型名称确定语言和添加后缀
+            if 'csmsc' in current_model or 'aishell3' in current_model:
+                # 中文模型
+                am_name = f"{current_model}-zh"
+            elif 'canton' in current_model:
+                # 粤语模型
+                am_name = f"{current_model}-canton"
+            elif 'ljspeech' in current_model or 'vctk' in current_model:
+                # 英文模型
+                am_name = f"{current_model}-en"
+            elif 'mix' in current_model:
+                # 混合语言模型
+                am_name = f"{current_model}-mix"
+            else:
+                # 默认使用中文
+                am_name = f"{current_model}-zh"
+            logger.info(f"📝 添加语言后缀: {current_model} → {am_name}")
+
+        # 根据模型名称选择声码器和语言
+        if 'csmsc' in am_name or 'aishell3' in am_name:
             voc_name = 'pwgan_csmsc'
             lang = 'zh'
-        elif 'ljspeech' in current_model or 'vctk' in current_model:
-            # 英文模型
-            am_name = f"{current_model}-en"  # 添加 -en 后缀
+        elif 'canton' in am_name:
+            voc_name = 'pwgan_csmsc'
+            lang = 'canton'
+        elif 'ljspeech' in am_name:
             voc_name = 'hifigan_ljspeech'
             lang = 'en'
-        elif 'mix' in current_model:
-            # 混合语言模型
-            am_name = f"{current_model}-mix"  # 添加 -mix 后缀
+        elif 'vctk' in am_name:
+            voc_name = 'hifigan_ljspeech'
+            lang = 'en'
+        elif 'mix' in am_name:
             voc_name = 'pwgan_csmsc'
             lang = 'mix'
         else:
             # 默认使用中文
-            am_name = f"{current_model}-zh"
             voc_name = 'pwgan_csmsc'
             lang = 'zh'
 

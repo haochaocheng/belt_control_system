@@ -12,7 +12,13 @@
 // ✅ 2026-01-22 20:00 [TCP音频传输] 添加 TCP 模式音频发送器
 #include "../audio_network/AudioNetworkTcpSender.h"
 // ✅ 2026-01-23 00:00 [TTS网络传输] 添加 TTS 语音网络传输
-#include "SherpaOnnxTTS.h"
+// ✅ 2026-02-13 [Phase 7.46.7]: 注释掉旧的 SherpaOnnxTTS，改用 TTSEngineManager
+// #include "SherpaOnnxTTS.h"
+
+// ✅ 2026-02-13 [Phase 7.46.7]: 添加 TTS 引擎管理器
+#include "tts/TTSEngineManager.h"
+#include "tts/PaddleSpeechAdapter.h"
+#include "tts/MeloTTSAdapter.h"
 
 // 前向声明
 class SystemConfig;
@@ -106,11 +112,59 @@ public:
      */
     Q_INVOKABLE AudioOutputMode audioOutputMode() const;
 
+    // ✅ 2026-02-13 [Phase 7.46.7]: TTS 引擎管理接口
+
+    /**
+     * @brief 切换 TTS 引擎
+     * @param engineIndex 引擎索引（0: PaddleSpeech, 1: MeloTTS）
+     * @return 切换是否成功
+     */
+    Q_INVOKABLE bool switchTTSEngine(int engineIndex);
+
+    /**
+     * @brief 切换 TTS 模型
+     * @param modelIndex 模型索引
+     * @return 切换是否成功
+     */
+    Q_INVOKABLE bool switchTTSModel(int modelIndex);
+
+    /**
+     * @brief 获取当前引擎的模型列表
+     * @return 模型名称列表
+     */
+    Q_INVOKABLE QStringList getTTSModelList();
+
+    /**
+     * @brief 获取指定模型的最大说话人ID
+     * @param modelIndex 模型索引
+     * @return 最大说话人ID
+     */
+    Q_INVOKABLE int getMaxSpeakerId(int modelIndex);
+
+    /**
+     * @brief 获取当前 TTS 引擎名称
+     * @return 引擎名称
+     */
+    Q_INVOKABLE QString getCurrentTTSEngine();
+
+    /**
+     * @brief 测试 TTS 语音合成
+     * @param text 要合成的文本
+     * @param speakerId 说话人ID
+     * @param rate 语速
+     * @param volume 音量
+     */
+    Q_INVOKABLE void testTTS(const QString &text, int speakerId = 0, double rate = 1.0, double volume = 0.8);
+
 signals:
     void beltStartRequested(int beltNumber);  // 皮带启动请求
     void beltStopRequested(int beltNumber);   // 皮带停止请求
     void warningPlaybackFinished();           // 预警播放完成
     void deviceStatusChanged(const QString &deviceName, bool isRunning);  // 设备状态改变
+
+    // ✅ 2026-02-21 22:45: 添加 TTS 初始化进度信号
+    // 原因：PaddleSpeech 初始化需要 5-10 分钟，QML 需要显示进度
+    void ttsInitializationProgress(const QString &message);  // TTS 初始化进度
 
 public slots:
     // 播放指定的音频文件
@@ -130,31 +184,7 @@ public slots:
     // 设置设备反馈参数（从QML调用）
     Q_INVOKABLE void setDeviceFeedbackConfig(const QString &deviceName, bool useFeedback, int feedbackChannel, int feedbackDelay);
 
-    // ✅ 2026-02-13 [Phase 7.45.35]: 添加 TTS 测试方法
-    /**
-     * @brief 测试 TTS 语音合成
-     * @param text 要合成的文本
-     * @param speakerId 说话人ID（默认：0）
-     * @param rate 语速（默认：1.0，范围：0.5-2.0）
-     * @param volume 音量（默认：0.8，范围：0.0-1.0）
-     */
-    Q_INVOKABLE void testTTS(const QString &text, int speakerId = 0, double rate = 1.0, double volume = 0.8);
-
-    // ✅ 2026-02-13 [Phase 7.45.36]: 添加 TTS 模型切换方法
-    /**
-     * @brief 切换 TTS 模型
-     * @param modelIndex 模型索引（0-6）
-     * @return 切换是否成功
-     */
-    Q_INVOKABLE bool switchTTSModel(int modelIndex);
-
-    // ✅ 2026-02-13 [Phase 7.45.37]: 添加获取最大说话人ID的方法
-    /**
-     * @brief 获取指定模型的最大说话人ID
-     * @param modelIndex 模型索引（0-6）
-     * @return 最大说话人ID（如果模型索引无效，返回 0）
-     */
-    Q_INVOKABLE int getMaxSpeakerId(int modelIndex);
+    // ✅ 2026-02-13 [Phase 7.45.35, 7.45.36, 7.45.37]: 旧的 TTS 方法已移到上面的 TTS 引擎管理接口区域
 
 private slots:
     void onMediaPlayerError(QMediaPlayer::Error error, const QString &errorString);
@@ -179,7 +209,9 @@ private:
     AudioNetworkTcpSender *m_audioNetworkTcpSender;  // TCP 模式音频发送器（UDP 发现 + TCP 连接 + WebSocket）
 
     // ✅ 2026-01-23 00:00 [TTS网络传输] 添加 TTS 语音网络传输
-    SherpaOnnxTTS *m_tts;  // TTS 语音合成器（用于起车预警语音）
+    // ✅ 2026-02-13 [Phase 7.46.7]: 替换为 TTS 引擎管理器
+    // SherpaOnnxTTS *m_tts;  // TTS 语音合成器（用于起车预警语音）
+    TTSEngineManager *m_ttsEngineManager;  // TTS 引擎管理器（支持多引擎切换）
 
     // 预警播放相关
     QTimer *m_warningTimer;        // 按时间模式的定时器
@@ -247,6 +279,12 @@ private:
     // 原因：TTS模型对阿拉伯数字"1"发音不清晰，改用中文数字"一"
     // 用途：将皮带编号（1-10）转换为中文数字（一-十）用于TTS文本生成
     QString numberToChinese(int number) const;
+
+    // ✅ 2026-02-13 [Phase 7.46.7]: 添加 TTS 引擎注册方法
+    /**
+     * @brief 注册所有 TTS 引擎
+     */
+    void registerTTSEngines();
 };
 
 #endif // COMMONCONTROL_H
