@@ -33,7 +33,8 @@ def initialize_paddlespeech(model_name):
     初始化 PaddleSpeech TTS
 
     Args:
-        model_name: 模型名称（如 "fastspeech2_csmsc"）
+        model_name: 模型路径或名称
+                   如: "/home/pi/.../fastspeech2_csmsc" 或 "fastspeech2_csmsc"
 
     Returns:
         bool: 是否成功
@@ -43,25 +44,22 @@ def initialize_paddlespeech(model_name):
     try:
         logger.info(f"🔧 初始化 PaddleSpeech - 模型: {model_name}")
 
+        # ✅ 2026-02-21 21:30: 从路径中提取模型名称
+        # 原因：PaddleSpeech 期望预定义模型名称，不是文件路径
+        # 效果：支持路径和名称两种输入方式
+
+        # 如果是路径，提取最后一部分作为模型名称
+        if '/' in model_name or '\\' in model_name:
+            model_name = os.path.basename(model_name)
+            logger.info(f"📝 提取模型名称: {model_name}")
+
         # 导入 PaddleSpeech
         from paddlespeech.cli.tts.infer import TTSExecutor
 
         # 创建 TTS 执行器
         tts_executor = TTSExecutor()
 
-        # 解析模型名称
-        # 格式: fastspeech2_csmsc
-        parts = model_name.split('_')
-        if len(parts) < 2:
-            raise ValueError(f"无效的模型名称: {model_name}")
-
-        am_name = parts[0]  # fastspeech2
-        dataset = '_'.join(parts[1:])  # csmsc
-
-        # 设置模型参数
-        # PaddleSpeech 会自动下载模型
-        logger.info(f"📦 加载模型 - AM: {am_name}, Dataset: {dataset}")
-
+        # 保存模型名称（不带语言后缀）
         current_model = model_name
 
         logger.info("✅ PaddleSpeech 初始化成功")
@@ -97,40 +95,50 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
     try:
         logger.info(f"🎙️ 合成语音 - 文本: {text}, 说话人ID: {speaker_id}, 语速: {speed}")
 
-        # ✅ 2026-02-16 07:30: 使用官方文档确认的正确参数
+        # ✅ 2026-02-21 21:30: 使用预定义模型名称（带语言后缀）
+        # 原因：PaddleSpeech 期望 'fastspeech2_csmsc-zh' 而不是路径或不带后缀的名称
+        # 效果：让 PaddleSpeech 使用预定义模型（自动下载）
+        #
         # 参考：https://github.com/PaddlePaddle/PaddleSpeech/blob/develop/paddlespeech/cli/tts/infer.py
         # 支持的参数：text, am, voc, lang, spk_id, output, device, use_onnx, cpu_threads, fs
         # 不支持的参数：am_dataset, voc_dataset, speed
         #
-        # 模型名称格式：
-        # - am: 'fastspeech2_csmsc' (完整名称，包含数据集)
-        # - voc: 'pwgan_csmsc' (完整名称，包含数据集)
-        #
         # 旧代码（错误）：
-        # am='fastspeech2', am_dataset='csmsc', voc='pwgan', voc_dataset='csmsc', speed=1.0
+        # am='fastspeech2_csmsc'  # 缺少语言后缀 -zh
+        # 或
+        # am='/home/pi/.../fastspeech2_csmsc'  # 使用路径而不是模型名称
 
-        # 使用完整的模型名称（包含数据集）
-        am_name = current_model  # 例如：'fastspeech2_csmsc'
-
-        # 选择声码器（完整名称）
-        if 'csmsc' in current_model or 'aishell3' in current_model:
+        # 根据模型名称确定语言和声码器
+        if 'csmsc' in current_model or 'aishell3' in current_model or 'canton' in current_model:
+            # 中文模型
+            am_name = f"{current_model}-zh"  # 添加 -zh 后缀
             voc_name = 'pwgan_csmsc'
             lang = 'zh'
-        elif 'ljspeech' in current_model:
+        elif 'ljspeech' in current_model or 'vctk' in current_model:
+            # 英文模型
+            am_name = f"{current_model}-en"  # 添加 -en 后缀
             voc_name = 'hifigan_ljspeech'
             lang = 'en'
+        elif 'mix' in current_model:
+            # 混合语言模型
+            am_name = f"{current_model}-mix"  # 添加 -mix 后缀
+            voc_name = 'pwgan_csmsc'
+            lang = 'mix'
         else:
             # 默认使用中文
+            am_name = f"{current_model}-zh"
             voc_name = 'pwgan_csmsc'
             lang = 'zh'
 
+        logger.info(f"📦 使用模型: am={am_name}, voc={voc_name}, lang={lang}")
+
         # 调用 PaddleSpeech 合成
-        # 使用官方文档确认的参数
+        # 使用预定义模型名称（带语言后缀）
         tts_executor(
             text=text,
             output=output_path,
-            am=am_name,        # 完整模型名称，如 'fastspeech2_csmsc'
-            voc=voc_name,      # 完整声码器名称，如 'pwgan_csmsc'
+            am=am_name,        # 预定义模型名称，如 'fastspeech2_csmsc-zh'
+            voc=voc_name,      # 预定义声码器名称，如 'pwgan_csmsc'
             lang=lang,         # 语言：'zh' 或 'en'
             spk_id=speaker_id  # 说话人ID
         )
