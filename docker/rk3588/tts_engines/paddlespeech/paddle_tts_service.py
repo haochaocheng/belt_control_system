@@ -97,49 +97,43 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
     try:
         logger.info(f"🎙️ 合成语音 - 文本: {text}, 说话人ID: {speaker_id}, 语速: {speed}")
 
-        # ✅ 2026-02-16 07:00: 修复 PaddleSpeech 调用参数
-        # 原因：TTSExecutor.__call__() 不接受 am_dataset 和 voc_dataset 参数
-        # 效果：使用正确的参数调用 PaddleSpeech
-        # 旧代码：
-        # parts = current_model.split('_')
-        # am_name = parts[0]
-        # dataset = '_'.join(parts[1:])
-        # tts_executor(am=am_name, am_dataset=dataset, voc_dataset=voc_dataset, ...)
+        # ✅ 2026-02-16 07:30: 使用官方文档确认的正确参数
+        # 参考：https://github.com/PaddlePaddle/PaddleSpeech/blob/develop/paddlespeech/cli/tts/infer.py
+        # 支持的参数：text, am, voc, lang, spk_id, output, device, use_onnx, cpu_threads, fs
+        # 不支持的参数：am_dataset, voc_dataset, speed
+        #
+        # 模型名称格式：
+        # - am: 'fastspeech2_csmsc' (完整名称，包含数据集)
+        # - voc: 'pwgan_csmsc' (完整名称，包含数据集)
+        #
+        # 旧代码（错误）：
+        # am='fastspeech2', am_dataset='csmsc', voc='pwgan', voc_dataset='csmsc', speed=1.0
 
-        # 解析模型名称
-        # 模型格式：fastspeech2_csmsc, speedyspeech_csmsc, tacotron2_ljspeech 等
-        parts = current_model.split('_')
-        am_name = parts[0]  # 声学模型名称：fastspeech2, speedyspeech, tacotron2
-        dataset = '_'.join(parts[1:])  # 数据集名称：csmsc, aishell3, ljspeech
+        # 使用完整的模型名称（包含数据集）
+        am_name = current_model  # 例如：'fastspeech2_csmsc'
 
-        # 选择声码器
-        # 中文模型使用 pwgan，英文模型使用 hifigan
-        if 'csmsc' in dataset or 'aishell3' in dataset:
-            voc_name = 'pwgan_csmsc'  # 完整的声码器名称
+        # 选择声码器（完整名称）
+        if 'csmsc' in current_model or 'aishell3' in current_model:
+            voc_name = 'pwgan_csmsc'
             lang = 'zh'
-        else:
-            voc_name = 'hifigan_ljspeech'  # 完整的声码器名称
+        elif 'ljspeech' in current_model:
+            voc_name = 'hifigan_ljspeech'
             lang = 'en'
-
-        # ✅ 2026-02-16 07:20: 修复 PaddleSpeech 调用参数（第二次）
-        # 原因：TTSExecutor.__call__() 也不接受 speed 参数
-        # 效果：移除 speed 参数，语速控制需要通过其他方式实现
-        # 注意：PaddleSpeech 不支持运行时语速调整，只能在模型训练时固定
-        # 旧代码：tts_executor(..., speed=speed)
+        else:
+            # 默认使用中文
+            voc_name = 'pwgan_csmsc'
+            lang = 'zh'
 
         # 调用 PaddleSpeech 合成
-        # 注意：不传递 am_dataset、voc_dataset 和 speed 参数
+        # 使用官方文档确认的参数
         tts_executor(
             text=text,
             output=output_path,
-            am=am_name,
-            voc=voc_name,
-            lang=lang,
-            spk_id=speaker_id
+            am=am_name,        # 完整模型名称，如 'fastspeech2_csmsc'
+            voc=voc_name,      # 完整声码器名称，如 'pwgan_csmsc'
+            lang=lang,         # 语言：'zh' 或 'en'
+            spk_id=speaker_id  # 说话人ID
         )
-
-        # 如果需要语速调整，可以使用 pydub 或 ffmpeg 后处理音频
-        # 例如：ffmpeg -i input.wav -filter:a "atempo=1.5" output.wav
 
         # 检查输出文件
         if not os.path.exists(output_path):
