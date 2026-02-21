@@ -121,17 +121,25 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
             voc_name = 'hifigan_ljspeech'  # 完整的声码器名称
             lang = 'en'
 
+        # ✅ 2026-02-16 07:20: 修复 PaddleSpeech 调用参数（第二次）
+        # 原因：TTSExecutor.__call__() 也不接受 speed 参数
+        # 效果：移除 speed 参数，语速控制需要通过其他方式实现
+        # 注意：PaddleSpeech 不支持运行时语速调整，只能在模型训练时固定
+        # 旧代码：tts_executor(..., speed=speed)
+
         # 调用 PaddleSpeech 合成
-        # 注意：不传递 am_dataset 和 voc_dataset 参数
+        # 注意：不传递 am_dataset、voc_dataset 和 speed 参数
         tts_executor(
             text=text,
             output=output_path,
             am=am_name,
             voc=voc_name,
             lang=lang,
-            spk_id=speaker_id,
-            speed=speed
+            spk_id=speaker_id
         )
+
+        # 如果需要语速调整，可以使用 pydub 或 ffmpeg 后处理音频
+        # 例如：ffmpeg -i input.wav -filter:a "atempo=1.5" output.wav
 
         # 检查输出文件
         if not os.path.exists(output_path):
