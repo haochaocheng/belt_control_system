@@ -1,32 +1,47 @@
 #!/bin/bash
 # ========================================
-# Belt Control System 启动脚本
+# Belt Control System Startup Script
 # ========================================
-# 日期: 2026-01-23 19:45
-# 版本: FIX 100.300.14
-# 目的: 容器启动时自动检测音频设备并启动应用
+# Date: 2026-01-23 19:45
+# Version: FIX 100.300.14
+# Purpose: Auto-detect audio device and start application
 # ========================================
 
 set -e
 
 echo "========================================="
-echo "Belt Control System - 启动中..."
+echo "Belt Control System - Starting..."
 echo "========================================="
 echo ""
 
-# ✅ 2026-01-23 19:45 [FIX 100.300.14] 自动检测音频设备
-# 原因：不同设备硬件配置不同（ES8388 vs HDMI）
-# 方案：启动时检测硬件并生成 ALSA 配置
+# Auto-detect audio device (ES8388 vs HDMI)
 if [ -f /app/detect-audio-device.sh ]; then
     /app/detect-audio-device.sh
 else
-    echo "⚠️  音频检测脚本不存在，使用默认配置"
+    echo "Warning: Audio detection script not found, using default config"
 fi
 
+# ✅ 2026-02-22 02:05 [Phase 7.46.29]: 创建 PaddleSpeech 模型符号链接
+# 原因：PaddleSpeech 在 /root/.paddlespeech/models/ 查找模型，但我们的模型在 /app/tts_models/
+# 效果：离线使用预下载的模型，无需网络下载
 echo "========================================="
-echo "🚀 启动应用程序..."
+echo "Setting up PaddleSpeech model symlinks..."
+echo "========================================="
+mkdir -p /root/.paddlespeech/models
+# fastspeech2_csmsc 模型
+ln -sf /app/tts_models/paddlespeech/models/fastspeech2_csmsc-zh /root/.paddlespeech/models/fastspeech2_csmsc-zh
+# pwgan_csmsc 声码器
+ln -sf /app/tts_models/paddlespeech/models/pwgan_csmsc-zh /root/.paddlespeech/models/pwgan_csmsc-zh
+# G2PW 中文文本转拼音模型（目录和zip文件都需要）
+ln -sf /app/tts_models/paddlespeech/models/G2PWModel_1.1 /root/.paddlespeech/models/G2PWModel_1.1
+ln -sf /app/tts_models/paddlespeech/models/G2PWModel_1.1.zip /root/.paddlespeech/models/G2PWModel_1.1.zip
+echo "PaddleSpeech model symlinks created."
+echo ""
+
+echo "========================================="
+echo "Launching application..."
 echo "========================================="
 echo ""
 
-# 启动应用
+# Start application
 exec /app/belt_control_system

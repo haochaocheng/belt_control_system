@@ -15,10 +15,15 @@ import logging
 from pathlib import Path
 
 # 配置日志
+# ✅ 2026-02-22 00:20: 禁用日志缓冲，确保实时输出
+# 原因：Python 的 stderr 默认有缓冲，导致日志延迟输出
+# 解决：设置 stream 为无缓冲模式
+import io
+stderr_unbuffered = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', line_buffering=True)
 logging.basicConfig(
     level=logging.INFO,
     format='[%(asctime)s] [%(levelname)s] %(message)s',
-    handlers=[logging.StreamHandler(sys.stderr)]
+    handlers=[logging.StreamHandler(stderr_unbuffered)]
 )
 
 logger = logging.getLogger(__name__)
@@ -108,29 +113,29 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
         # 例如：fastspeech2_csmsc-zh → fastspeech2_csmsc-zh-zh（错误）
         # 解决：先检查是否已经包含后缀
 
-        # 检查是否已经包含语言后缀
-        if current_model.endswith('-zh') or current_model.endswith('-en') or current_model.endswith('-mix') or current_model.endswith('-canton'):
-            # 已经包含后缀，直接使用
-            am_name = current_model
-            logger.info(f"📝 模型名称已包含语言后缀: {am_name}")
+        # ✅ 2026-02-22 01:45: 修复重复添加语言后缀的问题
+        # 根本原因：PaddleSpeech 库会根据 lang 参数自动添加后缀
+        # 例如：am='fastspeech2_csmsc' + lang='zh' → PaddleSpeech 内部使用 'fastspeech2_csmsc-zh'
+        # 所以我们不需要手动添加后缀，直接使用模型名称即可
+
+        print(f"[DEBUG] 🔍 current_model = '{current_model}'", file=sys.stderr, flush=True)
+
+        # 如果模型名称已经包含后缀，需要去掉（因为 PaddleSpeech 会自动添加）
+        am_name = current_model
+        if current_model.endswith('-zh'):
+            am_name = current_model[:-3]  # 去掉 '-zh'
+            print(f"[DEBUG] 📝 去掉语言后缀: {current_model} → {am_name}", file=sys.stderr, flush=True)
+        elif current_model.endswith('-en'):
+            am_name = current_model[:-3]  # 去掉 '-en'
+            print(f"[DEBUG] 📝 去掉语言后缀: {current_model} → {am_name}", file=sys.stderr, flush=True)
+        elif current_model.endswith('-mix'):
+            am_name = current_model[:-4]  # 去掉 '-mix'
+            print(f"[DEBUG] 📝 去掉语言后缀: {current_model} → {am_name}", file=sys.stderr, flush=True)
+        elif current_model.endswith('-canton'):
+            am_name = current_model[:-7]  # 去掉 '-canton'
+            print(f"[DEBUG] 📝 去掉语言后缀: {current_model} → {am_name}", file=sys.stderr, flush=True)
         else:
-            # 根据模型名称确定语言和添加后缀
-            if 'csmsc' in current_model or 'aishell3' in current_model:
-                # 中文模型
-                am_name = f"{current_model}-zh"
-            elif 'canton' in current_model:
-                # 粤语模型
-                am_name = f"{current_model}-canton"
-            elif 'ljspeech' in current_model or 'vctk' in current_model:
-                # 英文模型
-                am_name = f"{current_model}-en"
-            elif 'mix' in current_model:
-                # 混合语言模型
-                am_name = f"{current_model}-mix"
-            else:
-                # 默认使用中文
-                am_name = f"{current_model}-zh"
-            logger.info(f"📝 添加语言后缀: {current_model} → {am_name}")
+            print(f"[DEBUG] 📝 使用原始模型名称: {am_name}", file=sys.stderr, flush=True)
 
         # 根据模型名称选择声码器和语言
         if 'csmsc' in am_name or 'aishell3' in am_name:
