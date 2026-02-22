@@ -49,6 +49,27 @@ ln -sf /app/tts_models/paddlenlp/bert-base-chinese /root/.paddlenlp/models/bert-
 echo "PaddleNLP model symlinks created."
 echo ""
 
+# ✅ 2026-02-22 03:30 [Phase 7.46.31]: 修改 G2PW config.py 使用本地 BERT 路径
+# 原因：G2PW 的 config.py 中 model_source = 'bert-base-chinese' 是模型名称
+#       PaddleNLP 会尝试从网络下载，导致离线环境失败
+# 效果：修改为本地路径，确保离线使用
+echo "========================================="
+echo "Patching G2PW config for offline use..."
+echo "========================================="
+G2PW_CONFIG="/app/tts_models/paddlespeech/models/G2PWModel_1.1/config.py"
+if [ -f "$G2PW_CONFIG" ]; then
+    # 检查是否需要修改（避免重复修改）
+    if grep -q "model_source = 'bert-base-chinese'" "$G2PW_CONFIG"; then
+        sed -i "s|model_source = 'bert-base-chinese'|model_source = '/root/.paddlenlp/models/bert-base-chinese'|g" "$G2PW_CONFIG"
+        echo "G2PW config patched: model_source -> local path"
+    else
+        echo "G2PW config already patched or different format"
+    fi
+else
+    echo "Warning: G2PW config not found at $G2PW_CONFIG"
+fi
+echo ""
+
 echo "========================================="
 echo "Launching application..."
 echo "========================================="

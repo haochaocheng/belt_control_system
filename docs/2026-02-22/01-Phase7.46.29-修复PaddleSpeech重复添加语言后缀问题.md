@@ -147,15 +147,23 @@ model_source = '/root/.paddlenlp/models/bert-base-chinese'
 - 来源：HuggingFace bert-base-chinese
 - 用途：G2PW 的 BertTokenizer 需要
 
-### 4. G2PW config.py（设备上修改）
-- 文件：设备上 `/home/pi/belt-control-data/models/tts_models/paddlespeech/models/G2PWModel_1.1/config.py`
-- 修改：`model_source = '/root/.paddlenlp/models/bert-base-chinese'`
+### 4. G2PW config.py（自动修复）
+- 文件：[docker/rk3588/app-entrypoint.sh](docker/rk3588/app-entrypoint.sh#L52)
+- 修改：容器启动时自动将 `model_source = 'bert-base-chinese'` 改为 `model_source = '/root/.paddlenlp/models/bert-base-chinese'`
 - 原因：让 BertTokenizer 使用本地路径而不是尝试从网络下载
+- 效果：重新部署后自动生效，无需手动修改
 
 ## 下一步
 
 1. ✅ 将符号链接逻辑添加到容器启动脚本 `app-entrypoint.sh` 中
 2. ✅ 下载并部署 bert-base-chinese vocab.txt
-3. ✅ 修改 G2PW config.py 使用本地 BERT 路径
-4. 测试 TTS 合成功能
+3. ✅ 修改 G2PW config.py 使用本地 BERT 路径（已改为自动修复）
+4. ✅ 测试 TTS 合成功能（已成功）
 5. 测试其他模型（fastspeech2_aishell3, fastspeech2_ljspeech, fastspeech2_vctk）
+
+## 总结
+
+所有修改现在都在宿主机完成，重新部署不会丢失：
+- `paddle_tts_service.py` - 修复语言后缀
+- `app-entrypoint.sh` - 符号链接 + G2PW config 自动修复
+- `vocab.txt` - BERT 词表文件
