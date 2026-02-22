@@ -90,16 +90,30 @@ ln -sf /app/tts_models/paddlespeech/models/G2PWModel_1.1 /root/.paddlespeech/mod
 ## 需要创建的所有符号链接
 
 ```bash
-# fastspeech2_csmsc 模型
+# PaddleSpeech 模型
+mkdir -p /root/.paddlespeech/models
 ln -sf /app/tts_models/paddlespeech/models/fastspeech2_csmsc-zh /root/.paddlespeech/models/fastspeech2_csmsc-zh
-
-# pwgan_csmsc 声码器
 ln -sf /app/tts_models/paddlespeech/models/pwgan_csmsc-zh /root/.paddlespeech/models/pwgan_csmsc-zh
-
-# G2PW 中文文本转拼音模型（目录和zip文件都需要）
 ln -sf /app/tts_models/paddlespeech/models/G2PWModel_1.1 /root/.paddlespeech/models/G2PWModel_1.1
 ln -sf /app/tts_models/paddlespeech/models/G2PWModel_1.1.zip /root/.paddlespeech/models/G2PWModel_1.1.zip
+
+# PaddleNLP BERT 模型（G2PW 的 BertTokenizer 需要）
+mkdir -p /root/.paddlenlp/models
+ln -sf /app/tts_models/paddlenlp/bert-base-chinese /root/.paddlenlp/models/bert-base-chinese
 ```
+
+## 额外问题3：BERT 模型路径
+
+G2PW 使用 BertTokenizer 进行文本处理，需要 bert-base-chinese 模型：
+
+```
+HTTPSConnectionPool(host='bj.bcebos.com', port=443): Max retries exceeded with url: /paddle-hapi/models/bert/bert-base-chinese-vocab.txt
+```
+
+**解决方案**：
+1. 从 HuggingFace 下载 vocab.txt：`https://huggingface.co/bert-base-chinese/raw/main/vocab.txt`
+2. 放置到 `tts_models/paddlenlp/bert-base-chinese/vocab.txt`
+3. 创建符号链接到 `/root/.paddlenlp/models/bert-base-chinese`
 
 ## 已完成的修改
 
@@ -109,12 +123,18 @@ ln -sf /app/tts_models/paddlespeech/models/G2PWModel_1.1.zip /root/.paddlespeech
 
 ### 2. app-entrypoint.sh
 - 文件：[docker/rk3588/app-entrypoint.sh](docker/rk3588/app-entrypoint.sh#L24)
-- 修改：添加 PaddleSpeech 模型符号链接创建逻辑
+- 修改：添加 PaddleSpeech 和 PaddleNLP 模型符号链接创建逻辑
 - 符号链接在容器启动时自动创建，确保离线使用预下载的模型
+
+### 3. bert-base-chinese vocab.txt
+- 文件：`tts_models/paddlenlp/bert-base-chinese/vocab.txt`
+- 来源：HuggingFace bert-base-chinese
+- 用途：G2PW 的 BertTokenizer 需要
 
 ## 下一步
 
 1. ✅ 将符号链接逻辑添加到容器启动脚本 `app-entrypoint.sh` 中
-2. 重新构建 Docker 镜像以包含修复
-3. 测试 TTS 合成功能
-4. 测试其他模型（fastspeech2_aishell3, fastspeech2_ljspeech, fastspeech2_vctk）
+2. ✅ 下载并部署 bert-base-chinese vocab.txt
+3. 重新构建 Docker 镜像以包含修复
+4. 测试 TTS 合成功能
+5. 测试其他模型（fastspeech2_aishell3, fastspeech2_ljspeech, fastspeech2_vctk）
