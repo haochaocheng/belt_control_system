@@ -32,6 +32,11 @@ mkdir -p /root/.paddlespeech/models
 ln -sf /app/tts_models/paddlespeech/models/fastspeech2_csmsc-zh /root/.paddlespeech/models/fastspeech2_csmsc-zh
 # pwgan_csmsc 声码器
 ln -sf /app/tts_models/paddlespeech/models/pwgan_csmsc-zh /root/.paddlespeech/models/pwgan_csmsc-zh
+# ✅ 2026-02-22 05:25 [Phase 7.46.33]: 添加 aishell3 模型符号链接
+# fastspeech2_aishell3 多说话人模型
+ln -sf /app/tts_models/paddlespeech/models/fastspeech2_aishell3-zh /root/.paddlespeech/models/fastspeech2_aishell3-zh
+# hifigan_aishell3 声码器
+ln -sf /app/tts_models/paddlespeech/models/hifigan_aishell3-zh /root/.paddlespeech/models/hifigan_aishell3-zh
 # G2PW 中文文本转拼音模型（目录和zip文件都需要）
 ln -sf /app/tts_models/paddlespeech/models/G2PWModel_1.1 /root/.paddlespeech/models/G2PWModel_1.1
 ln -sf /app/tts_models/paddlespeech/models/G2PWModel_1.1.zip /root/.paddlespeech/models/G2PWModel_1.1.zip

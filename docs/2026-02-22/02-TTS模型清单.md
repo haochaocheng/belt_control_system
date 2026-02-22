@@ -35,19 +35,19 @@
 |------|------|------|------|------|
 | fastspeech2_csmsc | `paddlespeech/models/fastspeech2_csmsc-zh/` | 1.1 GB | 中文 | 单说话人女声（官方默认） |
 | pwgan_csmsc | `paddlespeech/models/pwgan_csmsc-zh/` | 32 MB | 中文 | 声码器（配合 csmsc 使用） |
+| fastspeech2_aishell3 | `paddlespeech/models/fastspeech2_aishell3-zh/` | 430 MB | 中文 | 多说话人（218人） |
+| hifigan_aishell3 | `paddlespeech/models/hifigan_aishell3-zh/` | 959 MB | 中文 | 声码器（配合 aishell3 使用） |
 | G2PWModel_1.1 | `paddlespeech/models/G2PWModel_1.1/` | 608 MB | 中文 | 中文文本转拼音模型 |
 
 ### 未部署模型（QML 界面显示但无法使用）
 
 | 模型 | 需要下载 | 大小（估计） | 语言 | 说明 |
 |------|----------|--------------|------|------|
-| fastspeech2_aishell3 | ❌ 未下载 | ~200 MB | 中文 | 多说话人（218人） |
-| pwgan_aishell3 | ❌ 未下载 | ~50 MB | 中文 | 声码器（配合 aishell3 使用） |
 | fastspeech2_ljspeech | ❌ 未下载 | ~200 MB | 英文 | 单说话人 |
 | hifigan_ljspeech | ❌ 未下载 | ~50 MB | 英文 | 声码器（配合 ljspeech 使用） |
 | fastspeech2_vctk | ❌ 未下载 | ~200 MB | 英文 | 多说话人（109人） |
 
-**总大小**: 2.3 GB（已部署）
+**总大小**: 约 3.1 GB（已部署）
 
 ---
 
@@ -93,7 +93,7 @@
 
 ### PaddleSpeech 引擎
 - ✅ fastspeech2_csmsc（中文女声）- 可正常合成
-- ❌ fastspeech2_aishell3（中文多说话人）- 模型未下载
+- ✅ fastspeech2_aishell3（中文多说话人）- 已部署
 - ❌ fastspeech2_ljspeech（英文）- 模型未下载
 - ❌ fastspeech2_vctk（英文多说话人）- 模型未下载
 
