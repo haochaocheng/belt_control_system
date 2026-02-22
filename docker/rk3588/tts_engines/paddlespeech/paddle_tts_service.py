@@ -138,7 +138,13 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
             print(f"[DEBUG] 📝 使用原始模型名称: {am_name}", file=sys.stderr, flush=True)
 
         # 根据模型名称选择声码器和语言
-        if 'csmsc' in am_name or 'aishell3' in am_name:
+        # ✅ 2026-02-22 03:50 [Phase 7.46.32]: 修复 aishell3 声码器配置
+        # 原因：aishell3 应该使用 pwgan_aishell3 声码器，而不是 pwgan_csmsc
+        # 效果：aishell3 多说话人模型可以正常合成
+        if 'aishell3' in am_name:
+            voc_name = 'pwgan_aishell3'
+            lang = 'zh'
+        elif 'csmsc' in am_name:
             voc_name = 'pwgan_csmsc'
             lang = 'zh'
         elif 'canton' in am_name:
