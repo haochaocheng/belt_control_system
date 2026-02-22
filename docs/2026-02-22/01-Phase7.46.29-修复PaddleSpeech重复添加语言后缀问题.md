@@ -115,6 +115,22 @@ HTTPSConnectionPool(host='bj.bcebos.com', port=443): Max retries exceeded with u
 2. 放置到 `tts_models/paddlenlp/bert-base-chinese/vocab.txt`
 3. 创建符号链接到 `/root/.paddlenlp/models/bert-base-chinese`
 
+## 额外问题4：G2PW config.py 中的 model_source
+
+即使创建了 BERT 符号链接，PaddleNLP 仍然尝试从网络下载，因为 G2PW 的 config.py 中 `model_source = 'bert-base-chinese'` 是模型名称而不是本地路径。
+
+**解决方案**：修改 G2PW 模型的 config.py，将 `model_source` 改为本地路径：
+
+```python
+# 修改前
+model_source = 'bert-base-chinese'
+
+# 修改后
+model_source = '/root/.paddlenlp/models/bert-base-chinese'
+```
+
+**修改位置**：设备上 `/home/pi/belt-control-data/models/tts_models/paddlespeech/models/G2PWModel_1.1/config.py`
+
 ## 已完成的修改
 
 ### 1. paddle_tts_service.py
@@ -131,10 +147,15 @@ HTTPSConnectionPool(host='bj.bcebos.com', port=443): Max retries exceeded with u
 - 来源：HuggingFace bert-base-chinese
 - 用途：G2PW 的 BertTokenizer 需要
 
+### 4. G2PW config.py（设备上修改）
+- 文件：设备上 `/home/pi/belt-control-data/models/tts_models/paddlespeech/models/G2PWModel_1.1/config.py`
+- 修改：`model_source = '/root/.paddlenlp/models/bert-base-chinese'`
+- 原因：让 BertTokenizer 使用本地路径而不是尝试从网络下载
+
 ## 下一步
 
 1. ✅ 将符号链接逻辑添加到容器启动脚本 `app-entrypoint.sh` 中
 2. ✅ 下载并部署 bert-base-chinese vocab.txt
-3. 重新构建 Docker 镜像以包含修复
+3. ✅ 修改 G2PW config.py 使用本地 BERT 路径
 4. 测试 TTS 合成功能
 5. 测试其他模型（fastspeech2_aishell3, fastspeech2_ljspeech, fastspeech2_vctk）
