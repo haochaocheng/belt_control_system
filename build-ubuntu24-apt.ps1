@@ -9,7 +9,7 @@
 #   .\build-ubuntu24-apt.ps1 simulator  # 启动模拟器（无需实体设备）
 
 param(
-    [string]$Device = "151"  # 默认151设备
+    [string]$Device = "185"  # 默认185设备
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,8 +17,8 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # Parse device parameter and setup configuration linaro
 # ============================================================
-$DeviceUser = "pi"
-$DevicePassword = "pi"
+$DeviceUser = "linaro"
+$DevicePassword = "linaro"
 
 switch -Regex ($Device) {
     "^simulator$" {
@@ -31,9 +31,9 @@ switch -Regex ($Device) {
         & "$PSScriptRoot\scripts\2026-02-15\30-start-simulator.ps1"
         exit 0
     }
-    "^151$" {
-        $DeviceIP = "192.168.10.151"
-        Write-Host "[Device] Target: Device 151 ($DeviceIP)" -ForegroundColor Cyan
+    "^185$" {
+        $DeviceIP = "192.168.10.185"
+        Write-Host "[Device] Target: Device 185 ($DeviceIP)" -ForegroundColor Cyan
     }
     "^188$" {
         $DeviceIP = "192.168.10.188"
@@ -47,8 +47,8 @@ switch -Regex ($Device) {
         Write-Host "[ERROR] Invalid device parameter: $Device" -ForegroundColor Red
         Write-Host ""
         Write-Host "Usage:" -ForegroundColor Yellow
-        Write-Host "  .\build-ubuntu24-apt.ps1 151              # Deploy to 192.168.10.151" -ForegroundColor White
-        Write-Host "  .\build-ubuntu24-apt.ps1 188              # Deploy to 192.168.10.188" -ForegroundColor White
+        Write-Host "  .\build-ubuntu24-apt.ps1 185              # Deploy to 192.168.10.185" -ForegroundColor White
+        Write-Host "  .\build-ubuntu24-apt.ps1 185              # Deploy to 192.168.10.185" -ForegroundColor White
         Write-Host "  .\build-ubuntu24-apt.ps1 192.168.10.200   # Deploy to custom IP" -ForegroundColor White
         Write-Host "  .\build-ubuntu24-apt.ps1 simulator        # Start simulator (no device needed)" -ForegroundColor White
         Write-Host ""
@@ -1056,17 +1056,32 @@ if (-not $baseImageExists) {
     Write-Host "  [!] Base image not found" -ForegroundColor Yellow
     $needBuildBase = $true
 } else {
-    # Check if Dockerfile.ubuntu24-base changed
+    # ✅ 2026-02-24 18:50 [Phase 7.46.48]: 修复基础镜像缓存键
+    # 原因：只检查 Dockerfile 变化，不检查 requirements.txt 变化
+    # 效果：修改 requirements.txt 会触发基础镜像重建
+    # 方案：计算 Dockerfile + requirements.txt 的联合哈希
+
+    # Check if Dockerfile.ubuntu24-base or requirements.txt changed
     $baseDockerfilePath = "$ProjectRoot\Dockerfile.ubuntu24-base"
+    $requirementsPath = "$ProjectRoot\docker\rk3588\tts_engines\paddlespeech\requirements.txt"
+
     if (Test-Path $baseDockerfilePath) {
-        $currentBaseHash = (Get-FileHash -Path $baseDockerfilePath -Algorithm MD5).Hash
+        # 计算联合哈希：Dockerfile + requirements.txt
+        $dockerfileHash = (Get-FileHash -Path $baseDockerfilePath -Algorithm MD5).Hash
+
+        if (Test-Path $requirementsPath) {
+            $requirementsHash = (Get-FileHash -Path $requirementsPath -Algorithm MD5).Hash
+            $currentBaseHash = "$dockerfileHash-$requirementsHash"
+        } else {
+            $currentBaseHash = $dockerfileHash
+        }
 
         if (Test-Path $BaseCacheFile) {
             $cacheData = Get-Content $BaseCacheFile | ConvertFrom-Json
             $previousBaseHash = $cacheData.hash
 
             if ($previousBaseHash -ne $currentBaseHash) {
-                Write-Host "  [!] Base Dockerfile changed - rebuild required" -ForegroundColor Yellow
+                Write-Host "  [!] Base Dockerfile or requirements.txt changed - rebuild required" -ForegroundColor Yellow
                 $needBuildBase = $true
             }
         } else {
@@ -1201,10 +1216,22 @@ if (Test-Path $TtsServiceFile) {
 
 # ✅ 2026-02-16 00:00: 复制 TTS 引擎服务脚本
 # 原因：PaddleSpeech 和 MeloTTS 需要 Python 服务脚本
+# ✅ 2026-02-21 23:30: 修复 TTS 引擎脚本复制问题
+# 问题：Copy-Item 不会删除旧文件，导致 Docker 使用缓存的旧代码
+# 解决：先删除目标目录，再复制新文件，确保 Docker 检测到文件变化
 $TtsEnginesPath = "$ProjectRoot\docker\rk3588\tts_engines"
+$TtsEnginesDestPath = "$DockerContextDir\tts_engines"
 if (Test-Path $TtsEnginesPath) {
     Write-Host "  Copying TTS engine service scripts..." -ForegroundColor Yellow
-    Copy-Item $TtsEnginesPath "$DockerContextDir\tts_engines" -Recurse -Force
+
+    # 先删除旧目录（确保没有缓存的旧文件）
+    if (Test-Path $TtsEnginesDestPath) {
+        Remove-Item $TtsEnginesDestPath -Recurse -Force
+        Write-Host "    [!] Removed old TTS engines directory" -ForegroundColor Yellow
+    }
+
+    # 复制新文件
+    Copy-Item $TtsEnginesPath $TtsEnginesDestPath -Recurse -Force
     Write-Host "  [OK] TTS engine scripts copied" -ForegroundColor Green
 } else {
     Write-Host "  [!] TTS engines not found at $TtsEnginesPath" -ForegroundColor Yellow
@@ -1505,18 +1532,27 @@ Write-Host "Step 4: Building application image..." -ForegroundColor Cyan
 Write-Host "  Image: ${AppImageName}:${AppImageTag}" -ForegroundColor White
 Write-Host "  Base: ${BaseImageName}:${BaseImageTag} (cached)" -ForegroundColor White
 
-# Smart cache: Only use --no-cache if binary/TTS/Dockerfile changed
+# Smart cache: Only use --no-cache if binary/TTS/Dockerfile/tts_engines changed
 $useNoCache = $false
 $appBinaryPath = "$DockerContextDir\belt_control_system"
 $ttsBinaryPath = "$DockerContextDir\sherpa_tts_service"
 $appDockerfilePath = "$ProjectRoot\Dockerfile.ubuntu24-apt"
+$ttsEnginesPath = "$DockerContextDir\tts_engines\paddlespeech\paddle_tts_service.py"
 
 if ((Test-Path $appBinaryPath) -and (Test-Path $ttsBinaryPath) -and (Test-Path $appDockerfilePath)) {
     $appHash = (Get-FileHash -Path $appBinaryPath -Algorithm MD5).Hash
     $ttsHash = (Get-FileHash -Path $ttsBinaryPath -Algorithm MD5).Hash
     $dockerfileHash = (Get-FileHash -Path $appDockerfilePath -Algorithm MD5).Hash
 
-    $currentHash = "$appHash|$ttsHash|$dockerfileHash"
+    # ✅ 2026-02-22 01:00 [Phase 7.46.27]: 添加 tts_engines 文件夹哈希检查
+    # 原因：修改 Python 文件后，Docker 构建仍然使用缓存层
+    # 效果：确保 Python 文件变化时重新构建镜像
+    $ttsEnginesHash = ""
+    if (Test-Path $ttsEnginesPath) {
+        $ttsEnginesHash = (Get-FileHash -Path $ttsEnginesPath -Algorithm MD5).Hash
+    }
+
+    $currentHash = "$appHash|$ttsHash|$dockerfileHash|$ttsEnginesHash"
 
     if (Test-Path $AppCacheFile) {
         $cacheData = Get-Content $AppCacheFile | ConvertFrom-Json
