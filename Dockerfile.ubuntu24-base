@@ -133,9 +133,15 @@ RUN apt-get update && apt-get install -y \
     # ✅ 2026-02-16 02:40: 添加 Python 和 TTS 引擎依赖到基础镜像
     # 原因：PaddleSpeech 依赖安装耗时 80+ 分钟，移到基础镜像避免每次重新安装
     # 效果：基础镜像构建一次，应用层镜像每次只需 2-3 分钟
+    # ✅ 2026-02-24 14:30 [Phase 7.46.44]: 添加 git（MeloTTS 从 GitHub 安装需要）
+    # ✅ 2026-02-24 15:00 [Phase 7.46.46]: 添加 MeCab（MeloTTS 依赖 fugashi 需要）
     python3 \
     python3-pip \
     python3-dev \
+    git \
+    libmecab-dev \
+    mecab \
+    mecab-ipadic-utf8 \
     \
     && rm -rf /var/lib/apt/lists/* \
     && fc-cache -fv
@@ -144,6 +150,19 @@ RUN apt-get update && apt-get install -y \
 # 原因：PaddleSpeech 依赖安装耗时长，移到基础镜像
 # 策略：先安装兼容的 numpy 版本，再安装其他依赖
 # 效果：避免 numpy 2.x 导致的 AttributeError: _ARRAY_API not found
+# ✅ 2026-02-22 12:35 [Phase 7.46.41]: 添加 MeloTTS 依赖，破坏缓存
+# ✅ 2026-02-22 14:00 [Phase 7.46.43]: 修复 MeloTTS 安装源（从 GitHub）
+# ✅ 2026-02-24 18:30 [Phase 7.46.47]: 添加 Rust 编译器（tokenizers 需要）
+# 原因：tokenizers 包需要 Rust 编译器，否则 pip install 失败，浪费 83 分钟
+# 效果：可以从源码编译 tokenizers，避免构建失败
+# 方案：先安装 Rust，再安装 Python 依赖
+RUN apt-get update && apt-get install -y curl \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# 设置 Rust 环境变量
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 COPY docker/rk3588/tts_engines/paddlespeech/requirements.txt /tmp/paddlespeech-requirements.txt
 RUN pip3 install --no-cache-dir --break-system-packages \
     "numpy<2.0.0" \
