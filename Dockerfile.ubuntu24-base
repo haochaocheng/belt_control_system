@@ -47,6 +47,7 @@ RUN apt-get update && apt-get install -y \
     libdrm2 \
     libwayland-client0 \
     libwayland-egl1 \
+    libwayland-server0 \
     \
     # X11 libraries (for xcb mode)
     libx11-6 \

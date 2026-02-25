@@ -1277,6 +1277,10 @@ void CommonControl::registerTTSEngines()
         qWarning() << "❌ [CommonControl] PaddleSpeech 注册失败";
     }
 
+    // ❌ 2026-02-24 23:00 [禁用 MeloTTS]: 不适合煤矿工业场景
+    // 原因：语音太柔和，缺乏权威感，部署复杂（需要 Rust 编译）
+    // 详见：docs/2026-02-24/21-煤矿工业场景TTS方案分析.md
+    /*
     // 2. 注册 MeloTTS（语音质量接近商业级别）
     MeloTTSAdapter *meloAdapter = new MeloTTSAdapter(this);
     if (m_ttsEngineManager->registerEngine(meloAdapter)) {
@@ -1284,6 +1288,7 @@ void CommonControl::registerTTSEngines()
     } else {
         qWarning() << "❌ [CommonControl] MeloTTS 注册失败";
     }
+    */
 
     qDebug() << "✅ [CommonControl] 所有 TTS 引擎注册完成";
 }
@@ -1297,8 +1302,8 @@ bool CommonControl::switchTTSEngine(int engineIndex)
 
     // 引擎索引到名称的映射
     static const QMap<int, QString> ENGINE_NAMES = {
-        {0, "PaddleSpeech"},
-        {1, "MeloTTS"}
+        {0, "PaddleSpeech"}
+        // ❌ 2026-02-24 23:00 [禁用]: {1, "MeloTTS"}
     };
 
     if (!ENGINE_NAMES.contains(engineIndex)) {
@@ -1352,12 +1357,15 @@ bool CommonControl::switchTTSModel(int modelIndex)
 #else
         modelPath = QString("tts_models/paddlespeech/%1").arg(modelName);
 #endif
+    /*
+    // ❌ 2026-02-24 23:00 [禁用 MeloTTS]
     } else if (engineName == "MeloTTS") {
 #ifdef Q_OS_LINUX
         modelPath = QString("/home/pi/belt-control-data/models/tts_models/melotts/%1").arg(modelName);
 #else
         modelPath = QString("tts_models/melotts/%1").arg(modelName);
 #endif
+    */
     } else {
         qWarning() << "⚠️ [CommonControl] 不支持的引擎:" << engineName;
         return false;

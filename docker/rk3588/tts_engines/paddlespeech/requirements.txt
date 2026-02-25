@@ -1,0 +1,30 @@
+# PaddleSpeech + MeloTTS 完整依赖列表
+# ✅ 2026-02-24 20:00 [Phase 7.46.52]: 创建完整的依赖列表
+# 原因：Dockerfile 引用此文件，但文件不存在导致构建失败
+# 内容：包含 PaddleSpeech、MeloTTS 及其所有依赖
+
+# ========== PaddleSpeech 核心依赖 ==========
+paddlepaddle>=2.4.0
+paddlespeech>=1.4.1
+
+# ========== 音频处理库 ==========
+librosa>=0.9.0
+soundfile>=0.12.1
+pydub>=0.25.1
+
+# ========== 数值计算库 ==========
+numpy>=1.21.0,<2.0.0
+scipy>=1.7.0
+
+# ========== MeloTTS 依赖 ==========
+# ✅ 2026-02-24 21:30 [临时禁用]: tensorboard 版本冲突
+# 原因：MeloTTS 依赖 tensorboard==2.16.2，但 PyPI 上只有到 2.14.0
+# 解决方案：先部署 PaddleSpeech，后续单独处理 MeloTTS
+# 详见：docs/2026-02-24/14-设备离线下载依赖包失败-tensorboard版本问题.md
+# 注意：MeloTTS 从 GitHub 安装，会自动安装 transformers、tokenizers 等依赖
+# tokenizers 需要 Rust 编译器（已在 Dockerfile 中安装）
+# git+https://github.com/myshell-ai/MeloTTS.git  # 暂时禁用
+
+# ========== 其他依赖 ==========
+# torch 通常已经安装，但如果需要可以取消注释
+# torch>=1.13.0

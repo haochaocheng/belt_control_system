@@ -24,6 +24,11 @@ set(CONTROL_SOURCES
     S7ClientController.cpp  # ✅ 2026-02-08 [Phase 7.42]: 添加S7客户端控制器源文件
     S7ServerController.cpp  # ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器源文件
     TTSConfigManager.cpp  # ✅ 2026-02-11 [Phase 7.45.24]: 添加TTS配置管理器源文件
+    # ✅ 2026-02-25 00:20 [Phase 7.46.54]: 添加 TTS 引擎模块源文件
+    tts/TTSEngineManager.cpp
+    tts/TTSEngineAdapter.cpp
+    tts/PaddleSpeechAdapter.cpp
+    # ❌ 2026-02-25 00:20 [禁用 MeloTTS]: tts/MeloTTSAdapter.cpp
 )
 
 set(CONTROL_HEADERS
@@ -51,6 +56,11 @@ set(CONTROL_HEADERS
     S7ClientController.h  # ✅ 2026-02-08 [Phase 7.42]: 添加S7客户端控制器头文件
     S7ServerController.h  # ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器头文件
     TTSConfigManager.h  # ✅ 2026-02-11 [Phase 7.45.24]: 添加TTS配置管理器头文件
+    # ✅ 2026-02-25 00:20 [Phase 7.46.54]: 添加 TTS 引擎模块头文件
+    tts/TTSEngineManager.h
+    tts/TTSEngineAdapter.h
+    tts/PaddleSpeechAdapter.h
+    # ❌ 2026-02-25 00:20 [禁用 MeloTTS]: tts/MeloTTSAdapter.h
 )
 
 # ========== Sherpa-ONNX TTS 集成（可选） ==========

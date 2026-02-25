@@ -18,7 +18,8 @@
 // ✅ 2026-02-13 [Phase 7.46.7]: 添加 TTS 引擎管理器
 #include "tts/TTSEngineManager.h"
 #include "tts/PaddleSpeechAdapter.h"
-#include "tts/MeloTTSAdapter.h"
+// ❌ 2026-02-24 23:00 [禁用 MeloTTS]: 不适合煤矿工业场景（语音太柔和，缺乏权威感）
+// #include "tts/MeloTTSAdapter.h"
 
 // 前向声明
 class SystemConfig;
