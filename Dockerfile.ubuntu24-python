@@ -1,0 +1,36 @@
+# ==============================================================================
+# Belt Control System - Ubuntu 24.04 Python Layer
+# ✅ 2026-02-25 15:45 [Phase 7.47.3]: 分层镜像方案 - 第二层
+# 用途：基于 system 层，安装 Python 依赖
+# 构建：docker build -t belt-control-base:latest -f Dockerfile.ubuntu24-python .
+# 依赖：需要先构建 belt-control-system:latest
+# ==============================================================================
+
+FROM belt-control-system:latest
+
+# ✅ 使用清华镜像源加速 pip 安装
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ARG PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn
+
+# 启用并行编译加速 pip install
+ENV MAKEFLAGS="-j8"
+ENV CMAKE_BUILD_PARALLEL_LEVEL=8
+
+# 安装 PaddleSpeech 依赖
+COPY docker/rk3588/tts_engines/paddlespeech/requirements.txt /tmp/paddlespeech-requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip3 install --break-system-packages \
+    -i ${PIP_INDEX_URL} --trusted-host ${PIP_TRUSTED_HOST} \
+    "numpy<2.0.0" \
+    && pip3 install --break-system-packages \
+    -i ${PIP_INDEX_URL} --trusted-host ${PIP_TRUSTED_HOST} \
+    -r /tmp/paddlespeech-requirements.txt \
+    && rm /tmp/paddlespeech-requirements.txt
+
+# Create application directory structure
+RUN mkdir -p /app/lib /app/plugins /app/qml /app/data /app/config /app/tts_models /app/AUDIO
+
+WORKDIR /app
+
+# This is a base image, no CMD needed
+# Application layer will add CMD

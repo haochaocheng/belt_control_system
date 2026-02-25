@@ -9,6 +9,11 @@ FROM --platform=linux/arm64 ubuntu:24.04
 # Avoid interactive prompts during apt-get
 ENV DEBIAN_FRONTEND=noninteractive
 
+# ❌ 2026-02-25 12:00: 移动并行编译配置到 pip install 之前
+# 原因：放在 apt-get 之前会破坏 Docker 层缓存，导致重新安装所有系统包
+# 解决：移动到 apt-get 之后、pip install 之前
+# 详见：docs/2026-02-25/01-Docker基础镜像构建优化工作日志.md
+
 # ============================================================
 # Install ALL system dependencies via apt-get
 # This layer is CACHED and will NOT be rebuilt unless changed
@@ -136,6 +141,17 @@ RUN apt-get update && apt-get install -y \
     # 效果：基础镜像构建一次，应用层镜像每次只需 2-3 分钟
     # ✅ 2026-02-24 14:30 [Phase 7.46.44]: 添加 git（MeloTTS 从 GitHub 安装需要）
     # ✅ 2026-02-24 15:00 [Phase 7.46.46]: 添加 MeCab（MeloTTS 依赖 fugashi 需要）
+    # ✅ 2026-02-25 14:10 [Phase 7.47.2]: 添加编译工具（pyworld, opencc 需要从源码编译）
+    # 问题：pyworld 和 opencc 在 ARM64 上没有预编译 wheel，需要从源码编译
+    # 解决：添加 build-essential, cmake, swig 等编译工具
+    # ✅ 2026-02-25 14:20: 添加 pyworld 和 opencc 的系统依赖
+    # - pyworld: 需要 libffi-dev
+    # - opencc: 需要 libopencc-dev（Ubuntu 24.04 有预编译包，避免从源码编译）
+    build-essential \
+    cmake \
+    swig \
+    libffi-dev \
+    libopencc-dev \
     python3 \
     python3-pip \
     python3-dev \
@@ -153,21 +169,38 @@ RUN apt-get update && apt-get install -y \
 # 效果：避免 numpy 2.x 导致的 AttributeError: _ARRAY_API not found
 # ✅ 2026-02-22 12:35 [Phase 7.46.41]: 添加 MeloTTS 依赖，破坏缓存
 # ✅ 2026-02-22 14:00 [Phase 7.46.43]: 修复 MeloTTS 安装源（从 GitHub）
+# ❌ 2026-02-25 01:00 [Phase 7.46.57]: 移除 Rust 编译器（MeloTTS 已禁用）
+# 原因：MeloTTS 已彻底禁用（不适合煤矿工业场景），不再需要 Rust 编译 tokenizers
+# 效果：避免 Rust 安装时 TLS 握手失败，减少构建时间
+# 详见：docs/2026-02-24/22-Phase7.46.54-彻底禁用MeloTTS.md
 # ✅ 2026-02-24 18:30 [Phase 7.46.47]: 添加 Rust 编译器（tokenizers 需要）
 # 原因：tokenizers 包需要 Rust 编译器，否则 pip install 失败，浪费 83 分钟
 # 效果：可以从源码编译 tokenizers，避免构建失败
 # 方案：先安装 Rust，再安装 Python 依赖
-RUN apt-get update && apt-get install -y curl \
-    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-    && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && apt-get install -y curl \
+#     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+#     && rm -rf /var/lib/apt/lists/*
 
 # 设置 Rust 环境变量
-ENV PATH="/root/.cargo/bin:${PATH}"
+# ENV PATH="/root/.cargo/bin:${PATH}"
+
+# ✅ 2026-02-25 10:10: 使用清华镜像源加速 pip 安装
+# ✅ 2026-02-25 10:20: 添加 BuildKit 缓存，避免重复下载
+# ✅ 2026-02-25 12:00: 并行编译配置移到此处，避免破坏 apt-get 缓存
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ARG PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn
+
+# 启用并行编译加速 pip install（放在 apt-get 之后保护缓存）
+ENV MAKEFLAGS="-j8"
+ENV CMAKE_BUILD_PARALLEL_LEVEL=8
 
 COPY docker/rk3588/tts_engines/paddlespeech/requirements.txt /tmp/paddlespeech-requirements.txt
-RUN pip3 install --no-cache-dir --break-system-packages \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip3 install --break-system-packages \
+    -i ${PIP_INDEX_URL} --trusted-host ${PIP_TRUSTED_HOST} \
     "numpy<2.0.0" \
-    && pip3 install --no-cache-dir --break-system-packages \
+    && pip3 install --break-system-packages \
+    -i ${PIP_INDEX_URL} --trusted-host ${PIP_TRUSTED_HOST} \
     -r /tmp/paddlespeech-requirements.txt \
     && rm /tmp/paddlespeech-requirements.txt
 
