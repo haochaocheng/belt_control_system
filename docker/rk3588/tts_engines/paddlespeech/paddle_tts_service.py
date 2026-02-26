@@ -30,14 +30,15 @@ logger = logging.getLogger(__name__)
 
 # ✅ 2026-02-26 11:00 [Phase 7.47.7]: 检查并设置 PADDLESPEECH_HOME 环境变量
 # 原因：确保 PaddleSpeech 使用本地模型，避免网络下载
+# ✅ 2026-02-26 12:30 [Phase 7.47.8]: 修复路径（移除多余的 models 层级）
 paddlespeech_home = os.environ.get('PADDLESPEECH_HOME', '')
 logger.info(f"📂 PADDLESPEECH_HOME 环境变量: '{paddlespeech_home}'")
 
 if not paddlespeech_home:
     # 自动检测模型路径
     possible_paths = [
-        '/home/linaro/belt-control-data/models/tts_models/paddlespeech',
-        '/home/pi/belt-control-data/models/tts_models/paddlespeech',
+        '/home/linaro/belt-control-data/tts_models/paddlespeech',
+        '/home/pi/belt-control-data/tts_models/paddlespeech',
         '/app/tts_models/paddlespeech'
     ]
     for path in possible_paths:
