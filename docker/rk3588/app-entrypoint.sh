@@ -21,57 +21,97 @@ else
     echo "Warning: Audio detection script not found, using default config"
 fi
 
-# ✅ 2026-02-22 02:05 [Phase 7.46.29]: 创建 PaddleSpeech 模型符号链接
-# 原因：PaddleSpeech 在 /root/.paddlespeech/models/ 查找模型，但我们的模型在 /app/tts_models/
-# 效果：离线使用预下载的模型，无需网络下载
+# ✅ 2026-02-26 09:50 [Phase 7.47.4]: 自动检测用户并创建 PaddleSpeech 模型符号链接
+# 原因：需要兼容 pi 和 linaro 两个用户的设备
+# 效果：自动检测挂载路径，创建正确的符号链接
 echo "========================================="
 echo "Setting up PaddleSpeech model symlinks..."
 echo "========================================="
+
+# 检测模型路径（优先 linaro，其次 pi）
+if [ -d "/home/linaro/belt-control-data/models/tts_models/paddlespeech/models" ]; then
+    MODEL_BASE="/home/linaro/belt-control-data/models/tts_models/paddlespeech/models"
+    echo "✅ 检测到 linaro 用户模型路径"
+elif [ -d "/home/pi/belt-control-data/models/tts_models/paddlespeech/models" ]; then
+    MODEL_BASE="/home/pi/belt-control-data/models/tts_models/paddlespeech/models"
+    echo "✅ 检测到 pi 用户模型路径"
+else
+    # 回退到容器内路径
+    MODEL_BASE="/app/tts_models/paddlespeech/models"
+    echo "⚠️ 使用容器内模型路径（回退方案）"
+fi
+
+echo "📂 模型基础路径: $MODEL_BASE"
+
 mkdir -p /root/.paddlespeech/models
-# fastspeech2_csmsc 模型
-ln -sf /app/tts_models/paddlespeech/models/fastspeech2_csmsc-zh /root/.paddlespeech/models/fastspeech2_csmsc-zh
-# pwgan_csmsc 声码器
-ln -sf /app/tts_models/paddlespeech/models/pwgan_csmsc-zh /root/.paddlespeech/models/pwgan_csmsc-zh
-# ✅ 2026-02-22 05:25 [Phase 7.46.33]: 添加 aishell3 模型符号链接
-# fastspeech2_aishell3 多说话人模型
-ln -sf /app/tts_models/paddlespeech/models/fastspeech2_aishell3-zh /root/.paddlespeech/models/fastspeech2_aishell3-zh
-# hifigan_aishell3 声码器
-ln -sf /app/tts_models/paddlespeech/models/hifigan_aishell3-zh /root/.paddlespeech/models/hifigan_aishell3-zh
-# G2PW 中文文本转拼音模型（目录和zip文件都需要）
-ln -sf /app/tts_models/paddlespeech/models/G2PWModel_1.1 /root/.paddlespeech/models/G2PWModel_1.1
-ln -sf /app/tts_models/paddlespeech/models/G2PWModel_1.1.zip /root/.paddlespeech/models/G2PWModel_1.1.zip
-echo "PaddleSpeech model symlinks created."
+# ✅ 2026-02-25 [Phase 7.47.6]: 先删除旧链接再创建，避免 "Read-only file system" 错误
+# 原因：ln -sf 在目标是目录时会在目录内创建链接，而不是替换目录
+rm -rf /root/.paddlespeech/models/fastspeech2_csmsc-zh
+rm -rf /root/.paddlespeech/models/pwgan_csmsc-zh
+rm -rf /root/.paddlespeech/models/fastspeech2_aishell3-zh
+rm -rf /root/.paddlespeech/models/hifigan_aishell3-zh
+rm -rf /root/.paddlespeech/models/G2PWModel_1.1
+rm -rf /root/.paddlespeech/models/G2PWModel_1.1.zip
+
+# 创建符号链接
+ln -sf "$MODEL_BASE/fastspeech2_csmsc-zh" /root/.paddlespeech/models/fastspeech2_csmsc-zh
+ln -sf "$MODEL_BASE/pwgan_csmsc-zh" /root/.paddlespeech/models/pwgan_csmsc-zh
+ln -sf "$MODEL_BASE/fastspeech2_aishell3-zh" /root/.paddlespeech/models/fastspeech2_aishell3-zh
+ln -sf "$MODEL_BASE/hifigan_aishell3-zh" /root/.paddlespeech/models/hifigan_aishell3-zh
+ln -sf "$MODEL_BASE/G2PWModel_1.1" /root/.paddlespeech/models/G2PWModel_1.1
+ln -sf "$MODEL_BASE/G2PWModel_1.1.zip" /root/.paddlespeech/models/G2PWModel_1.1.zip
+
+echo "✅ PaddleSpeech model symlinks created."
 echo ""
 
-# ✅ 2026-02-22 02:10 [Phase 7.46.30]: 创建 PaddleNLP BERT 模型符号链接
-# 原因：G2PW 的 BertTokenizer 需要 bert-base-chinese 模型
-# 效果：离线使用预下载的 BERT 词表文件
+# ✅ 2026-02-26 09:50 [Phase 7.47.4]: 自动检测用户并创建 PaddleNLP 模型符号链接
+# 原因：需要兼容 pi 和 linaro 两个用户的设备
+# 效果：自动检测挂载路径，创建正确的符号链接
 echo "========================================="
 echo "Setting up PaddleNLP model symlinks..."
 echo "========================================="
+
+# 检测 PaddleNLP 模型路径（优先 linaro，其次 pi）
+if [ -d "/home/linaro/belt-control-data/models/tts_models/paddlenlp" ]; then
+    PADDLENLP_BASE="/home/linaro/belt-control-data/models/tts_models/paddlenlp"
+    echo "✅ 检测到 linaro 用户 PaddleNLP 路径"
+elif [ -d "/home/pi/belt-control-data/models/tts_models/paddlenlp" ]; then
+    PADDLENLP_BASE="/home/pi/belt-control-data/models/tts_models/paddlenlp"
+    echo "✅ 检测到 pi 用户 PaddleNLP 路径"
+else
+    # 回退到容器内路径
+    PADDLENLP_BASE="/app/tts_models/paddlenlp"
+    echo "⚠️ 使用容器内 PaddleNLP 路径（回退方案）"
+fi
+
+echo "📂 PaddleNLP 基础路径: $PADDLENLP_BASE"
+
 mkdir -p /root/.paddlenlp/models
-ln -sf /app/tts_models/paddlenlp/bert-base-chinese /root/.paddlenlp/models/bert-base-chinese
-echo "PaddleNLP model symlinks created."
+rm -rf /root/.paddlenlp/models/bert-base-chinese
+ln -sf "$PADDLENLP_BASE/bert-base-chinese" /root/.paddlenlp/models/bert-base-chinese
+echo "✅ PaddleNLP model symlinks created."
 echo ""
 
-# ✅ 2026-02-22 03:30 [Phase 7.46.31]: 修改 G2PW config.py 使用本地 BERT 路径
+# ✅ 2026-02-26 09:50 [Phase 7.47.4]: 修改 G2PW config.py 使用本地 BERT 路径（兼容多用户）
 # 原因：G2PW 的 config.py 中 model_source = 'bert-base-chinese' 是模型名称
 #       PaddleNLP 会尝试从网络下载，导致离线环境失败
 # 效果：修改为本地路径，确保离线使用
 echo "========================================="
 echo "Patching G2PW config for offline use..."
 echo "========================================="
-G2PW_CONFIG="/app/tts_models/paddlespeech/models/G2PWModel_1.1/config.py"
+
+# 使用之前检测到的 MODEL_BASE 变量
+G2PW_CONFIG="$MODEL_BASE/G2PWModel_1.1/config.py"
 if [ -f "$G2PW_CONFIG" ]; then
     # 检查是否需要修改（避免重复修改）
     if grep -q "model_source = 'bert-base-chinese'" "$G2PW_CONFIG"; then
         sed -i "s|model_source = 'bert-base-chinese'|model_source = '/root/.paddlenlp/models/bert-base-chinese'|g" "$G2PW_CONFIG"
-        echo "G2PW config patched: model_source -> local path"
+        echo "✅ G2PW config patched: model_source -> local path"
     else
-        echo "G2PW config already patched or different format"
+        echo "✅ G2PW config already patched or different format"
     fi
 else
-    echo "Warning: G2PW config not found at $G2PW_CONFIG"
+    echo "⚠️ Warning: G2PW config not found at $G2PW_CONFIG"
 fi
 echo ""
 
