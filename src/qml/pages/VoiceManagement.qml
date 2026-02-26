@@ -46,32 +46,9 @@ Rectangle {
 
             Item { Layout.fillWidth: true }
 
-            // ✅ 2026-02-25 11:20 [Phase 7.47.2]: 批量合成按钮
-            Button {
-                text: "批量合成"
-                Layout.preferredWidth: 120
-                Layout.preferredHeight: 40
-
-                background: Rectangle {
-                    color: parent.pressed ? "#1a5f2a" : parent.hovered ? "#2a8f4a" : "#27ae60"
-                    border.color: "#2ecc71"
-                    border.width: 1
-                    radius: 5
-                }
-
-                contentItem: Text {
-                    text: parent.text
-                    font.pixelSize: 14
-                    font.bold: true
-                    color: "#ffffff"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-
-                onClicked: {
-                    batchSynthesisDialog.open()
-                }
-            }
+            // ✅ 2026-02-26 21:20 [Phase 7.47.18]: 移除顶部"批量合成"按钮
+            // 原因：批量合成功能已移至右侧 Tab 组件中
+            // Button { text: "批量合成" ... } 已删除
 
             // 帮助按钮
             Button {
@@ -138,7 +115,7 @@ Rectangle {
             }
         }
 
-        // 右侧：音频文件管理区域
+        // ✅ 2026-02-26 21:25 [Phase 7.47.18]: 右侧改为 Tab 结构
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -148,251 +125,289 @@ Rectangle {
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 15
-                spacing: 15
+                spacing: 0
 
-                // 区域标题
-                Text {
-                    text: "📁 音频文件管理"
-                    font.pixelSize: 18
-                    font.bold: true
-                    color: "#00d4ff"
-                }
-
-                // 目录选择
-                RowLayout {
+                // Tab 标签栏
+                TabBar {
+                    id: rightTabBar
                     Layout.fillWidth: true
-                    spacing: 10
-
-                    Text {
-                        text: "扫描目录："
-                        font.pixelSize: 14
-                        color: "#ecf0f1"
+                    background: Rectangle {
+                        color: "transparent"
                     }
 
-                    TextField {
-                        id: dirPathInput
-                        Layout.fillWidth: true
-                        placeholderText: "E:/2025/3_gongkongji/belt_control_system/AUDIO/1#PD"
-                        text: "E:/2025/3_gongkongji/belt_control_system/AUDIO/1#PD"
-
+                    TabButton {
+                        text: "🎯 批量识别"
+                        width: implicitWidth
                         background: Rectangle {
-                            color: "transparent"
-                            border.color: dirPathInput.activeFocus ? "#00d4ff" : "#34495e"
-                            border.width: 1
-                            radius: 5
-                        }
-
-                        color: "#ecf0f1"
-                        font.pixelSize: 14
-                    }
-
-                    Button {
-                        text: "📂 浏览"
-                        Layout.preferredWidth: 80
-
-                        background: Rectangle {
-                            color: parent.pressed ? "#34495e" : "#2c3e50"
+                            color: rightTabBar.currentIndex === 0 ? "#34495e" : "transparent"
                             border.color: "#00d4ff"
-                            border.width: 1
+                            border.width: rightTabBar.currentIndex === 0 ? 1 : 0
                             radius: 5
                         }
-
                         contentItem: Text {
                             text: parent.text
                             font.pixelSize: 14
-                            color: "#ecf0f1"
+                            font.bold: rightTabBar.currentIndex === 0
+                            color: rightTabBar.currentIndex === 0 ? "#00d4ff" : "#95a5a6"
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            // TODO: 打开文件夹选择对话框
-                            console.log("打开文件夹选择对话框")
                         }
                     }
 
-                    Button {
-                        text: "🔍 扫描"
-                        Layout.preferredWidth: 80
-
+                    TabButton {
+                        text: "🎙️ 批量生成"
+                        width: implicitWidth
                         background: Rectangle {
-                            color: parent.pressed ? "#00a8cc" : "#00d4ff"
+                            color: rightTabBar.currentIndex === 1 ? "#34495e" : "transparent"
                             border.color: "#00d4ff"
-                            border.width: 1
+                            border.width: rightTabBar.currentIndex === 1 ? 1 : 0
                             radius: 5
                         }
-
                         contentItem: Text {
                             text: parent.text
                             font.pixelSize: 14
-                            color: "#1a1a1a"
+                            font.bold: rightTabBar.currentIndex === 1
+                            color: rightTabBar.currentIndex === 1 ? "#00d4ff" : "#95a5a6"
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端扫描目录
-                            if (root.audioController) {
-                                root.audioController.scanDirectory(dirPathInput.text)
-                            }
                         }
                     }
                 }
 
-                // 文件列表
+                // 分隔线
                 Rectangle {
                     Layout.fillWidth: true
+                    height: 1
+                    color: "#4a4a6a"
+                    Layout.topMargin: 10
+                    Layout.bottomMargin: 10
+                }
+
+                // Tab 内容区域
+                StackLayout {
+                    Layout.fillWidth: true
                     Layout.fillHeight: true
-                    color: "#1a1a1a"
-                    radius: 5
+                    currentIndex: rightTabBar.currentIndex
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "文件列表\n（待实现）"
-                        font.pixelSize: 16
-                        color: "#95a5a6"
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                }
+                    // Tab 1: 批量识别
+                    ColumnLayout {
+                        spacing: 15
 
-                // 批量操作按钮
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
+                        // 目录选择
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
 
-                    Button {
-                        text: "🎯 批量识别"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 40
+                            Text {
+                                text: "扫描目录："
+                                font.pixelSize: 14
+                                color: "#ecf0f1"
+                            }
 
-                        background: Rectangle {
-                            color: parent.pressed ? "#27ae60" : "#2ecc71"
-                            border.color: "#2ecc71"
-                            border.width: 1
-                            radius: 5
+                            TextField {
+                                id: dirPathInput
+                                Layout.fillWidth: true
+                                placeholderText: "E:/2025/3_gongkongji/belt_control_system/AUDIO/1#PD"
+                                text: "E:/2025/3_gongkongji/belt_control_system/AUDIO/1#PD"
+
+                                background: Rectangle {
+                                    color: "transparent"
+                                    border.color: dirPathInput.activeFocus ? "#00d4ff" : "#34495e"
+                                    border.width: 1
+                                    radius: 5
+                                }
+
+                                color: "#ecf0f1"
+                                font.pixelSize: 14
+                            }
+
+                            Button {
+                                text: "📂 浏览"
+                                Layout.preferredWidth: 80
+
+                                background: Rectangle {
+                                    color: parent.pressed ? "#34495e" : "#2c3e50"
+                                    border.color: "#00d4ff"
+                                    border.width: 1
+                                    radius: 5
+                                }
+
+                                contentItem: Text {
+                                    text: parent.text
+                                    font.pixelSize: 14
+                                    color: "#ecf0f1"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+
+                                onClicked: {
+                                    // TODO: 打开文件夹选择对话框
+                                    console.log("打开文件夹选择对话框")
+                                }
+                            }
+
+                            Button {
+                                text: "🔍 扫描"
+                                Layout.preferredWidth: 80
+
+                                background: Rectangle {
+                                    color: parent.pressed ? "#00a8cc" : "#00d4ff"
+                                    border.color: "#00d4ff"
+                                    border.width: 1
+                                    radius: 5
+                                }
+
+                                contentItem: Text {
+                                    text: parent.text
+                                    font.pixelSize: 14
+                                    color: "#1a1a1a"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+
+                                onClicked: {
+                                    // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端扫描目录
+                                    if (root.audioController) {
+                                        root.audioController.scanDirectory(dirPathInput.text)
+                                    }
+                                }
+                            }
                         }
 
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
+                        // 文件列表
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
                             color: "#1a1a1a"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端批量识别
-                            if (root.audioController) {
-                                root.audioController.recognizeAll()
-                            }
-                        }
-                    }
-
-                    Button {
-                        text: "🎙️ 批量生成"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 40
-
-                        background: Rectangle {
-                            color: parent.pressed ? "#2980b9" : "#3498db"
-                            border.color: "#3498db"
-                            border.width: 1
                             radius: 5
-                        }
 
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            color: "#ecf0f1"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端批量生成
-                            if (root.audioController) {
-                                root.audioController.generateAllTts()
+                            Text {
+                                anchors.centerIn: parent
+                                text: "文件列表\n（待实现）"
+                                font.pixelSize: 16
+                                color: "#95a5a6"
+                                horizontalAlignment: Text.AlignHCenter
                             }
                         }
-                    }
 
-                    Button {
-                        text: "⏹️ 停止"
-                        Layout.preferredWidth: 100
-                        Layout.preferredHeight: 40
+                        // 批量操作按钮
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
 
-                        background: Rectangle {
-                            color: parent.pressed ? "#c0392b" : "#e74c3c"
-                            border.color: "#e74c3c"
-                            border.width: 1
-                            radius: 5
-                        }
+                            Button {
+                                text: "🎯 批量识别"
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 40
 
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            color: "#ecf0f1"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
+                                background: Rectangle {
+                                    color: parent.pressed ? "#27ae60" : "#2ecc71"
+                                    border.color: "#2ecc71"
+                                    border.width: 1
+                                    radius: 5
+                                }
 
-                        onClicked: {
-                            // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端停止处理
-                            if (root.audioController) {
-                                root.audioController.stopProcessing()
+                                contentItem: Text {
+                                    text: parent.text
+                                    font.pixelSize: 14
+                                    color: "#1a1a1a"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+
+                                onClicked: {
+                                    // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端批量识别
+                                    if (root.audioController) {
+                                        root.audioController.recognizeAll()
+                                    }
+                                }
+                            }
+
+                            Button {
+                                text: "⏹️ 停止"
+                                Layout.preferredWidth: 100
+                                Layout.preferredHeight: 40
+
+                                background: Rectangle {
+                                    color: parent.pressed ? "#c0392b" : "#e74c3c"
+                                    border.color: "#e74c3c"
+                                    border.width: 1
+                                    radius: 5
+                                }
+
+                                contentItem: Text {
+                                    text: parent.text
+                                    font.pixelSize: 14
+                                    color: "#ecf0f1"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+
+                                onClicked: {
+                                    // ✅ 2026-01-23 11:00 [FIX 100.299] 调用后端停止处理
+                                    if (root.audioController) {
+                                        root.audioController.stopProcessing()
+                                    }
+                                }
                             }
                         }
-                    }
-                }
 
-                // 进度显示
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
+                        // 进度显示
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
 
-                    Text {
-                        text: "进度："
-                        font.pixelSize: 14
-                        color: "#ecf0f1"
-                    }
+                            Text {
+                                text: "进度："
+                                font.pixelSize: 14
+                                color: "#ecf0f1"
+                            }
 
-                    ProgressBar {
-                        id: progressBar
-                        Layout.fillWidth: true
-                        // ✅ 2026-01-23 11:00 [FIX 100.299] 绑定后端进度
-                        value: root.audioController ? (root.audioController.progress / 100) : 0
+                            ProgressBar {
+                                id: progressBar
+                                Layout.fillWidth: true
+                                // ✅ 2026-01-23 11:00 [FIX 100.299] 绑定后端进度
+                                value: root.audioController ? (root.audioController.progress / 100) : 0
 
-                        background: Rectangle {
-                            implicitWidth: 200
-                            implicitHeight: 6
-                            color: "#34495e"
-                            radius: 3
-                        }
+                                background: Rectangle {
+                                    implicitWidth: 200
+                                    implicitHeight: 6
+                                    color: "#34495e"
+                                    radius: 3
+                                }
 
-                        contentItem: Item {
-                            implicitWidth: 200
-                            implicitHeight: 6
+                                contentItem: Item {
+                                    implicitWidth: 200
+                                    implicitHeight: 6
 
-                            Rectangle {
-                                width: progressBar.visualPosition * parent.width
-                                height: parent.height
-                                radius: 3
+                                    Rectangle {
+                                        width: progressBar.visualPosition * parent.width
+                                        height: parent.height
+                                        radius: 3
+                                        color: "#00d4ff"
+                                    }
+                                }
+                            }
+
+                            Text {
+                                id: progressText
+                                // ✅ 2026-01-23 11:00 [FIX 100.299] 绑定后端进度文本
+                                text: root.audioController
+                                      ? (root.audioController.processedFiles + " / " +
+                                         root.audioController.totalFiles + " (" +
+                                         root.audioController.progress + "%)")
+                                      : "0 / 0 (0%)"
+                                font.pixelSize: 14
                                 color: "#00d4ff"
+                                Layout.preferredWidth: 120
                             }
                         }
                     }
 
-                    Text {
-                        id: progressText
-                        // ✅ 2026-01-23 11:00 [FIX 100.299] 绑定后端进度文本
-                        text: root.audioController
-                              ? (root.audioController.processedFiles + " / " +
-                                 root.audioController.totalFiles + " (" +
-                                 root.audioController.progress + "%)")
-                              : "0 / 0 (0%)"
-                        font.pixelSize: 14
-                        color: "#00d4ff"
-                        Layout.preferredWidth: 120
+                    // Tab 2: 批量生成（嵌入 BatchSynthesisContent）
+                    BatchSynthesisContent {
+                        showHeader: false  // 嵌入模式，隐藏标题栏
+                        batchGenerator: batchGeneratorController
                     }
                 }
             }
@@ -462,11 +477,11 @@ Rectangle {
         standardButtons: Dialog.Ok
     }
 
-    // ✅ 2026-02-25 11:25 [Phase 7.47.2]: 批量合成对话框
-    BatchSynthesisDialog {
-        id: batchSynthesisDialog
-        anchors.centerIn: parent
-        // ✅ 2026-02-26 08:55 [Phase 7.47.3]: 绑定后端控制器
-        batchGenerator: batchGeneratorController
-    }
+    // ✅ 2026-02-26 21:30 [Phase 7.47.18]: 移除批量合成对话框
+    // 原因：批量合成功能已嵌入右侧 Tab 组件中，不再需要弹窗
+    // BatchSynthesisDialog {
+    //     id: batchSynthesisDialog
+    //     anchors.centerIn: parent
+    //     batchGenerator: batchGeneratorController
+    // }
 }
