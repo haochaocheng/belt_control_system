@@ -159,16 +159,17 @@ $extractScript = @"
 #!/bin/bash
 set -e
 
+# ✅ 2026-02-26 14:30 [Phase 7.47.10]: 修复目标路径（设备实际路径是 /home/linaro/belt-control-data/models/tts_models/）
 # 创建目标目录
-mkdir -p /home/linaro/belt-control-data/tts_models
+mkdir -p /home/linaro/belt-control-data/models/tts_models
 
 # 解压（覆盖现有文件）
 echo "  解压模型文件..."
-unzip -o /tmp/$zipFileName -d /home/linaro/belt-control-data/tts_models
+unzip -o /tmp/$zipFileName -d /home/linaro/belt-control-data/models/tts_models
 
 # 设置权限
 echo "  设置权限..."
-chmod -R 755 /home/linaro/belt-control-data/tts_models
+chmod -R 755 /home/linaro/belt-control-data/models/tts_models
 
 # 清理临时文件
 rm -f /tmp/$zipFileName

@@ -30,15 +30,15 @@ echo "Setting up PaddleSpeech model paths..."
 echo "========================================="
 
 # ✅ 2026-02-26 12:30 [Phase 7.47.8]: 修复路径检测（移除多余的 models 层级）
-# 原因：同步脚本同步到 /home/linaro/belt-control-data/tts_models，不是 /home/linaro/belt-control-data/models/tts_models
+# ✅ 2026-02-26 14:30 [Phase 7.47.10]: 恢复正确路径（设备实际路径是 /home/linaro/belt-control-data/models/tts_models/）
 # 检测模型路径（优先 linaro，其次 pi）
-if [ -d "/home/linaro/belt-control-data/tts_models/paddlespeech/models" ]; then
-    MODEL_BASE="/home/linaro/belt-control-data/tts_models/paddlespeech/models"
-    PADDLESPEECH_HOME="/home/linaro/belt-control-data/tts_models/paddlespeech"
+if [ -d "/home/linaro/belt-control-data/models/tts_models/paddlespeech/models" ]; then
+    MODEL_BASE="/home/linaro/belt-control-data/models/tts_models/paddlespeech/models"
+    PADDLESPEECH_HOME="/home/linaro/belt-control-data/models/tts_models/paddlespeech"
     echo "✅ 检测到 linaro 用户模型路径"
-elif [ -d "/home/pi/belt-control-data/tts_models/paddlespeech/models" ]; then
-    MODEL_BASE="/home/pi/belt-control-data/tts_models/paddlespeech/models"
-    PADDLESPEECH_HOME="/home/pi/belt-control-data/tts_models/paddlespeech"
+elif [ -d "/home/pi/belt-control-data/models/tts_models/paddlespeech/models" ]; then
+    MODEL_BASE="/home/pi/belt-control-data/models/tts_models/paddlespeech/models"
+    PADDLESPEECH_HOME="/home/pi/belt-control-data/models/tts_models/paddlespeech"
     echo "✅ 检测到 pi 用户模型路径"
 else
     # 回退到容器内路径
@@ -84,12 +84,13 @@ echo "Setting up PaddleNLP model symlinks..."
 echo "========================================="
 
 # ✅ 2026-02-26 12:30 [Phase 7.47.8]: 修复路径检测（移除多余的 models 层级）
+# ✅ 2026-02-26 14:30 [Phase 7.47.10]: 恢复正确路径（设备实际路径是 /home/linaro/belt-control-data/models/tts_models/）
 # 检测 PaddleNLP 模型路径（优先 linaro，其次 pi）
-if [ -d "/home/linaro/belt-control-data/tts_models/paddlenlp" ]; then
-    PADDLENLP_BASE="/home/linaro/belt-control-data/tts_models/paddlenlp"
+if [ -d "/home/linaro/belt-control-data/models/tts_models/paddlenlp" ]; then
+    PADDLENLP_BASE="/home/linaro/belt-control-data/models/tts_models/paddlenlp"
     echo "✅ 检测到 linaro 用户 PaddleNLP 路径"
-elif [ -d "/home/pi/belt-control-data/tts_models/paddlenlp" ]; then
-    PADDLENLP_BASE="/home/pi/belt-control-data/tts_models/paddlenlp"
+elif [ -d "/home/pi/belt-control-data/models/tts_models/paddlenlp" ]; then
+    PADDLENLP_BASE="/home/pi/belt-control-data/models/tts_models/paddlenlp"
     echo "✅ 检测到 pi 用户 PaddleNLP 路径"
 else
     # 回退到容器内路径
