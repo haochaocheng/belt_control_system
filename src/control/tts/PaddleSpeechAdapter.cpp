@@ -226,6 +226,25 @@ bool PaddleSpeechAdapter::startService()
     // 创建进程
     m_process = new QProcess(this);
 
+    // ✅ 2026-02-26 10:35 [Phase 7.47.6]: 设置 PADDLESPEECH_HOME 环境变量
+    // 原因：PaddleSpeech 需要知道模型路径，避免从网络下载
+    // 效果：Python 进程继承此环境变量，正确找到本地模型
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+#ifdef Q_OS_LINUX
+    // 检测模型路径（优先 linaro，其次 pi）
+    QString paddleSpeechHome;
+    if (QDir("/home/linaro/belt-control-data/models/tts_models/paddlespeech").exists()) {
+        paddleSpeechHome = "/home/linaro/belt-control-data/models/tts_models/paddlespeech";
+    } else if (QDir("/home/pi/belt-control-data/models/tts_models/paddlespeech").exists()) {
+        paddleSpeechHome = "/home/pi/belt-control-data/models/tts_models/paddlespeech";
+    } else {
+        paddleSpeechHome = "/app/tts_models/paddlespeech";
+    }
+    env.insert("PADDLESPEECH_HOME", paddleSpeechHome);
+    qDebug() << "📂 [PaddleSpeech] PADDLESPEECH_HOME=" << paddleSpeechHome;
+#endif
+    m_process->setProcessEnvironment(env);
+
     // 连接信号
     connect(m_process, &QProcess::readyReadStandardOutput,
             this, &PaddleSpeechAdapter::onProcessReadyRead);

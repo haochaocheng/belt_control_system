@@ -213,7 +213,8 @@ void BatchAudioGenerator::exportLog(const QString &filePath)
     }
 
     QTextStream out(&file);
-    out.setCodec("UTF-8");
+    // ✅ 2026-02-26 10:00 [Phase 7.47.5]: Qt 6移除了setCodec，UTF-8是默认编码
+    // out.setCodec("UTF-8");  // Qt 6已移除
 
     for (const QString &msg : m_logMessages) {
         out << msg << "\n";
@@ -472,6 +473,7 @@ bool BatchAudioGenerator::executeTask(const FileTask &task)
     }
 
     // ✅ 2026-02-26 08:30 [Phase 7.47.3]: 集成 TTSEngineManager
+    // ✅ 2026-02-26 10:00 [Phase 7.47.5]: 修复API调用，使用setCurrentEngine代替switchEngine
     // 调用 TTS 引擎生成音频
     if (!m_ttsEngineManager) {
         emit logMessage("error", "TTS 引擎管理器未初始化");
@@ -484,14 +486,9 @@ bool BatchAudioGenerator::executeTask(const FileTask &task)
     params.rate = 1.0;
     params.volume = 0.8;
 
-    // 切换到指定引擎和模型
-    if (!m_ttsEngineManager->switchEngine(task.engineName)) {
+    // 切换到指定引擎（模型通过speakerId在synthesize中指定）
+    if (!m_ttsEngineManager->setCurrentEngine(task.engineName)) {
         emit logMessage("error", QString("  无法切换到引擎: %1").arg(task.engineName));
-        return false;
-    }
-
-    if (!m_ttsEngineManager->switchModel(task.modelName)) {
-        emit logMessage("error", QString("  无法切换到模型: %1").arg(task.modelName));
         return false;
     }
 
@@ -520,7 +517,8 @@ void BatchAudioGenerator::generateReport()
     }
 
     QTextStream out(&file);
-    out.setCodec("UTF-8");
+    // ✅ 2026-02-26 10:00 [Phase 7.47.5]: Qt 6移除了setCodec，UTF-8是默认编码
+    // out.setCodec("UTF-8");  // Qt 6已移除
 
     out << "========== 批量语音合成报告 ==========\n";
     out << "开始时间：" << m_startTime.toString("yyyy-MM-dd HH:mm:ss") << "\n";

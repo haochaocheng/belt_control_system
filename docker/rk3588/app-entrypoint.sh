@@ -22,26 +22,36 @@ else
 fi
 
 # ✅ 2026-02-26 09:50 [Phase 7.47.4]: 自动检测用户并创建 PaddleSpeech 模型符号链接
+# ✅ 2026-02-26 10:30 [Phase 7.47.6]: 添加 PADDLESPEECH_HOME 环境变量（更可靠）
 # 原因：需要兼容 pi 和 linaro 两个用户的设备
-# 效果：自动检测挂载路径，创建正确的符号链接
+# 效果：自动检测挂载路径，设置环境变量并创建符号链接
 echo "========================================="
-echo "Setting up PaddleSpeech model symlinks..."
+echo "Setting up PaddleSpeech model paths..."
 echo "========================================="
 
 # 检测模型路径（优先 linaro，其次 pi）
 if [ -d "/home/linaro/belt-control-data/models/tts_models/paddlespeech/models" ]; then
     MODEL_BASE="/home/linaro/belt-control-data/models/tts_models/paddlespeech/models"
+    PADDLESPEECH_HOME="/home/linaro/belt-control-data/models/tts_models/paddlespeech"
     echo "✅ 检测到 linaro 用户模型路径"
 elif [ -d "/home/pi/belt-control-data/models/tts_models/paddlespeech/models" ]; then
     MODEL_BASE="/home/pi/belt-control-data/models/tts_models/paddlespeech/models"
+    PADDLESPEECH_HOME="/home/pi/belt-control-data/models/tts_models/paddlespeech"
     echo "✅ 检测到 pi 用户模型路径"
 else
     # 回退到容器内路径
     MODEL_BASE="/app/tts_models/paddlespeech/models"
+    PADDLESPEECH_HOME="/app/tts_models/paddlespeech"
     echo "⚠️ 使用容器内模型路径（回退方案）"
 fi
 
 echo "📂 模型基础路径: $MODEL_BASE"
+echo "📂 PADDLESPEECH_HOME: $PADDLESPEECH_HOME"
+
+# ✅ 2026-02-26 10:30 [Phase 7.47.6]: 设置环境变量（最可靠的方案）
+# PaddleSpeech 会在 $PADDLESPEECH_HOME/models/ 查找模型
+export PADDLESPEECH_HOME="$PADDLESPEECH_HOME"
+echo "✅ 已设置 PADDLESPEECH_HOME=$PADDLESPEECH_HOME"
 
 mkdir -p /root/.paddlespeech/models
 # ✅ 2026-02-25 [Phase 7.47.6]: 先删除旧链接再创建，避免 "Read-only file system" 错误

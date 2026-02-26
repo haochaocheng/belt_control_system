@@ -91,7 +91,10 @@ add_subdirectory(src/qml)  # QML模块需在控制模块之后（依赖C++逻辑
 add_subdirectory(src/main)
 
 # 单元测试
-option(BUILD_TESTS "Build unit tests" ON)
-if(BUILD_TESTS)
-    add_subdirectory(tests)
-endif()
+# ❌ 2026-02-26 09:50 [Phase 7.47.5]: 完全禁用单元测试
+# 原因：tests目录已被用户删除，测试功能不需要
+# 用户确认："我把tests文件夹移除了，测试功能，不需要"
+# option(BUILD_TESTS "Build unit tests" OFF)
+# if(BUILD_TESTS)
+#     add_subdirectory(tests)
+# endif()
