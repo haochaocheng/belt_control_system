@@ -28,6 +28,29 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# ✅ 2026-02-26 11:00 [Phase 7.47.7]: 检查并设置 PADDLESPEECH_HOME 环境变量
+# 原因：确保 PaddleSpeech 使用本地模型，避免网络下载
+paddlespeech_home = os.environ.get('PADDLESPEECH_HOME', '')
+logger.info(f"📂 PADDLESPEECH_HOME 环境变量: '{paddlespeech_home}'")
+
+if not paddlespeech_home:
+    # 自动检测模型路径
+    possible_paths = [
+        '/home/linaro/belt-control-data/models/tts_models/paddlespeech',
+        '/home/pi/belt-control-data/models/tts_models/paddlespeech',
+        '/app/tts_models/paddlespeech'
+    ]
+    for path in possible_paths:
+        if os.path.exists(os.path.join(path, 'models')):
+            paddlespeech_home = path
+            os.environ['PADDLESPEECH_HOME'] = paddlespeech_home
+            logger.info(f"✅ 自动设置 PADDLESPEECH_HOME={paddlespeech_home}")
+            break
+    if not paddlespeech_home:
+        logger.warning("⚠️ 未找到本地模型路径，PaddleSpeech 可能会尝试下载模型")
+else:
+    logger.info(f"✅ 使用环境变量 PADDLESPEECH_HOME={paddlespeech_home}")
+
 # 全局 TTS 对象
 tts_executor = None
 current_model = None
