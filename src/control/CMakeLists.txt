@@ -29,6 +29,8 @@ set(CONTROL_SOURCES
     tts/TTSEngineAdapter.cpp
     tts/PaddleSpeechAdapter.cpp
     # ❌ 2026-02-25 00:20 [禁用 MeloTTS]: tts/MeloTTSAdapter.cpp
+    # ✅ 2026-02-26 09:00 [Phase 7.47.3]: 添加批量音频生成器源文件
+    BatchAudioGenerator.cpp
 )
 
 set(CONTROL_HEADERS
@@ -61,6 +63,9 @@ set(CONTROL_HEADERS
     tts/TTSEngineAdapter.h
     tts/PaddleSpeechAdapter.h
     # ❌ 2026-02-25 00:20 [禁用 MeloTTS]: tts/MeloTTSAdapter.h
+    # ✅ 2026-02-26 09:00 [Phase 7.47.3]: 添加批量音频生成器头文件
+    BatchAudioGenerator.h
+    tts/TTSBatchConfig.h
 )
 
 # ========== Sherpa-ONNX TTS 集成（可选） ==========

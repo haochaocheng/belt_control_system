@@ -3,6 +3,7 @@ import QtQuick.Controls 6.5
 import QtQuick.Layouts 6.5
 import "../components/voice_management"
 import com.belt.control 1.0  // ✅ 2026-01-23 11:00 [FIX 100.299] 导入 TTSConfig 单例
+import "."  // ✅ 2026-02-25 11:40 [Phase 7.47.2]: 导入当前目录以使用 BatchSynthesisDialog
 
 /**
  * @brief 语音管理页面
@@ -44,6 +45,33 @@ Rectangle {
             }
 
             Item { Layout.fillWidth: true }
+
+            // ✅ 2026-02-25 11:20 [Phase 7.47.2]: 批量合成按钮
+            Button {
+                text: "批量合成"
+                Layout.preferredWidth: 120
+                Layout.preferredHeight: 40
+
+                background: Rectangle {
+                    color: parent.pressed ? "#1a5f2a" : parent.hovered ? "#2a8f4a" : "#27ae60"
+                    border.color: "#2ecc71"
+                    border.width: 1
+                    radius: 5
+                }
+
+                contentItem: Text {
+                    text: parent.text
+                    font.pixelSize: 14
+                    font.bold: true
+                    color: "#ffffff"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                onClicked: {
+                    batchSynthesisDialog.open()
+                }
+            }
 
             // 帮助按钮
             Button {
@@ -432,5 +460,13 @@ Rectangle {
         }
 
         standardButtons: Dialog.Ok
+    }
+
+    // ✅ 2026-02-25 11:25 [Phase 7.47.2]: 批量合成对话框
+    BatchSynthesisDialog {
+        id: batchSynthesisDialog
+        anchors.centerIn: parent
+        // ✅ 2026-02-26 08:55 [Phase 7.47.3]: 绑定后端控制器
+        batchGenerator: batchGeneratorController
     }
 }

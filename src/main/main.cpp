@@ -16,6 +16,8 @@
 #include "control/SystemConfig.h"
 #include "control/DeviceRuntimeTracker.h"
 #include "control/OperationLogDatabase.h"
+// ✅ 2026-02-26 08:40 [Phase 7.47.3]: 添加批量音频生成器
+#include "control/BatchAudioGenerator.h"
 #include "control/DeviceDatabase.h"
 #include "control/MaintenanceControl.h"
 #include "control/LocalControl.h"
@@ -243,6 +245,11 @@ int main(int argc, char *argv[]) {
         commonControl.setOperationLogDB(&operationLogDB);
         commonControl.setRuntimeTracker(&runtimeTracker);
 
+        // ✅ 2026-02-26 08:40 [Phase 7.47.3]: 创建批量音频生成器
+        // 注意：需要传入 CommonControl 的 TTS 引擎管理器
+        BatchAudioGenerator batchAudioGenerator(commonControl.getTTSEngineManager());
+        logMessage("BatchAudioGenerator created");
+
         MaintenanceControl maintenanceControl(hal);
         LocalControl localControl(hal);
 
@@ -329,6 +336,8 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("modbusSlaveController5", &modbusSlaveController5);
         engine.rootContext()->setContextProperty("modbusSlaveController6", &modbusSlaveController6);
         engine.rootContext()->setContextProperty("commonControl", &commonControl);
+        // ✅ 2026-02-26 08:45 [Phase 7.47.3]: 注册批量音频生成器到QML
+        engine.rootContext()->setContextProperty("batchGeneratorController", &batchAudioGenerator);
         engine.rootContext()->setContextProperty("maintenanceControl", &maintenanceControl);
         engine.rootContext()->setContextProperty("localControl", &localControl);
         engine.rootContext()->setContextProperty("networkTask", &networkTask);

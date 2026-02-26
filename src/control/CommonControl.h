@@ -6,6 +6,7 @@
 #include <QAudioOutput>
 #include <QKeyEvent>
 #include <QTimer>
+#include <QElapsedTimer>  // ✅ 2026-02-26 [Phase 7.47.8]: 播放时长计时器
 
 // ✅ 2026-01-21 20:15 [音频网络传输] 添加音频网络发送器
 #include "../audio_network/AudioNetworkSender.h"
@@ -149,6 +150,13 @@ public:
     Q_INVOKABLE QString getCurrentTTSEngine();
 
     /**
+     * @brief 获取 TTS 引擎管理器
+     * @return TTS 引擎管理器指针
+     * ✅ 2026-02-26 08:50 [Phase 7.47.3]: 添加此方法供 BatchAudioGenerator 使用
+     */
+    TTSEngineManager* getTTSEngineManager() { return m_ttsEngineManager; }
+
+    /**
      * @brief 测试 TTS 语音合成
      * @param text 要合成的文本
      * @param speakerId 说话人ID
@@ -222,6 +230,7 @@ private:
     int m_currentBeltNumber;       // ✅ 2026-01-23 00:00 [TTS网络传输] 当前起车预警皮带编号
     bool m_isStopAudioPlaying;     // 是否正在播放停车音频
     bool m_isFaultStop;            // 是否因故障而停止（跳过停车音频）
+    QElapsedTimer m_playbackTimer; // ✅ 2026-02-26 [Phase 7.47.8]: 播放时长计时器
 
     // 设备序列控制相关
     QTimer *m_deviceSequenceTimer; // 设备序列延时定时器
