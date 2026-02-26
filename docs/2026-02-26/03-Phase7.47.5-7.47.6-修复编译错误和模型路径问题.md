@@ -182,5 +182,54 @@ PaddleSpeech 按以下顺序查找模型：
 
 ---
 
-**文档版本**: v1.0
-**最后更新**: 2026-02-26 10:45
+## 📝 Phase 7.47.7 补充修复 (2026-02-26 11:00)
+
+### 问题
+
+Phase 7.47.6 修复后，TTS 合成仍然失败，日志显示：
+```
+RuntimeError: Download from https://paddlespeech.cdn.bcebos.com/...fastspeech2_nosil_aishell3_ckpt_0.4.zip failed
+```
+
+### 原因分析
+
+1. C++ 端设置的环境变量已正确传递给 Python 进程
+2. 但 Python 服务没有主动检查或使用 `PADDLESPEECH_HOME` 环境变量
+3. PaddleSpeech 库在环境变量未正确识别时会尝试从网络下载
+
+### 解决方案
+
+**文件**: `docker/rk3588/tts_engines/paddlespeech/paddle_tts_service.py`
+
+在 Python 服务启动时添加环境变量检查和自动设置：
+
+```python
+# ✅ 2026-02-26 11:00 [Phase 7.47.7]: 检查并设置 PADDLESPEECH_HOME 环境变量
+paddlespeech_home = os.environ.get('PADDLESPEECH_HOME', '')
+logger.info(f"📂 PADDLESPEECH_HOME 环境变量: '{paddlespeech_home}'")
+
+if not paddlespeech_home:
+    # 自动检测模型路径
+    possible_paths = [
+        '/home/linaro/belt-control-data/models/tts_models/paddlespeech',
+        '/home/pi/belt-control-data/models/tts_models/paddlespeech',
+        '/app/tts_models/paddlespeech'
+    ]
+    for path in possible_paths:
+        if os.path.exists(os.path.join(path, 'models')):
+            paddlespeech_home = path
+            os.environ['PADDLESPEECH_HOME'] = paddlespeech_home
+            logger.info(f"✅ 自动设置 PADDLESPEECH_HOME={paddlespeech_home}")
+            break
+```
+
+### 修改文件
+
+| 文件 | 修改内容 |
+|------|----------|
+| `docker/rk3588/tts_engines/paddlespeech/paddle_tts_service.py` | 添加环境变量检查和自动设置 |
+
+---
+
+**文档版本**: v1.1
+**最后更新**: 2026-02-26 11:05
