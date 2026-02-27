@@ -33,28 +33,29 @@ public:
     static TTSConfigManager* instance();
 
     // 加载/保存配置
-    void loadConfig();
-    void saveConfig();
+    Q_INVOKABLE void loadConfig();
+    Q_INVOKABLE void saveConfig();
 
     // 获取/设置配置（指定场景）
-    int modelIndex(Scene scene) const;
-    void setModelIndex(Scene scene, int index);
+    Q_INVOKABLE int modelIndex(Scene scene) const;
+    Q_INVOKABLE void setModelIndex(Scene scene, int index);
 
-    QString modelPath(Scene scene) const;
-    void setModelPath(Scene scene, const QString &path);
+    Q_INVOKABLE QString modelPath(Scene scene) const;
+    Q_INVOKABLE void setModelPath(Scene scene, const QString &path);
 
-    int speakerId(Scene scene) const;
-    void setSpeakerId(Scene scene, int id);
+    // ✅ 2026-02-27 06:30 [Phase 7.47.31]: 添加Q_INVOKABLE使QML可调用
+    Q_INVOKABLE int speakerId(Scene scene) const;
+    Q_INVOKABLE void setSpeakerId(Scene scene, int id);
 
-    double rate(Scene scene) const;
-    void setRate(Scene scene, double rate);
+    Q_INVOKABLE double rate(Scene scene) const;
+    Q_INVOKABLE void setRate(Scene scene, double rate);
 
-    double volume(Scene scene) const;
-    void setVolume(Scene scene, double volume);
+    Q_INVOKABLE double volume(Scene scene) const;
+    Q_INVOKABLE void setVolume(Scene scene, double volume);
 
     // ✅ 2026-02-26 [Phase 7.47.19]: 添加采样率配置
-    int sampleRate(Scene scene) const;
-    void setSampleRate(Scene scene, int rate);
+    Q_INVOKABLE int sampleRate(Scene scene) const;
+    Q_INVOKABLE void setSampleRate(Scene scene, int rate);
 
     // 获取模型信息
     QString modelName(int index) const;

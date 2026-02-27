@@ -120,7 +120,13 @@ bool DIDataManager::parseJsonData(int moduleIndex, const QByteArray &payload)
 
     // 检查必要字段
     if (!obj.contains("data") || !obj["data"].isObject()) {
-        qWarning() << "⚠️ [DIDataManager] 缺少data字段";
+        // ✅ 2026-02-27 06:40 [Phase 7.47.31]: 降级为静态局部变量控制，只打印一次
+        // 原因：MQTT高频推送，日志重复624次
+        static bool dataFieldWarned = false;
+        if (!dataFieldWarned) {
+            qWarning() << "⚠️ [DIDataManager] 缺少data字段（后续相同警告已抑制）";
+            dataFieldWarned = true;
+        }
         return false;
     }
 
@@ -163,8 +169,10 @@ bool DIDataManager::parseJsonData(int moduleIndex, const QByteArray &payload)
         emit module2DataChanged();
     }
 
-    qDebug() << "✅ [DIDataManager] 模块" << moduleIndex << "数据更新:"
-             << "byte=" << getByte(moduleIndex);
+    // ✅ 2026-02-26 19:55 [Phase 7.47.16.1]: 移除高频数据更新日志
+    // 原因：每秒多次打印，日志文件中重复14,606次
+    // qDebug() << "✅ [DIDataManager] 模块" << moduleIndex << "数据更新:"
+    //          << "byte=" << getByte(moduleIndex);
 
     return true;
 }
@@ -184,6 +192,7 @@ void DIDataManager::detectChanges(int moduleIndex, const QVector<bool> &newData)
             hasChange = true;
             // 发送单个位变化信号
             emit bitChanged(moduleIndex, i, newData[i]);
+            // ✅ 2026-02-26 19:55 [Phase 7.47.16.1]: 保留位变化日志（开关量变化不频繁，有意义）
             qDebug() << "🔄 [DIDataManager] 模块" << moduleIndex
                      << "位" << i << "变化:" << oldData[i] << "→" << newData[i];
         }
