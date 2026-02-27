@@ -546,6 +546,33 @@ Rectangle {
                 }
             }
 
+            // ✅ 2026-02-27 15:00 [Phase 7.47.37]: 全部ID生成按钮
+            // 为当前模型的所有说话人ID生成完整语音文件（所有分类），支持断点续传
+            Button {
+                text: batchGenerator && batchGenerator.isRunning ? "停止" : "全部ID生成"
+                Layout.preferredWidth: 130
+                Layout.preferredHeight: 36
+                onClicked: {
+                    if (batchGenerator && batchGenerator.isRunning) {
+                        batchGenerator.stop()
+                    } else {
+                        startFullGeneration()
+                    }
+                }
+                background: Rectangle {
+                    color: batchGenerator && batchGenerator.isRunning
+                           ? (parent.hovered ? "#aa4444" : "#884444")
+                           : parent.enabled ? (parent.hovered ? "#cc4400" : "#aa3300") : "#666666"
+                    radius: 4
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "#ffffff"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
             Item { Layout.fillWidth: true }
 
             Button {
@@ -650,6 +677,53 @@ Rectangle {
     function startGeneration() {
         appendLog("info", "开始批量生成...")
         var config = buildConfig()
+        if (batchGenerator) {
+            batchGenerator.setConfig(config)
+            batchGenerator.start()
+        }
+    }
+
+    // ✅ 2026-02-27 15:00 [Phase 7.47.37]: 全部ID生成
+    // 为当前模型的所有说话人ID生成完整语音文件（所有分类）
+    // 支持断点续传：skipExisting强制启用，容器重启后重新点击自动跳过已完成文件
+    function startFullGeneration() {
+        // 复用现有配置（分类、皮带数、电机数等全部使用界面当前设置）
+        var config = buildConfig()
+
+        // 获取当前模型的说话人上限
+        var modelIdx = TTSConfig.modelIndex(TTSConfig.Test)
+        var maxId = TTSConfig.maxSpeakerId(modelIdx)
+        var modelName = TTSConfig.modelName(modelIdx)
+
+        if (maxId <= 0) {
+            appendLog("warn", "当前模型只有1个说话人，无需全部ID生成，请直接使用\"开始生成\"")
+            return
+        }
+
+        var filesPerSpeaker = parseInt(calculateTotalFiles())
+        var totalFiles = (maxId + 1) * filesPerSpeaker
+        appendLog("info", "===== 全部ID生成 =====")
+        appendLog("info", "模型: " + modelName)
+        appendLog("info", "说话人范围: 0 ~ " + maxId + " (共" + (maxId + 1) + "个)")
+        appendLog("info", "每人文件数: " + filesPerSpeaker)
+        appendLog("info", "预计总文件数: " + totalFiles)
+        appendLog("info", "断点续传: 已启用（跳过已存在文件）")
+
+        // 为每个说话人ID创建一个EngineConfig
+        var engines = []
+        for (var id = 0; id <= maxId; id++) {
+            engines.push({
+                engineName: "PaddleSpeech",
+                modelName: modelName,
+                speakerId: id,
+                rate: TTSConfig.rate(TTSConfig.Test),
+                volume: TTSConfig.volume(TTSConfig.Test),
+                outputFolder: "paddlespeech-" + modelName + "-spk" + id
+            })
+        }
+        config.engines = engines
+        config.skipExisting = true  // 强制启用断点续传
+
         if (batchGenerator) {
             batchGenerator.setConfig(config)
             batchGenerator.start()
