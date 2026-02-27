@@ -237,10 +237,8 @@ int main(int argc, char *argv[]) {
         mqttAutoManager.start();
         logMessage("MQTT Auto Manager started");
 
-        // ✅ 2026-02-27 [Phase 7.47.35]: 创建并启动MQTT保护监控器
-        MqttProtectionMonitor mqttProtectionMonitor(&diDataManager, &commonControl);
-        mqttProtectionMonitor.start();
-        logMessage("MQTT Protection Monitor started");
+        // ✅ 2026-02-27 11:30 [Phase 7.47.36]: 移除此处的MqttProtectionMonitor创建，因为commonControl尚未声明
+        // 移动到commonControl声明之后（见下方#ifdef MQTT_ENABLED块）
 #endif
 
         NetworkTask networkTask;
@@ -276,6 +274,11 @@ int main(int argc, char *argv[]) {
         deviceRoleManager.setMQTTController(&mqttController);
         deviceRoleManager.startMQTTPublishing();
         logMessage("DeviceRoleManager MQTT publishing started");
+
+        // ✅ 2026-02-27 11:30 [Phase 7.47.36]: 移到此处，确保commonControl已声明
+        MqttProtectionMonitor mqttProtectionMonitor(&diDataManager, &commonControl);
+        mqttProtectionMonitor.start();
+        logMessage("MQTT Protection Monitor started");
 #endif
 
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）

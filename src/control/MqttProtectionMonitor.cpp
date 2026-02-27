@@ -12,7 +12,8 @@ MqttProtectionMonitor::MqttProtectionMonitor(DIDataManager *diManager,
     : QObject(parent)
     , m_diManager(diManager)
     , m_commonControl(commonControl)
-    , m_audioPathMapper(new AudioPathMapper("/app/audio", this))
+    // ✅ 2026-02-27 11:00 [Phase 7.47.35]: 修复编译错误，AudioPathMapper不是QObject，不接受parent参数
+    , m_audioPathMapper(new AudioPathMapper("/app/audio"))
     , m_isRunning(false)
 {
     qDebug() << "✅ [MqttProtectionMonitor] MQTT保护监控器已创建";
@@ -34,6 +35,9 @@ MqttProtectionMonitor::MqttProtectionMonitor(DIDataManager *diManager,
 MqttProtectionMonitor::~MqttProtectionMonitor()
 {
     stop();
+    // ✅ 2026-02-27 11:30 [Phase 7.47.36]: 释放AudioPathMapper内存（非QObject，不会自动释放）
+    delete m_audioPathMapper;
+    m_audioPathMapper = nullptr;
     qDebug() << "✅ [MqttProtectionMonitor] MQTT保护监控器已销毁";
 }
 
