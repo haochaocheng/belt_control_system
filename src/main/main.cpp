@@ -42,6 +42,7 @@
 #include "mqtt/MQTTAutoManager.h"  // ✅ 2026-02-09 [Phase 7.44.1]: 添加MQTT自动管理器头文件
 #include "mqtt/DIDataManager.h"  // ✅ 2026-02-09 [Phase 7.44.3]: 添加开关量数据管理器头文件
 #include "mqtt/AIDataManager.h"  // ✅ 2026-02-09 [Phase 7.44.4]: 添加模拟量数据管理器头文件
+#include "control/MqttProtectionMonitor.h"  // ✅ 2026-02-27 [Phase 7.47.35]: 添加MQTT保护监控器头文件
 #endif
 #include "network/NetworkTask.h"
 
@@ -235,6 +236,11 @@ int main(int argc, char *argv[]) {
         // 启动自动管理器
         mqttAutoManager.start();
         logMessage("MQTT Auto Manager started");
+
+        // ✅ 2026-02-27 [Phase 7.47.35]: 创建并启动MQTT保护监控器
+        MqttProtectionMonitor mqttProtectionMonitor(&diDataManager, &commonControl);
+        mqttProtectionMonitor.start();
+        logMessage("MQTT Protection Monitor started");
 #endif
 
         NetworkTask networkTask;
