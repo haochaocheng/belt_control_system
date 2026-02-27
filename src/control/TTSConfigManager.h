@@ -52,10 +52,18 @@ public:
     double volume(Scene scene) const;
     void setVolume(Scene scene, double volume);
 
+    // ✅ 2026-02-26 [Phase 7.47.19]: 添加采样率配置
+    int sampleRate(Scene scene) const;
+    void setSampleRate(Scene scene, int rate);
+
     // 获取模型信息
     QString modelName(int index) const;
     int maxSpeakerId(int modelIndex) const;
     QStringList modelNames() const;
+
+    // ✅ 2026-02-27 02:10 [Phase 7.47.28]: 通用键值存储（供QML批量合成参数持久化）
+    Q_INVOKABLE void setValue(const QString &key, const QVariant &value);
+    Q_INVOKABLE QVariant getValue(const QString &key, const QVariant &defaultValue = QVariant()) const;
 
 signals:
     void configChanged(Scene scene);
@@ -74,6 +82,7 @@ private:
         int speakerId;
         double rate;
         double volume;
+        int sampleRate;  // ✅ 2026-02-26 [Phase 7.47.19]: 采样率
     };
 
     QMap<Scene, SceneConfig> m_configs;

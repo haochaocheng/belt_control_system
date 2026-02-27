@@ -6,6 +6,7 @@
 import QtQuick 6.5
 import QtQuick.Controls 6.5
 import QtQuick.Layouts 6.5
+import com.belt.control 1.0  // ✅ 2026-02-27 02:15 [Phase 7.47.28]: 导入TTSConfig单例
 
 Rectangle {
     id: root
@@ -689,6 +690,112 @@ Rectangle {
         logArea.text += timestamp + " " + prefix + " " + message + "\n"
         // 自动滚动到底部
         logArea.cursorPosition = logArea.text.length
+    }
+
+    // ✅ 2026-02-27 02:15 [Phase 7.47.28]: 保存批量合成参数到持久化存储
+    function saveBatchConfig() {
+        TTSConfig.setValue("batch/chkSwitchInput", chkSwitchInput.checked)
+        TTSConfig.setValue("batch/chkAnalogInput", chkAnalogInput.checked)
+        TTSConfig.setValue("batch/chkMotor", chkMotor.checked)
+        TTSConfig.setValue("batch/chkBrake", chkBrake.checked)
+        TTSConfig.setValue("batch/chkTension", chkTension.checked)
+        TTSConfig.setValue("batch/chkLinePosition", chkLinePosition.checked)
+        TTSConfig.setValue("batch/chkSystemSound", chkSystemSound.checked)
+        TTSConfig.setValue("batch/beltCount", spinBeltCount.value)
+        TTSConfig.setValue("batch/motorCount", spinMotorCount.value)
+        TTSConfig.setValue("batch/brakeCount", spinBrakeCount.value)
+        TTSConfig.setValue("batch/tensionCount", spinTensionCount.value)
+        TTSConfig.setValue("batch/lineStart", spinLineStart.value)
+        TTSConfig.setValue("batch/lineEnd", spinLineEnd.value)
+        TTSConfig.setValue("batch/skipExisting", chkSkipExisting.checked)
+        TTSConfig.setValue("batch/generateReport", chkGenerateReport.checked)
+    }
+
+    // ✅ 2026-02-27 02:15 [Phase 7.47.28]: 从持久化存储恢复批量合成参数
+    function loadBatchConfig() {
+        chkSwitchInput.checked = TTSConfig.getValue("batch/chkSwitchInput", true)
+        chkAnalogInput.checked = TTSConfig.getValue("batch/chkAnalogInput", true)
+        chkMotor.checked = TTSConfig.getValue("batch/chkMotor", true)
+        chkBrake.checked = TTSConfig.getValue("batch/chkBrake", true)
+        chkTension.checked = TTSConfig.getValue("batch/chkTension", true)
+        chkLinePosition.checked = TTSConfig.getValue("batch/chkLinePosition", true)
+        chkSystemSound.checked = TTSConfig.getValue("batch/chkSystemSound", true)
+        spinBeltCount.value = TTSConfig.getValue("batch/beltCount", 8)
+        spinMotorCount.value = TTSConfig.getValue("batch/motorCount", 4)
+        spinBrakeCount.value = TTSConfig.getValue("batch/brakeCount", 4)
+        spinTensionCount.value = TTSConfig.getValue("batch/tensionCount", 2)
+        spinLineStart.value = TTSConfig.getValue("batch/lineStart", 1)
+        spinLineEnd.value = TTSConfig.getValue("batch/lineEnd", 64)
+        chkSkipExisting.checked = TTSConfig.getValue("batch/skipExisting", true)
+        chkGenerateReport.checked = TTSConfig.getValue("batch/generateReport", true)
+        console.log("📂 已恢复批量合成参数")
+    }
+
+    // ✅ 2026-02-27 02:15 [Phase 7.47.28]: 组件加载时恢复参数
+    Component.onCompleted: {
+        loadBatchConfig()
+    }
+
+    // ✅ 2026-02-27 02:20 [Phase 7.47.28]: 监听参数变化，自动保存
+    Connections {
+        target: chkSwitchInput
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: chkAnalogInput
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: chkMotor
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: chkBrake
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: chkTension
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: chkLinePosition
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: chkSystemSound
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: spinBeltCount
+        function onValueChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: spinMotorCount
+        function onValueChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: spinBrakeCount
+        function onValueChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: spinTensionCount
+        function onValueChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: spinLineStart
+        function onValueChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: spinLineEnd
+        function onValueChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: chkSkipExisting
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: chkGenerateReport
+        function onCheckedChanged() { saveBatchConfig() }
     }
 
     // 连接信号

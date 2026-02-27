@@ -64,6 +64,8 @@ void TTSConfigManager::loadConfig()
         config.speakerId = m_settings->value(key + "/speakerId", 0).toInt();
         config.rate = m_settings->value(key + "/rate", 1.0).toDouble();
         config.volume = m_settings->value(key + "/volume", 0.8).toDouble();
+        // ✅ 2026-02-26 [Phase 7.47.19]: 加载采样率配置，默认 24000
+        config.sampleRate = m_settings->value(key + "/sampleRate", 24000).toInt();
 
         m_configs[scene] = config;
 
@@ -87,6 +89,8 @@ void TTSConfigManager::saveConfig()
         m_settings->setValue(key + "/speakerId", config.speakerId);
         m_settings->setValue(key + "/rate", config.rate);
         m_settings->setValue(key + "/volume", config.volume);
+        // ✅ 2026-02-26 [Phase 7.47.19]: 保存采样率配置
+        m_settings->setValue(key + "/sampleRate", config.sampleRate);
     }
 
     m_settings->sync();
@@ -168,6 +172,20 @@ void TTSConfigManager::setVolume(Scene scene, double volume)
     }
 }
 
+// ✅ 2026-02-26 [Phase 7.47.19]: 采样率配置
+int TTSConfigManager::sampleRate(Scene scene) const
+{
+    return m_configs.value(scene).sampleRate;
+}
+
+void TTSConfigManager::setSampleRate(Scene scene, int rate)
+{
+    if (m_configs[scene].sampleRate != rate) {
+        m_configs[scene].sampleRate = rate;
+        emit configChanged(scene);
+    }
+}
+
 QString TTSConfigManager::modelName(int index) const
 {
     return MODEL_NAMES.value(index, "unknown");
@@ -185,4 +203,16 @@ QStringList TTSConfigManager::modelNames() const
         names << MODEL_NAMES[i];
     }
     return names;
+}
+
+// ✅ 2026-02-27 02:10 [Phase 7.47.28]: 通用键值存储（供QML批量合成参数持久化）
+void TTSConfigManager::setValue(const QString &key, const QVariant &value)
+{
+    m_settings->setValue(key, value);
+    m_settings->sync();
+}
+
+QVariant TTSConfigManager::getValue(const QString &key, const QVariant &defaultValue) const
+{
+    return m_settings->value(key, defaultValue);
 }

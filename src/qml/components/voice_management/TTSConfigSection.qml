@@ -42,12 +42,12 @@ ColumnLayout {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 40
 
+                // ✅ 2026-02-25 [Phase 7.47.2]: 移除 MeloTTS（不适合煤矿工业场景）
                 model: [
-                    "PaddleSpeech (中文最好)",
-                    "MeloTTS (推荐)"
+                    "PaddleSpeech (中文最好)"
                 ]
 
-                currentIndex: 1  // 默认选择 MeloTTS
+                currentIndex: 0  // 默认选择 PaddleSpeech
 
                 background: Rectangle {
                     color: "transparent"
@@ -338,7 +338,9 @@ ColumnLayout {
 
                 onValueChanged: {
                     console.log("说话人ID:", value)
-                    // TODO: 调用 TTSConfigManager.setSpeakerId()
+                    // ✅ 2026-02-27 02:00 [Phase 7.47.28]: 保存说话人ID到持久化存储
+                    TTSConfig.setSpeakerId(TTSConfig.Test, value)
+                    TTSConfig.saveConfig()
                 }
             }
 
@@ -428,7 +430,9 @@ ColumnLayout {
 
                 onValueChanged: {
                     console.log("语速:", value.toFixed(1))
-                    // TODO: 调用 TTSConfigManager.setRate()
+                    // ✅ 2026-02-27 02:00 [Phase 7.47.28]: 保存语速到持久化存储
+                    TTSConfig.setRate(TTSConfig.Test, value)
+                    TTSConfig.saveConfig()
                 }
             }
 
@@ -494,7 +498,9 @@ ColumnLayout {
 
                 onValueChanged: {
                     console.log("音量:", (value * 100).toFixed(0) + "%")
-                    // TODO: 调用 TTSConfigManager.setVolume()
+                    // ✅ 2026-02-27 02:00 [Phase 7.47.28]: 保存音量到持久化存储
+                    TTSConfig.setVolume(TTSConfig.Test, value)
+                    TTSConfig.saveConfig()
                 }
             }
 
@@ -504,6 +510,106 @@ ColumnLayout {
                 color: "#00d4ff"
                 Layout.preferredWidth: 50
                 horizontalAlignment: Text.AlignRight
+            }
+        }
+    }
+
+    // ✅ 2026-02-26 [Phase 7.47.19]: 采样率选择
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: 8
+
+        Text {
+            text: "采样率："
+            font.pixelSize: 14
+            color: "#ecf0f1"
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+
+            ComboBox {
+                id: sampleRateComboBox
+                Layout.fillWidth: true
+                Layout.preferredHeight: 36
+
+                model: ListModel {
+                    ListElement { text: "16000 Hz (电话质量)"; value: 16000 }
+                    ListElement { text: "22050 Hz (低质量)"; value: 22050 }
+                    ListElement { text: "24000 Hz (默认)"; value: 24000 }
+                    ListElement { text: "44100 Hz (CD质量)"; value: 44100 }
+                    ListElement { text: "48000 Hz (专业)"; value: 48000 }
+                }
+
+                currentIndex: 2  // 默认 24000 Hz
+
+                textRole: "text"
+                valueRole: "value"
+
+                background: Rectangle {
+                    color: "transparent"
+                    border.color: sampleRateComboBox.activeFocus ? "#00d4ff" : "#34495e"
+                    border.width: 1
+                    radius: 5
+                }
+
+                contentItem: Text {
+                    text: sampleRateComboBox.displayText
+                    font.pixelSize: 14
+                    color: "#ecf0f1"
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: 10
+                }
+
+                delegate: ItemDelegate {
+                    width: sampleRateComboBox.width
+                    contentItem: Text {
+                        text: model.text
+                        color: "#ecf0f1"
+                        font.pixelSize: 14
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    highlighted: sampleRateComboBox.highlightedIndex === index
+                    background: Rectangle {
+                        color: highlighted ? "#00d4ff" : "transparent"
+                        opacity: highlighted ? 0.3 : 1.0
+                    }
+                }
+
+                popup: Popup {
+                    y: sampleRateComboBox.height
+                    width: sampleRateComboBox.width
+                    implicitHeight: contentItem.implicitHeight
+                    padding: 1
+
+                    contentItem: ListView {
+                        clip: true
+                        implicitHeight: contentHeight
+                        model: sampleRateComboBox.popup.visible ? sampleRateComboBox.delegateModel : null
+                        currentIndex: sampleRateComboBox.highlightedIndex
+
+                        ScrollIndicator.vertical: ScrollIndicator { }
+                    }
+
+                    background: Rectangle {
+                        color: "#2c3e50"
+                        border.color: "#00d4ff"
+                        border.width: 1
+                        radius: 5
+                    }
+                }
+
+                onCurrentIndexChanged: {
+                    if (currentIndex >= 0) {
+                        var rate = model.get(currentIndex).value
+                        console.log("采样率:", rate, "Hz")
+                        // 调用后端设置采样率
+                        if (typeof commonControl !== 'undefined' && commonControl.setTTSSampleRate) {
+                            commonControl.setTTSSampleRate(rate)
+                        }
+                    }
+                }
             }
         }
     }
@@ -657,10 +763,23 @@ ColumnLayout {
      */
     Component.onCompleted: {
         console.log("🚀 TTSConfigSection 组件加载完成")
+        // ✅ 2026-02-25 [Phase 7.47.5]: 自动初始化 TTS 引擎
+        // 原因：只有一个引擎选项时，onCurrentIndexChanged 不会触发
+        // 效果：组件加载时自动初始化 PaddleSpeech 引擎
+        console.log("🔄 自动初始化 TTS 引擎，索引:", engineComboBox.currentIndex)
+        commonControl.switchTTSEngine(engineComboBox.currentIndex)
         // 初始化模型列表
         updateModelList()
         // 初始化引擎状态
         updateEngineStatus()
+
+        // ✅ 2026-02-27 02:00 [Phase 7.47.28]: 从持久化存储恢复参数
+        speakerIdSpinBox.value = TTSConfig.speakerId(TTSConfig.Test)
+        rateSlider.value = TTSConfig.rate(TTSConfig.Test)
+        volumeSlider.value = TTSConfig.volume(TTSConfig.Test)
+        console.log("📂 已恢复TTS参数: 说话人ID=" + speakerIdSpinBox.value
+                    + ", 语速=" + rateSlider.value.toFixed(1)
+                    + ", 音量=" + (volumeSlider.value * 100).toFixed(0) + "%")
     }
 
     // ✅ 2026-02-21 22:55: 连接 TTS 初始化进度信号
