@@ -281,6 +281,11 @@ void BatchAudioGenerator::generateTasks()
                 generateLinePositionTasks(engine);
             } else if (category == "systemSound") {
                 generateSystemSoundTasks(engine);
+            // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
+            } else if (category == "beltOperation") {
+                generateBeltOperationTasks(engine);
+            } else if (category == "systemStatus") {
+                generateSystemStatusTasks(engine);
             }
         }
     }
@@ -349,10 +354,11 @@ void BatchAudioGenerator::generateAnalogInputTasks(const EngineConfig &engine)
 void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
 {
     // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // 电机保护：9 个文件/皮带/电机（按设计方案）
+    // ✅ 2026-02-27 [Phase 7.47.29]: 与MotorControlPage.qml Tab页完全对应，共9项
     QStringList protectionNames = {
-        "电流过载保护", "温度过高保护", "启动失败保护", "运行异常保护",
-        "通讯故障保护", "过压保护", "欠压保护", "缺相保护", "接地保护"
+        "电流保护", "前轴承温度保护", "后轴承温度保护",
+        "A相绕组保护", "B相绕组保护", "C相绕组保护",
+        "电机温度保护", "X轴振动保护", "Y轴振动保护"
     };
 
     for (int beltNum : m_beltNumbers) {
@@ -492,6 +498,97 @@ void BatchAudioGenerator::generateSystemSoundTasks(const EngineConfig &engine)
         task.modelName = engine.modelName;
         task.speakerId = engine.speakerId;
         m_tasks.append(task);
+    }
+}
+
+// ✅ 2026-02-27 05:30 [Phase 7.47.30]: 皮带操作状态语音（对比1#PD已有文件补充）
+// 包含：皮带启动/停车/运行失败/通讯失败、电机运行失败、松闸运行失败、张紧运行失败
+void BatchAudioGenerator::generateBeltOperationTasks(const EngineConfig &engine)
+{
+    for (int beltNum : m_beltNumbers) {
+        QString outputDir = QString("%1/%2/%3#PD/")
+                            .arg(m_outputBaseDir)
+                            .arg(engine.outputFolder)
+                            .arg(beltNum);
+
+        // 皮带级操作语音：5个/皮带
+        QStringList beltOps = {
+            "皮带启动", "皮带停车", "皮带运行失败", "皮带通讯失败", "皮带启动请注意"
+        };
+        for (const QString &op : beltOps) {
+            FileTask task;
+            task.category = "beltOperation";
+            task.text = QString("%1号%2").arg(beltNum).arg(op);
+            task.outputPath = QString("%1%2号%3.wav").arg(outputDir).arg(beltNum).arg(op);
+            task.engineName = engine.engineName;
+            task.modelName = engine.modelName;
+            task.speakerId = engine.speakerId;
+            m_tasks.append(task);
+        }
+
+        // 电机运行失败：每台电机1个
+        for (int motorNum : m_motorNumbers) {
+            FileTask task;
+            task.category = "beltOperation";
+            task.text = QString("%1号电机运行失败").arg(motorNum);
+            task.outputPath = QString("%1%2号电机运行失败.wav").arg(outputDir).arg(motorNum);
+            task.engineName = engine.engineName;
+            task.modelName = engine.modelName;
+            task.speakerId = engine.speakerId;
+            m_tasks.append(task);
+        }
+
+        // 松闸运行失败：每台制动器1个
+        for (int brakeNum : m_brakeNumbers) {
+            FileTask task;
+            task.category = "beltOperation";
+            task.text = QString("%1号松闸运行失败").arg(brakeNum);
+            task.outputPath = QString("%1%2号松闸运行失败.wav").arg(outputDir).arg(brakeNum);
+            task.engineName = engine.engineName;
+            task.modelName = engine.modelName;
+            task.speakerId = engine.speakerId;
+            m_tasks.append(task);
+        }
+
+        // 张紧运行失败：每台张紧1个
+        for (int tensionNum : m_tensionNumbers) {
+            FileTask task;
+            task.category = "beltOperation";
+            task.text = QString("%1号张紧运行失败").arg(tensionNum);
+            task.outputPath = QString("%1%2号张紧运行失败.wav").arg(outputDir).arg(tensionNum);
+            task.engineName = engine.engineName;
+            task.modelName = engine.modelName;
+            task.speakerId = engine.speakerId;
+            m_tasks.append(task);
+        }
+    }
+}
+
+// ✅ 2026-02-27 05:30 [Phase 7.47.30]: 系统/通讯状态语音（对比1#PD已有文件补充）
+// 包含：与主站通信失败、终端离线、继电器通讯、远程急停、集控停车、集控起车启动等
+void BatchAudioGenerator::generateSystemStatusTasks(const EngineConfig &engine)
+{
+    QStringList statusNames = {
+        "与主站通信失败", "未知皮带通讯失败", "终端离线",
+        "继电器通讯", "远程急停", "集控停车", "集控起车启动"
+    };
+
+    for (int beltNum : m_beltNumbers) {
+        QString outputDir = QString("%1/%2/%3#PD/")
+                            .arg(m_outputBaseDir)
+                            .arg(engine.outputFolder)
+                            .arg(beltNum);
+
+        for (const QString &statusName : statusNames) {
+            FileTask task;
+            task.category = "systemStatus";
+            task.text = statusName;
+            task.outputPath = QString("%1%2.wav").arg(outputDir).arg(statusName);
+            task.engineName = engine.engineName;
+            task.modelName = engine.modelName;
+            task.speakerId = engine.speakerId;
+            m_tasks.append(task);
+        }
     }
 }
 

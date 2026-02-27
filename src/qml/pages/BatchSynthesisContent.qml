@@ -181,6 +181,27 @@ Rectangle {
                                 leftPadding: parent.indicator.width + 5
                             }
                         }
+                        // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
+                        CheckBox {
+                            id: chkBeltOperation
+                            text: "皮带操作状态"
+                            checked: true
+                            contentItem: Text {
+                                text: parent.text
+                                color: "#ffffff"
+                                leftPadding: parent.indicator.width + 5
+                            }
+                        }
+                        CheckBox {
+                            id: chkSystemStatus
+                            text: "系统/通讯状态"
+                            checked: true
+                            contentItem: Text {
+                                text: parent.text
+                                color: "#ffffff"
+                                leftPadding: parent.indicator.width + 5
+                            }
+                        }
                     }
                 }
 
@@ -602,11 +623,14 @@ Rectangle {
         // 按设计方案的文件数量
         if (chkSwitchInput.checked) total += 8 * beltCount           // 开关量：8个/皮带
         if (chkAnalogInput.checked) total += 8 * beltCount           // 模拟量：8个/皮带
-        if (chkMotor.checked) total += 9 * beltCount * motorCount    // 电机：9个/皮带/电机
+        if (chkMotor.checked) total += 9 * beltCount * motorCount    // 电机：9个/皮带/电机（与MotorControlPage Tab对应）
         if (chkBrake.checked) total += 3 * beltCount * brakeCount    // 制动器：3个/皮带/制动器
         if (chkTension.checked) total += 3 * beltCount * tensionCount // 张紧：3个/皮带/张紧
         if (chkLinePosition.checked) total += 3 * lineCount * beltCount // 沿线：3个/皮带/点位
         if (chkSystemSound.checked) total += 16                       // 系统提示音：16个
+        // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
+        if (chkBeltOperation.checked) total += (5 + motorCount + brakeCount + tensionCount) * beltCount  // 皮带操作：(5+电机+制动器+张紧)/皮带
+        if (chkSystemStatus.checked) total += 7 * beltCount            // 系统/通讯状态：7个/皮带
 
         return total.toString()
     }
@@ -642,6 +666,9 @@ Rectangle {
         if (chkTension.checked) categories.push("tension")
         if (chkLinePosition.checked) categories.push("linePosition")
         if (chkSystemSound.checked) categories.push("systemSound")
+        // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
+        if (chkBeltOperation.checked) categories.push("beltOperation")
+        if (chkSystemStatus.checked) categories.push("systemStatus")
 
         var beltNumbers = []
         for (var i = 1; i <= spinBeltCount.value; i++) beltNumbers.push(i)
@@ -701,6 +728,9 @@ Rectangle {
         TTSConfig.setValue("batch/chkTension", chkTension.checked)
         TTSConfig.setValue("batch/chkLinePosition", chkLinePosition.checked)
         TTSConfig.setValue("batch/chkSystemSound", chkSystemSound.checked)
+        // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充新分类持久化
+        TTSConfig.setValue("batch/chkBeltOperation", chkBeltOperation.checked)
+        TTSConfig.setValue("batch/chkSystemStatus", chkSystemStatus.checked)
         TTSConfig.setValue("batch/beltCount", spinBeltCount.value)
         TTSConfig.setValue("batch/motorCount", spinMotorCount.value)
         TTSConfig.setValue("batch/brakeCount", spinBrakeCount.value)
@@ -720,6 +750,9 @@ Rectangle {
         chkTension.checked = TTSConfig.getValue("batch/chkTension", true)
         chkLinePosition.checked = TTSConfig.getValue("batch/chkLinePosition", true)
         chkSystemSound.checked = TTSConfig.getValue("batch/chkSystemSound", true)
+        // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充新分类恢复
+        chkBeltOperation.checked = TTSConfig.getValue("batch/chkBeltOperation", true)
+        chkSystemStatus.checked = TTSConfig.getValue("batch/chkSystemStatus", true)
         spinBeltCount.value = TTSConfig.getValue("batch/beltCount", 8)
         spinMotorCount.value = TTSConfig.getValue("batch/motorCount", 4)
         spinBrakeCount.value = TTSConfig.getValue("batch/brakeCount", 4)
@@ -763,6 +796,15 @@ Rectangle {
     }
     Connections {
         target: chkSystemSound
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充新分类监听
+    Connections {
+        target: chkBeltOperation
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    Connections {
+        target: chkSystemStatus
         function onCheckedChanged() { saveBatchConfig() }
     }
     Connections {

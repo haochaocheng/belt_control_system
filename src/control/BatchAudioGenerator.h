@@ -33,6 +33,9 @@ class BatchAudioGenerator : public QObject
     Q_PROPERTY(int failedFiles READ failedFiles NOTIFY failedFilesChanged)
     Q_PROPERTY(QString currentFile READ currentFile NOTIFY currentFileChanged)
     Q_PROPERTY(double progress READ progress NOTIFY progressChanged)
+    // ✅ 2026-02-26 23:30 [Phase 7.47.21]: 添加时间统计属性
+    Q_PROPERTY(QString elapsedTime READ elapsedTime NOTIFY elapsedTimeChanged)
+    Q_PROPERTY(QString estimatedTime READ estimatedTime NOTIFY estimatedTimeChanged)
 
 public:
     // ✅ 2026-02-26 08:35 [Phase 7.47.3]: 添加 TTSEngineManager 参数
@@ -46,6 +49,9 @@ public:
     int failedFiles() const { return m_failedFiles; }
     QString currentFile() const { return m_currentFile; }
     double progress() const;
+    // ✅ 2026-02-26 23:30 [Phase 7.47.21]: 时间统计访问器
+    QString elapsedTime() const;
+    QString estimatedTime() const;
 
 public slots:
     /**
@@ -87,6 +93,15 @@ public slots:
      */
     void exportLog(const QString &filePath);
 
+    /**
+     * @brief 生成所有说话人ID测试语音
+     * ✅ 2026-02-27 00:25 [Phase 7.47.23]: 新增功能
+     * 为 fastspeech2_aishell3 模型的所有 174 个说话人生成测试语音
+     * 测试文本：1108顺槽皮带沿线急停保护
+     * 输出目录：{outputBaseDir}/speaker-samples/
+     */
+    void generateAllSpeakerSamples();
+
 signals:
     void isRunningChanged();
     void totalFilesChanged();
@@ -94,6 +109,9 @@ signals:
     void failedFilesChanged();
     void currentFileChanged();
     void progressChanged();
+    // ✅ 2026-02-26 23:30 [Phase 7.47.21]: 添加时间统计信号
+    void elapsedTimeChanged();
+    void estimatedTimeChanged();
 
     /**
      * @brief 日志消息
@@ -137,6 +155,9 @@ private:
     void generateTensionTasks(const EngineConfig &engine);
     void generateLinePositionTasks(const EngineConfig &engine);
     void generateSystemSoundTasks(const EngineConfig &engine);
+    // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
+    void generateBeltOperationTasks(const EngineConfig &engine);
+    void generateSystemStatusTasks(const EngineConfig &engine);
 
     // 执行单个任务
     bool executeTask(const FileTask &task);
@@ -169,6 +190,8 @@ private:
     QString m_currentFile;
     QDateTime m_startTime;
     QStringList m_logMessages;
+    // ✅ 2026-02-26 23:30 [Phase 7.47.21]: 添加时间统计成员
+    qint64 m_elapsedMs;  // 已用时间（毫秒）
 
     // ✅ 2026-02-26 08:35 [Phase 7.47.3]: TTS 引擎管理器
     TTSEngineManager *m_ttsEngineManager;
