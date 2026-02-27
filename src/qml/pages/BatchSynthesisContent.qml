@@ -23,6 +23,15 @@ Rectangle {
     // 关闭信号，由父组件处理
     signal closeRequested()
 
+    // ✅ 2026-02-27 01:30 [Phase 7.47.27]: 获取输出基础目录（支持linaro和pi用户）
+    function getOutputBaseDir() {
+        // 从环境变量获取用户名，默认linaro
+        var userName = Qt.platform.os === "linux" ?
+            (typeof process !== 'undefined' && process.env.BELT_CONTROL_USER ?
+             process.env.BELT_CONTROL_USER : "linaro") : "linaro"
+        return "/home/" + userName + "/belt-control-data/audio"
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 15
@@ -657,8 +666,9 @@ Rectangle {
             generateReport: chkGenerateReport.checked,
             // ✅ 2026-02-26 23:20 [Phase 7.47.20]: 使用容器内路径
             // ✅ 2026-02-27 01:20 [Phase 7.47.26]: 修改为小写audio，与设备实际目录一致
+            // ✅ 2026-02-27 01:30 [Phase 7.47.27]: 支持linaro和pi用户，使用环境变量
             // 参考：docs/2026-02-26/08-音频文件路径映射设计方案.md
-            outputBaseDir: "/home/linaro/belt-control-data/audio",
+            outputBaseDir: getOutputBaseDir(),
             engines: [{
                 // ✅ 2026-02-27 00:10 [Phase 7.47.22]: 修复引擎名称大小写
                 // 原因：后端注册的是 "PaddleSpeech"（大写P），QML 必须匹配

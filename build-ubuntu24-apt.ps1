@@ -1860,6 +1860,7 @@ sudo docker run \
     -e XDG_RUNTIME_DIR=/tmp \
     -e GST_QUEUE_SIZE_BUFFERS=1000 \
     -e GST_QUEUE_MAX_SIZE_TIME=5000000000 \
+    -e BELT_CONTROL_USER=DEVICE_USER_PLACEHOLDER \
     $X11_VOLUME \
     $MALI_VOLUME \
     $HW_LIBS_VOLUME \
@@ -1868,7 +1869,7 @@ sudo docker run \
     -v /sys:/sys \
     -v /run/udev:/run/udev:ro \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/appdata:/app/appdata:rw \
-    -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/audio:/home/linaro/belt-control-data/audio:rw \
+    -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/audio:/home/DEVICE_USER_PLACEHOLDER/belt-control-data/audio:rw \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/models/tts_models:/app/tts_models:ro \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/models/asr_models:/app/asr_models:ro \
     -v /tmp/belt-control-cores:/tmp/belt-control-cores:rw \
