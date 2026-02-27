@@ -58,9 +58,10 @@ public:
     Q_INVOKABLE void setSampleRate(Scene scene, int rate);
 
     // 获取模型信息
-    QString modelName(int index) const;
-    int maxSpeakerId(int modelIndex) const;
-    QStringList modelNames() const;
+    // ✅ 2026-02-27 10:00 [Phase 7.47.34]: 添加Q_INVOKABLE使QML可调用
+    Q_INVOKABLE QString modelName(int index) const;
+    Q_INVOKABLE int maxSpeakerId(int modelIndex) const;
+    Q_INVOKABLE QStringList modelNames() const;
 
     // ✅ 2026-02-27 02:10 [Phase 7.47.28]: 通用键值存储（供QML批量合成参数持久化）
     Q_INVOKABLE void setValue(const QString &key, const QVariant &value);

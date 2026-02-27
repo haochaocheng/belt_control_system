@@ -701,13 +701,17 @@ Rectangle {
                 // ✅ 2026-02-27 00:10 [Phase 7.47.22]: 修复引擎名称大小写
                 // 原因：后端注册的是 "PaddleSpeech"（大写P），QML 必须匹配
                 engineName: "PaddleSpeech",
-                modelName: "fastspeech2-aishell3",
+                // ✅ 2026-02-27 10:00 [Phase 7.47.34]: 使用语音管理界面选择的模型，不再硬编码
+                // modelName: "fastspeech2-aishell3",  // 2026-02-27 10:00 注释：原硬编码值
+                modelName: TTSConfig.modelName(TTSConfig.modelIndex(TTSConfig.Test)),
                 // ✅ 2026-02-27 06:00 [Phase 7.47.31]: 使用语音管理界面保存的参数，不再硬编码
                 // speakerId: 21,  // 2026-02-27 06:00 注释：原硬编码值
                 speakerId: TTSConfig.speakerId(TTSConfig.Test),
                 rate: TTSConfig.rate(TTSConfig.Test),
                 volume: TTSConfig.volume(TTSConfig.Test),
-                outputFolder: "paddlespeech-fastspeech2-aishell3-spk" + TTSConfig.speakerId(TTSConfig.Test)
+                // ✅ 2026-02-27 10:00 [Phase 7.47.34]: 输出文件夹名称使用实际选择的模型
+                // outputFolder: "paddlespeech-fastspeech2-aishell3-spk" + TTSConfig.speakerId(TTSConfig.Test)  // 2026-02-27 10:00 注释：原硬编码值
+                outputFolder: "paddlespeech-" + TTSConfig.modelName(TTSConfig.modelIndex(TTSConfig.Test)) + "-spk" + TTSConfig.speakerId(TTSConfig.Test)
             }]
         }
     }
