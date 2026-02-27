@@ -420,6 +420,9 @@ ColumnLayout {
                 handle: Rectangle {
                     x: rateSlider.leftPadding + rateSlider.visualPosition * (rateSlider.availableWidth - width)
                     y: rateSlider.topPadding + rateSlider.availableHeight / 2 - height / 2
+                    // ✅ 2026-02-27 06:10 [Phase 7.47.31]: 添加implicitWidth/Height修复滑块无法拖动
+                    implicitWidth: 20
+                    implicitHeight: 20
                     width: 20
                     height: 20
                     radius: 10
@@ -488,6 +491,9 @@ ColumnLayout {
                 handle: Rectangle {
                     x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
                     y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                    // ✅ 2026-02-27 06:10 [Phase 7.47.31]: 添加implicitWidth/Height修复滑块无法拖动
+                    implicitWidth: 20
+                    implicitHeight: 20
                     width: 20
                     height: 20
                     radius: 10

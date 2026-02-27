@@ -702,9 +702,12 @@ Rectangle {
                 // 原因：后端注册的是 "PaddleSpeech"（大写P），QML 必须匹配
                 engineName: "PaddleSpeech",
                 modelName: "fastspeech2-aishell3",
-                // ✅ 2026-02-26 23:20 [Phase 7.47.20]: 使用说话人21（男声）
-                speakerId: 21,
-                outputFolder: "paddlespeech-fastspeech2-aishell3-spk21"
+                // ✅ 2026-02-27 06:00 [Phase 7.47.31]: 使用语音管理界面保存的参数，不再硬编码
+                // speakerId: 21,  // 2026-02-27 06:00 注释：原硬编码值
+                speakerId: TTSConfig.speakerId(TTSConfig.Test),
+                rate: TTSConfig.rate(TTSConfig.Test),
+                volume: TTSConfig.volume(TTSConfig.Test),
+                outputFolder: "paddlespeech-fastspeech2-aishell3-spk" + TTSConfig.speakerId(TTSConfig.Test)
             }]
         }
     }

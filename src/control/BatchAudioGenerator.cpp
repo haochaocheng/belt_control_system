@@ -124,6 +124,9 @@ void BatchAudioGenerator::setConfig(const QVariantMap &config)
         engine.modelName = engineMap.value("modelName").toString();
         engine.speakerId = engineMap.value("speakerId").toInt();
         engine.outputFolder = engineMap.value("outputFolder").toString();
+        // ✅ 2026-02-27 06:00 [Phase 7.47.31]: 读取语音管理界面保存的语速和音量参数
+        engine.rate = engineMap.value("rate", 1.0).toDouble();
+        engine.volume = engineMap.value("volume", 0.8).toDouble();
         m_engines.append(engine);
     }
 
@@ -318,6 +321,8 @@ void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
             m_tasks.append(task);
         }
     }
@@ -346,6 +351,8 @@ void BatchAudioGenerator::generateAnalogInputTasks(const EngineConfig &engine)
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
             m_tasks.append(task);
         }
     }
@@ -377,6 +384,8 @@ void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
                 m_tasks.append(task);
             }
         }
@@ -407,6 +416,8 @@ void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
                 m_tasks.append(task);
             }
         }
@@ -437,6 +448,8 @@ void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
                 m_tasks.append(task);
             }
         }
@@ -467,6 +480,8 @@ void BatchAudioGenerator::generateLinePositionTasks(const EngineConfig &engine)
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
                 m_tasks.append(task);
             }
         }
@@ -497,6 +512,8 @@ void BatchAudioGenerator::generateSystemSoundTasks(const EngineConfig &engine)
         task.engineName = engine.engineName;
         task.modelName = engine.modelName;
         task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
         m_tasks.append(task);
     }
 }
@@ -523,6 +540,8 @@ void BatchAudioGenerator::generateBeltOperationTasks(const EngineConfig &engine)
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
             m_tasks.append(task);
         }
 
@@ -535,6 +554,8 @@ void BatchAudioGenerator::generateBeltOperationTasks(const EngineConfig &engine)
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
             m_tasks.append(task);
         }
 
@@ -547,6 +568,8 @@ void BatchAudioGenerator::generateBeltOperationTasks(const EngineConfig &engine)
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
             m_tasks.append(task);
         }
 
@@ -559,6 +582,8 @@ void BatchAudioGenerator::generateBeltOperationTasks(const EngineConfig &engine)
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
             m_tasks.append(task);
         }
     }
@@ -587,6 +612,8 @@ void BatchAudioGenerator::generateSystemStatusTasks(const EngineConfig &engine)
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
+            task.rate = engine.rate;
+            task.volume = engine.volume;
             m_tasks.append(task);
         }
     }
@@ -617,10 +644,13 @@ bool BatchAudioGenerator::executeTask(const FileTask &task)
     }
 
     // 设置 TTS 参数
+    // ✅ 2026-02-27 06:00 [Phase 7.47.31]: 使用语音管理界面保存的参数，不再硬编码
     TTSParameters params;
     params.speakerId = task.speakerId;
-    params.rate = 1.0;
-    params.volume = 0.8;
+    // params.rate = 1.0;   // 2026-02-27 06:00 注释：原硬编码值
+    // params.volume = 0.8; // 2026-02-27 06:00 注释：原硬编码值
+    params.rate = task.rate;
+    params.volume = task.volume;
 
     // 切换到指定引擎（模型通过speakerId在synthesize中指定）
     if (!m_ttsEngineManager->setCurrentEngine(task.engineName)) {

@@ -135,6 +135,9 @@ private:
         QString engineName;     // 引擎名称
         QString modelName;      // 模型名称
         int speakerId;          // 说话人ID
+        // ✅ 2026-02-27 06:00 [Phase 7.47.31]: 添加语速和音量
+        double rate = 1.0;
+        double volume = 0.8;
     };
 
     struct EngineConfig {
@@ -142,6 +145,9 @@ private:
         QString modelName;
         int speakerId;
         QString outputFolder;
+        // ✅ 2026-02-27 06:00 [Phase 7.47.31]: 添加语速和音量，使用语音管理界面保存的参数
+        double rate = 1.0;
+        double volume = 0.8;
     };
 
     // 生成任务列表
