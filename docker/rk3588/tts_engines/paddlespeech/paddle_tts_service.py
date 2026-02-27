@@ -32,26 +32,45 @@ logger = logging.getLogger(__name__)
 # 原因：确保 PaddleSpeech 使用本地模型，避免网络下载
 # ✅ 2026-02-26 12:30 [Phase 7.47.8]: 修复路径（移除多余的 models 层级）
 # ✅ 2026-02-26 14:30 [Phase 7.47.10]: 恢复正确路径（设备实际路径是 /home/linaro/belt-control-data/models/tts_models/）
+# ✅ 2026-02-26 16:30 [Phase 7.47.12]: 使用容器内路径 /app/tts_models
+# 原因：Docker 挂载 /home/linaro/belt-control-data/models/tts_models → /app/tts_models
+#       容器内应使用 /app/tts_models，不是宿主机路径
+# 效果：兼容 pi 和 linaro 两种设备
+# ✅ 2026-02-26 19:35 [Phase 7.47.15]: 设置 PPSPEECH_HOME 环境变量
+# 原因：PaddleSpeech 库实际检查的是 PPSPEECH_HOME，不是 PADDLESPEECH_HOME
+#       见 paddlespeech/utils/env.py: if 'PPSPEECH_HOME' in os.environ
+# 效果：PaddleSpeech 正确使用本地模型，不再尝试下载
 paddlespeech_home = os.environ.get('PADDLESPEECH_HOME', '')
+ppspeech_home = os.environ.get('PPSPEECH_HOME', '')
 logger.info(f"📂 PADDLESPEECH_HOME 环境变量: '{paddlespeech_home}'")
+logger.info(f"📂 PPSPEECH_HOME 环境变量: '{ppspeech_home}'")
 
 if not paddlespeech_home:
-    # 自动检测模型路径
+    # 自动检测模型路径 - 优先使用容器内路径
     possible_paths = [
-        '/home/linaro/belt-control-data/models/tts_models/paddlespeech',
-        '/home/pi/belt-control-data/models/tts_models/paddlespeech',
-        '/app/tts_models/paddlespeech'
+        '/app/tts_models/paddlespeech',  # Docker 挂载路径（推荐）
+        # '/home/linaro/belt-control-data/models/tts_models/paddlespeech',
+        # '/home/pi/belt-control-data/models/tts_models/paddlespeech',
     ]
     for path in possible_paths:
         if os.path.exists(os.path.join(path, 'models')):
             paddlespeech_home = path
             os.environ['PADDLESPEECH_HOME'] = paddlespeech_home
+            # ✅ 2026-02-26 19:35 [Phase 7.47.15]: 同时设置 PPSPEECH_HOME
+            os.environ['PPSPEECH_HOME'] = paddlespeech_home
             logger.info(f"✅ 自动设置 PADDLESPEECH_HOME={paddlespeech_home}")
+            logger.info(f"✅ 自动设置 PPSPEECH_HOME={paddlespeech_home}")
             break
     if not paddlespeech_home:
         logger.warning("⚠️ 未找到本地模型路径，PaddleSpeech 可能会尝试下载模型")
 else:
     logger.info(f"✅ 使用环境变量 PADDLESPEECH_HOME={paddlespeech_home}")
+    # ✅ 2026-02-26 19:35 [Phase 7.47.15]: 确保 PPSPEECH_HOME 也被设置
+    if not ppspeech_home:
+        os.environ['PPSPEECH_HOME'] = paddlespeech_home
+        logger.info(f"✅ 自动设置 PPSPEECH_HOME={paddlespeech_home}")
+    else:
+        logger.info(f"✅ 使用环境变量 PPSPEECH_HOME={ppspeech_home}")
 
 # 全局 TTS 对象
 tts_executor = None
@@ -83,6 +102,20 @@ def initialize_paddlespeech(model_name):
             model_name = os.path.basename(model_name)
             logger.info(f"📝 提取模型名称: {model_name}")
 
+        # ✅ 2026-02-27 07:00 [Phase 7.47.32]: 如果模型没变，跳过重新初始化，防止内存泄漏
+        if current_model == model_name and tts_executor is not None:
+            logger.info(f"✅ 模型未变化({model_name})，跳过重新初始化")
+            return True
+
+        # ✅ 2026-02-27 07:00 [Phase 7.47.32]: 释放旧的 executor，防止内存暴涨
+        if tts_executor is not None:
+            logger.info("🗑️ 释放旧的 TTS executor")
+            del tts_executor
+            tts_executor = None
+            import gc
+            gc.collect()
+            logger.info("✅ 旧 executor 已释放，GC 已执行")
+
         # 导入 PaddleSpeech
         from paddlespeech.cli.tts.infer import TTSExecutor
 
@@ -102,7 +135,7 @@ def initialize_paddlespeech(model_name):
         return False
 
 
-def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
+def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8, sample_rate=24000):
     """
     合成语音
 
@@ -112,6 +145,7 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
         speaker_id: 说话人ID
         speed: 语速（0.5-2.0）
         volume: 音量（0.0-1.0）
+        sample_rate: 采样率（16000, 22050, 24000, 44100, 48000）
 
     Returns:
         bool: 是否成功
@@ -171,10 +205,12 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
             voc_name = 'hifigan_aishell3'
             lang = 'zh'
         elif 'csmsc' in am_name:
-            voc_name = 'pwgan_csmsc'
+            # voc_name = 'pwgan_csmsc'  # ✅ 2026-02-27 10:00 [Phase 7.47.30]: 注释，音质不如 HiFiGAN
+            voc_name = 'hifigan_csmsc'  # ✅ 2026-02-27 10:00 [Phase 7.47.30]: 与 PaddleSpeech CLI 默认一致，音质更优
             lang = 'zh'
         elif 'canton' in am_name:
-            voc_name = 'pwgan_csmsc'
+            # voc_name = 'pwgan_csmsc'  # ✅ 2026-02-27 10:00 [Phase 7.47.30]: 注释，改用 HiFiGAN
+            voc_name = 'hifigan_csmsc'  # ✅ 2026-02-27 10:00 [Phase 7.47.30]: 统一使用 HiFiGAN
             lang = 'canton'
         elif 'ljspeech' in am_name:
             voc_name = 'hifigan_ljspeech'
@@ -183,24 +219,32 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8):
             voc_name = 'hifigan_ljspeech'
             lang = 'en'
         elif 'mix' in am_name:
-            voc_name = 'pwgan_csmsc'
+            # voc_name = 'pwgan_csmsc'  # ✅ 2026-02-27 10:00 [Phase 7.47.30]: 注释，改用 HiFiGAN
+            voc_name = 'hifigan_csmsc'  # ✅ 2026-02-27 10:00 [Phase 7.47.30]: 统一使用 HiFiGAN
             lang = 'mix'
         else:
             # 默认使用中文
-            voc_name = 'pwgan_csmsc'
+            # voc_name = 'pwgan_csmsc'  # ✅ 2026-02-27 10:00 [Phase 7.47.30]: 注释，改用 HiFiGAN
+            voc_name = 'hifigan_csmsc'  # ✅ 2026-02-27 10:00 [Phase 7.47.30]: 默认也使用 HiFiGAN
             lang = 'zh'
 
         logger.info(f"📦 使用模型: am={am_name}, voc={voc_name}, lang={lang}")
+        # ✅ 2026-02-26 20:45 [Phase 7.47.17]: 添加 speaker_id 调试日志
+        logger.info(f"👤 说话人ID: spk_id={speaker_id}")
+        # ✅ 2026-02-26 [Phase 7.47.19]: 添加采样率日志
+        logger.info(f"🎵 采样率: fs={sample_rate}")
 
         # 调用 PaddleSpeech 合成
         # 使用预定义模型名称（带语言后缀）
+        # ✅ 2026-02-26 [Phase 7.47.19]: 添加 fs 参数设置采样率
         tts_executor(
             text=text,
             output=output_path,
             am=am_name,        # 预定义模型名称，如 'fastspeech2_csmsc-zh'
             voc=voc_name,      # 预定义声码器名称，如 'pwgan_csmsc'
             lang=lang,         # 语言：'zh' 或 'en'
-            spk_id=speaker_id  # 说话人ID
+            spk_id=speaker_id, # 说话人ID
+            fs=sample_rate     # 采样率
         )
 
         # 检查输出文件
@@ -257,8 +301,10 @@ def handle_command(command_json):
         speaker_id = command_json.get('speaker_id', 0)
         speed = command_json.get('speed', 1.0)
         volume = command_json.get('volume', 0.8)
+        # ✅ 2026-02-26 [Phase 7.47.19]: 添加采样率参数
+        sample_rate = command_json.get('sample_rate', 24000)
 
-        success = synthesize_speech(text, output_path, speaker_id, speed, volume)
+        success = synthesize_speech(text, output_path, speaker_id, speed, volume, sample_rate)
         return {
             'status': 'success' if success else 'error',
             'error': None if success else '合成失败'
