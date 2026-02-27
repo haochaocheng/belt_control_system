@@ -10,6 +10,7 @@
 #include <QFileInfo>
 #include <QDebug>
 #include <QElapsedTimer>
+#include <QCoreApplication>
 
 BatchAudioGenerator::BatchAudioGenerator(TTSEngineManager *ttsManager, QObject *parent)
     : QObject(parent)
@@ -174,17 +175,26 @@ void BatchAudioGenerator::start()
     m_startTime = QDateTime::currentDateTime();
     m_logMessages.clear();
 
-    emit logMessage("info", "========== 开始批量生成 ==========");
-    emit logMessage("info", QString("总任务数：%1").arg(m_totalFiles));
-
     // 生成任务
     generateTasks();
+
+    // ✅ 2026-02-27 08:00 [Phase 7.47.33]: 重新计算totalFiles，确保与实际任务数一致
+    m_totalFiles = m_tasks.size();
+    emit totalFilesChanged();
+
+    emit logMessage("info", "========== 开始批量生成 ==========");
+    emit logMessage("info", QString("总任务数：%1").arg(m_totalFiles));
 
     // 执行任务
     QElapsedTimer timer;
     timer.start();
 
     for (int i = 0; i < m_tasks.size(); ++i) {
+        // ✅ 2026-02-27 09:00 [Phase 7.47.33]: 处理事件队列，让 QML 的 stop() 调用能被送达
+        // 原因：start() 在主线程同步执行，for 循环阻塞事件循环
+        //       不调用 processEvents，QML 的 stop 按钮点击永远无法被处理
+        QCoreApplication::processEvents();
+
         if (!m_isRunning) {
             emit logMessage("warn", "批量生成已停止");
             break;
@@ -242,6 +252,18 @@ void BatchAudioGenerator::stop()
     emit logMessage("info", "正在停止批量生成...");
     m_isRunning = false;
     emit isRunningChanged();
+
+    // ✅ 2026-02-27 09:00 [Phase 7.47.33]: 通知 TTS 引擎取消当前正在等待的合成命令
+    // 原因：sendCommand() 用 waitForReadyRead 轮询阻塞，需要通过 cancelPending 中断
+    //       否则 stop 后 sendCommand 仍在等响应，再次 start 会协议错位导致死锁
+    if (m_ttsEngineManager) {
+        m_ttsEngineManager->stop();
+    }
+
+    // ✅ 2026-02-27 08:00 [Phase 7.47.33]: 清空任务列表，防止残留任务
+    // 原因：stop后如果sendCommand还在等待响应，响应回来后循环会检查m_isRunning退出
+    //       但如果用户立即再次start，需要确保旧任务不会干扰
+    m_tasks.clear();
 }
 
 void BatchAudioGenerator::exportLog(const QString &filePath)

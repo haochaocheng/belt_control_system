@@ -5,7 +5,7 @@
 #include <QFile>
 #include <QDir>
 #include <QThread>
-#include <QEventLoop>
+#include <QElapsedTimer>
 #include <QTimer>
 
 // ✅ 2026-02-13 [Phase 7.46.3]: 实现 PaddleSpeech 适配器
@@ -142,6 +142,8 @@ bool PaddleSpeechAdapter::synthesize(const QString &text, const QString &outputP
     command["speaker_id"] = params.speakerId;
     command["speed"] = params.rate;
     command["volume"] = params.volume;
+    // ✅ 2026-02-26 [Phase 7.47.19]: 添加采样率参数
+    command["sample_rate"] = params.sampleRate;
 
     emit synthesisProgress(0);
 
@@ -202,17 +204,34 @@ int PaddleSpeechAdapter::getMaxSpeakerId(int modelIndex) const
 
 void PaddleSpeechAdapter::stop()
 {
-    QMutexLocker locker(&m_mutex);
+    // ✅ 2026-02-27 09:00 [Phase 7.47.33]: 重写stop()
+    // 原因：旧实现在 stop() 中调用 sendCommand()，但 synthesize() 已持有 m_mutex
+    //       导致 stop() 等待 mutex → synthesize() 的 sendCommand 阻塞在 QEventLoop → 死锁
+    // 方案：stop() 只设置 cancelPending 标志，不发送命令，不获取 mutex
+    //       sendCommand() 内部定期检查标志并提前退出
+    cancelPending();
+    qDebug() << "🛑 [PaddleSpeech] 停止合成（已设置取消标志）";
+}
 
+void PaddleSpeechAdapter::cancelPending()
+{
+    // ✅ 2026-02-27 09:00 [Phase 7.47.33]: 原子操作，不需要 mutex
+    m_cancelRequested.store(true);
+}
+
+void PaddleSpeechAdapter::drainStdout()
+{
+    // ✅ 2026-02-27 09:00 [Phase 7.47.33]: 排空 stdout 残留数据
+    // 原因：取消后 Python 进程可能还会返回上一条命令的响应
+    //       如果不排空，下一次 sendCommand 会读到旧响应 → 协议错位
     if (m_process && m_process->state() == QProcess::Running) {
-        // 发送停止命令
-        QJsonObject command;
-        command["command"] = "stop";
-
-        QJsonObject response;
-        sendCommand(command, response, 5000);
-
-        qDebug() << "🛑 [PaddleSpeech] 停止合成";
+        // 等待短暂时间让 Python 进程输出残留数据
+        m_process->waitForReadyRead(500);
+        QByteArray residual = m_process->readAllStandardOutput();
+        if (!residual.isEmpty()) {
+            qDebug() << "🗑️ [PaddleSpeech] 排空残留数据:" << residual.size() << "字节";
+        }
+        m_responseBuffer.clear();
     }
 }
 
@@ -231,19 +250,31 @@ bool PaddleSpeechAdapter::startService()
     // 效果：Python 进程继承此环境变量，正确找到本地模型
     // ✅ 2026-02-26 12:30 [Phase 7.47.8]: 修复路径（移除多余的 models 层级）
     // ✅ 2026-02-26 14:30 [Phase 7.47.10]: 恢复正确路径（设备实际路径是 /home/linaro/belt-control-data/models/tts_models/）
+    // ✅ 2026-02-26 16:30 [Phase 7.47.12]: 使用容器内路径 /app/tts_models
+    // 原因：Docker 挂载 /home/linaro/belt-control-data/models/tts_models → /app/tts_models
+    //       容器内应使用 /app/tts_models，不是宿主机路径
+    // 效果：兼容 pi 和 linaro 两种设备
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 #ifdef Q_OS_LINUX
     // 检测模型路径（优先 linaro，其次 pi）
-    QString paddleSpeechHome;
-    if (QDir("/home/linaro/belt-control-data/models/tts_models/paddlespeech").exists()) {
-        paddleSpeechHome = "/home/linaro/belt-control-data/models/tts_models/paddlespeech";
-    } else if (QDir("/home/pi/belt-control-data/models/tts_models/paddlespeech").exists()) {
-        paddleSpeechHome = "/home/pi/belt-control-data/models/tts_models/paddlespeech";
-    } else {
-        paddleSpeechHome = "/app/tts_models/paddlespeech";
-    }
+    // QString paddleSpeechHome;
+    // if (QDir("/home/linaro/belt-control-data/models/tts_models/paddlespeech").exists()) {
+    //     paddleSpeechHome = "/home/linaro/belt-control-data/models/tts_models/paddlespeech";
+    // } else if (QDir("/home/pi/belt-control-data/models/tts_models/paddlespeech").exists()) {
+    //     paddleSpeechHome = "/home/pi/belt-control-data/models/tts_models/paddlespeech";
+    // } else {
+    //     paddleSpeechHome = "/app/tts_models/paddlespeech";
+    // }
+    // 使用容器内路径，Docker 挂载会自动处理宿主机路径映射
+    QString paddleSpeechHome = "/app/tts_models/paddlespeech";
     env.insert("PADDLESPEECH_HOME", paddleSpeechHome);
+    // ✅ 2026-02-26 19:35 [Phase 7.47.15]: 设置 PPSPEECH_HOME 环境变量
+    // 原因：PaddleSpeech 库实际检查的是 PPSPEECH_HOME，不是 PADDLESPEECH_HOME
+    //       见 paddlespeech/utils/env.py: if 'PPSPEECH_HOME' in os.environ
+    // 效果：PaddleSpeech 正确使用本地模型，不再尝试下载
+    env.insert("PPSPEECH_HOME", paddleSpeechHome);
     qDebug() << "📂 [PaddleSpeech] PADDLESPEECH_HOME=" << paddleSpeechHome;
+    qDebug() << "📂 [PaddleSpeech] PPSPEECH_HOME=" << paddleSpeechHome;
 #endif
     m_process->setProcessEnvironment(env);
 
@@ -319,6 +350,9 @@ bool PaddleSpeechAdapter::sendCommand(const QJsonObject &command, QJsonObject &r
         return false;
     }
 
+    // ✅ 2026-02-27 09:00 [Phase 7.47.33]: 进入 sendCommand 时清除取消标志
+    m_cancelRequested.store(false);
+
     // ✅ 2026-02-16 02:50: 临时断开 readyReadStandardOutput 信号
     // 原因：onProcessReadyRead() 会读取数据，导致 sendCommand() 读不到完整响应
     // 效果：避免响应被其他槽函数读走
@@ -337,26 +371,38 @@ bool PaddleSpeechAdapter::sendCommand(const QJsonObject &command, QJsonObject &r
     m_process->write(data);
     m_process->waitForBytesWritten(1000);
 
-    // 等待响应
-    QEventLoop loop;
-    QTimer timer;
-    timer.setSingleShot(true);
+    // ✅ 2026-02-27 09:00 [Phase 7.47.33]: 使用轮询方式等待响应，支持取消中断
+    // 原因：旧实现用 QEventLoop::exec() 阻塞主线程，stop() 无法中断
+    //       导致 stop→再start 时 sendCommand 仍在等旧响应 → 协议错位 → 死锁
+    // 方案：每 500ms 检查一次 m_cancelRequested，提前退出
+    QElapsedTimer elapsed;
+    elapsed.start();
+    bool gotData = false;
 
-    connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-    connect(m_process, &QProcess::readyReadStandardOutput, &loop, &QEventLoop::quit);
+    while (elapsed.elapsed() < timeoutMs) {
+        // 检查取消标志
+        if (m_cancelRequested.load()) {
+            qDebug() << "⚠️ [PaddleSpeech] sendCommand 被取消";
+            // 排空残留数据，防止下次协议错位
+            drainStdout();
+            connect(m_process, &QProcess::readyReadStandardOutput,
+                    this, &PaddleSpeechAdapter::onProcessReadyRead);
+            return false;
+        }
 
-    timer.start(timeoutMs);
-    loop.exec();
+        // 等待数据，最多 500ms
+        if (m_process->waitForReadyRead(500)) {
+            gotData = true;
+            break;
+        }
+    }
 
-    if (!timer.isActive()) {
+    if (!gotData) {
         qWarning() << "⚠️ [PaddleSpeech] 命令超时";
-        // ✅ 2026-02-16 02:50: 恢复信号连接
         connect(m_process, &QProcess::readyReadStandardOutput,
                 this, &PaddleSpeechAdapter::onProcessReadyRead);
         return false;
     }
-
-    timer.stop();
 
     // 读取响应
     QByteArray responseData = m_process->readAllStandardOutput();
@@ -366,7 +412,6 @@ bool PaddleSpeechAdapter::sendCommand(const QJsonObject &command, QJsonObject &r
     int newlineIndex = m_responseBuffer.indexOf('\n');
     if (newlineIndex == -1) {
         qWarning() << "⚠️ [PaddleSpeech] 响应不完整";
-        // ✅ 2026-02-16 02:50: 恢复信号连接
         connect(m_process, &QProcess::readyReadStandardOutput,
                 this, &PaddleSpeechAdapter::onProcessReadyRead);
         return false;
@@ -378,7 +423,6 @@ bool PaddleSpeechAdapter::sendCommand(const QJsonObject &command, QJsonObject &r
     QJsonDocument responseDoc = QJsonDocument::fromJson(responseLine.toUtf8());
     if (responseDoc.isNull() || !responseDoc.isObject()) {
         qWarning() << "⚠️ [PaddleSpeech] 响应格式错误:" << responseLine;
-        // ✅ 2026-02-16 02:50: 恢复信号连接
         connect(m_process, &QProcess::readyReadStandardOutput,
                 this, &PaddleSpeechAdapter::onProcessReadyRead);
         return false;

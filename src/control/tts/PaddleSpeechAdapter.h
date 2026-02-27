@@ -5,6 +5,7 @@
 #include <QProcess>
 #include <QMutex>
 #include <QJsonObject>
+#include <atomic>
 
 /**
  * @brief PaddleSpeech 适配器
@@ -54,11 +55,27 @@ private:
      */
     bool sendCommand(const QJsonObject &command, QJsonObject &response, int timeoutMs = 30000);
 
+    /**
+     * @brief 排空 Python 进程的 stdout 残留数据，防止协议错位
+     * ✅ 2026-02-27 09:00 [Phase 7.47.33]
+     */
+    void drainStdout();
+
+public:
+    /**
+     * @brief 请求取消当前正在等待的 sendCommand
+     * ✅ 2026-02-27 09:00 [Phase 7.47.33]: 不走 mutex，直接设标志
+     */
+    void cancelPending();
+
 private:
     QProcess *m_process;            // Python 服务进程
     QString m_serviceScript;        // 服务脚本路径
     QString m_responseBuffer;       // 响应缓冲区
     QMutex m_mutex;                 // 线程锁
+    // ✅ 2026-02-27 08:00 [Phase 7.47.33]: 添加取消标志，让sendCommand可被中断
+    // ✅ 2026-02-27 09:00 [Phase 7.47.33]: 改用 atomic 保证线程安全（cancelPending 不走 mutex）
+    std::atomic<bool> m_cancelRequested{false};
 
     // 模型信息
     static const QMap<QString, int> MODEL_SPEAKER_COUNTS;
