@@ -21,6 +21,7 @@ BatchAudioGenerator::BatchAudioGenerator(TTSEngineManager *ttsManager, QObject *
     , m_linePositionEnd(64)
     , m_skipExisting(true)
     , m_generateReport(true)
+    , m_elapsedMs(0)  // ✅ 2026-02-26 23:30 [Phase 7.47.21]: 初始化时间统计
     , m_ttsEngineManager(ttsManager)
 {
     qDebug() << "[BatchAudioGenerator] 初始化";
@@ -35,6 +36,34 @@ double BatchAudioGenerator::progress() const
 {
     if (m_totalFiles == 0) return 0.0;
     return (double)m_completedFiles / m_totalFiles * 100.0;
+}
+
+// ✅ 2026-02-26 23:30 [Phase 7.47.21]: 格式化时间为 mm:ss 格式
+QString BatchAudioGenerator::elapsedTime() const
+{
+    int totalSeconds = m_elapsedMs / 1000;
+    int minutes = totalSeconds / 60;
+    int seconds = totalSeconds % 60;
+    return QString("%1:%2").arg(minutes).arg(seconds, 2, 10, QChar('0'));
+}
+
+QString BatchAudioGenerator::estimatedTime() const
+{
+    if (m_completedFiles == 0 || m_totalFiles == 0) {
+        return "--:--";
+    }
+
+    // 计算平均每个文件的时间
+    double avgTimePerFile = (double)m_elapsedMs / m_completedFiles;
+    // 计算剩余文件数
+    int remainingFiles = m_totalFiles - m_completedFiles;
+    // 计算预计剩余时间
+    qint64 estimatedMs = (qint64)(avgTimePerFile * remainingFiles);
+
+    int totalSeconds = estimatedMs / 1000;
+    int minutes = totalSeconds / 60;
+    int seconds = totalSeconds % 60;
+    return QString("%1:%2").arg(minutes).arg(seconds, 2, 10, QChar('0'));
 }
 
 void BatchAudioGenerator::setConfig(const QVariantMap &config)
@@ -132,9 +161,12 @@ void BatchAudioGenerator::start()
 
     m_completedFiles = 0;
     m_failedFiles = 0;
+    m_elapsedMs = 0;  // ✅ 2026-02-26 23:30 [Phase 7.47.21]: 重置时间统计
     emit completedFilesChanged();
     emit failedFilesChanged();
     emit progressChanged();
+    emit elapsedTimeChanged();
+    emit estimatedTimeChanged();
 
     m_startTime = QDateTime::currentDateTime();
     m_logMessages.clear();
@@ -171,9 +203,14 @@ void BatchAudioGenerator::start()
             m_failedFiles++;
         }
 
+        // ✅ 2026-02-26 23:30 [Phase 7.47.21]: 更新时间统计
+        m_elapsedMs = timer.elapsed();
+
         emit completedFilesChanged();
         emit failedFilesChanged();
         emit progressChanged();
+        emit elapsedTimeChanged();
+        emit estimatedTimeChanged();
     }
 
     qint64 elapsed = timer.elapsed();
@@ -251,31 +288,28 @@ void BatchAudioGenerator::generateTasks()
 
 void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
 {
-    // 开关量输入保护：33 个文件/皮带
-    QStringList texts = {
-        "急停保护", "拉绳保护", "跑偏保护", "打滑保护",
-        "堆煤保护", "温度保护", "烟雾保护", "自动洒水",
-        "撕裂保护", "纵撕保护", "超温保护", "欠速保护",
-        "超速保护", "低速保护", "堵转保护", "过载保护",
-        "欠载保护", "空载保护", "满载保护", "轻载保护",
-        "重载保护", "启动保护", "停止保护", "正转保护",
-        "反转保护", "前进保护", "后退保护", "上升保护",
-        "下降保护", "开门保护", "关门保护", "锁定保护",
-        "解锁保护"
+    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
+    // 参考：docs/2026-02-26/08-音频文件路径映射设计方案.md
+    // 开关量输入保护：8 个文件/皮带（按设计方案）
+    QStringList protectionNames = {
+        "沿线急停保护", "沿线跑偏保护", "沿线撕裂保护", "烟雾保护",
+        "温度保护", "护网保护", "堆煤保护", "主机急停保护"
     };
 
     for (int beltNum : m_beltNumbers) {
-        QString beltFolder = QString("%1号皮带").arg(beltNum);
-        QString outputDir = QString("%1/%2/开关量输入保护/%3/")
+        // 目录格式：{outputBaseDir}/{engineFolder}/{皮带号}#PD/
+        QString outputDir = QString("%1/%2/%3#PD/")
                             .arg(m_outputBaseDir)
                             .arg(engine.outputFolder)
-                            .arg(beltFolder);
+                            .arg(beltNum);
 
-        for (int i = 0; i < texts.size(); ++i) {
+        for (const QString &protName : protectionNames) {
             FileTask task;
             task.category = "switchInput";
-            task.text = QString("%1号皮带%2").arg(beltNum).arg(texts[i]);
-            task.outputPath = QString("%1%2.wav").arg(outputDir).arg(i + 1, 3, 10, QChar('0'));
+            // 文本格式：{皮带号}号皮带{保护名称}
+            task.text = QString("%1号皮带%2").arg(beltNum).arg(protName);
+            // 文件名格式：{皮带号}号皮带{保护名称}.wav
+            task.outputPath = QString("%1%2号皮带%3.wav").arg(outputDir).arg(beltNum).arg(protName);
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
@@ -286,26 +320,24 @@ void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
 
 void BatchAudioGenerator::generateAnalogInputTasks(const EngineConfig &engine)
 {
-    // 模拟量输入保护：16 个文件/皮带
-    QStringList texts = {
-        "电流过高", "电流过低", "电压过高", "电压过低",
-        "温度过高", "温度过低", "速度过高", "速度过低",
-        "压力过高", "压力过低", "流量过高", "流量过低",
-        "液位过高", "液位过低", "功率过高", "功率过低"
+    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
+    // 模拟量输入保护：8 个文件/皮带（按设计方案）
+    QStringList protectionNames = {
+        "速度超速保护", "低速打滑保护", "张力过大保护", "张力过小保护",
+        "温度一过高保护", "温度二过高保护", "电压过高保护", "电压过低保护"
     };
 
     for (int beltNum : m_beltNumbers) {
-        QString beltFolder = QString("%1号皮带").arg(beltNum);
-        QString outputDir = QString("%1/%2/模拟量输入保护/%3/")
+        QString outputDir = QString("%1/%2/%3#PD/")
                             .arg(m_outputBaseDir)
                             .arg(engine.outputFolder)
-                            .arg(beltFolder);
+                            .arg(beltNum);
 
-        for (int i = 0; i < texts.size(); ++i) {
+        for (const QString &protName : protectionNames) {
             FileTask task;
             task.category = "analogInput";
-            task.text = QString("%1号皮带%2").arg(beltNum).arg(texts[i]);
-            task.outputPath = QString("%1%2.wav").arg(outputDir).arg(i + 1, 3, 10, QChar('0'));
+            task.text = QString("%1号皮带%2").arg(beltNum).arg(protName);
+            task.outputPath = QString("%1%2号皮带%3.wav").arg(outputDir).arg(beltNum).arg(protName);
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
@@ -316,26 +348,26 @@ void BatchAudioGenerator::generateAnalogInputTasks(const EngineConfig &engine)
 
 void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
 {
-    // 电机保护：12 个文件/皮带/电机
-    QStringList texts = {
-        "过载", "欠载", "过流", "欠流",
-        "过压", "欠压", "过热", "欠热",
-        "堵转", "失速", "缺相", "接地"
+    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
+    // 电机保护：9 个文件/皮带/电机（按设计方案）
+    QStringList protectionNames = {
+        "电流过载保护", "温度过高保护", "启动失败保护", "运行异常保护",
+        "通讯故障保护", "过压保护", "欠压保护", "缺相保护", "接地保护"
     };
 
     for (int beltNum : m_beltNumbers) {
-        for (int motorNum : m_motorNumbers) {
-            QString folder = QString("%1号皮带/%2号电机").arg(beltNum).arg(motorNum);
-            QString outputDir = QString("%1/%2/电机保护/%3/")
-                                .arg(m_outputBaseDir)
-                                .arg(engine.outputFolder)
-                                .arg(folder);
+        QString outputDir = QString("%1/%2/%3#PD/")
+                            .arg(m_outputBaseDir)
+                            .arg(engine.outputFolder)
+                            .arg(beltNum);
 
-            for (int i = 0; i < texts.size(); ++i) {
+        for (int motorNum : m_motorNumbers) {
+            for (const QString &protName : protectionNames) {
                 FileTask task;
                 task.category = "motor";
-                task.text = QString("%1号皮带%2号电机%3").arg(beltNum).arg(motorNum).arg(texts[i]);
-                task.outputPath = QString("%1%2.wav").arg(outputDir).arg(i + 1, 3, 10, QChar('0'));
+                task.text = QString("%1号皮带%2号电机%3").arg(beltNum).arg(motorNum).arg(protName);
+                task.outputPath = QString("%1%2号皮带%3号电机%4.wav")
+                                  .arg(outputDir).arg(beltNum).arg(motorNum).arg(protName);
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
@@ -347,25 +379,25 @@ void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
 
 void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
 {
-    // 制动器保护：8 个文件/皮带/制动器
-    QStringList texts = {
-        "制动失效", "制动过紧", "制动过松", "制动异响",
-        "制动过热", "制动磨损", "制动卡死", "制动延迟"
+    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
+    // 制动器保护：3 个文件/皮带/制动器（按设计方案）
+    QStringList protectionNames = {
+        "制动失效保护", "制动过热保护", "制动磨损保护"
     };
 
     for (int beltNum : m_beltNumbers) {
-        for (int brakeNum : m_brakeNumbers) {
-            QString folder = QString("%1号皮带/%2号制动器").arg(beltNum).arg(brakeNum);
-            QString outputDir = QString("%1/%2/制动器保护/%3/")
-                                .arg(m_outputBaseDir)
-                                .arg(engine.outputFolder)
-                                .arg(folder);
+        QString outputDir = QString("%1/%2/%3#PD/")
+                            .arg(m_outputBaseDir)
+                            .arg(engine.outputFolder)
+                            .arg(beltNum);
 
-            for (int i = 0; i < texts.size(); ++i) {
+        for (int brakeNum : m_brakeNumbers) {
+            for (const QString &protName : protectionNames) {
                 FileTask task;
                 task.category = "brake";
-                task.text = QString("%1号皮带%2号制动器%3").arg(beltNum).arg(brakeNum).arg(texts[i]);
-                task.outputPath = QString("%1%2.wav").arg(outputDir).arg(i + 1, 3, 10, QChar('0'));
+                task.text = QString("%1号皮带%2号制动器%3").arg(beltNum).arg(brakeNum).arg(protName);
+                task.outputPath = QString("%1%2号皮带%3号制动器%4.wav")
+                                  .arg(outputDir).arg(beltNum).arg(brakeNum).arg(protName);
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
@@ -377,26 +409,25 @@ void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
 
 void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
 {
-    // 张紧控制保护：10 个文件/皮带/张紧装置
-    QStringList texts = {
-        "张紧过紧", "张紧过松", "张紧失效", "张紧异响",
-        "张紧过热", "张紧磨损", "张紧卡死", "张紧延迟",
-        "张紧超限", "张紧欠限"
+    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
+    // 张紧控制保护：3 个文件/皮带/张紧装置（按设计方案）
+    QStringList protectionNames = {
+        "张紧过大保护", "张紧过小保护", "张紧失效保护"
     };
 
     for (int beltNum : m_beltNumbers) {
-        for (int tensionNum : m_tensionNumbers) {
-            QString folder = QString("%1号皮带/%2号张紧装置").arg(beltNum).arg(tensionNum);
-            QString outputDir = QString("%1/%2/张紧控制保护/%3/")
-                                .arg(m_outputBaseDir)
-                                .arg(engine.outputFolder)
-                                .arg(folder);
+        QString outputDir = QString("%1/%2/%3#PD/")
+                            .arg(m_outputBaseDir)
+                            .arg(engine.outputFolder)
+                            .arg(beltNum);
 
-            for (int i = 0; i < texts.size(); ++i) {
+        for (int tensionNum : m_tensionNumbers) {
+            for (const QString &protName : protectionNames) {
                 FileTask task;
                 task.category = "tension";
-                task.text = QString("%1号皮带%2号张紧装置%3").arg(beltNum).arg(tensionNum).arg(texts[i]);
-                task.outputPath = QString("%1%2.wav").arg(outputDir).arg(i + 1, 3, 10, QChar('0'));
+                task.text = QString("%1号皮带%2号张紧%3").arg(beltNum).arg(tensionNum).arg(protName);
+                task.outputPath = QString("%1%2号皮带%3号张紧%4.wav")
+                                  .arg(outputDir).arg(beltNum).arg(tensionNum).arg(protName);
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
@@ -408,47 +439,55 @@ void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
 
 void BatchAudioGenerator::generateLinePositionTasks(const EngineConfig &engine)
 {
-    // 沿线点位保护：linePositionEnd - linePositionStart + 1 个文件/皮带
+    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
+    // 沿线点位保护：3 个文件/皮带/点位（按设计方案）
+    QStringList protectionNames = {
+        "沿线急停保护", "沿线跑偏保护", "沿线撕裂保护"
+    };
+
     for (int beltNum : m_beltNumbers) {
-        QString beltFolder = QString("%1号皮带").arg(beltNum);
-        QString outputDir = QString("%1/%2/沿线点位保护/%3/")
+        QString outputDir = QString("%1/%2/%3#PD/")
                             .arg(m_outputBaseDir)
                             .arg(engine.outputFolder)
-                            .arg(beltFolder);
+                            .arg(beltNum);
 
         for (int pos = m_linePositionStart; pos <= m_linePositionEnd; ++pos) {
-            FileTask task;
-            task.category = "linePosition";
-            task.text = QString("%1号皮带%2号点位").arg(beltNum).arg(pos);
-            task.outputPath = QString("%1%2.wav").arg(outputDir).arg(pos, 3, 10, QChar('0'));
-            task.engineName = engine.engineName;
-            task.modelName = engine.modelName;
-            task.speakerId = engine.speakerId;
-            m_tasks.append(task);
+            for (const QString &protName : protectionNames) {
+                FileTask task;
+                task.category = "linePosition";
+                task.text = QString("%1号皮带%2号%3").arg(beltNum).arg(pos).arg(protName);
+                task.outputPath = QString("%1%2号皮带%3号%4.wav")
+                                  .arg(outputDir).arg(beltNum).arg(pos).arg(protName);
+                task.engineName = engine.engineName;
+                task.modelName = engine.modelName;
+                task.speakerId = engine.speakerId;
+                m_tasks.append(task);
+            }
         }
     }
 }
 
 void BatchAudioGenerator::generateSystemSoundTasks(const EngineConfig &engine)
 {
-    // 系统提示音：20 个文件
-    QStringList texts = {
-        "系统启动", "系统关闭", "系统重启", "系统故障",
-        "系统正常", "系统异常", "系统报警", "系统警告",
-        "操作成功", "操作失败", "操作取消", "操作确认",
-        "数据保存", "数据加载", "数据删除", "数据导出",
-        "网络连接", "网络断开", "电池电量低", "电池充电中"
+    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
+    // 系统提示音：16 个文件（按设计方案）
+    QStringList soundNames = {
+        "系统启动完成", "网络连接正常", "网络连接断开", "设备通讯正常",
+        "设备通讯故障", "参数保存成功", "参数加载成功", "操作成功",
+        "操作失败", "请确认操作", "报警已确认", "报警已解除",
+        "紧急停止", "恢复运行", "维护提醒", "电量不足"
     };
 
-    QString outputDir = QString("%1/%2/系统提示音/")
+    // 系统提示音放在 Sounds 目录
+    QString outputDir = QString("%1/%2/Sounds/")
                         .arg(m_outputBaseDir)
                         .arg(engine.outputFolder);
 
-    for (int i = 0; i < texts.size(); ++i) {
+    for (const QString &soundName : soundNames) {
         FileTask task;
         task.category = "systemSound";
-        task.text = texts[i];
-        task.outputPath = QString("%1%2.wav").arg(outputDir).arg(i + 1, 3, 10, QChar('0'));
+        task.text = soundName;
+        task.outputPath = QString("%1%2.wav").arg(outputDir).arg(soundName);
         task.engineName = engine.engineName;
         task.modelName = engine.modelName;
         task.speakerId = engine.speakerId;
@@ -531,4 +570,141 @@ void BatchAudioGenerator::generateReport()
 
     file.close();
     emit logMessage("info", QString("报告已生成：%1").arg(reportPath));
+}
+
+// ✅ 2026-02-27 00:30 [Phase 7.47.23]: 生成所有说话人ID测试语音
+void BatchAudioGenerator::generateAllSpeakerSamples()
+{
+    if (m_isRunning) {
+        emit logMessage("warn", "批量生成已在运行中");
+        return;
+    }
+
+    // ✅ 2026-02-27 01:00 [Phase 7.47.24]: 初始化输出基础目录
+    // 原因：generateAllSpeakerSamples() 独立调用，不依赖 setConfig()
+    if (m_outputBaseDir.isEmpty()) {
+        m_outputBaseDir = "/home/linaro/belt-control-data/AUDIO";
+    }
+
+    m_isRunning = true;
+    emit isRunningChanged();
+
+    // 重置统计
+    m_completedFiles = 0;
+    m_failedFiles = 0;
+    m_elapsedMs = 0;
+    m_totalFiles = 174;  // fastspeech2_aishell3 有 174 个说话人（ID 0-173）
+    emit totalFilesChanged();
+    emit completedFilesChanged();
+    emit failedFilesChanged();
+    emit progressChanged();
+    emit elapsedTimeChanged();
+    emit estimatedTimeChanged();
+
+    m_startTime = QDateTime::currentDateTime();
+    m_logMessages.clear();
+
+    emit logMessage("info", "========== 开始生成所有说话人测试语音 ==========");
+    emit logMessage("info", QString("总说话人数：%1（ID 0-173）").arg(m_totalFiles));
+
+    // 测试文本（符合煤矿场景）
+    QString testText = "1108顺槽皮带沿线急停保护";
+
+    // 输出目录
+    QString outputDir = QString("%1/speaker-samples/").arg(m_outputBaseDir);
+
+    // 创建输出目录
+    QDir dir;
+    if (!dir.mkpath(outputDir)) {
+        emit logMessage("error", QString("创建目录失败: %1").arg(outputDir));
+        m_isRunning = false;
+        emit isRunningChanged();
+        emit finished(false, "创建目录失败");
+        return;
+    }
+
+    emit logMessage("info", QString("输出目录: %1").arg(outputDir));
+    emit logMessage("info", QString("测试文本: %1").arg(testText));
+
+    // 切换到 PaddleSpeech 引擎
+    if (!m_ttsEngineManager->setCurrentEngine("PaddleSpeech")) {
+        emit logMessage("error", "无法切换到 PaddleSpeech 引擎");
+        m_isRunning = false;
+        emit isRunningChanged();
+        emit finished(false, "引擎切换失败");
+        return;
+    }
+
+    QElapsedTimer timer;
+    timer.start();
+
+    // 遍历所有说话人 ID（0-173）
+    for (int speakerId = 0; speakerId < 174; ++speakerId) {
+        if (!m_isRunning) {
+            emit logMessage("warn", "生成已停止");
+            break;
+        }
+
+        // 文件名格式：spk000-测试文本.wav
+        QString fileName = QString("spk%1-%2.wav")
+                           .arg(speakerId, 3, 10, QChar('0'))
+                           .arg(testText);
+        QString outputPath = outputDir + fileName;
+
+        m_currentFile = outputPath;
+        emit currentFileChanged();
+
+        emit logMessage("info", QString("[%1/%2] 生成说话人 ID %3: %4")
+                        .arg(m_completedFiles + 1)
+                        .arg(m_totalFiles)
+                        .arg(speakerId)
+                        .arg(testText));
+
+        // 检查文件是否已存在
+        if (m_skipExisting && QFile::exists(outputPath)) {
+            emit logMessage("info", QString("  跳过（已存在）: %1").arg(outputPath));
+            m_completedFiles++;
+        } else {
+            // 设置 TTS 参数
+            TTSParameters params;
+            params.speakerId = speakerId;
+            params.rate = 1.0;
+            params.volume = 0.8;
+
+            // 执行合成
+            bool success = m_ttsEngineManager->synthesize(testText, outputPath, params);
+
+            m_completedFiles++;
+            if (!success) {
+                m_failedFiles++;
+                emit logMessage("error", QString("  生成失败: spk%1").arg(speakerId, 3, 10, QChar('0')));
+            } else {
+                emit logMessage("info", QString("  生成成功: %1").arg(fileName));
+            }
+        }
+
+        // 更新时间统计
+        m_elapsedMs = timer.elapsed();
+
+        emit completedFilesChanged();
+        emit failedFilesChanged();
+        emit progressChanged();
+        emit elapsedTimeChanged();
+        emit estimatedTimeChanged();
+    }
+
+    qint64 elapsed = timer.elapsed();
+    double seconds = elapsed / 1000.0;
+
+    emit logMessage("info", "========== 说话人测试语音生成完成 ==========");
+    emit logMessage("info", QString("总耗时：%.2f 秒").arg(seconds));
+    emit logMessage("info", QString("成功：%1，失败：%2")
+                    .arg(m_completedFiles - m_failedFiles)
+                    .arg(m_failedFiles));
+    emit logMessage("info", QString("输出目录：%1").arg(outputDir));
+
+    m_isRunning = false;
+    emit isRunningChanged();
+
+    emit finished(m_failedFiles == 0, "说话人测试语音生成完成");
 }

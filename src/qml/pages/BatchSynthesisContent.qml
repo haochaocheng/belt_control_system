@@ -72,9 +72,11 @@ Rectangle {
             spacing: 20
 
             // 左侧：配置区
+            // ✅ 2026-02-26 22:45 [Phase 7.47.19]: 修复对齐问题，添加顶部对齐
             ColumnLayout {
                 Layout.preferredWidth: 350
                 Layout.fillHeight: true
+                Layout.alignment: Qt.AlignTop
                 spacing: 10
 
                 // 分类选择
@@ -172,7 +174,8 @@ Rectangle {
                     }
                 }
 
-                // 范围设置 - 4列布局
+                // 范围设置 - 2列布局，更宽的输入框
+                // ✅ 2026-02-26 22:50 [Phase 7.47.19]: 修复输入框宽度问题
                 GroupBox {
                     Layout.fillWidth: true
                     title: "生成范围"
@@ -190,56 +193,65 @@ Rectangle {
                     }
 
                     GridLayout {
-                        columns: 4
-                        columnSpacing: 10
-                        rowSpacing: 6
+                        columns: 2
+                        columnSpacing: 15
+                        rowSpacing: 8
+                        anchors.fill: parent
 
-                        Text { text: "皮带:"; color: "#cccccc" }
+                        Text { text: "皮带数量:"; color: "#cccccc"; Layout.preferredWidth: 80 }
                         SpinBox {
                             id: spinBeltCount
                             from: 1; to: 8; value: 8
                             editable: true
-                            Layout.preferredWidth: 80
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 35
                         }
-                        Text { text: "电机:"; color: "#cccccc" }
+
+                        Text { text: "电机数量:"; color: "#cccccc"; Layout.preferredWidth: 80 }
                         SpinBox {
                             id: spinMotorCount
                             from: 1; to: 4; value: 4
                             editable: true
-                            Layout.preferredWidth: 80
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 35
                         }
 
-                        Text { text: "制动器:"; color: "#cccccc" }
+                        Text { text: "制动器数量:"; color: "#cccccc"; Layout.preferredWidth: 80 }
                         SpinBox {
                             id: spinBrakeCount
                             from: 1; to: 4; value: 4
                             editable: true
-                            Layout.preferredWidth: 80
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 35
                         }
-                        Text { text: "张紧:"; color: "#cccccc" }
+
+                        Text { text: "张紧数量:"; color: "#cccccc"; Layout.preferredWidth: 80 }
                         SpinBox {
                             id: spinTensionCount
                             from: 1; to: 2; value: 2
                             editable: true
-                            Layout.preferredWidth: 80
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 35
                         }
 
-                        Text { text: "点位:"; color: "#cccccc" }
+                        Text { text: "点位范围:"; color: "#cccccc"; Layout.preferredWidth: 80 }
                         RowLayout {
-                            Layout.columnSpan: 3
-                            spacing: 5
+                            Layout.fillWidth: true
+                            spacing: 10
                             SpinBox {
                                 id: spinLineStart
                                 from: 1; to: 64; value: 1
                                 editable: true
-                                Layout.preferredWidth: 80
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 35
                             }
                             Text { text: "-"; color: "#cccccc" }
                             SpinBox {
                                 id: spinLineEnd
                                 from: 1; to: 64; value: 64
                                 editable: true
-                                Layout.preferredWidth: 80
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 35
                             }
                         }
                     }
@@ -247,9 +259,11 @@ Rectangle {
             }
 
             // 右侧：预览和进度区
+            // ✅ 2026-02-26 22:45 [Phase 7.47.19]: 修复对齐问题，添加顶部对齐
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.alignment: Qt.AlignTop
                 spacing: 10
 
                 // 统计信息
@@ -331,14 +345,16 @@ Rectangle {
 
                         ProgressBar {
                             Layout.fillWidth: true
-                            value: batchGenerator ? batchGenerator.progressPercent / 100 : 0
+                            // ✅ 2026-02-26 23:05 [Phase 7.47.19]: 修复属性名称
+                            value: batchGenerator ? batchGenerator.progress / 100 : 0
                             background: Rectangle {
                                 color: "#1a1a2e"
                                 radius: 3
                             }
                             contentItem: Item {
                                 Rectangle {
-                                    width: parent.width * (batchGenerator ? batchGenerator.progressPercent / 100 : 0)
+                                    // ✅ 2026-02-26 23:00 [Phase 7.47.19]: 修复属性名称，与后端匹配
+                                    width: parent.width * (batchGenerator ? batchGenerator.progress / 100 : 0)
                                     height: parent.height
                                     radius: 3
                                     color: "#00aa66"
@@ -346,13 +362,15 @@ Rectangle {
                             }
                         }
 
+                        // ✅ 2026-02-26 23:00 [Phase 7.47.19]: 修复属性名称，与后端匹配
                         Text {
-                            text: batchGenerator ? (batchGenerator.progressPercent.toFixed(1) + "%") : "0%"
+                            text: batchGenerator ? (batchGenerator.progress.toFixed(1) + "%") : "0%"
                             color: "#ffffff"
                             font.pixelSize: 16
                             Layout.alignment: Qt.AlignHCenter
                         }
 
+                        // ✅ 2026-02-26 23:35 [Phase 7.47.21]: 添加时间统计显示
                         RowLayout {
                             Layout.fillWidth: true
                             Text {
@@ -361,13 +379,26 @@ Rectangle {
                             }
                             Item { Layout.fillWidth: true }
                             Text {
-                                text: "预计剩余: " + (batchGenerator ? batchGenerator.estimatedTime : "0:00")
+                                text: "预计剩余: " + (batchGenerator ? batchGenerator.estimatedTime : "--:--")
                                 color: "#aaaaaa"
                             }
                         }
 
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Text {
+                                text: "已完成: " + (batchGenerator ? batchGenerator.completedFiles : 0) + " / " + (batchGenerator ? batchGenerator.totalFiles : 0)
+                                color: "#aaaaaa"
+                            }
+                            Item { Layout.fillWidth: true }
+                            Text {
+                                text: "失败: " + (batchGenerator ? batchGenerator.failedFiles : 0)
+                                color: batchGenerator && batchGenerator.failedFiles > 0 ? "#ff6666" : "#aaaaaa"
+                            }
+                        }
+
                         Text {
-                            text: "当前: " + (batchGenerator ? batchGenerator.currentText : "")
+                            text: "当前: " + (batchGenerator ? batchGenerator.currentFile : "")
                             color: "#88aaff"
                             elide: Text.ElideRight
                             Layout.fillWidth: true
@@ -460,17 +491,41 @@ Rectangle {
                 }
             }
 
+            // ✅ 2026-02-27 00:35 [Phase 7.47.23]: 添加生成所有ID语音按钮
+            Button {
+                text: "生成所有ID语音"
+                Layout.preferredWidth: 130
+                Layout.preferredHeight: 36
+                enabled: batchGenerator && !batchGenerator.isRunning
+                onClicked: {
+                    if (batchGenerator) {
+                        appendLog("info", "开始生成所有说话人测试语音（174个）...")
+                        batchGenerator.generateAllSpeakerSamples()
+                    }
+                }
+                background: Rectangle {
+                    color: parent.enabled ? (parent.hovered ? "#ff8800" : "#cc6600") : "#666666"
+                    radius: 4
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "#ffffff"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
             Item { Layout.fillWidth: true }
 
             Button {
                 id: btnStart
-                text: batchGenerator && batchGenerator.isRunning ? "暂停" : "开始生成"
+                // ✅ 2026-02-26 23:00 [Phase 7.47.19]: 修复按钮逻辑，与后端匹配
+                text: batchGenerator && batchGenerator.isRunning ? "停止" : "开始生成"
                 Layout.preferredWidth: 100
                 Layout.preferredHeight: 36
-                enabled: !batchGenerator || !batchGenerator.isPaused
                 onClicked: {
                     if (batchGenerator && batchGenerator.isRunning) {
-                        batchGenerator.pause()
+                        batchGenerator.stop()
                     } else {
                         startGeneration()
                     }
@@ -525,6 +580,7 @@ Rectangle {
     }
 
     // 计算预计文件数
+    // ✅ 2026-02-26 23:25 [Phase 7.47.20]: 更新文件数量计算，与后端一致
     function calculateTotalFiles() {
         var total = 0
         var beltCount = spinBeltCount.value
@@ -533,13 +589,14 @@ Rectangle {
         var tensionCount = spinTensionCount.value
         var lineCount = spinLineEnd.value - spinLineStart.value + 1
 
-        if (chkSwitchInput.checked) total += 33 * beltCount
-        if (chkAnalogInput.checked) total += 16 * beltCount
-        if (chkMotor.checked) total += 12 * beltCount * motorCount
-        if (chkBrake.checked) total += 8 * beltCount * brakeCount
-        if (chkTension.checked) total += 10 * beltCount * tensionCount
-        if (chkLinePosition.checked) total += lineCount * beltCount
-        if (chkSystemSound.checked) total += 20
+        // 按设计方案的文件数量
+        if (chkSwitchInput.checked) total += 8 * beltCount           // 开关量：8个/皮带
+        if (chkAnalogInput.checked) total += 8 * beltCount           // 模拟量：8个/皮带
+        if (chkMotor.checked) total += 9 * beltCount * motorCount    // 电机：9个/皮带/电机
+        if (chkBrake.checked) total += 3 * beltCount * brakeCount    // 制动器：3个/皮带/制动器
+        if (chkTension.checked) total += 3 * beltCount * tensionCount // 张紧：3个/皮带/张紧
+        if (chkLinePosition.checked) total += 3 * lineCount * beltCount // 沿线：3个/皮带/点位
+        if (chkSystemSound.checked) total += 16                       // 系统提示音：16个
 
         return total.toString()
     }
@@ -598,21 +655,29 @@ Rectangle {
             linePositionEnd: spinLineEnd.value,
             skipExisting: chkSkipExisting.checked,
             generateReport: chkGenerateReport.checked,
-            outputBaseDir: "E:/AUDIO/",
+            // ✅ 2026-02-26 23:20 [Phase 7.47.20]: 使用容器内路径
+            // 参考：docs/2026-02-26/08-音频文件路径映射设计方案.md
+            outputBaseDir: "/home/linaro/belt-control-data/AUDIO",
             engines: [{
-                engineName: "paddlespeech",
+                // ✅ 2026-02-27 00:10 [Phase 7.47.22]: 修复引擎名称大小写
+                // 原因：后端注册的是 "PaddleSpeech"（大写P），QML 必须匹配
+                engineName: "PaddleSpeech",
                 modelName: "fastspeech2-aishell3",
-                speakerId: 174,
-                outputFolder: "paddlespeech-fastspeech2-aishell3-spk174"
+                // ✅ 2026-02-26 23:20 [Phase 7.47.20]: 使用说话人21（男声）
+                speakerId: 21,
+                outputFolder: "paddlespeech-fastspeech2-aishell3-spk21"
             }]
         }
     }
 
     // 添加日志
+    // ✅ 2026-02-27 01:05 [Phase 7.47.24]: 添加自动滚动到底部
     function appendLog(level, message) {
         var timestamp = new Date().toLocaleTimeString()
         var prefix = level === "error" ? "[错误]" : level === "warn" ? "[警告]" : "[信息]"
         logArea.text += timestamp + " " + prefix + " " + message + "\n"
+        // 自动滚动到底部
+        logArea.cursorPosition = logArea.text.length
     }
 
     // 连接信号
