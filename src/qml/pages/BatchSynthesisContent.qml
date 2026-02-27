@@ -656,8 +656,9 @@ Rectangle {
             skipExisting: chkSkipExisting.checked,
             generateReport: chkGenerateReport.checked,
             // ✅ 2026-02-26 23:20 [Phase 7.47.20]: 使用容器内路径
+            // ✅ 2026-02-27 01:20 [Phase 7.47.26]: 修改为小写audio，与设备实际目录一致
             // 参考：docs/2026-02-26/08-音频文件路径映射设计方案.md
-            outputBaseDir: "/home/linaro/belt-control-data/AUDIO",
+            outputBaseDir: "/home/linaro/belt-control-data/audio",
             engines: [{
                 // ✅ 2026-02-27 00:10 [Phase 7.47.22]: 修复引擎名称大小写
                 // 原因：后端注册的是 "PaddleSpeech"（大写P），QML 必须匹配

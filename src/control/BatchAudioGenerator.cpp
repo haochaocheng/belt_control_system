@@ -581,9 +581,10 @@ void BatchAudioGenerator::generateAllSpeakerSamples()
     }
 
     // ✅ 2026-02-27 01:00 [Phase 7.47.24]: 初始化输出基础目录
+    // ✅ 2026-02-27 01:20 [Phase 7.47.26]: 修改为小写audio，与设备实际目录一致
     // 原因：generateAllSpeakerSamples() 独立调用，不依赖 setConfig()
     if (m_outputBaseDir.isEmpty()) {
-        m_outputBaseDir = "/home/linaro/belt-control-data/AUDIO";
+        m_outputBaseDir = "/home/linaro/belt-control-data/audio";
     }
 
     m_isRunning = true;
