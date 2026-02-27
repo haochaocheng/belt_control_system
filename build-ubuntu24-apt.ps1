@@ -1868,7 +1868,7 @@ sudo docker run \
     -v /sys:/sys \
     -v /run/udev:/run/udev:ro \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/appdata:/app/appdata:rw \
-    -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/audio:/app/AUDIO:rw \
+    -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/AUDIO:/home/linaro/belt-control-data/AUDIO:rw \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/models/tts_models:/app/tts_models:ro \
     -v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/models/asr_models:/app/asr_models:ro \
     -v /tmp/belt-control-cores:/tmp/belt-control-cores:rw \

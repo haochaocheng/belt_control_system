@@ -167,8 +167,37 @@ function appendLog(level, message) {
 5. ✅ **日志不自动滚动** → 添加 cursorPosition 设置
 
 ### 验证项（2个）
-6. ⏳ **文件路径验证** → 需要部署到设备验证
-7. ⏳ **持久化存储** → 需要重启容器验证
+6. ❌ **文件路径验证** → **发现Docker挂载配置错误**
+7. ❌ **持久化存储** → **依赖问题6修复**
+
+## ⚠️ 新发现的问题（2026-02-27 01:15）
+
+### Docker Volume挂载路径不匹配（P0）
+
+**问题描述**：
+- **代码中使用**: `/home/linaro/belt-control-data/AUDIO`
+- **Docker挂载**: `/home/linaro/belt-control-data/audio` → `/app/AUDIO`
+- **结果**: 容器内路径 `/home/linaro/belt-control-data/AUDIO` 不存在
+
+**影响**：
+- 文件无法写入到挂载的volume
+- 生成的文件保存在容器内部，容器重启后丢失
+- 功能完全不可用
+
+**修复方案**：
+修改 `build-ubuntu24-apt.ps1:1871` 的挂载配置：
+```bash
+# 修改前
+-v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/audio:/app/AUDIO:rw
+
+# 修改后
+-v /home/DEVICE_USER_PLACEHOLDER/belt-control-data/AUDIO:/home/linaro/belt-control-data/AUDIO:rw
+```
+
+**说明**：
+- 设备路径：`/home/linaro/belt-control-data/AUDIO`（持久化存储）
+- 容器路径：`/home/linaro/belt-control-data/AUDIO`（保持一致）
+- 挂载模式：`rw`（读写）
 
 ## 🔍 技术要点
 
