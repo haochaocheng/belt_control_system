@@ -31,21 +31,29 @@ echo "========================================="
 
 # ✅ 2026-02-26 12:30 [Phase 7.47.8]: 修复路径检测（移除多余的 models 层级）
 # ✅ 2026-02-26 14:30 [Phase 7.47.10]: 恢复正确路径（设备实际路径是 /home/linaro/belt-control-data/models/tts_models/）
+# ✅ 2026-02-26 16:30 [Phase 7.47.12]: 使用容器内路径 /app/tts_models
+# 原因：Docker 挂载 /home/linaro/belt-control-data/models/tts_models → /app/tts_models
+#       容器内应使用 /app/tts_models，不是宿主机路径
+# 效果：兼容 pi 和 linaro 两种设备
 # 检测模型路径（优先 linaro，其次 pi）
-if [ -d "/home/linaro/belt-control-data/models/tts_models/paddlespeech/models" ]; then
-    MODEL_BASE="/home/linaro/belt-control-data/models/tts_models/paddlespeech/models"
-    PADDLESPEECH_HOME="/home/linaro/belt-control-data/models/tts_models/paddlespeech"
-    echo "✅ 检测到 linaro 用户模型路径"
-elif [ -d "/home/pi/belt-control-data/models/tts_models/paddlespeech/models" ]; then
-    MODEL_BASE="/home/pi/belt-control-data/models/tts_models/paddlespeech/models"
-    PADDLESPEECH_HOME="/home/pi/belt-control-data/models/tts_models/paddlespeech"
-    echo "✅ 检测到 pi 用户模型路径"
-else
-    # 回退到容器内路径
-    MODEL_BASE="/app/tts_models/paddlespeech/models"
-    PADDLESPEECH_HOME="/app/tts_models/paddlespeech"
-    echo "⚠️ 使用容器内模型路径（回退方案）"
-fi
+# if [ -d "/home/linaro/belt-control-data/models/tts_models/paddlespeech/models" ]; then
+#     MODEL_BASE="/home/linaro/belt-control-data/models/tts_models/paddlespeech/models"
+#     PADDLESPEECH_HOME="/home/linaro/belt-control-data/models/tts_models/paddlespeech"
+#     echo "✅ 检测到 linaro 用户模型路径"
+# elif [ -d "/home/pi/belt-control-data/models/tts_models/paddlespeech/models" ]; then
+#     MODEL_BASE="/home/pi/belt-control-data/models/tts_models/paddlespeech/models"
+#     PADDLESPEECH_HOME="/home/pi/belt-control-data/models/tts_models/paddlespeech"
+#     echo "✅ 检测到 pi 用户模型路径"
+# else
+#     # 回退到容器内路径
+#     MODEL_BASE="/app/tts_models/paddlespeech/models"
+#     PADDLESPEECH_HOME="/app/tts_models/paddlespeech"
+#     echo "⚠️ 使用容器内模型路径（回退方案）"
+# fi
+# 使用容器内路径，Docker 挂载会自动处理宿主机路径映射
+MODEL_BASE="/app/tts_models/paddlespeech/models"
+PADDLESPEECH_HOME="/app/tts_models/paddlespeech"
+echo "✅ 使用容器内模型路径（Docker 挂载）"
 
 echo "📂 模型基础路径: $MODEL_BASE"
 echo "📂 PADDLESPEECH_HOME: $PADDLESPEECH_HOME"
@@ -55,13 +63,36 @@ echo "📂 PADDLESPEECH_HOME: $PADDLESPEECH_HOME"
 export PADDLESPEECH_HOME="$PADDLESPEECH_HOME"
 echo "✅ 已设置 PADDLESPEECH_HOME=$PADDLESPEECH_HOME"
 
+# ✅ 2026-02-26 19:35 [Phase 7.47.15]: 设置 PPSPEECH_HOME 环境变量
+# 原因：PaddleSpeech 库实际检查的是 PPSPEECH_HOME，不是 PADDLESPEECH_HOME
+#       见 paddlespeech/utils/env.py: if 'PPSPEECH_HOME' in os.environ
+# 效果：PaddleSpeech 正确使用本地模型，不再尝试下载
+export PPSPEECH_HOME="$PADDLESPEECH_HOME"
+echo "✅ 已设置 PPSPEECH_HOME=$PPSPEECH_HOME"
+
 mkdir -p /root/.paddlespeech/models
+# ✅ 2026-02-26 19:00 [Phase 7.47.14]: 同步 conf 和 datasets 目录
+# 原因：PaddleSpeech 使用 ~/.paddlespeech/conf/cache.yaml 验证模型缓存
+#       如果缓存哈希不匹配，会尝试重新下载模型
+# 效果：使用挂载的缓存配置，避免下载
+mkdir -p /root/.paddlespeech/conf
+rm -rf /root/.paddlespeech/conf/cache.yaml
+ln -sf /app/tts_models/paddlespeech/conf/cache.yaml /root/.paddlespeech/conf/cache.yaml
+echo "✅ PaddleSpeech conf symlink created."
+
+# 同步 datasets 目录
+rm -rf /root/.paddlespeech/datasets
+ln -sf /app/tts_models/paddlespeech/datasets /root/.paddlespeech/datasets
+echo "✅ PaddleSpeech datasets symlink created."
+
 # ✅ 2026-02-25 [Phase 7.47.6]: 先删除旧链接再创建，避免 "Read-only file system" 错误
 # 原因：ln -sf 在目标是目录时会在目录内创建链接，而不是替换目录
 rm -rf /root/.paddlespeech/models/fastspeech2_csmsc-zh
 rm -rf /root/.paddlespeech/models/pwgan_csmsc-zh
 rm -rf /root/.paddlespeech/models/fastspeech2_aishell3-zh
 rm -rf /root/.paddlespeech/models/hifigan_aishell3-zh
+# ✅ 2026-02-27 15:30 [Phase 7.47.38]: 添加hifigan_csmsc-zh，修复合成失败（缺失导致PaddleSpeech尝试从网络下载）
+rm -rf /root/.paddlespeech/models/hifigan_csmsc-zh
 rm -rf /root/.paddlespeech/models/G2PWModel_1.1
 rm -rf /root/.paddlespeech/models/G2PWModel_1.1.zip
 
@@ -70,6 +101,8 @@ ln -sf "$MODEL_BASE/fastspeech2_csmsc-zh" /root/.paddlespeech/models/fastspeech2
 ln -sf "$MODEL_BASE/pwgan_csmsc-zh" /root/.paddlespeech/models/pwgan_csmsc-zh
 ln -sf "$MODEL_BASE/fastspeech2_aishell3-zh" /root/.paddlespeech/models/fastspeech2_aishell3-zh
 ln -sf "$MODEL_BASE/hifigan_aishell3-zh" /root/.paddlespeech/models/hifigan_aishell3-zh
+# ✅ 2026-02-27 15:30 [Phase 7.47.38]: 添加hifigan_csmsc-zh符号链接
+ln -sf "$MODEL_BASE/hifigan_csmsc-zh" /root/.paddlespeech/models/hifigan_csmsc-zh
 ln -sf "$MODEL_BASE/G2PWModel_1.1" /root/.paddlespeech/models/G2PWModel_1.1
 ln -sf "$MODEL_BASE/G2PWModel_1.1.zip" /root/.paddlespeech/models/G2PWModel_1.1.zip
 
@@ -85,18 +118,25 @@ echo "========================================="
 
 # ✅ 2026-02-26 12:30 [Phase 7.47.8]: 修复路径检测（移除多余的 models 层级）
 # ✅ 2026-02-26 14:30 [Phase 7.47.10]: 恢复正确路径（设备实际路径是 /home/linaro/belt-control-data/models/tts_models/）
+# ✅ 2026-02-26 16:30 [Phase 7.47.12]: 使用容器内路径 /app/tts_models
+# 原因：Docker 挂载 /home/linaro/belt-control-data/models/tts_models → /app/tts_models
+#       容器内应使用 /app/tts_models，不是宿主机路径
+# 效果：兼容 pi 和 linaro 两种设备
 # 检测 PaddleNLP 模型路径（优先 linaro，其次 pi）
-if [ -d "/home/linaro/belt-control-data/models/tts_models/paddlenlp" ]; then
-    PADDLENLP_BASE="/home/linaro/belt-control-data/models/tts_models/paddlenlp"
-    echo "✅ 检测到 linaro 用户 PaddleNLP 路径"
-elif [ -d "/home/pi/belt-control-data/models/tts_models/paddlenlp" ]; then
-    PADDLENLP_BASE="/home/pi/belt-control-data/models/tts_models/paddlenlp"
-    echo "✅ 检测到 pi 用户 PaddleNLP 路径"
-else
-    # 回退到容器内路径
-    PADDLENLP_BASE="/app/tts_models/paddlenlp"
-    echo "⚠️ 使用容器内 PaddleNLP 路径（回退方案）"
-fi
+# if [ -d "/home/linaro/belt-control-data/models/tts_models/paddlenlp" ]; then
+#     PADDLENLP_BASE="/home/linaro/belt-control-data/models/tts_models/paddlenlp"
+#     echo "✅ 检测到 linaro 用户 PaddleNLP 路径"
+# elif [ -d "/home/pi/belt-control-data/models/tts_models/paddlenlp" ]; then
+#     PADDLENLP_BASE="/home/pi/belt-control-data/models/tts_models/paddlenlp"
+#     echo "✅ 检测到 pi 用户 PaddleNLP 路径"
+# else
+#     # 回退到容器内路径
+#     PADDLENLP_BASE="/app/tts_models/paddlenlp"
+#     echo "⚠️ 使用容器内 PaddleNLP 路径（回退方案）"
+# fi
+# 使用容器内路径，Docker 挂载会自动处理宿主机路径映射
+PADDLENLP_BASE="/app/tts_models/paddlenlp"
+echo "✅ 使用容器内 PaddleNLP 路径（Docker 挂载）"
 
 echo "📂 PaddleNLP 基础路径: $PADDLENLP_BASE"
 
