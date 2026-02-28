@@ -1741,7 +1741,9 @@ Rectangle {
             // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - ttsRadio/fileRadio 在注释块中，改用 audioSourceMode
             // 旧错误代码: ttsRadio.checked = protection.use_text_to_speech === 1
             // 旧错误代码: fileRadio.checked = protection.use_text_to_speech === 0
-            root.audioSourceMode = (protection.use_text_to_speech === 1) ? 1 : 0
+            // ✅ 2026-02-28 [Phase 7.47.51]: 修复 - 改用 == 宽松比较（DB返回字符串"1"，=== 1 严格比较失败）
+            // 旧代码: root.audioSourceMode = (protection.use_text_to_speech === 1) ? 1 : 0
+            root.audioSourceMode = (protection.use_text_to_speech == 1) ? 1 : 0
             ttsTextField.text = protection.tts_text || getTtsDefaultText(item.name)
             // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - audioField → audioFileField（正确ID）
             // 旧错误代码: audioField.text = protection.audio_file || ""
