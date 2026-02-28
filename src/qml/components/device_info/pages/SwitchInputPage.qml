@@ -158,6 +158,20 @@ Rectangle {
                         // 焦点状态：依赖 focusSubArea 和 focusItemIndex（焦点离开列表时消失）
                         readonly property bool isSelected: (root.currentProtectionIndex === index)
 
+                        // ✅ 2026-02-28 [Phase 7.47.47]: 从 diDataManager 实时读取对应位状态（响应式绑定）
+                        // 当 MQTT DI 模块对应位变化时自动刷新（通过访问 Q_PROPERTY 建立绑定依赖）
+                        // Windows 无 MQTT 时 fallback 到 ListModel 的静态 active 值
+                        readonly property bool _diIsActive: {
+                            if (typeof diDataManager !== 'undefined' && diDataManager !== null) {
+                                var moduleIdx = (model.moduleType === "开关量输入模块1") ? 0 : 1
+                                var bitIdx = model.channelNumber
+                                // 访问 Q_PROPERTY 建立绑定（module1DataChanged/module2DataChanged 触发时刷新）
+                                var _dep = (moduleIdx === 0) ? diDataManager.module1Data : diDataManager.module2Data
+                                return diDataManager.getBit(moduleIdx, bitIdx)
+                            }
+                            return model.active  // fallback
+                        }
+
                         // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器边框（只在列表区域显示）
                         border.color: isFocused ? "#2196F3" : "transparent"
                         border.width: isFocused ? 3 : 0
@@ -227,12 +241,12 @@ Rectangle {
                                 width: 8
                                 height: 8
                                 radius: 2
-                                color: model.active ? "#F44336" : "#4CAF50"  // 红色激活，绿色正常
+                                color: _diIsActive ? "#F44336" : "#4CAF50"  // 红色激活，绿色正常
                                 anchors.verticalCenter: parent.verticalCenter
                             }
 
                             Text {
-                                text: model.active ? "已激活" : "正常"
+                                text: _diIsActive ? "已激活" : "正常"
                                 font.pixelSize: 12
                                 color: "#9E9E9E"
                             }
@@ -870,13 +884,25 @@ Rectangle {
                             Layout.row: 4
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            implicitHeight: 50
+                            implicitHeight: 60
 
-                            // 读取当前选中保护项的激活状态
+                            // ✅ 2026-02-28 [Phase 7.47.47]: 从 diDataManager 实时读取对应位状态
+                            // 通过访问 Q_PROPERTY (module1Data/module2Data) 建立响应式绑定
+                            // 当 DI 模块的对应位发生变化时，此属性自动更新（无需手动监听信号）
+                            // Windows 无 MQTT 时 fallback 到 ListModel 的静态 active 值
                             readonly property bool isActive: {
                                 if (root.currentProtectionIndex >= 0 &&
                                     root.currentProtectionIndex < digitalProtectionModel.count) {
-                                    return digitalProtectionModel.get(root.currentProtectionIndex).active
+                                    var item = digitalProtectionModel.get(root.currentProtectionIndex)
+                                    if (typeof diDataManager !== 'undefined' && diDataManager !== null) {
+                                        var moduleIdx = (item.moduleType === "开关量输入模块1") ? 0 : 1
+                                        var bitIdx = item.channelNumber
+                                        // 访问 Q_PROPERTY 建立响应式依赖
+                                        var _dep = (moduleIdx === 0) ? diDataManager.module1Data : diDataManager.module2Data
+                                        return diDataManager.getBit(moduleIdx, bitIdx)
+                                    }
+                                    // fallback: Windows（无MQTT）时使用 ListModel 中的静态值
+                                    return item.active
                                 }
                                 return false
                             }
@@ -889,17 +915,18 @@ Rectangle {
 
                                 // uipro LED 状态指示灯（工业感双环设计）
                                 Item {
-                                    width: 24
-                                    height: 24
+                                    // ✅ 2026-02-28 [Phase 7.47.47]: 2倍大小（旧值 24）
+                                    width: 48
+                                    height: 48
                                     anchors.verticalCenter: parent.verticalCenter
 
                                     // 外环脉冲光晕（激活时闪烁）
                                     Rectangle {
                                         id: ledOuterRing
                                         anchors.centerIn: parent
-                                        width: 24
-                                        height: 24
-                                        radius: 12
+                                        width: 48   // ✅ 旧值 24
+                                        height: 48  // ✅ 旧值 24
+                                        radius: 24  // ✅ 旧值 12
                                         color: "transparent"
                                         border.width: 2
                                         border.color: channelStatusItem.isActive ? "#22C55E" : "#475569"
@@ -917,20 +944,20 @@ Rectangle {
                                     // 内核 LED 球体
                                     Rectangle {
                                         anchors.centerIn: parent
-                                        width: 14
-                                        height: 14
-                                        radius: 7
+                                        width: 28   // ✅ 旧值 14
+                                        height: 28  // ✅ 旧值 14
+                                        radius: 14  // ✅ 旧值 7
                                         color: channelStatusItem.isActive ? "#22C55E" : "#475569"
 
                                         // 内部反光高亮点（uipro 3D 立体感）
                                         Rectangle {
-                                            width: 4
-                                            height: 4
-                                            radius: 2
+                                            width: 8    // ✅ 旧值 4
+                                            height: 8   // ✅ 旧值 4
+                                            radius: 4   // ✅ 旧值 2
                                             color: channelStatusItem.isActive ? "#86EFAC" : "#64748B"
                                             anchors.top: parent.top
                                             anchors.left: parent.left
-                                            anchors.margins: 3
+                                            anchors.margins: 5  // ✅ 旧值 3
                                         }
                                     }
                                 }
