@@ -1,6 +1,7 @@
 #include "MqttProtectionMonitor.h"
 #include "../mqtt/DIDataManager.h"
 #include "CommonControl.h"
+#include "DataPathConfig.h"  // ✅ 2026-02-28 [Phase 7.47.43]: 统一音频路径
 #include <QDebug>
 #include <QFile>
 
@@ -13,10 +14,21 @@ MqttProtectionMonitor::MqttProtectionMonitor(DIDataManager *diManager,
     , m_diManager(diManager)
     , m_commonControl(commonControl)
     // ✅ 2026-02-27 11:00 [Phase 7.47.35]: 修复编译错误，AudioPathMapper不是QObject，不接受parent参数
-    , m_audioPathMapper(new AudioPathMapper("/app/audio"))
+    // ⚠️ 2026-02-28 [Phase 7.47.43]: 先用默认构造，构造体内再设置正确路径（见下方）
+    // 旧值（错误）：new AudioPathMapper("/app/audio")
+    // 原因：Docker挂载的是 /home/{user}/belt-control-data/audio，不是 /app/audio
+    //       AudioPathMapper("/app/audio") 会查找不存在的路径，导致音频文件找不到
+    , m_audioPathMapper(new AudioPathMapper())
     , m_isRunning(false)
 {
+    // ✅ 2026-02-28 [Phase 7.47.43]: 使用DataPathConfig统一音频目录
+    // 与BatchAudioGenerator的outputBaseDir保持一致（都从BELT_CONTROL_USER读取）
+    // Docker启动命令注入：-e BELT_CONTROL_USER=linaro
+    // 实际路径：/home/linaro/belt-control-data/audio（对应挂载卷）
+    QString audioBaseDir = DataPathConfig::getAudioBaseDirectory();
+    m_audioPathMapper->setBaseDirectory(audioBaseDir);
     qDebug() << "✅ [MqttProtectionMonitor] MQTT保护监控器已创建";
+    qDebug() << "📁 [MqttProtectionMonitor] 音频基础目录:" << audioBaseDir;
 
     // 初始化默认皮带映射
     m_beltMapping[0] = 1;  // 模块0 → 1号皮带

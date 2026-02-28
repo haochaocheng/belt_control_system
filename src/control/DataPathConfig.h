@@ -144,6 +144,28 @@ public:
     }
 
     /**
+     * @brief 获取音频文件基础目录
+     * @return 音频文件目录的绝对路径
+     *
+     * ✅ 2026-02-28 [Phase 7.47.43]: 新增统一音频路径函数
+     * 说明：
+     *   - 路径通过环境变量 BELT_CONTROL_USER 决定（Docker启动时注入）
+     *   - 与 Docker 挂载卷一致：/home/{user}/belt-control-data/audio
+     *   - 与 QML getOutputBaseDir() 返回值保持一致
+     *   - BatchAudioGenerator 生成到此目录，MqttProtectionMonitor 也从此目录读取
+     *
+     * Docker volume 挂载：
+     *   -v /home/{user}/belt-control-data/audio:/home/{user}/belt-control-data/audio:rw
+     */
+    static QString getAudioBaseDirectory()
+    {
+        // 从环境变量获取用户名（由 Docker 启动脚本注入 BELT_CONTROL_USER=linaro/pi）
+        // 2026-02-28 [Phase 7.47.43]: 默认值 linaro，与 QML getOutputBaseDir() 一致
+        QString userName = qEnvironmentVariable("BELT_CONTROL_USER", "linaro");
+        return QString("/home/%1/belt-control-data/audio").arg(userName);
+    }
+
+    /**
      * @brief 输出所有数据文件路径信息（用于调试）
      */
     static void printAllPaths()
