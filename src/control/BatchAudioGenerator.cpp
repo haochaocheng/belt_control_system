@@ -5,7 +5,9 @@
 #include "BatchAudioGenerator.h"
 #include "tts/TTSBatchConfig.h"
 #include "tts/TTSEngineManager.h"
-#include "tts/VoiceFileList.h"  // ✅ 2026-02-28 [Phase 7.47.41]: 统一使用VoiceFileList作为保护名称源
+// #include "tts/VoiceFileList.h"  // ⚠️ 2026-02-28 [Phase 7.47.42]: 已废弃，不再使用
+//                                  // 原因：VoiceFileList.h的保护项与真实DI模块不一致
+//                                  // 现在使用内联定义（来自docs/2026-02-24/01-TTS语音文件批量生成清单.md）
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -319,13 +321,32 @@ void BatchAudioGenerator::generateTasks()
 
 void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
 {
-    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
-    // 原因：BatchAudioGenerator生成的文件名与AudioPathMapper查找的文件名不一致
-    //       旧值：硬编码8个名字("沿线急停保护"等)，文件名含"X号皮带"前缀
-    //       新值：使用VoiceFileList的33个保护项，文件名仅保护名(与AudioPathMapper一致)
-    // 效果：MQTT触发保护播放时能正确找到批量生成的音频文件
-    const QStringList &items = SwitchInputVoice::PROTECTION_ITEMS;
+    // ✅ 2026-02-28 [Phase 7.47.42]: 重构为真实文档定义
+    // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第二章（8种DI保护）
+    // 规则：TTS合成文本 = 完整中文句子（含皮带号），如"1号皮带沿线急停保护"
+    //       音频文件名  = 短名（去掉"X号皮带"前缀，去掉"保护"后缀），如"沿线急停.wav"
+    //       触发查找   = 与文件名完全一致，如"沿线急停"
+    // 与AudioPathMapper.PROTECTION_NAME_MAP中的8个条目一致
+    //
+    // 旧代码（使用VoiceFileList.h的33项）已废弃：
+    // const QStringList &items = SwitchInputVoice::PROTECTION_ITEMS;
+    // protName.replace("%1号皮带", "");
+    // task.outputPath = QString("%1%2.wav").arg(outputDir, protName);
+
+    struct ProtDef {
+        QString textTemplate;   // TTS合成文本模板（%1=皮带号）
+        QString fileName;       // 音频文件短名（不含.wav后缀）
+    };
+    static const QList<ProtDef> DEFS = {
+        {"%1号皮带沿线急停保护", "沿线急停"},    // bit 0 (channelNumber: 0)
+        {"%1号皮带沿线跑偏保护", "沿线跑偏"},    // bit 1 (channelNumber: 1)
+        {"%1号皮带沿线撕裂保护", "沿线撕裂"},    // bit 2 (channelNumber: 2)
+        {"%1号皮带烟雾保护",     "烟雾"},        // bit 3 (channelNumber: 3)
+        {"%1号皮带温度保护",     "温度"},        // bit 4 (channelNumber: 4)
+        {"%1号皮带护网保护",     "护网"},        // bit 5 (channelNumber: 5)
+        {"%1号皮带堆煤保护",     "堆煤"},        // bit 6 (channelNumber: 6)
+        {"%1号皮带主机急停保护", "主机急停"},    // bit 7 (channelNumber: 7)
+    };
 
     for (int beltNum : m_beltNumbers) {
         // 目录格式：{outputBaseDir}/{engineFolder}/{皮带号}#PD/
@@ -334,17 +355,11 @@ void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
                             .arg(engine.outputFolder)
                             .arg(beltNum);
 
-        for (const QString &itemTemplate : items) {
-            // 提取保护名称（去掉"%1号皮带"前缀）
-            QString protName = itemTemplate;
-            protName.replace("%1号皮带", "");
-
+        for (const ProtDef &def : DEFS) {
             FileTask task;
             task.category = "switchInput";
-            // TTS合成文本：完整的"X号皮带XX保护"
-            task.text = itemTemplate.arg(beltNum);
-            // 文件名格式：{保护名}.wav（与AudioPathMapper.getAudioPath一致）
-            task.outputPath = QString("%1%2.wav").arg(outputDir, protName);
+            task.text = def.textTemplate.arg(beltNum);              // TTS合成内容
+            task.outputPath = QString("%1%2.wav").arg(outputDir, def.fileName);  // 文件路径
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
@@ -357,10 +372,28 @@ void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
 
 void BatchAudioGenerator::generateAnalogInputTasks(const EngineConfig &engine)
 {
-    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
-    // 原因：旧硬编码8个名字与AudioPathMapper不一致
-    const QStringList &items = AnalogInputVoice::PROTECTION_ITEMS;
+    // ✅ 2026-02-28 [Phase 7.47.42]: 重构为真实文档定义
+    // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第三章（8种模拟量保护）
+    // 规则：TTS合成文本 = 完整中文句子，音频文件名 = 短名（去掉皮带号前缀+保护后缀）
+    //
+    // 旧代码（使用VoiceFileList.h的16项）已废弃：
+    // const QStringList &items = AnalogInputVoice::PROTECTION_ITEMS;
+    // protName.replace("%1号皮带", "");
+
+    struct ProtDef {
+        QString textTemplate;
+        QString fileName;
+    };
+    static const QList<ProtDef> DEFS = {
+        {"%1号皮带速度超速保护",   "速度超速"},
+        {"%1号皮带低速打滑保护",   "低速打滑"},
+        {"%1号皮带张力过大保护",   "张力过大"},
+        {"%1号皮带张力过小保护",   "张力过小"},
+        {"%1号皮带温度一过高保护", "温度一过高"},
+        {"%1号皮带温度二过高保护", "温度二过高"},
+        {"%1号皮带电压过高保护",   "电压过高"},
+        {"%1号皮带电压过低保护",   "电压过低"},
+    };
 
     for (int beltNum : m_beltNumbers) {
         QString outputDir = QString("%1/%2/%3#PD/")
@@ -368,14 +401,11 @@ void BatchAudioGenerator::generateAnalogInputTasks(const EngineConfig &engine)
                             .arg(engine.outputFolder)
                             .arg(beltNum);
 
-        for (const QString &itemTemplate : items) {
-            QString protName = itemTemplate;
-            protName.replace("%1号皮带", "");
-
+        for (const ProtDef &def : DEFS) {
             FileTask task;
             task.category = "analogInput";
-            task.text = itemTemplate.arg(beltNum);
-            task.outputPath = QString("%1%2.wav").arg(outputDir, protName);
+            task.text = def.textTemplate.arg(beltNum);
+            task.outputPath = QString("%1%2.wav").arg(outputDir, def.fileName);
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
@@ -388,10 +418,29 @@ void BatchAudioGenerator::generateAnalogInputTasks(const EngineConfig &engine)
 
 void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
 {
-    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
-    // 原因：旧硬编码名字与AudioPathMapper不一致
-    const QStringList &items = MotorVoice::PROTECTION_ITEMS;
+    // ✅ 2026-02-28 [Phase 7.47.42]: 重构为真实文档定义
+    // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第四章（9种电机保护）
+    // 规则：文本模板 %1=皮带号, %2=电机号
+    //       文件名模板 %1=电机号（保留电机号，去掉皮带号前缀和保护后缀）
+    //
+    // 旧代码（使用VoiceFileList.h的12项）已废弃：
+    // const QStringList &items = MotorVoice::PROTECTION_ITEMS;
+
+    struct ProtDef {
+        QString textTemplate;   // %1=皮带号, %2=电机号
+        QString fileNameTpl;    // %1=电机号
+    };
+    static const QList<ProtDef> DEFS = {
+        {"%1号皮带%2号电机电流过载保护",     "%1号电机电流过载"},
+        {"%1号皮带%2号电机温度过高保护",     "%1号电机温度过高"},
+        {"%1号皮带%2号电机前轴承温度过高保护", "%1号电机前轴承温度过高"},
+        {"%1号皮带%2号电机后轴承温度过高保护", "%1号电机后轴承温度过高"},
+        {"%1号皮带%2号电机X轴振动过大保护",  "%1号电机X轴振动过大"},
+        {"%1号皮带%2号电机Y轴振动过大保护",  "%1号电机Y轴振动过大"},
+        {"%1号皮带%2号电机A相绕组温度过高保护", "%1号电机A相绕组温度过高"},
+        {"%1号皮带%2号电机B相绕组温度过高保护", "%1号电机B相绕组温度过高"},
+        {"%1号皮带%2号电机C相绕组温度过高保护", "%1号电机C相绕组温度过高"},
+    };
 
     for (int beltNum : m_beltNumbers) {
         QString outputDir = QString("%1/%2/%3#PD/")
@@ -400,17 +449,13 @@ void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
                             .arg(beltNum);
 
         for (int motorNum : m_motorNumbers) {
-            for (const QString &itemTemplate : items) {
-                // 提取保护名称（去掉"%1号皮带%2号电机"前缀）
-                QString protName = itemTemplate;
-                protName.replace("%1号皮带", "");
-                protName.replace("%2号电机", "");
-
+            for (const ProtDef &def : DEFS) {
                 FileTask task;
                 task.category = "motor";
-                task.text = itemTemplate.arg(beltNum).arg(motorNum);
-                task.outputPath = QString("%1%2号电机%3.wav")
-                                  .arg(outputDir).arg(motorNum).arg(protName);
+                task.text = def.textTemplate.arg(beltNum).arg(motorNum);
+                task.outputPath = QString("%1%2.wav")
+                                  .arg(outputDir)
+                                  .arg(def.fileNameTpl.arg(motorNum));
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
@@ -424,9 +469,22 @@ void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
 
 void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
 {
-    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
-    const QStringList &items = BrakeVoice::PROTECTION_ITEMS;
+    // ✅ 2026-02-28 [Phase 7.47.42]: 重构为真实文档定义
+    // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第五章（3种制动器保护）
+    // 规则：文件名保留制动器编号，去掉皮带号前缀和保护后缀
+    //
+    // 旧代码（使用VoiceFileList.h的8项）已废弃：
+    // const QStringList &items = BrakeVoice::PROTECTION_ITEMS;
+
+    struct ProtDef {
+        QString textTemplate;   // %1=皮带号, %2=制动器号
+        QString fileNameTpl;    // %1=制动器号
+    };
+    static const QList<ProtDef> DEFS = {
+        {"%1号皮带%2号制动器温度过高保护", "%1号制动器温度过高"},
+        {"%1号皮带%2号制动器压力异常保护", "%1号制动器压力异常"},
+        {"%1号皮带%2号制动器故障保护",     "%1号制动器故障"},
+    };
 
     for (int beltNum : m_beltNumbers) {
         QString outputDir = QString("%1/%2/%3#PD/")
@@ -435,16 +493,13 @@ void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
                             .arg(beltNum);
 
         for (int brakeNum : m_brakeNumbers) {
-            for (const QString &itemTemplate : items) {
-                QString protName = itemTemplate;
-                protName.replace("%1号皮带", "");
-                protName.replace("%2号制动器", "");
-
+            for (const ProtDef &def : DEFS) {
                 FileTask task;
                 task.category = "brake";
-                task.text = itemTemplate.arg(beltNum).arg(brakeNum);
-                task.outputPath = QString("%1%2号制动器%3.wav")
-                                  .arg(outputDir).arg(brakeNum).arg(protName);
+                task.text = def.textTemplate.arg(beltNum).arg(brakeNum);
+                task.outputPath = QString("%1%2.wav")
+                                  .arg(outputDir)
+                                  .arg(def.fileNameTpl.arg(brakeNum));
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
@@ -458,9 +513,22 @@ void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
 
 void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
 {
-    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
-    const QStringList &items = TensionVoice::PROTECTION_ITEMS;
+    // ✅ 2026-02-28 [Phase 7.47.42]: 重构为真实文档定义
+    // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第六章（3种张紧保护）
+    // 规则：文件名保留张紧装置编号，去掉皮带号前缀和保护后缀
+    //
+    // 旧代码（使用VoiceFileList.h的10项）已废弃：
+    // const QStringList &items = TensionVoice::PROTECTION_ITEMS;
+
+    struct ProtDef {
+        QString textTemplate;   // %1=皮带号, %2=张紧号
+        QString fileNameTpl;    // %1=张紧号
+    };
+    static const QList<ProtDef> DEFS = {
+        {"%1号皮带%2号张紧装置张紧力过大保护", "%1号张紧装置张紧力过大"},
+        {"%1号皮带%2号张紧装置张紧力过小保护", "%1号张紧装置张紧力过小"},
+        {"%1号皮带%2号张紧装置故障保护",       "%1号张紧装置故障"},
+    };
 
     for (int beltNum : m_beltNumbers) {
         QString outputDir = QString("%1/%2/%3#PD/")
@@ -469,16 +537,13 @@ void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
                             .arg(beltNum);
 
         for (int tensionNum : m_tensionNumbers) {
-            for (const QString &itemTemplate : items) {
-                QString protName = itemTemplate;
-                protName.replace("%1号皮带", "");
-                protName.replace("%2号张紧装置", "");
-
+            for (const ProtDef &def : DEFS) {
                 FileTask task;
                 task.category = "tension";
-                task.text = itemTemplate.arg(beltNum).arg(tensionNum);
-                task.outputPath = QString("%1%2号张紧装置%3.wav")
-                                  .arg(outputDir).arg(tensionNum).arg(protName);
+                task.text = def.textTemplate.arg(beltNum).arg(tensionNum);
+                task.outputPath = QString("%1%2.wav")
+                                  .arg(outputDir)
+                                  .arg(def.fileNameTpl.arg(tensionNum));
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
@@ -492,10 +557,25 @@ void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
 
 void BatchAudioGenerator::generateLinePositionTasks(const EngineConfig &engine)
 {
-    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
-    // 沿线点位：使用VoiceFileList模板
-    const QString &itemTemplate = LinePositionVoice::PROTECTION_TEMPLATE;
+    // ✅ 2026-02-28 [Phase 7.47.42]: 重构为真实文档定义（3种保护类型）
+    // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第七章（3种沿线点位保护）
+    // 规则：每个点位生成3个文件（急停/跑偏/撕裂）
+    //       文件名保留点位号，去掉皮带号前缀和保护后缀
+    //
+    // 旧代码（只生成1种"故障"）已废弃：
+    // const QString &itemTemplate = LinePositionVoice::PROTECTION_TEMPLATE;
+    // task.text = itemTemplate.arg(beltNum).arg(pos);
+    // task.outputPath = QString("%1%2号点位故障.wav").arg(outputDir).arg(pos);
+
+    struct ProtDef {
+        QString textTemplate;   // %1=皮带号, %2=点位号
+        QString fileNameTpl;    // %1=点位号
+    };
+    static const QList<ProtDef> DEFS = {
+        {"%1号皮带%2号沿线急停保护", "%1号沿线急停"},
+        {"%1号皮带%2号沿线跑偏保护", "%1号沿线跑偏"},
+        {"%1号皮带%2号沿线撕裂保护", "%1号沿线撕裂"},
+    };
 
     for (int beltNum : m_beltNumbers) {
         QString outputDir = QString("%1/%2/%3#PD/")
@@ -504,42 +584,70 @@ void BatchAudioGenerator::generateLinePositionTasks(const EngineConfig &engine)
                             .arg(beltNum);
 
         for (int pos = m_linePositionStart; pos <= m_linePositionEnd; ++pos) {
-            FileTask task;
-            task.category = "linePosition";
-            task.text = itemTemplate.arg(beltNum).arg(pos);
-            // 文件名：{点位号}号点位故障.wav
-            task.outputPath = QString("%1%2号点位故障.wav").arg(outputDir).arg(pos);
-            task.engineName = engine.engineName;
-            task.modelName = engine.modelName;
-            task.speakerId = engine.speakerId;
-            task.rate = engine.rate;
-            task.volume = engine.volume;
-            m_tasks.append(task);
+            for (const ProtDef &def : DEFS) {
+                FileTask task;
+                task.category = "linePosition";
+                task.text = def.textTemplate.arg(beltNum).arg(pos);
+                task.outputPath = QString("%1%2.wav")
+                                  .arg(outputDir)
+                                  .arg(def.fileNameTpl.arg(pos));
+                task.engineName = engine.engineName;
+                task.modelName = engine.modelName;
+                task.speakerId = engine.speakerId;
+                task.rate = engine.rate;
+                task.volume = engine.volume;
+                m_tasks.append(task);
+            }
         }
     }
 }
 
 void BatchAudioGenerator::generateSystemSoundTasks(const EngineConfig &engine)
 {
-    // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
-    const QStringList &soundNames = SystemSoundVoice::SOUND_ITEMS;
+    // ✅ 2026-02-28 [Phase 7.47.42]: 重构为真实文档定义（16种系统提示音）
+    // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第八章（系统状态提示音）
+    // 规则：系统提示音无皮带号前缀，TTS文本=文件名（完整中文）
+    //
+    // 旧代码（使用VoiceFileList.h的20项）已废弃：
+    // const QStringList &soundNames = SystemSoundVoice::SOUND_ITEMS;
+
+    // 系统提示音：TTS文本 = 文件名（无皮带号前缀，无需短名转换）
+    static const QStringList SOUNDS = {
+        // 8.1 通用提示音
+        "系统启动完成",
+        "系统正在关闭",
+        "设备配置已保存",
+        "设备配置保存失败",
+        "网络连接正常",
+        "网络连接断开",
+        "MQTT连接成功",
+        "MQTT连接失败",
+        "数据同步完成",
+        "数据同步失败",
+        // 8.2 操作提示音
+        "请确认操作",
+        "操作已取消",
+        "操作成功",
+        "操作失败",
+        "参数超出范围",
+        "请输入有效数值",
+    };
 
     // 系统提示音放在 Sounds 目录
     QString outputDir = QString("%1/%2/Sounds/")
                         .arg(m_outputBaseDir)
                         .arg(engine.outputFolder);
 
-    for (const QString &soundName : soundNames) {
+    for (const QString &soundName : SOUNDS) {
         FileTask task;
         task.category = "systemSound";
-        task.text = soundName;
-        task.outputPath = QString("%1%2.wav").arg(outputDir).arg(soundName);
+        task.text = soundName;                                              // TTS合成内容
+        task.outputPath = QString("%1%2.wav").arg(outputDir, soundName);    // 文件名=TTS文本
         task.engineName = engine.engineName;
         task.modelName = engine.modelName;
         task.speakerId = engine.speakerId;
-            task.rate = engine.rate;
-            task.volume = engine.volume;
+        task.rate = engine.rate;
+        task.volume = engine.volume;
         m_tasks.append(task);
     }
 }

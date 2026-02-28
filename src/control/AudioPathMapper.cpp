@@ -1,27 +1,38 @@
 #include "AudioPathMapper.h"
-#include "tts/VoiceFileList.h"
+// #include "tts/VoiceFileList.h"  // ⚠️ 2026-02-28 [Phase 7.47.42]: 已废弃，不再使用
 #include "TTSConfigManager.h"
 #include <QDir>
 #include <QDebug>
 
 // ✅ 2026-02-27 10:00 [Phase 7.47.35]: 实现音频文件路径映射器
+// ✅ 2026-02-28 [Phase 7.47.42]: 重构保护名称映射，使用真实DI位定义
 
 // 初始化保护名称映射表
 QMap<int, QString> AudioPathMapper::initProtectionNameMap()
 {
     QMap<int, QString> map;
 
-    // ✅ 从VoiceFileList.h中的SwitchInputVoice::PROTECTION_ITEMS提取保护名称
-    // 去掉模板中的"%1号皮带"前缀，只保留保护类型
-    const QStringList &items = SwitchInputVoice::PROTECTION_ITEMS;
+    // ✅ 2026-02-28 [Phase 7.47.42]: 8位DI保护名称（短名，用作音频文件名）
+    // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第二章
+    // 与SwitchInputPage.qml的channelNumber定义一致
+    // 规则：文件名 = 去掉"X号皮带"前缀 + 去掉"保护"后缀
+    // 对应关系：
+    //   TTS合成文本："{belt}号皮带沿线急停保护"
+    //   音频文件名：  "沿线急停.wav"
+    //   触发查找文件："沿线急停.wav"  ← 三者一致
 
-    for (int i = 0; i < items.size(); ++i) {
-        QString item = items[i];
-        // 移除"%1号皮带"前缀
-        QString protectionName = item;
-        protectionName.replace("%1号皮带", "");
-        map[i] = protectionName;
-    }
+    // 旧代码（从VoiceFileList.h的33项中提取，但名称不正确）已废弃：
+    // const QStringList &items = SwitchInputVoice::PROTECTION_ITEMS;
+    // for (int i = 0; i < items.size(); ++i) { ... }
+
+    map[0] = "沿线急停";    // channelNumber: 0 (急停)  TTS: "X号皮带沿线急停保护"
+    map[1] = "沿线跑偏";    // channelNumber: 1 (跑偏)  TTS: "X号皮带沿线跑偏保护"
+    map[2] = "沿线撕裂";    // channelNumber: 2 (撕裂)  TTS: "X号皮带沿线撕裂保护"
+    map[3] = "烟雾";        // channelNumber: 3 (烟雾)  TTS: "X号皮带烟雾保护"
+    map[4] = "温度";        // channelNumber: 4 (温度)  TTS: "X号皮带温度保护"
+    map[5] = "护网";        // channelNumber: 5 (护网)  TTS: "X号皮带护网保护"
+    map[6] = "堆煤";        // channelNumber: 6 (堆煤)  TTS: "X号皮带堆煤保护"
+    map[7] = "主机急停";    // channelNumber: 7 (主机急停) TTS: "X号皮带主机急停保护"
 
     return map;
 }
