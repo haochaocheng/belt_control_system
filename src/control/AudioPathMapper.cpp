@@ -7,6 +7,38 @@
 // ✅ 2026-02-27 10:00 [Phase 7.47.35]: 实现音频文件路径映射器
 // ✅ 2026-02-28 [Phase 7.47.42]: 重构保护名称映射，使用真实DI位定义
 
+// ✅ 2026-02-28 [Phase 7.47.49]: 默认音频文件名映射（通道号 → 1#PD实际文件名.mp3）
+// 文件来源：AUDIO/1#PD/ 目录，与设备端 /home/{user}/belt-control-data/audio/{belt}#PD/ 内容一致
+QMap<int, QString> AudioPathMapper::initDefaultAudioFileMap()
+{
+    QMap<int, QString> map;
+    map[0] = "沿线急停.mp3";   // 急停  → AUDIO/1#PD/沿线急停.mp3
+    map[1] = "跑偏.mp3";       // 跑偏  → AUDIO/1#PD/跑偏.mp3
+    map[2] = "撕裂.mp3";       // 撕裂  → AUDIO/1#PD/撕裂.mp3
+    map[3] = "烟雾.mp3";       // 烟雾  → AUDIO/1#PD/烟雾.mp3
+    map[4] = "温度.mp3";       // 温度  → AUDIO/1#PD/温度.mp3
+    map[5] = "护网.mp3";       // 护网  → AUDIO/1#PD/护网.mp3
+    map[6] = "堆煤.mp3";       // 堆煤  → AUDIO/1#PD/堆煤.mp3
+    map[7] = "主机急停.mp3";   // 主机急停 → AUDIO/1#PD/主机急停.mp3
+    return map;
+}
+
+// ✅ 2026-02-28 [Phase 7.47.49]: 保护短名称映射（通道号 → UI/DB名称）
+// 与 SwitchInputPage.qml 的 digitalProtectionModel name 字段一致（用于DB查询 use_text_to_speech）
+QMap<int, QString> AudioPathMapper::initShortNameMap()
+{
+    QMap<int, QString> map;
+    map[0] = "急停";
+    map[1] = "跑偏";
+    map[2] = "撕裂";
+    map[3] = "烟雾";
+    map[4] = "温度";
+    map[5] = "护网";
+    map[6] = "堆煤";
+    map[7] = "主机急停";
+    return map;
+}
+
 // 初始化保护名称映射表
 QMap<int, QString> AudioPathMapper::initProtectionNameMap()
 {
@@ -39,6 +71,9 @@ QMap<int, QString> AudioPathMapper::initProtectionNameMap()
 
 // 静态成员初始化
 const QMap<int, QString> AudioPathMapper::PROTECTION_NAME_MAP = AudioPathMapper::initProtectionNameMap();
+// ✅ 2026-02-28 [Phase 7.47.49]: 新增静态成员初始化
+const QMap<int, QString> AudioPathMapper::DEFAULT_AUDIO_FILE_MAP = AudioPathMapper::initDefaultAudioFileMap();
+const QMap<int, QString> AudioPathMapper::SHORT_NAME_MAP = AudioPathMapper::initShortNameMap();
 
 AudioPathMapper::AudioPathMapper(const QString &baseDir)
     : m_baseDir(baseDir)
@@ -120,4 +155,25 @@ QString AudioPathMapper::getFolderPath(const QString &engineName,
                             .arg(beltNumber);
 
     return folderPath;
+}
+
+// ✅ 2026-02-28 [Phase 7.47.49]: 获取默认音频文件路径（1#PD预置MP3）
+QString AudioPathMapper::getDefaultAudioPath(int beltNumber, int channelNumber) const
+{
+    // 从DEFAULT_AUDIO_FILE_MAP获取文件名
+    QString filename = DEFAULT_AUDIO_FILE_MAP.value(channelNumber,
+                           QString("未知保护%1.mp3").arg(channelNumber));
+
+    // 路径格式：{baseDir}/{belt}#PD/{filename}
+    // 例：/home/linaro/belt-control-data/audio/1#PD/沿线急停.mp3
+    QString path = QString("%1/%2#PD/%3").arg(m_baseDir).arg(beltNumber).arg(filename);
+
+    qDebug() << "🎵 [AudioPathMapper] 默认音频路径:" << path;
+    return path;
+}
+
+// ✅ 2026-02-28 [Phase 7.47.49]: 获取保护短名称（用于DB查询）
+QString AudioPathMapper::getShortProtectionName(int bitIndex) const
+{
+    return SHORT_NAME_MAP.value(bitIndex, QString("未知保护%1").arg(bitIndex));
 }

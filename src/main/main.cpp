@@ -277,6 +277,8 @@ int main(int argc, char *argv[]) {
 
         // ✅ 2026-02-27 11:30 [Phase 7.47.36]: 移到此处，确保commonControl已声明
         MqttProtectionMonitor mqttProtectionMonitor(&diDataManager, &commonControl);
+        // ✅ 2026-02-28 [Phase 7.47.49]: 注入DeviceConfigManager，用于查询每个保护的use_text_to_speech
+        mqttProtectionMonitor.setDeviceConfigManager(&deviceConfigMgr);
         mqttProtectionMonitor.start();
         logMessage("MQTT Protection Monitor started");
 

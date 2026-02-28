@@ -22,6 +22,7 @@
 // 前向声明
 class DIDataManager;
 class CommonControl;
+class DeviceConfigManager;  // ✅ 2026-02-28 [Phase 7.47.49]
 
 /**
  * @brief MQTT开关量保护监控器
@@ -63,6 +64,9 @@ public:
      * @return true=运行中，false=已停止
      */
     Q_INVOKABLE bool isRunning() const { return m_isRunning; }
+
+    // ✅ 2026-02-28 [Phase 7.47.49]: 新增 - 设置设备配置管理器（用于查询 use_text_to_speech）
+    void setDeviceConfigManager(DeviceConfigManager *mgr) { m_deviceConfigMgr = mgr; }
 
     /**
      * @brief 设置皮带编号映射
@@ -108,6 +112,7 @@ private:
     DIDataManager *m_diManager;        ///< DI数据管理器
     CommonControl *m_commonControl;    ///< 公共控制器
     AudioPathMapper *m_audioPathMapper; ///< 音频路径映射器
+    DeviceConfigManager *m_deviceConfigMgr; ///< 设备配置管理器（查询use_text_to_speech）✅ Phase 7.47.49
     bool m_isRunning;                  ///< 是否正在运行
 
     /**

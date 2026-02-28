@@ -73,6 +73,24 @@ public:
      */
     QString getAudioPath(int beltNumber, const QString &protectionName) const;
 
+    // ✅ 2026-02-28 [Phase 7.47.49]: 新增 - 默认音频路径（预置MP3，不走TTS）
+    /**
+     * @brief 获取默认音频文件路径（使用1#PD预置MP3文件）
+     * @param beltNumber 皮带编号（1-8）
+     * @param channelNumber DI通道号（0-7）
+     * @return 路径：{baseDir}/{belt}#PD/{filename}.mp3
+     *
+     * 文件来源：AUDIO/1#PD/ 目录（同步到设备 /home/{user}/belt-control-data/audio/{belt}#PD/）
+     */
+    QString getDefaultAudioPath(int beltNumber, int channelNumber) const;
+
+    /**
+     * @brief 根据DI位索引获取保护短名称（用于DB查询，与UI保护名称一致）
+     * @param bitIndex DI位索引（0-7）
+     * @return 短名称（例如："急停"），与 digitalProtectionModel 的 name 字段一致
+     */
+    QString getShortProtectionName(int bitIndex) const;
+
     /**
      * @brief 根据DI位索引获取保护名称
      * @param bitIndex DI位索引（0-7）
@@ -112,11 +130,23 @@ private:
      */
     static const QMap<int, QString> PROTECTION_NAME_MAP;
 
+    // ✅ 2026-02-28 [Phase 7.47.49]: 新增 - 默认音频文件名映射（通道号 → 1#PD文件名）
+    // 对应 AUDIO/1#PD/ 中实际存在的文件名（.mp3）
+    static const QMap<int, QString> DEFAULT_AUDIO_FILE_MAP;
+
+    // ✅ 2026-02-28 [Phase 7.47.49]: 新增 - 保护短名称映射（通道号 → UI显示名/DB名）
+    // 与 SwitchInputPage.qml digitalProtectionModel 的 name 字段一致
+    static const QMap<int, QString> SHORT_NAME_MAP;
+
     /**
      * @brief 初始化保护名称映射表
      * @return 保护名称映射表
      */
     static QMap<int, QString> initProtectionNameMap();
+
+    // ✅ 2026-02-28 [Phase 7.47.49]: 新增初始化函数
+    static QMap<int, QString> initDefaultAudioFileMap();
+    static QMap<int, QString> initShortNameMap();
 };
 
 #endif // AUDIOPATHMAPPER_H

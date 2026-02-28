@@ -39,6 +39,15 @@ Rectangle {
     // ✅ 2026-02-28 [Phase 7.47.44]: 音频来源模式 0=默认 1=TTS合成
     property int audioSourceMode: 0
 
+    // ✅ 2026-02-28 [Phase 7.47.49]: 音频来源模式切换时，自动刷新音频文件名
+    // 原因：getAudioFileName() 依赖 audioSourceMode，切换模式后需更新显示
+    onAudioSourceModeChanged: {
+        if (currentProtectionIndex >= 0 && currentProtectionIndex < digitalProtectionModel.count) {
+            var item = digitalProtectionModel.get(currentProtectionIndex)
+            audioFileField.text = getAudioFileName(item.name)
+        }
+    }
+
     // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 监听焦点变化，同步更新 currentProtectionIndex
     // 当焦点在列表区域移动时，同步更新选中项索引
     onFocusItemIndexChanged: {
@@ -1713,7 +1722,14 @@ Rectangle {
         if (protection && protection.protection_name) {
             // 从数据库加载完整参数
             nameField.text = protection.protection_name
-            moduleTypeCombo.currentIndex = moduleTypeCombo.model.indexOf(protection.module_type)
+            // ✅ 2026-02-28 [Phase 7.47.48]: 兼容旧DB格式（Phase 7.47.44前保存的"输入模块1"等旧名称）
+            // 旧代码: moduleTypeCombo.currentIndex = moduleTypeCombo.model.indexOf(protection.module_type)
+            // 原因: 旧名称indexOf返回-1，新model无法匹配，导致ComboBox显示为空
+            var mt = protection.module_type || ""
+            if (mt === "输入模块1" || mt === "") mt = "开关量输入模块1"
+            else if (mt === "输入模块2") mt = "开关量输入模块2"
+            var mtIdx = moduleTypeCombo.model.indexOf(mt)
+            moduleTypeCombo.currentIndex = (mtIdx >= 0) ? mtIdx : 0
             // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - registerAddressSpin 由moduleType自动决定（隐藏）
             // 旧: registerAddressSpin.value = protection.register_address
             channelSpin.value = protection.channel_number
@@ -1979,20 +1995,38 @@ Rectangle {
         return mapping[protectionName] || (belt + "号皮带" + protectionName + "保护")
     }
 
-    // ✅ 2026-02-28 [Phase 7.47.44]: 获取保护项对应的默认音频文件名
-    // 规则：短名.wav（去掉 "X号皮带" 前缀和 "保护" 后缀）
-    // 与 AudioPathMapper::PROTECTION_NAME_MAP 保持一致
+    // ✅ 2026-02-28 [Phase 7.47.49]: 重新设计 getAudioFileName
+    // 原逻辑：始终返回 TTS .wav 文件名（与实际需求不符）
+    // 新逻辑：根据 audioSourceMode 返回不同文件名
+    //   - 默认(0): 返回1#PD预置MP3文件名（与 AudioPathMapper.DEFAULT_AUDIO_FILE_MAP 一致）
+    //   - TTS合成(1): 返回TTS生成的.wav文件名（与 AudioPathMapper.PROTECTION_NAME_MAP 一致）
     function getAudioFileName(protectionName) {
-        var mapping = {
-            "急停":    "沿线急停.wav",
-            "跑偏":    "沿线跑偏.wav",
-            "撕裂":    "沿线撕裂.wav",
-            "烟雾":    "烟雾.wav",
-            "温度":    "温度.wav",
-            "护网":    "护网.wav",
+        if (root.audioSourceMode === 0) {
+            // 默认音频：使用1#PD文件夹中的预置MP3（文件名与AUDIO/1#PD/内容一致）
+            var defaultMapping = {
+                "急停":    "沿线急停.mp3",
+                "跑偏":    "跑偏.mp3",
+                "撕裂":    "撕裂.mp3",
+                "烟雾":    "烟雾.mp3",
+                "温度":    "温度.mp3",
+                "护网":    "护网.mp3",
+                "堆煤":    "堆煤.mp3",
+                "主机急停": "主机急停.mp3"
+            }
+            return defaultMapping[protectionName] || (protectionName + ".mp3")
+        } else {
+            // TTS合成：使用TTS生成的.wav文件（与AudioPathMapper.PROTECTION_NAME_MAP一致）
+            var ttsMapping = {
+                "急停":    "沿线急停.wav",
+                "跑偏":    "沿线跑偏.wav",
+                "撕裂":    "沿线撕裂.wav",
+                "烟雾":    "烟雾.wav",
+                "温度":    "温度.wav",
+                "护网":    "护网.wav",
             "堆煤":    "堆煤.wav",
-            "主机急停": "主机急停.wav"
+                "主机急停": "主机急停.wav"
+            }
+            return ttsMapping[protectionName] || (protectionName + ".wav")
         }
-        return mapping[protectionName] || (protectionName + ".wav")
     }
 }

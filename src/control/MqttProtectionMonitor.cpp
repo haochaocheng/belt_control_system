@@ -1,7 +1,8 @@
 #include "MqttProtectionMonitor.h"
 #include "../mqtt/DIDataManager.h"
 #include "CommonControl.h"
-#include "DataPathConfig.h"  // ✅ 2026-02-28 [Phase 7.47.43]: 统一音频路径
+#include "DataPathConfig.h"      // ✅ 2026-02-28 [Phase 7.47.43]: 统一音频路径
+#include "DeviceConfigManager.h" // ✅ 2026-02-28 [Phase 7.47.49]: 查询use_text_to_speech
 #include <QDebug>
 #include <QFile>
 
@@ -19,6 +20,7 @@ MqttProtectionMonitor::MqttProtectionMonitor(DIDataManager *diManager,
     // 原因：Docker挂载的是 /home/{user}/belt-control-data/audio，不是 /app/audio
     //       AudioPathMapper("/app/audio") 会查找不存在的路径，导致音频文件找不到
     , m_audioPathMapper(new AudioPathMapper())
+    , m_deviceConfigMgr(nullptr)  // ✅ 2026-02-28 [Phase 7.47.49]: 由main.cpp通过setDeviceConfigManager注入
     , m_isRunning(false)
 {
     // ✅ 2026-02-28 [Phase 7.47.43]: 使用DataPathConfig统一音频目录
@@ -131,12 +133,33 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
     int beltNumber = getBeltMapping(moduleIndex);
     qDebug() << "   对应皮带:" << beltNumber << "号";
 
-    // 获取保护名称
+    // 获取保护名称（TTS文件名格式，如"沿线急停"）
     QString protectionName = m_audioPathMapper->getProtectionName(bitIndex);
     qDebug() << "   保护名称:" << protectionName;
 
-    // 生成音频文件路径
-    QString audioPath = m_audioPathMapper->getAudioPath(beltNumber, protectionName);
+    // ✅ 2026-02-28 [Phase 7.47.49]: 根据 use_text_to_speech 选择音频路径
+    // 默认使用TTS路径（兼容旧行为），如果DB配置为"默认"则使用1#PD预置MP3
+    QString audioPath;
+    bool useTTS = true;  // 默认使用TTS
+
+    if (m_deviceConfigMgr) {
+        // 查询DB获取该保护的音频来源设置
+        QString shortName = m_audioPathMapper->getShortProtectionName(bitIndex);
+        QVariantMap protection = m_deviceConfigMgr->loadDigitalProtection(beltNumber, shortName);
+        if (!protection.isEmpty()) {
+            useTTS = (protection.value("use_text_to_speech", 1).toInt() == 1);
+            qDebug() << "📋 [MqttProtectionMonitor] 保护" << shortName
+                     << "音频来源:" << (useTTS ? "TTS合成" : "默认(1#PD MP3)");
+        }
+    }
+
+    if (useTTS) {
+        // TTS合成路径：{baseDir}/paddlespeech-{model}-spk{id}/{belt}#PD/{name}.wav
+        audioPath = m_audioPathMapper->getAudioPath(beltNumber, protectionName);
+    } else {
+        // 默认音频路径：{baseDir}/{belt}#PD/{filename}.mp3
+        audioPath = m_audioPathMapper->getDefaultAudioPath(beltNumber, bitIndex);
+    }
     qDebug() << "   音频路径:" << audioPath;
 
     // 检查音频文件是否存在
