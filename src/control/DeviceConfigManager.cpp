@@ -306,24 +306,50 @@ void DeviceConfigManager::runMigrations()
     QSqlQuery query(m_database);
 
     // 检查是否已执行过此迁移（用 schema_migrations 表记录）
-    query.exec(R"(
+    if (!query.exec(R"(
         CREATE TABLE IF NOT EXISTS schema_migrations (
             version TEXT PRIMARY KEY,
             applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    )");
+    )")) {
+        qWarning() << "⚠️ [DeviceConfigManager] 创建 schema_migrations 表失败:" << query.lastError().text();
+    }
 
-    // 迁移 001：将 use_text_to_speech 默认值从 1 改为 0
-    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '001_reset_audio_source'");
+    // 迁移 001：将 use_text_to_speech 默认值从 1 改为 0（开关量保护）
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 001（开关量保护）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '001_reset_audio_source_digital'");
     if (query.exec() && query.next() && query.value(0).toInt() == 0) {
         QSqlQuery fix(m_database);
         if (fix.exec("UPDATE device_digital_protections SET use_text_to_speech = 0 WHERE use_text_to_speech = 1")) {
             int affected = fix.numRowsAffected();
-            qDebug() << "✅ [DeviceConfigManager] 迁移001: 重置" << affected << "条保护记录的音频来源为默认(0)";
-            query.exec("INSERT INTO schema_migrations (version) VALUES ('001_reset_audio_source')");
+            qDebug() << "✅ [DeviceConfigManager] 迁移001: 重置" << affected << "条开关量保护的音频来源为默认(0)";
+            query.exec("INSERT INTO schema_migrations (version) VALUES ('001_reset_audio_source_digital')");
         } else {
-            qWarning() << "⚠️ [DeviceConfigManager] 迁移001失败:" << fix.lastError().text();
+            qWarning() << "⚠️ [DeviceConfigManager] 迁移001(开关量)失败:" << fix.lastError().text();
         }
+    } else if (!query.exec()) {
+        qWarning() << "⚠️ [DeviceConfigManager] 迁移001查询失败:" << query.lastError().text();
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移001已执行过，跳过";
+    }
+
+    // 迁移 002：将 use_text_to_speech 默认值从 1 改为 0（模拟量保护）
+    // ✅ 2026-02-28 [Phase 7.47.53]: 新增 - 也需要修复模拟量保护
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 002（模拟量保护）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '002_reset_audio_source_analog'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        QSqlQuery fix(m_database);
+        if (fix.exec("UPDATE device_analog_protections SET use_text_to_speech = 0 WHERE use_text_to_speech = 1")) {
+            int affected = fix.numRowsAffected();
+            qDebug() << "✅ [DeviceConfigManager] 迁移002: 重置" << affected << "条模拟量保护的音频来源为默认(0)";
+            query.exec("INSERT INTO schema_migrations (version) VALUES ('002_reset_audio_source_analog')");
+        } else {
+            qWarning() << "⚠️ [DeviceConfigManager] 迁移002(模拟量)失败:" << fix.lastError().text();
+        }
+    } else if (!query.exec()) {
+        qWarning() << "⚠️ [DeviceConfigManager] 迁移002查询失败:" << query.lastError().text();
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移002已执行过，跳过";
     }
 }
 
@@ -402,10 +428,13 @@ bool DeviceConfigManager::initDefaultDigitalProtections(int deviceId)
     QSqlQuery query(m_database);
     for (int i = 0; i < protectionNames.size(); i++) {
         QString name = protectionNames[i];
+        // ✅ 2026-02-28 [Phase 7.47.53]: 修复 - 添加 use_text_to_speech = 0（默认为默认音频）
+        // 旧代码：不指定 use_text_to_speech，导致使用表的DEFAULT值（旧版本DEFAULT为1，导致新建保护默认为TTS）
+        // 新代码：显式设置为0，确保新建的所有保护默认使用默认音频
         query.prepare(R"(
             INSERT INTO device_digital_protections
-            (device_id, protection_name, module_type, register_address, channel_number, tts_text)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (device_id, protection_name, module_type, register_address, channel_number, tts_text, use_text_to_speech)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         )");
         query.addBindValue(deviceId);
         query.addBindValue(name);
@@ -413,6 +442,7 @@ bool DeviceConfigManager::initDefaultDigitalProtections(int deviceId)
         query.addBindValue(2);
         query.addBindValue(i);  // 通道编号 0-7
         query.addBindValue(name + "保护报警");
+        query.addBindValue(0);  // ✅ 默认为0（使用默认音频）
 
         if (!query.exec()) {
             QString error = QString("初始化设备%1的开关量保护'%2'失败: %3")
@@ -451,11 +481,13 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
 
     QSqlQuery query(m_database);
     for (const auto &p : protections) {
+        // ✅ 2026-02-28 [Phase 7.47.53]: 修复 - 添加 use_text_to_speech = 0（默认为默认音频）
+        // 与initDefaultDigitalProtections保持一致
         query.prepare(R"(
             INSERT INTO device_analog_protections
             (device_id, protection_name, module_type, register_address, unit,
-             upper_limit, lower_limit, range_value, rated_value, tts_text)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         )");
         query.addBindValue(deviceId);
         query.addBindValue(p.name);
@@ -467,6 +499,7 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
         query.addBindValue(p.range);
         query.addBindValue(p.rated);
         query.addBindValue(p.name + "保护报警");
+        query.addBindValue(0);  // ✅ 默认为0（使用默认音频）
 
         if (!query.exec()) {
             QString error = QString("初始化设备%1的模拟量保护'%2'失败: %3")
