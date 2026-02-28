@@ -45,6 +45,9 @@ bool DeviceConfigManager::initDatabase(const QString &dbPath)
         return false;
     }
 
+    // ✅ 2026-02-28 [Phase 7.47.52]: 运行数据库迁移（用于修复历史数据）
+    runMigrations();
+
     // 初始化默认数据
     if (!initDefaultData()) {
         return false;
@@ -119,7 +122,8 @@ bool DeviceConfigManager::createTables()
             protection_delay REAL DEFAULT 1.0,
             play_count INTEGER DEFAULT 3,
             play_duration REAL DEFAULT 5.0,
-            use_text_to_speech BOOLEAN DEFAULT 1,
+            // ✅ 2026-02-28 [Phase 7.47.52]: 默认改为0（默认音频），旧值1导致新建保护默认TTS
+            use_text_to_speech BOOLEAN DEFAULT 0,
             tts_text TEXT,
             audio_file TEXT,
             enabled BOOLEAN DEFAULT 1,
@@ -158,7 +162,8 @@ bool DeviceConfigManager::createTables()
             protection_delay REAL DEFAULT 1.0,
             play_count INTEGER DEFAULT 3,
             play_duration REAL DEFAULT 5.0,
-            use_text_to_speech BOOLEAN DEFAULT 1,
+            // ✅ 2026-02-28 [Phase 7.47.52]: 默认改为0（默认音频）
+            use_text_to_speech BOOLEAN DEFAULT 0,
             tts_text TEXT,
             audio_file TEXT,
             enabled BOOLEAN DEFAULT 1,
@@ -291,6 +296,35 @@ bool DeviceConfigManager::createTables()
 
     qDebug() << "✅ [DeviceConfigManager] 数据库表创建成功（包含电机/制动器/张紧控制表）";
     return true;
+}
+
+// ✅ 2026-02-28 [Phase 7.47.52]: 数据库迁移 - 修复历史数据
+// 原因：建表时 use_text_to_speech DEFAULT 1，导致所有旧记录默认为TTS合成
+// 修复：将所有 use_text_to_speech=1 的记录重置为 0（默认音频）
+void DeviceConfigManager::runMigrations()
+{
+    QSqlQuery query(m_database);
+
+    // 检查是否已执行过此迁移（用 schema_migrations 表记录）
+    query.exec(R"(
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version TEXT PRIMARY KEY,
+            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    )");
+
+    // 迁移 001：将 use_text_to_speech 默认值从 1 改为 0
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '001_reset_audio_source'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        QSqlQuery fix(m_database);
+        if (fix.exec("UPDATE device_digital_protections SET use_text_to_speech = 0 WHERE use_text_to_speech = 1")) {
+            int affected = fix.numRowsAffected();
+            qDebug() << "✅ [DeviceConfigManager] 迁移001: 重置" << affected << "条保护记录的音频来源为默认(0)";
+            query.exec("INSERT INTO schema_migrations (version) VALUES ('001_reset_audio_source')");
+        } else {
+            qWarning() << "⚠️ [DeviceConfigManager] 迁移001失败:" << fix.lastError().text();
+        }
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -586,7 +620,9 @@ bool DeviceConfigManager::saveDigitalProtection(int deviceId, const QVariantMap 
     query.addBindValue(protection.value("protection_delay", 1.0).toDouble());
     query.addBindValue(protection.value("play_count", 3).toInt());
     query.addBindValue(protection.value("play_duration", 5.0).toDouble());
-    query.addBindValue(protection.value("use_text_to_speech", true).toBool() ? 1 : 0);
+    // ✅ 2026-02-28 [Phase 7.47.52]: 默认改为false（默认音频），旧值true导致新建保护默认TTS
+    // 旧：protection.value("use_text_to_speech", true).toBool() ? 1 : 0
+    query.addBindValue(protection.value("use_text_to_speech", false).toBool() ? 1 : 0);
     query.addBindValue(protection.value("tts_text", protectionName + "保护报警").toString());
     query.addBindValue(protection.value("audio_file", "").toString());
     query.addBindValue(QDateTime::currentDateTime());
@@ -687,7 +723,9 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     query.addBindValue(protection.value("protection_delay", 1.0).toDouble());
     query.addBindValue(protection.value("play_count", 3).toInt());
     query.addBindValue(protection.value("play_duration", 5.0).toDouble());
-    query.addBindValue(protection.value("use_text_to_speech", true).toBool() ? 1 : 0);
+    // ✅ 2026-02-28 [Phase 7.47.52]: 默认改为false（默认音频）
+    // 旧：protection.value("use_text_to_speech", true).toBool() ? 1 : 0
+    query.addBindValue(protection.value("use_text_to_speech", false).toBool() ? 1 : 0);
     query.addBindValue(protection.value("tts_text", protectionName + "保护报警").toString());
     query.addBindValue(protection.value("audio_file", "").toString());
     query.addBindValue(QDateTime::currentDateTime());

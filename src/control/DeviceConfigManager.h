@@ -47,6 +47,9 @@ public:
      */
     bool createTables();
 
+    // ✅ 2026-02-28 [Phase 7.47.52]: 数据库迁移，修复历史数据
+    void runMigrations();
+
     /**
      * @brief 初始化12个设备的默认数据
      * @return 成功返回true，失败返回false

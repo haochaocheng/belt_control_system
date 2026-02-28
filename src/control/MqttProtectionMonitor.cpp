@@ -138,9 +138,10 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
     qDebug() << "   保护名称:" << protectionName;
 
     // ✅ 2026-02-28 [Phase 7.47.49]: 根据 use_text_to_speech 选择音频路径
-    // 默认使用TTS路径（兼容旧行为），如果DB配置为"默认"则使用1#PD预置MP3
+    // ✅ 2026-02-28 [Phase 7.47.52]: 默认改为false（默认音频），旧值true导致DB无记录时也走TTS
+    // 旧：bool useTTS = true;
     QString audioPath;
-    bool useTTS = true;  // 默认使用TTS
+    bool useTTS = false;
 
     if (m_deviceConfigMgr) {
         // 查询DB获取该保护的音频来源设置
