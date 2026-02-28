@@ -2,6 +2,7 @@
 #include "SystemConfig.h"
 #include "OperationLogDatabase.h"
 #include "DeviceRuntimeTracker.h"
+#include "TTSConfigManager.h"  // ✅ 2026-02-26 [Phase 7.47.19]: 采样率配置
 #include <QDebug>
 #include <QCoreApplication>
 #include <QDir>
@@ -95,6 +96,12 @@ CommonControl::CommonControl(QObject *parent)
                          << (state == QMediaPlayer::StoppedState ? "Stopped" :
                              state == QMediaPlayer::PlayingState ? "Playing" : "Paused")
                          << "| 距上次状态变化:" << elapsed << "ms";
+
+                // ✅ 2026-02-26 [Phase 7.47.8]: 播放开始时启动计时器
+                if (state == QMediaPlayer::PlayingState) {
+                    m_playbackTimer.start();
+                    qDebug() << "   [播放计时] 开始计时";
+                }
 
                 if (state == QMediaPlayer::StoppedState) {
                     onPlaybackFinished();
@@ -374,7 +381,13 @@ void CommonControl::playAudio(const QString &audioPath)
             if (m_audioNetworkTcpSender->isConnected()) {
                 m_audioNetworkTcpSender->playAudioToNetwork(audioPath);
             } else {
-                qWarning() << "   [TCP发送] ❌ 未连接到 TCP 服务器，无法播放";
+                // ✅ 2026-02-25 [Phase 7.47.8]: TCP 未连接时回退到本地播放
+                // 原因：用户需要同时保留 TCP 网络播放和本地播放两种模式
+                // 效果：TCP 服务器未连接时，自动使用本地 ES8388 播放
+                qWarning() << "   [TCP发送] ⚠️ 未连接到 TCP 服务器，回退到本地播放";
+                qint64 playTime = timer.elapsed();
+                m_mediaPlayer->play();
+                qDebug() << "   [本地播放] play() 调用耗时:" << (timer.elapsed() - playTime) << "ms";
             }
             break;
         }
@@ -547,7 +560,10 @@ void CommonControl::onPlaybackFinished()
         }
     } else {
         // 普通播放完成
-        qDebug() << "✅ CommonControl: 音频播放完成";
+        // ✅ 2026-02-26 [Phase 7.47.8]: 输出播放时长（秒）
+        qint64 playbackMs = m_playbackTimer.elapsed();
+        double playbackSec = playbackMs / 1000.0;
+        qDebug() << "✅ CommonControl: 音频播放完成，时长:" << QString::number(playbackSec, 'f', 2) << "秒";
     }
 }
 
@@ -1350,10 +1366,15 @@ bool CommonControl::switchTTSModel(int modelIndex)
     QString modelName = modelDisplayName.split(" ").first();  // 例如 "fastspeech2_csmsc (中文女声)" -> "fastspeech2_csmsc"
 
     // 构建模型路径
+    // ✅ 2026-02-26 16:30 [Phase 7.47.12]: 修复模型路径
+    // 原因：Docker 挂载 /home/linaro/belt-control-data/models/tts_models → /app/tts_models
+    //       容器内应使用 /app/tts_models，不是宿主机路径
+    // 效果：兼容 pi 和 linaro 两种设备
     QString modelPath;
     if (engineName == "PaddleSpeech") {
 #ifdef Q_OS_LINUX
-        modelPath = QString("/home/pi/belt-control-data/models/tts_models/paddlespeech/%1").arg(modelName);
+        // modelPath = QString("/home/pi/belt-control-data/models/tts_models/paddlespeech/%1").arg(modelName);
+        modelPath = QString("/app/tts_models/paddlespeech/%1").arg(modelName);
 #else
         modelPath = QString("tts_models/paddlespeech/%1").arg(modelName);
 #endif
@@ -1361,7 +1382,8 @@ bool CommonControl::switchTTSModel(int modelIndex)
     // ❌ 2026-02-24 23:00 [禁用 MeloTTS]
     } else if (engineName == "MeloTTS") {
 #ifdef Q_OS_LINUX
-        modelPath = QString("/home/pi/belt-control-data/models/tts_models/melotts/%1").arg(modelName);
+        // modelPath = QString("/home/pi/belt-control-data/models/tts_models/melotts/%1").arg(modelName);
+        modelPath = QString("/app/tts_models/melotts/%1").arg(modelName);
 #else
         modelPath = QString("tts_models/melotts/%1").arg(modelName);
 #endif
@@ -1381,6 +1403,30 @@ bool CommonControl::switchTTSModel(int modelIndex)
 
     qDebug() << "✅ [CommonControl] TTS 模型切换成功:" << modelList[modelIndex];
     return true;
+}
+
+// ✅ 2026-02-28 09:30 [Phase 7.47.39]: 异步切换TTS模型
+// 原因：PaddleSpeech初始化阻塞主线程5-10分钟，导致程序启动卡住
+// 效果：后台线程执行初始化，UI立即可用
+void CommonControl::switchTTSModelAsync(int modelIndex)
+{
+    qDebug() << "🔄 [CommonControl] 异步切换 TTS 模型 - 索引:" << modelIndex;
+
+    QThread *thread = QThread::create([this, modelIndex]() {
+        bool success = switchTTSModel(modelIndex);
+        // 使用 QueuedConnection 将信号发送回主线程
+        QMetaObject::invokeMethod(this, [this, success, modelIndex]() {
+            if (success) {
+                qDebug() << "✅ [CommonControl] TTS 模型异步切换完成";
+            } else {
+                qWarning() << "❌ [CommonControl] TTS 模型异步切换失败";
+            }
+            emit ttsModelSwitchCompleted(success, modelIndex);
+        }, Qt::QueuedConnection);
+    });
+
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start();
 }
 
 QStringList CommonControl::getTTSModelList()
@@ -1438,6 +1484,8 @@ void CommonControl::testTTS(const QString &text, int speakerId, double rate, dou
     params.speakerId = speakerId;
     params.rate = rate;
     params.volume = volume;
+    // ✅ 2026-02-26 [Phase 7.47.19]: 使用配置的采样率
+    params.sampleRate = TTSConfigManager::instance()->sampleRate(TTSConfigManager::Test);
 
     // 生成临时输出文件
     QString outputPath = "/tmp/test_tts.wav";
@@ -1446,10 +1494,31 @@ void CommonControl::testTTS(const QString &text, int speakerId, double rate, dou
     if (m_ttsEngineManager->synthesize(text, outputPath, params)) {
         qDebug() << "✅ [CommonControl] TTS 合成成功:" << outputPath;
 
+        // ✅ 2026-02-26 [Phase 7.47.17]: 清除该文件的 Opus 缓存
+        // 原因：TTS 每次合成到同一文件，但 Opus 缓存使用文件路径作为键
+        //       导致播放的是旧的缓存音频，而不是新合成的音频
+        // 效果：清除缓存后，下次播放会重新编码新文件
+        if (m_audioNetworkTcpSender) {
+            m_audioNetworkTcpSender->removeFromOpusCache(outputPath);
+        }
+
         // 播放生成的语音
         playAudio(outputPath);
     } else {
         qWarning() << "❌ [CommonControl] TTS 合成失败";
     }
+}
+
+// ✅ 2026-02-26 [Phase 7.47.19]: 采样率配置
+void CommonControl::setTTSSampleRate(int sampleRate)
+{
+    qDebug() << "🔧 [CommonControl] 设置 TTS 采样率:" << sampleRate << "Hz";
+    TTSConfigManager::instance()->setSampleRate(TTSConfigManager::Test, sampleRate);
+    TTSConfigManager::instance()->saveConfig();
+}
+
+int CommonControl::getTTSSampleRate()
+{
+    return TTSConfigManager::instance()->sampleRate(TTSConfigManager::Test);
 }
 

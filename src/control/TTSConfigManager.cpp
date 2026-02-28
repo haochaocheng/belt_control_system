@@ -2,37 +2,28 @@
 #include <QDebug>
 
 // ✅ 2026-01-23 09:30 [FIX 100.299] TTS模型信息表
+// ✅ 2026-02-28 09:50 [Phase 7.47.40]: 更新为PaddleSpeech实际模型名
+// 原因：旧的vits模型名(vits-zh-aishell3等)已废弃，现在使用PaddleSpeech引擎
+//       AudioPathMapper读取此表生成音频路径，必须与批量生成的文件夹名一致
+// 旧值：{0, "vits-zh-aishell3"}, {1, "vits-zh-hf-fanchen-wnj"}, ...
 // 模型名称映射
 static const QMap<int, QString> MODEL_NAMES = {
-    {0, "vits-zh-aishell3"},
-    {1, "vits-zh-hf-fanchen-wnj"},
-    {2, "vits-zh-hf-fanchen-C"},
-    {3, "vits-zh-hf-theresa"},
-    {4, "vits-zh-hf-eula"},
-    {5, "sherpa-onnx-vits-zh-ll"},
-    {6, "vits-melo-tts-zh_en"}
+    {0, "fastspeech2_csmsc"},
+    {1, "fastspeech2_aishell3"}
 };
 
 // 模型路径映射
+// 旧值：{0, "/app/tts_models/vits-zh-aishell3"}, ...
 static const QMap<int, QString> MODEL_PATHS = {
-    {0, "/app/tts_models/vits-zh-aishell3"},
-    {1, "/app/tts_models/vits-zh-hf-fanchen-wnj"},
-    {2, "/app/tts_models/vits-zh-hf-fanchen-C"},
-    {3, "/app/tts_models/vits-zh-hf-theresa"},
-    {4, "/app/tts_models/vits-zh-hf-eula"},
-    {5, "/app/tts_models/sherpa-onnx-vits-zh-ll"},
-    {6, "/app/tts_models/vits-melo-tts-zh_en"}
+    {0, "/app/tts_models/paddlespeech/fastspeech2_csmsc"},
+    {1, "/app/tts_models/paddlespeech/fastspeech2_aishell3"}
 };
 
 // 模型最大说话人ID映射
+// 旧值：{0, 173}, {1, 0}, {2, 186}, {3, 803}, {4, 803}, {5, 4}, {6, 0}
 static const QMap<int, int> MODEL_MAX_SPEAKER_IDS = {
-    {0, 173},   // aishell3: 174 speakers (0-173)
-    {1, 0},     // fanchen-wnj: 1 speaker (0)
-    {2, 186},   // fanchen-C: 187 speakers (0-186)
-    {3, 803},   // theresa: 804 speakers (0-803)
-    {4, 803},   // eula: 804 speakers (0-803)
-    {5, 4},     // zh-ll: 5 speakers (0-4)
-    {6, 0}      // melo-tts: 1 speaker (0)
+    {0, 0},     // fastspeech2_csmsc: 单说话人（中文女声）
+    {1, 173}    // fastspeech2_aishell3: 174 speakers (0-173)
 };
 
 TTSConfigManager* TTSConfigManager::instance()
@@ -60,6 +51,13 @@ void TTSConfigManager::loadConfig()
 
         SceneConfig config;
         config.modelIndex = m_settings->value(key + "/modelIndex", 0).toInt();
+        // ✅ 2026-02-28 09:50 [Phase 7.47.40]: 防止旧配置的模型索引超出范围
+        // 原因：旧版本有7个vits模型(0-6)，现在只有2个PaddleSpeech模型(0-1)
+        if (config.modelIndex >= MODEL_NAMES.size()) {
+            qWarning() << "⚠️ [TTSConfig] 模型索引" << config.modelIndex
+                       << "超出范围，重置为0";
+            config.modelIndex = 0;
+        }
         config.modelPath = m_settings->value(key + "/modelPath", MODEL_PATHS[0]).toString();
         config.speakerId = m_settings->value(key + "/speakerId", 0).toInt();
         config.rate = m_settings->value(key + "/rate", 1.0).toDouble();

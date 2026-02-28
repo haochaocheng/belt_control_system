@@ -7,6 +7,7 @@
 #include <QKeyEvent>
 #include <QTimer>
 #include <QElapsedTimer>  // ✅ 2026-02-26 [Phase 7.47.8]: 播放时长计时器
+#include <QThread>        // ✅ 2026-02-28 [Phase 7.47.39]: TTS异步初始化
 
 // ✅ 2026-01-21 20:15 [音频网络传输] 添加音频网络发送器
 #include "../audio_network/AudioNetworkSender.h"
@@ -131,6 +132,13 @@ public:
     Q_INVOKABLE bool switchTTSModel(int modelIndex);
 
     /**
+     * @brief 异步切换 TTS 模型（不阻塞主线程）
+     * @param modelIndex 模型索引
+     * ✅ 2026-02-28 [Phase 7.47.39]: 启动优化，后台线程初始化TTS引擎
+     */
+    Q_INVOKABLE void switchTTSModelAsync(int modelIndex);
+
+    /**
      * @brief 获取当前引擎的模型列表
      * @return 模型名称列表
      */
@@ -165,6 +173,19 @@ public:
      */
     Q_INVOKABLE void testTTS(const QString &text, int speakerId = 0, double rate = 1.0, double volume = 0.8);
 
+    /**
+     * @brief 设置 TTS 采样率
+     * @param sampleRate 采样率（16000, 22050, 24000, 44100, 48000）
+     * ✅ 2026-02-26 [Phase 7.47.19]: 添加采样率配置
+     */
+    Q_INVOKABLE void setTTSSampleRate(int sampleRate);
+
+    /**
+     * @brief 获取当前 TTS 采样率
+     * @return 采样率
+     */
+    Q_INVOKABLE int getTTSSampleRate();
+
 signals:
     void beltStartRequested(int beltNumber);  // 皮带启动请求
     void beltStopRequested(int beltNumber);   // 皮带停止请求
@@ -174,6 +195,9 @@ signals:
     // ✅ 2026-02-21 22:45: 添加 TTS 初始化进度信号
     // 原因：PaddleSpeech 初始化需要 5-10 分钟，QML 需要显示进度
     void ttsInitializationProgress(const QString &message);  // TTS 初始化进度
+
+    // ✅ 2026-02-28 [Phase 7.47.39]: TTS模型异步切换完成信号
+    void ttsModelSwitchCompleted(bool success, int modelIndex);
 
 public slots:
     // 播放指定的音频文件

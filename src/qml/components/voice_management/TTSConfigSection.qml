@@ -20,6 +20,10 @@ ColumnLayout {
     id: root
     spacing: 15
 
+    // ✅ 2026-02-28 [Phase 7.47.39]: 启动优化标志
+    // 原因：防止 updateModelList 设置 modelComboBox.currentIndex 时触发同步初始化
+    property bool _startupComplete: false
+
     // ✅ 2026-02-13 [Phase 7.46.6]: 添加 TTS 引擎选择
     ColumnLayout {
         Layout.fillWidth: true
@@ -281,16 +285,11 @@ ColumnLayout {
 
             onCurrentIndexChanged: {
                 // ✅ 2026-02-13 [Phase 7.46.6]: 简化为调用辅助函数
+                // ✅ 2026-02-28 [Phase 7.47.39]: 启动阶段跳过同步初始化，改用异步
                 console.log("模型切换:", currentIndex)
-                if (currentIndex >= 0) {
-                    var success = commonControl.switchTTSModel(currentIndex)
-                    if (success) {
-                        console.log("✅ 模型切换成功:", modelComboBox.displayText)
-                        // 更新说话人ID范围
-                        updateSpeakerIdRange()
-                    } else {
-                        console.log("❌ 模型切换失败:", modelComboBox.displayText)
-                    }
+                if (currentIndex >= 0 && _startupComplete) {
+                    // 启动完成后的手动切换，使用异步初始化
+                    commonControl.switchTTSModelAsync(currentIndex)
                 }
             }
         }
@@ -774,7 +773,7 @@ ColumnLayout {
         // 效果：组件加载时自动初始化 PaddleSpeech 引擎
         console.log("🔄 自动初始化 TTS 引擎，索引:", engineComboBox.currentIndex)
         commonControl.switchTTSEngine(engineComboBox.currentIndex)
-        // 初始化模型列表
+        // 初始化模型列表（_startupComplete=false，不会触发同步初始化）
         updateModelList()
         // 初始化引擎状态
         updateEngineStatus()
@@ -786,6 +785,14 @@ ColumnLayout {
         console.log("📂 已恢复TTS参数: 说话人ID=" + speakerIdSpinBox.value
                     + ", 语速=" + rateSlider.value.toFixed(1)
                     + ", 音量=" + (volumeSlider.value * 100).toFixed(0) + "%")
+
+        _startupComplete = true
+
+        // ✅ 2026-02-28 [Phase 7.47.39]: 使用异步初始化，不阻塞UI
+        // 原因：PaddleSpeech初始化需要5-10分钟，同步调用会导致启动卡住
+        // 效果：UI立即可用，TTS在后台线程初始化
+        console.log("🔄 启动异步TTS模型初始化...")
+        commonControl.switchTTSModelAsync(0)
     }
 
     // ✅ 2026-02-21 22:55: 连接 TTS 初始化进度信号
@@ -814,6 +821,17 @@ ColumnLayout {
             if (message.includes("初始化完成") || message.includes("初始化成功")) {
                 // 延迟 2 秒后隐藏进度条
                 hideProgressTimer.start()
+            }
+        }
+
+        // ✅ 2026-02-28 [Phase 7.47.39]: 异步模型切换完成回调
+        function onTtsModelSwitchCompleted(success, modelIndex) {
+            if (success) {
+                console.log("✅ TTS模型异步初始化完成，索引:", modelIndex)
+                updateSpeakerIdRange()
+                updateEngineStatus()
+            } else {
+                console.log("❌ TTS模型异步初始化失败，索引:", modelIndex)
             }
         }
     }

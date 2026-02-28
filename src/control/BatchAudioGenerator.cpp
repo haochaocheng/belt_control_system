@@ -5,6 +5,7 @@
 #include "BatchAudioGenerator.h"
 #include "tts/TTSBatchConfig.h"
 #include "tts/TTSEngineManager.h"
+#include "tts/VoiceFileList.h"  // ✅ 2026-02-28 [Phase 7.47.41]: 统一使用VoiceFileList作为保护名称源
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -319,12 +320,12 @@ void BatchAudioGenerator::generateTasks()
 void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
 {
     // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // 参考：docs/2026-02-26/08-音频文件路径映射设计方案.md
-    // 开关量输入保护：8 个文件/皮带（按设计方案）
-    QStringList protectionNames = {
-        "沿线急停保护", "沿线跑偏保护", "沿线撕裂保护", "烟雾保护",
-        "温度保护", "护网保护", "堆煤保护", "主机急停保护"
-    };
+    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
+    // 原因：BatchAudioGenerator生成的文件名与AudioPathMapper查找的文件名不一致
+    //       旧值：硬编码8个名字("沿线急停保护"等)，文件名含"X号皮带"前缀
+    //       新值：使用VoiceFileList的33个保护项，文件名仅保护名(与AudioPathMapper一致)
+    // 效果：MQTT触发保护播放时能正确找到批量生成的音频文件
+    const QStringList &items = SwitchInputVoice::PROTECTION_ITEMS;
 
     for (int beltNum : m_beltNumbers) {
         // 目录格式：{outputBaseDir}/{engineFolder}/{皮带号}#PD/
@@ -333,13 +334,17 @@ void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
                             .arg(engine.outputFolder)
                             .arg(beltNum);
 
-        for (const QString &protName : protectionNames) {
+        for (const QString &itemTemplate : items) {
+            // 提取保护名称（去掉"%1号皮带"前缀）
+            QString protName = itemTemplate;
+            protName.replace("%1号皮带", "");
+
             FileTask task;
             task.category = "switchInput";
-            // 文本格式：{皮带号}号皮带{保护名称}
-            task.text = QString("%1号皮带%2").arg(beltNum).arg(protName);
-            // 文件名格式：{皮带号}号皮带{保护名称}.wav
-            task.outputPath = QString("%1%2号皮带%3.wav").arg(outputDir).arg(beltNum).arg(protName);
+            // TTS合成文本：完整的"X号皮带XX保护"
+            task.text = itemTemplate.arg(beltNum);
+            // 文件名格式：{保护名}.wav（与AudioPathMapper.getAudioPath一致）
+            task.outputPath = QString("%1%2.wav").arg(outputDir, protName);
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
@@ -353,11 +358,9 @@ void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
 void BatchAudioGenerator::generateAnalogInputTasks(const EngineConfig &engine)
 {
     // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // 模拟量输入保护：8 个文件/皮带（按设计方案）
-    QStringList protectionNames = {
-        "速度超速保护", "低速打滑保护", "张力过大保护", "张力过小保护",
-        "温度一过高保护", "温度二过高保护", "电压过高保护", "电压过低保护"
-    };
+    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
+    // 原因：旧硬编码8个名字与AudioPathMapper不一致
+    const QStringList &items = AnalogInputVoice::PROTECTION_ITEMS;
 
     for (int beltNum : m_beltNumbers) {
         QString outputDir = QString("%1/%2/%3#PD/")
@@ -365,11 +368,14 @@ void BatchAudioGenerator::generateAnalogInputTasks(const EngineConfig &engine)
                             .arg(engine.outputFolder)
                             .arg(beltNum);
 
-        for (const QString &protName : protectionNames) {
+        for (const QString &itemTemplate : items) {
+            QString protName = itemTemplate;
+            protName.replace("%1号皮带", "");
+
             FileTask task;
             task.category = "analogInput";
-            task.text = QString("%1号皮带%2").arg(beltNum).arg(protName);
-            task.outputPath = QString("%1%2号皮带%3.wav").arg(outputDir).arg(beltNum).arg(protName);
+            task.text = itemTemplate.arg(beltNum);
+            task.outputPath = QString("%1%2.wav").arg(outputDir, protName);
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;
             task.speakerId = engine.speakerId;
@@ -383,12 +389,9 @@ void BatchAudioGenerator::generateAnalogInputTasks(const EngineConfig &engine)
 void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
 {
     // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // ✅ 2026-02-27 [Phase 7.47.29]: 与MotorControlPage.qml Tab页完全对应，共9项
-    QStringList protectionNames = {
-        "电流保护", "前轴承温度保护", "后轴承温度保护",
-        "A相绕组保护", "B相绕组保护", "C相绕组保护",
-        "电机温度保护", "X轴振动保护", "Y轴振动保护"
-    };
+    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
+    // 原因：旧硬编码名字与AudioPathMapper不一致
+    const QStringList &items = MotorVoice::PROTECTION_ITEMS;
 
     for (int beltNum : m_beltNumbers) {
         QString outputDir = QString("%1/%2/%3#PD/")
@@ -397,17 +400,22 @@ void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
                             .arg(beltNum);
 
         for (int motorNum : m_motorNumbers) {
-            for (const QString &protName : protectionNames) {
+            for (const QString &itemTemplate : items) {
+                // 提取保护名称（去掉"%1号皮带%2号电机"前缀）
+                QString protName = itemTemplate;
+                protName.replace("%1号皮带", "");
+                protName.replace("%2号电机", "");
+
                 FileTask task;
                 task.category = "motor";
-                task.text = QString("%1号皮带%2号电机%3").arg(beltNum).arg(motorNum).arg(protName);
-                task.outputPath = QString("%1%2号皮带%3号电机%4.wav")
-                                  .arg(outputDir).arg(beltNum).arg(motorNum).arg(protName);
+                task.text = itemTemplate.arg(beltNum).arg(motorNum);
+                task.outputPath = QString("%1%2号电机%3.wav")
+                                  .arg(outputDir).arg(motorNum).arg(protName);
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
-            task.rate = engine.rate;
-            task.volume = engine.volume;
+                task.rate = engine.rate;
+                task.volume = engine.volume;
                 m_tasks.append(task);
             }
         }
@@ -417,10 +425,8 @@ void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
 void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
 {
     // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // 制动器保护：3 个文件/皮带/制动器（按设计方案）
-    QStringList protectionNames = {
-        "制动失效保护", "制动过热保护", "制动磨损保护"
-    };
+    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
+    const QStringList &items = BrakeVoice::PROTECTION_ITEMS;
 
     for (int beltNum : m_beltNumbers) {
         QString outputDir = QString("%1/%2/%3#PD/")
@@ -429,17 +435,21 @@ void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
                             .arg(beltNum);
 
         for (int brakeNum : m_brakeNumbers) {
-            for (const QString &protName : protectionNames) {
+            for (const QString &itemTemplate : items) {
+                QString protName = itemTemplate;
+                protName.replace("%1号皮带", "");
+                protName.replace("%2号制动器", "");
+
                 FileTask task;
                 task.category = "brake";
-                task.text = QString("%1号皮带%2号制动器%3").arg(beltNum).arg(brakeNum).arg(protName);
-                task.outputPath = QString("%1%2号皮带%3号制动器%4.wav")
-                                  .arg(outputDir).arg(beltNum).arg(brakeNum).arg(protName);
+                task.text = itemTemplate.arg(beltNum).arg(brakeNum);
+                task.outputPath = QString("%1%2号制动器%3.wav")
+                                  .arg(outputDir).arg(brakeNum).arg(protName);
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
-            task.rate = engine.rate;
-            task.volume = engine.volume;
+                task.rate = engine.rate;
+                task.volume = engine.volume;
                 m_tasks.append(task);
             }
         }
@@ -449,10 +459,8 @@ void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
 void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
 {
     // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // 张紧控制保护：3 个文件/皮带/张紧装置（按设计方案）
-    QStringList protectionNames = {
-        "张紧过大保护", "张紧过小保护", "张紧失效保护"
-    };
+    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
+    const QStringList &items = TensionVoice::PROTECTION_ITEMS;
 
     for (int beltNum : m_beltNumbers) {
         QString outputDir = QString("%1/%2/%3#PD/")
@@ -461,17 +469,21 @@ void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
                             .arg(beltNum);
 
         for (int tensionNum : m_tensionNumbers) {
-            for (const QString &protName : protectionNames) {
+            for (const QString &itemTemplate : items) {
+                QString protName = itemTemplate;
+                protName.replace("%1号皮带", "");
+                protName.replace("%2号张紧装置", "");
+
                 FileTask task;
                 task.category = "tension";
-                task.text = QString("%1号皮带%2号张紧%3").arg(beltNum).arg(tensionNum).arg(protName);
-                task.outputPath = QString("%1%2号皮带%3号张紧%4.wav")
-                                  .arg(outputDir).arg(beltNum).arg(tensionNum).arg(protName);
+                task.text = itemTemplate.arg(beltNum).arg(tensionNum);
+                task.outputPath = QString("%1%2号张紧装置%3.wav")
+                                  .arg(outputDir).arg(tensionNum).arg(protName);
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
-            task.rate = engine.rate;
-            task.volume = engine.volume;
+                task.rate = engine.rate;
+                task.volume = engine.volume;
                 m_tasks.append(task);
             }
         }
@@ -481,10 +493,9 @@ void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
 void BatchAudioGenerator::generateLinePositionTasks(const EngineConfig &engine)
 {
     // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // 沿线点位保护：3 个文件/皮带/点位（按设计方案）
-    QStringList protectionNames = {
-        "沿线急停保护", "沿线跑偏保护", "沿线撕裂保护"
-    };
+    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
+    // 沿线点位：使用VoiceFileList模板
+    const QString &itemTemplate = LinePositionVoice::PROTECTION_TEMPLATE;
 
     for (int beltNum : m_beltNumbers) {
         QString outputDir = QString("%1/%2/%3#PD/")
@@ -493,19 +504,17 @@ void BatchAudioGenerator::generateLinePositionTasks(const EngineConfig &engine)
                             .arg(beltNum);
 
         for (int pos = m_linePositionStart; pos <= m_linePositionEnd; ++pos) {
-            for (const QString &protName : protectionNames) {
-                FileTask task;
-                task.category = "linePosition";
-                task.text = QString("%1号皮带%2号%3").arg(beltNum).arg(pos).arg(protName);
-                task.outputPath = QString("%1%2号皮带%3号%4.wav")
-                                  .arg(outputDir).arg(beltNum).arg(pos).arg(protName);
-                task.engineName = engine.engineName;
-                task.modelName = engine.modelName;
-                task.speakerId = engine.speakerId;
+            FileTask task;
+            task.category = "linePosition";
+            task.text = itemTemplate.arg(beltNum).arg(pos);
+            // 文件名：{点位号}号点位故障.wav
+            task.outputPath = QString("%1%2号点位故障.wav").arg(outputDir).arg(pos);
+            task.engineName = engine.engineName;
+            task.modelName = engine.modelName;
+            task.speakerId = engine.speakerId;
             task.rate = engine.rate;
             task.volume = engine.volume;
-                m_tasks.append(task);
-            }
+            m_tasks.append(task);
         }
     }
 }
@@ -513,13 +522,8 @@ void BatchAudioGenerator::generateLinePositionTasks(const EngineConfig &engine)
 void BatchAudioGenerator::generateSystemSoundTasks(const EngineConfig &engine)
 {
     // ✅ 2026-02-26 23:15 [Phase 7.47.20]: 按照设计方案修改文件路径和命名
-    // 系统提示音：16 个文件（按设计方案）
-    QStringList soundNames = {
-        "系统启动完成", "网络连接正常", "网络连接断开", "设备通讯正常",
-        "设备通讯故障", "参数保存成功", "参数加载成功", "操作成功",
-        "操作失败", "请确认操作", "报警已确认", "报警已解除",
-        "紧急停止", "恢复运行", "维护提醒", "电量不足"
-    };
+    // ✅ 2026-02-28 10:20 [Phase 7.47.41]: 统一使用VoiceFileList保护名称
+    const QStringList &soundNames = SystemSoundVoice::SOUND_ITEMS;
 
     // 系统提示音放在 Sounds 目录
     QString outputDir = QString("%1/%2/Sounds/")
