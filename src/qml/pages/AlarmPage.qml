@@ -34,6 +34,16 @@ Item {
         Qt.callLater(loadAlarms)
     }
 
+    // ✅ 2026-02-28 [Phase 7.47.48]: 监听 alarmHistoryDB 的 alarmAdded 信号，自动刷新列表
+    // 原因：保护触发后 saveAlarmTriggered() 写入DB，但AlarmPage不会主动刷新
+    // 修复：alarmAdded 信号触发时，重新调用 loadAlarms() 更新界面
+    Connections {
+        target: alarmHistoryDB
+        function onAlarmAdded() {
+            Qt.callLater(loadAlarms)
+        }
+    }
+
     // ========== 加载数据函数 ==========
     function loadAlarms() {
         alarmModel.clear()

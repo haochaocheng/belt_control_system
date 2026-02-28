@@ -112,6 +112,8 @@ bool AlarmHistoryDatabase::saveAlarmTriggered(const QString &protectionName,
 
     qDebug() << "📝 AlarmHistoryDatabase: 报警触发事件已保存 -" << protectionName
              << "类型:" << protectionType << "值:" << triggerValue;
+    // ✅ 2026-02-28 [Phase 7.47.48]: 通知QML AlarmPage自动刷新列表
+    emit alarmAdded();
     return true;
 }
 
@@ -145,6 +147,8 @@ bool AlarmHistoryDatabase::saveAlarmRestored(const QString &protectionName)
     }
 
     qDebug() << "📝 AlarmHistoryDatabase: 报警恢复事件已保存 -" << protectionName;
+    // ✅ 2026-02-28 [Phase 7.47.48]: 通知QML AlarmPage自动刷新列表
+    emit alarmAdded();
     return true;
 }
 

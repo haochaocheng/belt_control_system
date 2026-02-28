@@ -58,6 +58,10 @@ public:
     // 删除旧记录（保留最近N天）
     Q_INVOKABLE bool deleteOldRecords(int daysToKeep = 90);
 
+signals:
+    // ✅ 2026-02-28 [Phase 7.47.48]: 新增信号，通知QML报警记录已写入（供AlarmPage自动刷新）
+    void alarmAdded();
+
 private:
     // 创建数据库表
     bool createTables();
