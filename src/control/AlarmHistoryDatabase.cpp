@@ -224,6 +224,23 @@ int AlarmHistoryDatabase::countAlarmsToday()
     return 0;
 }
 
+// ✅ 2026-02-28 [Phase 7.47.50]: 新增 - 统计全部记录总数（不受过滤影响）
+int AlarmHistoryDatabase::countAllAlarms()
+{
+    QSqlQuery query(m_db);
+
+    if (!query.exec("SELECT COUNT(*) FROM alarm_history")) {
+        qWarning() << "❌ AlarmHistoryDatabase: 统计全部记录数失败:" << query.lastError().text();
+        return 0;
+    }
+
+    if (query.next()) {
+        return query.value(0).toInt();
+    }
+
+    return 0;
+}
+
 bool AlarmHistoryDatabase::clearHistory()
 {
     QSqlQuery query(m_db);

@@ -52,6 +52,9 @@ public:
     // 统计今日报警总次数
     Q_INVOKABLE int countAlarmsToday();
 
+    // ✅ 2026-02-28 [Phase 7.47.50]: 新增 - 统计全部记录总数（不受筛选影响，供AlarmPage显示"总记录"）
+    Q_INVOKABLE int countAllAlarms();
+
     // 清空历史记录（谨慎使用）
     Q_INVOKABLE bool clearHistory();
 

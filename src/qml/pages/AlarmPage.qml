@@ -76,7 +76,9 @@ Item {
             for (var i = 0; i < records.length; i++) {
                 var r = records[i]
                 alarmModel.append({
-                    "rowNum":         i + 1,
+                    // ✅ 2026-02-28 [Phase 7.47.50]: 修复序号倒序——新记录序号最大在顶部，1在最底部
+                    // 旧值：i + 1（正序）
+                    "rowNum":         records.length - i,
                     "alarmDate":      r.date || "",
                     "alarmTime":      r.time || "",
                     "protectionName": r.protectionName || "",
@@ -89,7 +91,9 @@ Item {
         }
 
         // 更新统计
-        totalCount = alarmModel.count
+        // ✅ 2026-02-28 [Phase 7.47.50]: 修复总记录数不更新——改用 countAllAlarms() 查DB真实总数
+        // 旧值：alarmModel.count（只反映当前筛选结果数量，不是全量）
+        totalCount = alarmHistoryDB.countAllAlarms()
         todayCount = alarmHistoryDB.countAlarmsToday()
 
         console.log("✅ [AlarmPage] 加载报警记录:", alarmModel.count, "条")
@@ -148,8 +152,8 @@ Item {
 
                 // 今日报警数统计 badge
                 Rectangle {
-                    height: 34
-                    width: 150
+                    height: 42
+                    width: 180
                     radius: 4
                     color: root.todayCount > 0 ? "#1a0808" : "#0d1117"
                     border.color: root.todayCount > 0 ? "#ef4444" : "#334155"
@@ -160,7 +164,7 @@ Item {
                         spacing: 6
                         // 左侧LED点
                         Rectangle {
-                            width: 8; height: 8; radius: 4
+                            width: 10; height: 10; radius: 5
                             color: root.todayCount > 0 ? "#ef4444" : "#475569"
                             // 闪烁动画（有报警时）
                             SequentialAnimation on opacity {
@@ -172,7 +176,7 @@ Item {
                         }
                         Text {
                             text: "今日报警: " + root.todayCount
-                            font.pixelSize: 13
+                            font.pixelSize: 20
                             color: root.todayCount > 0 ? "#fca5a5" : "#64748B"
                         }
                     }
@@ -180,8 +184,8 @@ Item {
 
                 // 总记录数统计 badge
                 Rectangle {
-                    height: 34
-                    width: 140
+                    height: 42
+                    width: 180
                     radius: 4
                     color: "#0d1b2e"
                     border.color: "#1e3a5f"
@@ -190,10 +194,10 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 8
                         spacing: 6
-                        Rectangle { width: 8; height: 8; radius: 4; color: "#00d4ff"; opacity: 0.7 }
+                        Rectangle { width: 10; height: 10; radius: 5; color: "#00d4ff"; opacity: 0.7 }
                         Text {
                             text: "总记录: " + root.totalCount
-                            font.pixelSize: 13
+                            font.pixelSize: 20
                             color: "#7ecfff"
                         }
                     }
@@ -202,7 +206,7 @@ Item {
                 // 刷新按钮
                 Button {
                     id: refreshBtn
-                    width: 88; height: 34
+                    width: 110; height: 42
 
                     background: Rectangle {
                         color: refreshBtn.pressed ? "#1565c0" : (refreshBtn.hovered ? "#1976d2" : "#0d1b2e")
@@ -212,7 +216,7 @@ Item {
                     }
                     contentItem: Text {
                         text: "刷新"
-                        font.pixelSize: 14; font.bold: true
+                        font.pixelSize: 21; font.bold: true
                         color: "#00d4ff"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
@@ -223,7 +227,7 @@ Item {
                 // 清空按钮
                 Button {
                     id: clearBtn
-                    width: 88; height: 34
+                    width: 110; height: 42
 
                     background: Rectangle {
                         color: clearBtn.pressed ? "#7f1d1d" : (clearBtn.hovered ? "#991b1b" : "#1a0808")
@@ -233,7 +237,7 @@ Item {
                     }
                     contentItem: Text {
                         text: "清空"
-                        font.pixelSize: 14; font.bold: true
+                        font.pixelSize: 21; font.bold: true
                         color: "#ef4444"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
@@ -261,7 +265,7 @@ Item {
                 // 日期筛选标签
                 Text {
                     text: "日期:"
-                    font.pixelSize: 13
+                    font.pixelSize: 20
                     color: "#64748B"
                 }
 
@@ -269,7 +273,7 @@ Item {
                 Button {
                     id: filterAllBtn
                     text: "全部"
-                    width: 72; height: 28
+                    width: 90; height: 40
                     checkable: true
                     checked: root.currentDateFilter === "all" && root.currentNameFilter === ""
 
@@ -288,7 +292,7 @@ Item {
                     }
                     contentItem: Text {
                         text: parent.text
-                        font.pixelSize: 13
+                        font.pixelSize: 20
                         color: filterAllBtn.checked ? "#00d4ff" : "#9E9E9E"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
@@ -305,7 +309,7 @@ Item {
                 Button {
                     id: filterTodayBtn
                     text: "今日"
-                    width: 72; height: 28
+                    width: 90; height: 40
                     checkable: true
                     checked: root.currentDateFilter === "today" && root.currentNameFilter === ""
 
@@ -324,7 +328,7 @@ Item {
                     }
                     contentItem: Text {
                         text: parent.text
-                        font.pixelSize: 13
+                        font.pixelSize: 20
                         color: filterTodayBtn.checked ? "#22C55E" : "#9E9E9E"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
@@ -341,7 +345,7 @@ Item {
                 Button {
                     id: filterWeekBtn
                     text: "近7天"
-                    width: 80; height: 28
+                    width: 100; height: 40
                     checkable: true
                     checked: root.currentDateFilter === "week" && root.currentNameFilter === ""
 
@@ -360,7 +364,7 @@ Item {
                     }
                     contentItem: Text {
                         text: parent.text
-                        font.pixelSize: 13
+                        font.pixelSize: 20
                         color: filterWeekBtn.checked ? "#F59E0B" : "#9E9E9E"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
@@ -375,14 +379,14 @@ Item {
 
                 // 分隔线
                 Rectangle {
-                    width: 1; height: 22
+                    width: 1; height: 30
                     color: "#334155"
                 }
 
                 // 保护名称筛选标签
                 Text {
                     text: "保护名称:"
-                    font.pixelSize: 13
+                    font.pixelSize: 20
                     color: "#64748B"
                 }
 
@@ -390,7 +394,7 @@ Item {
                 ComboBox {
                     id: nameFilterCombo
                     model: ["全部保护", "急停", "跑偏", "撕裂", "烟雾", "温度", "护网", "堆煤", "主机急停"]
-                    width: 150; height: 28
+                    width: 190; height: 40
 
                     background: Rectangle {
                         color: nameFilterCombo.pressed ? "#1e2d42" : "#141920"
@@ -400,7 +404,7 @@ Item {
                     }
                     contentItem: Text {
                         text: nameFilterCombo.displayText
-                        font.pixelSize: 13
+                        font.pixelSize: 20
                         color: root.currentNameFilter !== "" ? "#00d4ff" : "#E0E0E0"
                         verticalAlignment: Text.AlignVCenter
                         leftPadding: 8
@@ -408,10 +412,10 @@ Item {
                     indicator: Item {
                         x: nameFilterCombo.width - width - 8
                         y: (nameFilterCombo.height - height) / 2
-                        width: 12; height: 12
+                        width: 16; height: 16
                         Text {
                             text: "▾"
-                            font.pixelSize: 11
+                            font.pixelSize: 16
                             color: "#64748B"
                             anchors.centerIn: parent
                         }
@@ -435,13 +439,13 @@ Item {
                     }
                     delegate: ItemDelegate {
                         width: nameFilterCombo.width
-                        height: 30
+                        height: 44
                         background: Rectangle {
                             color: hovered ? "#1e3a5f" : "#141920"
                         }
                         contentItem: Text {
                             text: modelData
-                            font.pixelSize: 13
+                            font.pixelSize: 20
                             color: "#E0E0E0"
                             leftPadding: 8
                             verticalAlignment: Text.AlignVCenter
@@ -452,7 +456,11 @@ Item {
                         if (currentIndex === 0) {
                             root.currentNameFilter = ""
                         } else {
-                            root.currentNameFilter = model[currentIndex]
+                            // ✅ 2026-02-28 [Phase 7.47.50]: 修复过滤——UI短名 → DB完整名映射
+                            // 旧：root.currentNameFilter = model[currentIndex]（"急停"查不到"沿线急停"）
+                            var nameMap = { "急停": "沿线急停", "跑偏": "沿线跑偏", "撕裂": "沿线撕裂" }
+                            var selected = model[currentIndex]
+                            root.currentNameFilter = nameMap[selected] || selected
                             root.currentDateFilter = "all"
                         }
                         loadAlarms()
@@ -465,12 +473,12 @@ Item {
                 RowLayout {
                     spacing: 6
                     Rectangle {
-                        width: 8; height: 8; radius: 4
+                        width: 10; height: 10; radius: 5
                         color: "#22C55E"
                     }
                     Text {
                         text: "数据库已连接"
-                        font.pixelSize: 12
+                        font.pixelSize: 18
                         color: "#475569"
                     }
                 }
@@ -493,7 +501,7 @@ Item {
                     // ---------- 表头 ----------
                     Rectangle {
                         Layout.fillWidth: true
-                        height: 44
+                        height: 60
                         color: "#0d1f3a"
                         radius: 8
 
@@ -515,57 +523,57 @@ Item {
                             // # 序号
                             Text {
                                 text: "#"
-                                font.pixelSize: 13; font.bold: true
+                                font.pixelSize: 20; font.bold: true
                                 color: "#00d4ff"
-                                Layout.preferredWidth: 50
+                                Layout.preferredWidth: 70
                                 horizontalAlignment: Text.AlignHCenter
                             }
-                            Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.15; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+                            Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.15; Layout.topMargin: 10; Layout.bottomMargin: 10 }
 
                             // 日期
                             Text {
                                 text: "日期"
-                                font.pixelSize: 13; font.bold: true
+                                font.pixelSize: 20; font.bold: true
                                 color: "#00d4ff"
-                                Layout.preferredWidth: 115
+                                Layout.preferredWidth: 150
                                 horizontalAlignment: Text.AlignHCenter
                             }
-                            Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.15; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+                            Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.15; Layout.topMargin: 10; Layout.bottomMargin: 10 }
 
                             // 时间
                             Text {
                                 text: "时间"
-                                font.pixelSize: 13; font.bold: true
-                                color: "#00d4ff"
-                                Layout.preferredWidth: 100
-                                horizontalAlignment: Text.AlignHCenter
-                            }
-                            Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.15; Layout.topMargin: 8; Layout.bottomMargin: 8 }
-
-                            // 保护名称
-                            Text {
-                                text: "保护名称"
-                                font.pixelSize: 13; font.bold: true
+                                font.pixelSize: 20; font.bold: true
                                 color: "#00d4ff"
                                 Layout.preferredWidth: 130
                                 horizontalAlignment: Text.AlignHCenter
                             }
-                            Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.15; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+                            Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.15; Layout.topMargin: 10; Layout.bottomMargin: 10 }
+
+                            // 保护名称
+                            Text {
+                                text: "保护名称"
+                                font.pixelSize: 20; font.bold: true
+                                color: "#00d4ff"
+                                Layout.preferredWidth: 180
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+                            Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.15; Layout.topMargin: 10; Layout.bottomMargin: 10 }
 
                             // 事件类型
                             Text {
                                 text: "事件"
-                                font.pixelSize: 13; font.bold: true
+                                font.pixelSize: 20; font.bold: true
                                 color: "#00d4ff"
-                                Layout.preferredWidth: 96
+                                Layout.preferredWidth: 130
                                 horizontalAlignment: Text.AlignHCenter
                             }
-                            Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.15; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+                            Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.15; Layout.topMargin: 10; Layout.bottomMargin: 10 }
 
                             // 详情
                             Text {
                                 text: "详情"
-                                font.pixelSize: 13; font.bold: true
+                                font.pixelSize: 20; font.bold: true
                                 color: "#00d4ff"
                                 Layout.fillWidth: true
                                 leftPadding: 16
@@ -615,14 +623,14 @@ Item {
 
                             Text {
                                 text: "暂无报警记录"
-                                font.pixelSize: 15
+                                font.pixelSize: 22
                                 color: "#334155"
                                 anchors.horizontalCenter: parent.horizontalCenter
                             }
 
                             Text {
                                 text: "当保护触发时，记录将自动出现在此处"
-                                font.pixelSize: 12
+                                font.pixelSize: 18
                                 color: "#1e3a5f"
                                 anchors.horizontalCenter: parent.horizontalCenter
                             }
@@ -661,7 +669,7 @@ Item {
                             delegate: Rectangle {
                                 // 行宽留出滚动条空间
                                 width: alarmListView.width - 14
-                                height: 46
+                                height: 66
 
                                 // 根据事件类型决定行背景色
                                 readonly property bool isTriggered: model.eventType === "triggered"
@@ -685,8 +693,8 @@ Item {
 
                                 // 左侧彩色竖条（触发=红，恢复=绿）
                                 Rectangle {
-                                    x: 0; y: 7
-                                    width: 3; height: parent.height - 14
+                                    x: 0; y: 10
+                                    width: 3; height: parent.height - 20
                                     radius: 2
                                     color: isTriggered ? "#ef4444" : "#22C55E"
                                 }
@@ -700,51 +708,52 @@ Item {
                                     // # 序号
                                     Text {
                                         text: model.rowNum
-                                        font.pixelSize: 13
+                                        font.pixelSize: 20
                                         color: isTriggered ? "#f87171" : "#4ade80"
-                                        Layout.preferredWidth: 50
+                                        Layout.preferredWidth: 70
                                         horizontalAlignment: Text.AlignHCenter
                                     }
-                                    Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.07; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+                                    Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.07; Layout.topMargin: 12; Layout.bottomMargin: 12 }
 
                                     // 日期
                                     Text {
                                         text: model.alarmDate
-                                        font.pixelSize: 13
+                                        font.pixelSize: 20
                                         color: "#94a3b8"
-                                        Layout.preferredWidth: 115
+                                        Layout.preferredWidth: 150
                                         horizontalAlignment: Text.AlignHCenter
                                     }
-                                    Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.07; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+                                    Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.07; Layout.topMargin: 12; Layout.bottomMargin: 12 }
 
                                     // 时间
                                     Text {
                                         text: model.alarmTime
-                                        font.pixelSize: 13; font.bold: true
+                                        font.pixelSize: 20; font.bold: true
                                         color: "#cbd5e1"
-                                        Layout.preferredWidth: 100
+                                        Layout.preferredWidth: 130
                                         horizontalAlignment: Text.AlignHCenter
                                     }
-                                    Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.07; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+                                    Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.07; Layout.topMargin: 12; Layout.bottomMargin: 12 }
 
                                     // 保护名称
                                     Text {
                                         text: model.protectionName
-                                        font.pixelSize: 13; font.bold: true
+                                        font.pixelSize: 20; font.bold: true
                                         color: "#e2e8f0"
-                                        Layout.preferredWidth: 130
+                                        Layout.preferredWidth: 180
                                         horizontalAlignment: Text.AlignHCenter
+                                        wrapMode: Text.NoWrap
                                     }
-                                    Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.07; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+                                    Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.07; Layout.topMargin: 12; Layout.bottomMargin: 12 }
 
                                     // 事件类型 Badge
                                     Item {
-                                        Layout.preferredWidth: 96
+                                        Layout.preferredWidth: 130
                                         Layout.fillHeight: true
 
                                         Rectangle {
                                             anchors.centerIn: parent
-                                            width: 74; height: 24; radius: 4
+                                            width: 110; height: 36; radius: 6
                                             color: isTriggered ? "#3d0f0f" : "#0a2214"
                                             border.color: isTriggered ? "#ef4444" : "#22C55E"
                                             border.width: 1
@@ -762,12 +771,12 @@ Item {
                                             Text {
                                                 anchors.centerIn: parent
                                                 text: isTriggered ? "保护触发" : "保护恢复"
-                                                font.pixelSize: 12; font.bold: true
+                                                font.pixelSize: 18; font.bold: true
                                                 color: isTriggered ? "#fca5a5" : "#86efac"
                                             }
                                         }
                                     }
-                                    Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.07; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+                                    Rectangle { width: 1; Layout.fillHeight: true; color: "#00d4ff"; opacity: 0.07; Layout.topMargin: 12; Layout.bottomMargin: 12 }
 
                                     // 详情
                                     Text {
@@ -780,7 +789,7 @@ Item {
                                             }
                                             return "已恢复正常"
                                         }
-                                        font.pixelSize: 13
+                                        font.pixelSize: 20
                                         color: isTriggered ? "#f87171" : "#4ade80"
                                         Layout.fillWidth: true
                                         leftPadding: 16
