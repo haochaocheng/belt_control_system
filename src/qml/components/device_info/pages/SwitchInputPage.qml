@@ -529,6 +529,11 @@ Rectangle {
                                 anchors.fill: parent
                                 spacing: 8
 
+                                // ✅ 2026-02-28 [Phase 7.47.44 uipro]: 美化按钮 - Cyberpunk 工业风
+                                // 选中默认: 深蓝背景 + 青色边框 + 顶部青色高亮线 + LED点
+                                // 选中TTS: 深绿背景 + 绿色边框 + 顶部绿色高亮线 + LED点
+                                // 未选中: 深灰背景 + 板岩边框 + 灰色LED点
+
                                 // [默认] 按钮
                                 Button {
                                     id: audioSourceDefaultBtn
@@ -539,18 +544,59 @@ Rectangle {
                                     checked: root.audioSourceMode === 0
 
                                     background: Rectangle {
-                                        color: audioSourceDefaultBtn.checked ? "#2196F3" :
-                                               (audioSourceDefaultBtn.hovered ? "#3d4556" : "#2a2f3d")
-                                        radius: 4
-                                        border.color: audioSourceDefaultBtn.checked ? "#2196F3" : "#555"
-                                        border.width: 1
+                                        color: audioSourceDefaultBtn.checked ? "#0d1b2e" :
+                                               (audioSourceDefaultBtn.hovered ? "#1e2d42" : "#141920")
+                                        radius: 6
+                                        border.color: audioSourceDefaultBtn.checked ? "#00d4ff" :
+                                                      (audioSourceDefaultBtn.hovered ? "#2196F3" : "#334155")
+                                        border.width: audioSourceDefaultBtn.checked ? 2 : 1
+
+                                        // 顶部青色高亮线（选中状态）
+                                        Rectangle {
+                                            visible: audioSourceDefaultBtn.checked
+                                            anchors.top: parent.top
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.leftMargin: 1
+                                            anchors.rightMargin: 1
+                                            anchors.topMargin: 1
+                                            height: 2
+                                            radius: 1
+                                            color: "#00d4ff"
+                                        }
                                     }
-                                    contentItem: Text {
-                                        text: audioSourceDefaultBtn.text
-                                        font.pixelSize: 18
-                                        color: "#E0E0E0"
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
+
+                                    contentItem: Item {
+                                        Row {
+                                            anchors.centerIn: parent
+                                            spacing: 8
+
+                                            // uipro LED状态指示点
+                                            Rectangle {
+                                                width: 8
+                                                height: 8
+                                                radius: 4
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                color: audioSourceDefaultBtn.checked ? "#00d4ff" : "#475569"
+
+                                                // 内部高亮
+                                                Rectangle {
+                                                    width: 4
+                                                    height: 4
+                                                    radius: 2
+                                                    anchors.centerIn: parent
+                                                    color: audioSourceDefaultBtn.checked ? "#e0f7ff" : "#64748B"
+                                                }
+                                            }
+
+                                            Text {
+                                                text: audioSourceDefaultBtn.text
+                                                font.pixelSize: 16
+                                                font.weight: audioSourceDefaultBtn.checked ? Font.Medium : Font.Normal
+                                                color: audioSourceDefaultBtn.checked ? "#00d4ff" : "#9E9E9E"
+                                                verticalAlignment: Text.AlignVCenter
+                                            }
+                                        }
                                     }
                                     onClicked: root.audioSourceMode = 0
                                 }
@@ -565,18 +611,59 @@ Rectangle {
                                     checked: root.audioSourceMode === 1
 
                                     background: Rectangle {
-                                        color: audioSourceTtsBtn.checked ? "#2196F3" :
-                                               (audioSourceTtsBtn.hovered ? "#3d4556" : "#2a2f3d")
-                                        radius: 4
-                                        border.color: audioSourceTtsBtn.checked ? "#2196F3" : "#555"
-                                        border.width: 1
+                                        color: audioSourceTtsBtn.checked ? "#0d2218" :
+                                               (audioSourceTtsBtn.hovered ? "#1e2d42" : "#141920")
+                                        radius: 6
+                                        border.color: audioSourceTtsBtn.checked ? "#22C55E" :
+                                                      (audioSourceTtsBtn.hovered ? "#2196F3" : "#334155")
+                                        border.width: audioSourceTtsBtn.checked ? 2 : 1
+
+                                        // 顶部绿色高亮线（选中状态）
+                                        Rectangle {
+                                            visible: audioSourceTtsBtn.checked
+                                            anchors.top: parent.top
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.leftMargin: 1
+                                            anchors.rightMargin: 1
+                                            anchors.topMargin: 1
+                                            height: 2
+                                            radius: 1
+                                            color: "#22C55E"
+                                        }
                                     }
-                                    contentItem: Text {
-                                        text: audioSourceTtsBtn.text
-                                        font.pixelSize: 18
-                                        color: "#E0E0E0"
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
+
+                                    contentItem: Item {
+                                        Row {
+                                            anchors.centerIn: parent
+                                            spacing: 8
+
+                                            // uipro LED状态指示点
+                                            Rectangle {
+                                                width: 8
+                                                height: 8
+                                                radius: 4
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                color: audioSourceTtsBtn.checked ? "#22C55E" : "#475569"
+
+                                                // 内部高亮
+                                                Rectangle {
+                                                    width: 4
+                                                    height: 4
+                                                    radius: 2
+                                                    anchors.centerIn: parent
+                                                    color: audioSourceTtsBtn.checked ? "#86EFAC" : "#64748B"
+                                                }
+                                            }
+
+                                            Text {
+                                                text: audioSourceTtsBtn.text
+                                                font.pixelSize: 16
+                                                font.weight: audioSourceTtsBtn.checked ? Font.Medium : Font.Normal
+                                                color: audioSourceTtsBtn.checked ? "#22C55E" : "#9E9E9E"
+                                                verticalAlignment: Text.AlignVCenter
+                                            }
+                                        }
                                     }
                                     onClicked: root.audioSourceMode = 1
                                 }
@@ -595,16 +682,18 @@ Rectangle {
 
                         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.27]: TTS文字 - 第三行右侧（索引5）
                         // ✅ 2026-02-28 [Phase 7.47.44]: 修复颜色和默认值
-                        // - visible: 仅TTS合成模式显示
+                        // ✅ 2026-02-28 [Phase 7.47.44 uipro]: 改为始终显示，默认模式下灰化（不隐藏）
                         Text {
                             text: "TTS文字:"
                             font.pixelSize: 21
-                            color: "#9E9E9E"
+                            // 默认模式: 灰化；TTS模式: 正常
+                            color: root.audioSourceMode === 1 ? "#9E9E9E" : "#505565"
                             Layout.column: 2
                             Layout.row: 2
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
-                            visible: root.audioSourceMode === 1
+                            // 旧: visible: root.audioSourceMode === 1  // 直接隐藏
+                            // 新: 始终显示，依靠 color 灰化传达"不可用"状态
                         }
 
                         Item {
@@ -613,7 +702,8 @@ Rectangle {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
                             implicitHeight: ttsTextField.implicitHeight
-                            visible: root.audioSourceMode === 1
+                            // 旧: visible: root.audioSourceMode === 1  // 直接隐藏
+                            // 新: 始终显示，依靠 readOnly + color 灰化
 
                             DeviceInfo.CustomTextField {
                                 id: ttsTextField
@@ -622,8 +712,11 @@ Rectangle {
                                 inputMethodHints: Qt.ImhNone
                                 // ✅ 2026-02-28 [Phase 7.47.44]: 浅色占位文字，避免黑色不可见
                                 placeholderText: "如：1号皮带沿线急停保护"
-                                color: "#E0E0E0"
+                                // ✅ 2026-02-28 [Phase 7.47.44 uipro]: 默认模式只读+灰色，TTS模式可编辑
+                                readOnly: root.audioSourceMode === 0
+                                color: root.audioSourceMode === 1 ? "#E0E0E0" : "#505565"
                                 placeholderTextColor: "#6E6E6E"
+                                opacity: root.audioSourceMode === 1 ? 1.0 : 0.55
                                 keyboardManager: root.keyboardManager
                             }
 
@@ -756,6 +849,115 @@ Rectangle {
                                 z: 10
                             }
                         }
+
+                        // ✅ 2026-02-28 [Phase 7.47.44 uipro]: 通道状态指示器 - 第五行右侧
+                        // uipro 设计: Cyberpunk 工业 LED 风格
+                        // - 灰色LED (不亮): channel = 0 / 未激活
+                        // - 绿色LED (脉冲闪烁): channel = 1 / 已激活
+                        Text {
+                            text: "通道状态:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 2
+                            Layout.row: 4
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            id: channelStatusItem
+                            Layout.column: 3
+                            Layout.row: 4
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: 50
+
+                            // 读取当前选中保护项的激活状态
+                            readonly property bool isActive: {
+                                if (root.currentProtectionIndex >= 0 &&
+                                    root.currentProtectionIndex < digitalProtectionModel.count) {
+                                    return digitalProtectionModel.get(root.currentProtectionIndex).active
+                                }
+                                return false
+                            }
+
+                            Row {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
+                                spacing: 12
+
+                                // uipro LED 状态指示灯（工业感双环设计）
+                                Item {
+                                    width: 24
+                                    height: 24
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    // 外环脉冲光晕（激活时闪烁）
+                                    Rectangle {
+                                        id: ledOuterRing
+                                        anchors.centerIn: parent
+                                        width: 24
+                                        height: 24
+                                        radius: 12
+                                        color: "transparent"
+                                        border.width: 2
+                                        border.color: channelStatusItem.isActive ? "#22C55E" : "#475569"
+                                        opacity: 0.4
+
+                                        // 激活时脉冲动画（uipro animate-pulse 等效）
+                                        SequentialAnimation on opacity {
+                                            running: channelStatusItem.isActive
+                                            loops: Animation.Infinite
+                                            NumberAnimation { to: 0.05; duration: 900; easing.type: Easing.InOutSine }
+                                            NumberAnimation { to: 0.55; duration: 900; easing.type: Easing.InOutSine }
+                                        }
+                                    }
+
+                                    // 内核 LED 球体
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 14
+                                        height: 14
+                                        radius: 7
+                                        color: channelStatusItem.isActive ? "#22C55E" : "#475569"
+
+                                        // 内部反光高亮点（uipro 3D 立体感）
+                                        Rectangle {
+                                            width: 4
+                                            height: 4
+                                            radius: 2
+                                            color: channelStatusItem.isActive ? "#86EFAC" : "#64748B"
+                                            anchors.top: parent.top
+                                            anchors.left: parent.left
+                                            anchors.margins: 3
+                                        }
+                                    }
+                                }
+
+                                // 状态文字（双行：主状态 + 副信息）
+                                Column {
+                                    spacing: 2
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Text {
+                                        // 主状态: "信号激活 (1)" 或 "正常监测 (0)"
+                                        text: channelStatusItem.isActive ? "信号激活 (1)" : "正常监测 (0)"
+                                        font.pixelSize: 15
+                                        font.weight: Font.Medium
+                                        color: channelStatusItem.isActive ? "#22C55E" : "#64748B"
+                                    }
+
+                                    Text {
+                                        // 副信息: "保护已触发" 或 "通道正常"
+                                        text: channelStatusItem.isActive ? "保护已触发" : "通道正常"
+                                        font.pixelSize: 12
+                                        color: channelStatusItem.isActive ? "#86EFAC" : "#475569"
+                                    }
+                                }
+                            }
+                        }
+
                     }  // GridLayout 结束
 
                     // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17]: 临时移除 RowLayout，测试是否还卡住
