@@ -36,6 +36,8 @@ Rectangle {
     property int focusSubArea: 0  // 0:列表区域 1:参数区域 2:底部按钮区域
     property int focusParamIndex: 0  // 参数区域焦点索引
     property int focusButtonIndex: 0  // ✅ 2026-01-29 [Phase 2.30]: 底部按钮区域焦点索引（0-4）
+    // ✅ 2026-02-28 [Phase 7.47.44]: 音频来源模式 0=默认 1=TTS合成
+    property int audioSourceMode: 0
 
     // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 监听焦点变化，同步更新 currentProtectionIndex
     // 当焦点在列表区域移动时，同步更新选中项索引
@@ -60,14 +62,14 @@ Rectangle {
     // ========== 开关量保护模型 ==========
     ListModel {
         id: digitalProtectionModel
-        ListElement { name: "急停"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 0 }
-        ListElement { name: "跑偏"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 1 }
-        ListElement { name: "撕裂"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 2 }
-        ListElement { name: "烟雾"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 3 }
-        ListElement { name: "温度"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 4 }
-        ListElement { name: "护网"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 5 }
-        ListElement { name: "堆煤"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 6 }
-        ListElement { name: "主机急停"; active: false; moduleType: "输入模块1"; registerAddress: 2; channelNumber: 7 }
+        ListElement { name: "急停"; active: false; moduleType: "开关量输入模块1"; registerAddress: 2; channelNumber: 0 }
+        ListElement { name: "跑偏"; active: false; moduleType: "开关量输入模块1"; registerAddress: 2; channelNumber: 1 }
+        ListElement { name: "撕裂"; active: false; moduleType: "开关量输入模块1"; registerAddress: 2; channelNumber: 2 }
+        ListElement { name: "烟雾"; active: false; moduleType: "开关量输入模块1"; registerAddress: 2; channelNumber: 3 }
+        ListElement { name: "温度"; active: false; moduleType: "开关量输入模块1"; registerAddress: 2; channelNumber: 4 }
+        ListElement { name: "护网"; active: false; moduleType: "开关量输入模块1"; registerAddress: 2; channelNumber: 5 }
+        ListElement { name: "堆煤"; active: false; moduleType: "开关量输入模块1"; registerAddress: 2; channelNumber: 6 }
+        ListElement { name: "主机急停"; active: false; moduleType: "开关量输入模块1"; registerAddress: 2; channelNumber: 7 }
     }
 
     // ✅ 2026-01-28 [FIX 100.300.101]: 参数字段模型（动态管理，便于添加/删除参数）
@@ -432,7 +434,13 @@ Rectangle {
                                 id: moduleTypeCombo
                                 anchors.fill: parent
                                 keyboardManager: root.keyboardManager
-                                model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
+                                // ✅ 2026-02-28 [Phase 7.47.44]: 只保留2个模块选项（与实际DI硬件一致）
+                                // 旧值：["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
+                                model: ["开关量输入模块1", "开关量输入模块2"]
+                                // ✅ 根据模块自动确定寄存器地址（模块1→寄存器2，模块2→寄存器3）
+                                onCurrentIndexChanged: {
+                                    registerAddressSpin.value = (currentIndex === 0) ? 2 : 3
+                                }
                             }
 
                             // 焦点指示器
@@ -485,9 +493,11 @@ Rectangle {
                             }
                         }
 
-                        // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.27]: 寄存器地址 - 第三行左侧（索引4）
+                        // ✅ 2026-02-28 [Phase 7.47.44]: 音频来源 - 第三行左侧（索引4）
+                        // 旧代码：寄存器地址（SpinBox），用户不需要看到底层寄存器细节
+                        // 新功能：音频来源选择 [默认] [TTS合成]
                         Text {
-                            text: "寄存器地址:"
+                            text: "音频来源:"
                             font.pixelSize: 21
                             color: "#9E9E9E"
                             Layout.column: 0
@@ -501,16 +511,75 @@ Rectangle {
                             Layout.row: 2
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            implicitHeight: registerAddressSpin.implicitHeight
+                            implicitHeight: 60
 
+                            // ✅ 隐藏的寄存器地址（由moduleTypeCombo自动设置，数据库兼容用）
                             DeviceInfo.CustomSpinBox {
                                 id: registerAddressSpin
-                                anchors.fill: parent
+                                visible: false
                                 from: 0
                                 to: 255
                                 value: 2
                                 editable: true
                                 keyboardManager: root.keyboardManager
+                            }
+
+                            // 音频来源切换按钮行
+                            RowLayout {
+                                anchors.fill: parent
+                                spacing: 8
+
+                                // [默认] 按钮
+                                Button {
+                                    id: audioSourceDefaultBtn
+                                    text: "默认"
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 50
+                                    checkable: true
+                                    checked: root.audioSourceMode === 0
+
+                                    background: Rectangle {
+                                        color: audioSourceDefaultBtn.checked ? "#2196F3" :
+                                               (audioSourceDefaultBtn.hovered ? "#3d4556" : "#2a2f3d")
+                                        radius: 4
+                                        border.color: audioSourceDefaultBtn.checked ? "#2196F3" : "#555"
+                                        border.width: 1
+                                    }
+                                    contentItem: Text {
+                                        text: audioSourceDefaultBtn.text
+                                        font.pixelSize: 18
+                                        color: "#E0E0E0"
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    onClicked: root.audioSourceMode = 0
+                                }
+
+                                // [TTS合成] 按钮
+                                Button {
+                                    id: audioSourceTtsBtn
+                                    text: "TTS合成"
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 50
+                                    checkable: true
+                                    checked: root.audioSourceMode === 1
+
+                                    background: Rectangle {
+                                        color: audioSourceTtsBtn.checked ? "#2196F3" :
+                                               (audioSourceTtsBtn.hovered ? "#3d4556" : "#2a2f3d")
+                                        radius: 4
+                                        border.color: audioSourceTtsBtn.checked ? "#2196F3" : "#555"
+                                        border.width: 1
+                                    }
+                                    contentItem: Text {
+                                        text: audioSourceTtsBtn.text
+                                        font.pixelSize: 18
+                                        color: "#E0E0E0"
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    onClicked: root.audioSourceMode = 1
+                                }
                             }
 
                             // 焦点指示器
@@ -525,6 +594,8 @@ Rectangle {
                         }
 
                         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.27]: TTS文字 - 第三行右侧（索引5）
+                        // ✅ 2026-02-28 [Phase 7.47.44]: 修复颜色和默认值
+                        // - visible: 仅TTS合成模式显示
                         Text {
                             text: "TTS文字:"
                             font.pixelSize: 21
@@ -533,6 +604,7 @@ Rectangle {
                             Layout.row: 2
                             Layout.preferredWidth: 120
                             horizontalAlignment: Text.AlignRight
+                            visible: root.audioSourceMode === 1
                         }
 
                         Item {
@@ -541,11 +613,17 @@ Rectangle {
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
                             implicitHeight: ttsTextField.implicitHeight
+                            visible: root.audioSourceMode === 1
 
                             DeviceInfo.CustomTextField {
                                 id: ttsTextField
                                 anchors.fill: parent
-                                placeholderText: "输入TTS文字"
+                                // ✅ 2026-02-28 [Phase 7.47.44]: 允许中文输入（不再限制为数字）
+                                inputMethodHints: Qt.ImhNone
+                                // ✅ 2026-02-28 [Phase 7.47.44]: 浅色占位文字，避免黑色不可见
+                                placeholderText: "如：1号皮带沿线急停保护"
+                                color: "#E0E0E0"
+                                placeholderTextColor: "#6E6E6E"
                                 keyboardManager: root.keyboardManager
                             }
 
@@ -600,6 +678,7 @@ Rectangle {
                         }
 
                         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.28]: 音频文件 - 第四行右侧（索引7）
+                        // ✅ 2026-02-28 [Phase 7.47.44]: 修复显示实际文件名（不再是占位文字）
                         Text {
                             text: "音频文件:"
                             font.pixelSize: 21
@@ -620,7 +699,10 @@ Rectangle {
                             DeviceInfo.CustomTextField {
                                 id: audioFileField
                                 anchors.fill: parent
-                                placeholderText: "选择音频文件"
+                                // ✅ 2026-02-28 [Phase 7.47.44]: 浅色占位文字
+                                placeholderText: "未配置音频文件"
+                                placeholderTextColor: "#6E6E6E"
+                                color: "#E0E0E0"
                                 readOnly: true
                                 keyboardManager: root.keyboardManager
                             }
@@ -1403,31 +1485,46 @@ Rectangle {
             // 从数据库加载完整参数
             nameField.text = protection.protection_name
             moduleTypeCombo.currentIndex = moduleTypeCombo.model.indexOf(protection.module_type)
-            registerAddressSpin.value = protection.register_address
+            // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - registerAddressSpin 由moduleType自动决定（隐藏）
+            // 旧: registerAddressSpin.value = protection.register_address
             channelSpin.value = protection.channel_number
             delaySpin.value = protection.protection_delay * 10  // 转换为整数（0.1秒精度）
             playCountSpin.value = protection.play_count
-            durationSpin.value = protection.play_duration * 10  // 转换为整数（0.1秒精度）
-            ttsRadio.checked = protection.use_text_to_speech === 1
-            fileRadio.checked = protection.use_text_to_speech === 0
-            ttsTextField.text = protection.tts_text || (item.name + "保护报警")
-            audioField.text = protection.audio_file || ""
+            // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - durationSpin → playDurationSpin（旧ID在注释块中，已失效）
+            // 旧错误代码: durationSpin.value = protection.play_duration * 10
+            playDurationSpin.value = protection.play_duration * 10
+            // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - ttsRadio/fileRadio 在注释块中，改用 audioSourceMode
+            // 旧错误代码: ttsRadio.checked = protection.use_text_to_speech === 1
+            // 旧错误代码: fileRadio.checked = protection.use_text_to_speech === 0
+            root.audioSourceMode = (protection.use_text_to_speech === 1) ? 1 : 0
+            ttsTextField.text = protection.tts_text || getTtsDefaultText(item.name)
+            // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - audioField → audioFileField（正确ID）
+            // 旧错误代码: audioField.text = protection.audio_file || ""
+            audioFileField.text = protection.audio_file || getAudioFileName(item.name)
 
             console.log("✅ [SwitchInputPage] 从数据库加载完整参数:", item.name)
         } else {
             // 数据库中没有，使用ListModel中的基本数据
             nameField.text = item.name
             moduleTypeCombo.currentIndex = moduleTypeCombo.model.indexOf(item.moduleType)
-            registerAddressSpin.value = item.registerAddress
+            // ✅ 2026-02-28 [Phase 7.47.44]: registerAddressSpin 由 moduleTypeCombo.onCurrentIndexChanged 自动设置
             channelSpin.value = item.channelNumber
 
             // 设置默认值
             delaySpin.value = 10  // 1.0秒
             playCountSpin.value = 3
-            durationSpin.value = 50  // 5.0秒
-            ttsRadio.checked = true
-            ttsTextField.text = item.name + "保护报警"
-            audioField.text = ""
+            // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - durationSpin → playDurationSpin
+            // 旧错误代码（导致 TypeError，后续行无法执行）: durationSpin.value = 50
+            playDurationSpin.value = 50
+            // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - ttsRadio 不存在，改用 audioSourceMode
+            // 旧错误代码: ttsRadio.checked = true
+            root.audioSourceMode = 0  // 默认使用默认音频
+            // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - 使用正确的TTS文字（与批量合成清单一致）
+            // 旧代码: ttsTextField.text = item.name + "保护报警"
+            ttsTextField.text = getTtsDefaultText(item.name)
+            // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - audioField → audioFileField + 显示实际文件名
+            // 旧错误代码: audioField.text = ""
+            audioFileField.text = getAudioFileName(item.name)
 
             console.log("⚠️ [SwitchInputPage] 数据库中没有详细参数，使用默认值:", item.name)
         }
@@ -1448,17 +1545,21 @@ Rectangle {
         console.log("✅ 保存保护数据到内存:", nameField.text)
 
         // ✅ 2026-01-25 [数据库集成] 保存到数据库
+        // ✅ 2026-02-28 [Phase 7.47.44]: 修复所有错误ID引用
         var protection = {
             "protection_name": nameField.text,
             "module_type": moduleTypeCombo.currentText,
-            "register_address": registerAddressSpin.value,
+            "register_address": registerAddressSpin.value,  // 由moduleType自动设置
             "channel_number": channelSpin.value,
             "protection_delay": delaySpin.realValue,
             "play_count": playCountSpin.value,
-            "play_duration": durationSpin.realValue,
-            "use_text_to_speech": ttsRadio.checked,
+            // 旧错误代码: "play_duration": durationSpin.realValue  （durationSpin在注释块中）
+            "play_duration": playDurationSpin.realValue,
+            // 旧错误代码: "use_text_to_speech": ttsRadio.checked  （ttsRadio在注释块中）
+            "use_text_to_speech": root.audioSourceMode === 1 ? 1 : 0,
             "tts_text": ttsTextField.text,
-            "audio_file": audioField.text
+            // 旧错误代码: "audio_file": audioField.text  （audioField在注释块中）
+            "audio_file": audioFileField.text
         }
 
         if (deviceConfigMgr.saveDigitalProtection(root.deviceId, protection)) {
@@ -1583,8 +1684,14 @@ Rectangle {
     Component.onCompleted: {
         // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.15]: 临时禁用 Component.onCompleted，测试是否还卡住
         console.log("✅ [SwitchInputPage] Component.onCompleted 开始")
+        // ✅ 2026-02-28 [Phase 7.47.44]: 恢复初始加载 - 解决保护名称默认为空的问题
+        // 旧代码被注释掉导致右侧参数区域始终为空，需要用户手动点击列表项才能显示
         Qt.callLater(function() {
-            console.log("✅ [SwitchInputPage] Qt.callLater 回调执行 - 事件循环正常")
+            console.log("✅ [SwitchInputPage] Qt.callLater 回调执行 - 加载第一个保护项")
+            if (digitalProtectionModel.count > 0) {
+                loadProtectionData(0)
+                console.log("✅ [SwitchInputPage] 初始加载第一个保护项完成")
+            }
         })
         console.log("✅ [SwitchInputPage] Component.onCompleted 完成")
 
@@ -1623,5 +1730,40 @@ Rectangle {
         //         console.log("✅ [SwitchInputPage] 延迟加载第一个保护项完成")
         //     })
         // }
+    }
+
+    // ✅ 2026-02-28 [Phase 7.47.44]: 获取保护项的默认TTS合成文字
+    // 规则：{belt}号皮带 + 真实保护名称 + 保护
+    // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第二章
+    function getTtsDefaultText(protectionName) {
+        var belt = root.deviceId
+        var mapping = {
+            "急停":    belt + "号皮带沿线急停保护",
+            "跑偏":    belt + "号皮带沿线跑偏保护",
+            "撕裂":    belt + "号皮带沿线撕裂保护",
+            "烟雾":    belt + "号皮带烟雾保护",
+            "温度":    belt + "号皮带温度保护",
+            "护网":    belt + "号皮带护网保护",
+            "堆煤":    belt + "号皮带堆煤保护",
+            "主机急停": belt + "号皮带主机急停保护"
+        }
+        return mapping[protectionName] || (belt + "号皮带" + protectionName + "保护")
+    }
+
+    // ✅ 2026-02-28 [Phase 7.47.44]: 获取保护项对应的默认音频文件名
+    // 规则：短名.wav（去掉 "X号皮带" 前缀和 "保护" 后缀）
+    // 与 AudioPathMapper::PROTECTION_NAME_MAP 保持一致
+    function getAudioFileName(protectionName) {
+        var mapping = {
+            "急停":    "沿线急停.wav",
+            "跑偏":    "沿线跑偏.wav",
+            "撕裂":    "沿线撕裂.wav",
+            "烟雾":    "烟雾.wav",
+            "温度":    "温度.wav",
+            "护网":    "护网.wav",
+            "堆煤":    "堆煤.wav",
+            "主机急停": "主机急停.wav"
+        }
+        return mapping[protectionName] || (protectionName + ".wav")
     }
 }
