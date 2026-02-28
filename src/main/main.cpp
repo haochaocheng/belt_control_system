@@ -279,6 +279,20 @@ int main(int argc, char *argv[]) {
         MqttProtectionMonitor mqttProtectionMonitor(&diDataManager, &commonControl);
         mqttProtectionMonitor.start();
         logMessage("MQTT Protection Monitor started");
+
+        // ✅ 2026-02-28 [Phase 7.47.46]: 连接保护触发信号到报警历史数据库
+        // 当DI位从0→1（保护触发）时，自动记录到报警历史数据库
+        // protectionTriggered(moduleIndex, bitIndex, beltNumber, protectionName, audioPath)
+        QObject::connect(&mqttProtectionMonitor, &MqttProtectionMonitor::protectionTriggered,
+            [&alarmHistoryDB](int /*moduleIndex*/, int /*bitIndex*/, int beltNumber,
+                              const QString &protectionName, const QString &/*audioPath*/) {
+                // protectionType: "X号皮带" 标识是哪条皮带触发的保护
+                QString protectionType = QString("%1号皮带").arg(beltNumber);
+                alarmHistoryDB.saveAlarmTriggered(protectionName, protectionType, 0.0);
+                qDebug() << "📝 [Main] 保护触发已记录到报警历史 -"
+                         << protectionName << "皮带:" << beltNumber;
+            });
+        logMessage("Protection trigger -> alarm history DB connection established");
 #endif
 
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）
