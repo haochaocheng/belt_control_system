@@ -21,8 +21,11 @@ Rectangle {
     signal requestReturnToCategory()
 
     // ========== 公开属性 ==========
-    property int deviceId: 1
-    property string deviceName: "1号皮带"
+    // ✅ 2026-02-28 [Phase 7.47.53]: 改为动态读取machineNumber，不再硬编码为1
+    // 旧值：property int deviceId: 1 / deviceName: "1号皮带"
+    // 原因：硬编码导致非1号皮带的设备，保存和读取的DB key与MqttProtectionMonitor不一致
+    property int deviceId: systemConfig.machineNumber
+    property string deviceName: systemConfig.machineNumber + "号皮带"
     property int currentProtectionIndex: 0  // 当前选中的保护项索引
     // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性（已废弃，保留兼容性）
     property var keyboardManager: null
