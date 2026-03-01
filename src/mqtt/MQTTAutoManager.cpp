@@ -399,25 +399,32 @@ void MQTTAutoManager::checkModuleHealth(int moduleIndex)
     }
 
     // 检查数据超时（5秒无数据）
-    if (health.lastDataTime > 0) {
-        qint64 timeSinceLastData = now - health.lastDataTime;
+    // ✅ 2026-03-01 [Phase 7.47.62]: 修复 lastDataTime=0 时跳过超时检查的问题
+    // 旧逻辑：if (lastDataTime > 0) — 从未收到数据时不检查，status停留在"已连接"
+    // 新逻辑：lastDataTime=0 表示连上broker但从未收到硬件数据，也视为"等待数据"
+    if (health.lastDataTime == 0) {
+        // 连上broker但从未收到数据 → 不算"正常"
+        health.status = "等待数据";
+        return;
+    }
 
-        if (timeSinceLastData > DATA_TIMEOUT_THRESHOLD) {
-            health.dataTimeoutCount++;
+    qint64 timeSinceLastData = now - health.lastDataTime;
 
-            if (health.dataTimeoutCount >= MAX_TIMEOUT_COUNT) {
-                health.status = "数据超时";
-                emit moduleHealthWarning(moduleIndex, "数据超时");
-                qWarning() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "数据超时";
-            }
-        } else {
-            // 恢复正常
-            if (health.dataTimeoutCount > 0) {
-                health.dataTimeoutCount = 0;
-                health.status = "正常";
-                emit moduleHealthRecovered(moduleIndex);
-                qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "恢复正常";
-            }
+    if (timeSinceLastData > DATA_TIMEOUT_THRESHOLD) {
+        health.dataTimeoutCount++;
+
+        if (health.dataTimeoutCount >= MAX_TIMEOUT_COUNT) {
+            health.status = "数据超时";
+            emit moduleHealthWarning(moduleIndex, "数据超时");
+            qWarning() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "数据超时";
+        }
+    } else {
+        // 恢复正常
+        if (health.dataTimeoutCount > 0) {
+            health.dataTimeoutCount = 0;
+            health.status = "正常";
+            emit moduleHealthRecovered(moduleIndex);
+            qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "恢复正常";
         }
     }
 }
@@ -539,5 +546,7 @@ void MQTTAutoManager::onModuleMessageReceived(int moduleIndex, const QString &to
     // 转发给数据管理器
     emit moduleDataReceived(moduleIndex, topic, payload);
 
-    qDebug() << "📩 [MQTTAutoManager] 模块" << moduleIndex << "收到数据 - 主题:" << topic;
+    // ✅ 2026-02-26 18:40 [Phase 7.47.13]: 移除收到数据日志
+    // 原因：高频日志（每秒多次），影响性能和日志可读性
+    // qDebug() << "📩 [MQTTAutoManager] 模块" << moduleIndex << "收到数据 - 主题:" << topic;
 }
