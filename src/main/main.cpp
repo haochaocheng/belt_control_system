@@ -304,6 +304,10 @@ int main(int argc, char *argv[]) {
 
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）
         logMessage("Setting context properties...");
+        // ✅ 2026-03-01 [Phase 7.47.55]: 注入音频基础目录到QML，兼容linaro和pi设备
+        // 旧方式：QML用process.env.BELT_CONTROL_USER（Node.js API，QML不支持），永远回退linaro
+        // 新方式：C++读取环境变量后直接注入字符串，QML直接使用
+        engine.rootContext()->setContextProperty("audioBaseDir", DataPathConfig::getAudioBaseDirectory());
         engine.rootContext()->setContextProperty("controller", &controller);
         engine.rootContext()->setContextProperty("logger", Logger::instance());
         engine.rootContext()->setContextProperty("systemConfig", &systemConfig);

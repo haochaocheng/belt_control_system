@@ -234,17 +234,63 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8, sa
         # ✅ 2026-02-26 [Phase 7.47.19]: 添加采样率日志
         logger.info(f"🎵 采样率: fs={sample_rate}")
 
+        # ✅ 2026-03-01 [Phase 7.47.55]: 构建本地vocoder路径，绕过PaddleSpeech下载机制
+        # 原因：PaddleSpeech的download_and_decompress检查zip文件是否存在，
+        #       pi设备hifigan_csmsc-zh目录下缺少zip文件，导致尝试从网络下载失败
+        # 方案：直接传入voc_config/voc_ckpt/voc_stat本地路径参数
+        VOC_PATH_MAP = {
+            'hifigan_csmsc': '/root/.paddlespeech/models/hifigan_csmsc-zh/1.0/hifigan_csmsc_ckpt_0.1.1',
+            'hifigan_aishell3': '/root/.paddlespeech/models/hifigan_aishell3-zh/1.0/hifigan_aishell3_ckpt_0.2.0',
+            'pwgan_csmsc': '/root/.paddlespeech/models/pwgan_csmsc-zh/1.0/pwg_baker_ckpt_0.4',
+        }
+        # AM 路径映射
+        AM_PATH_MAP = {
+            'fastspeech2_csmsc': '/root/.paddlespeech/models/fastspeech2_csmsc-zh/1.0/fastspeech2_nosil_baker_ckpt_0.4',
+            'fastspeech2_aishell3': '/root/.paddlespeech/models/fastspeech2_aishell3-zh/1.0/fastspeech2_nosil_aishell3_ckpt_0.4',
+        }
+
+        voc_kwargs = {}
+        voc_dir = VOC_PATH_MAP.get(voc_name)
+        if voc_dir and os.path.isdir(voc_dir):
+            voc_config = os.path.join(voc_dir, 'default.yaml')
+            voc_ckpt_files = [f for f in os.listdir(voc_dir) if f.endswith('.pdz')]
+            voc_stat_files = [f for f in os.listdir(voc_dir) if f.endswith('.npy')]
+            if voc_ckpt_files and os.path.isfile(voc_config):
+                voc_kwargs['voc_config'] = voc_config
+                voc_kwargs['voc_ckpt'] = os.path.join(voc_dir, voc_ckpt_files[0])
+                if voc_stat_files:
+                    voc_kwargs['voc_stat'] = os.path.join(voc_dir, voc_stat_files[0])
+                logger.info(f"📂 使用本地vocoder路径: {voc_dir}")
+
+        am_kwargs = {}
+        am_dir = AM_PATH_MAP.get(am_name)
+        if am_dir and os.path.isdir(am_dir):
+            am_config = os.path.join(am_dir, 'default.yaml')
+            am_ckpt_files = [f for f in os.listdir(am_dir) if f.endswith('.pdz')]
+            am_stat_files = [f for f in os.listdir(am_dir) if f.startswith('speech_stats') and f.endswith('.npy')]
+            phones_dict = os.path.join(am_dir, 'phone_id_map.txt')
+            if am_ckpt_files and os.path.isfile(am_config):
+                am_kwargs['am_config'] = am_config
+                am_kwargs['am_ckpt'] = os.path.join(am_dir, am_ckpt_files[0])
+                if am_stat_files:
+                    am_kwargs['am_stat'] = os.path.join(am_dir, am_stat_files[0])
+                if os.path.isfile(phones_dict):
+                    am_kwargs['phones_dict'] = phones_dict
+                logger.info(f"📂 使用本地AM路径: {am_dir}")
+
         # 调用 PaddleSpeech 合成
-        # 使用预定义模型名称（带语言后缀）
         # ✅ 2026-02-26 [Phase 7.47.19]: 添加 fs 参数设置采样率
+        # ✅ 2026-03-01 [Phase 7.47.55]: 传入本地路径参数，兼容离线环境
         tts_executor(
             text=text,
             output=output_path,
             am=am_name,        # 预定义模型名称，如 'fastspeech2_csmsc-zh'
-            voc=voc_name,      # 预定义声码器名称，如 'pwgan_csmsc'
+            voc=voc_name,      # 预定义声码器名称，如 'hifigan_csmsc'
             lang=lang,         # 语言：'zh' 或 'en'
             spk_id=speaker_id, # 说话人ID
-            fs=sample_rate     # 采样率
+            fs=sample_rate,    # 采样率
+            **voc_kwargs,      # 本地vocoder路径（如有）
+            **am_kwargs,       # 本地AM路径（如有）
         )
 
         # 检查输出文件

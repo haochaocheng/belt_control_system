@@ -24,13 +24,11 @@ Rectangle {
     // 关闭信号，由父组件处理
     signal closeRequested()
 
-    // ✅ 2026-02-27 01:30 [Phase 7.47.27]: 获取输出基础目录（支持linaro和pi用户）
+    // ✅ 2026-03-01 [Phase 7.47.55]: 改用C++注入的audioBaseDir，兼容linaro和pi设备
+    // 旧方式：process.env.BELT_CONTROL_USER（Node.js API，QML不支持），永远回退linaro
+    // 新方式：main.cpp通过setContextProperty注入audioBaseDir字符串
     function getOutputBaseDir() {
-        // 从环境变量获取用户名，默认linaro
-        var userName = Qt.platform.os === "linux" ?
-            (typeof process !== 'undefined' && process.env.BELT_CONTROL_USER ?
-             process.env.BELT_CONTROL_USER : "linaro") : "linaro"
-        return "/home/" + userName + "/belt-control-data/audio"
+        return audioBaseDir
     }
 
     ColumnLayout {
