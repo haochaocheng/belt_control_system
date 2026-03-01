@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作日报 - 2026-02-28</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        caption {
+            caption-side: top;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            padding: 12px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #4CAF50;
+            color: #fff;
+            font-weight: bold;
+            text-align: center;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .time-zone {
+            font-weight: bold;
+            text-align: center;
+        }
+        .time-zone-morning {
+            background-color: #fff3e0;
+        }
+        .time-zone-noon {
+            background-color: #e8f5e9;
+        }
+        .time-zone-afternoon {
+            background-color: #e1f5fe;
+        }
+        .time-zone-rest {
+            background-color: #f3e5f5;
+        }
+        .status-complete {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .status-pending {
+            color: #ff9800;
+            font-weight: bold;
+        }
+        .review-yes {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <table>
+        <caption>工作日报 - 2026-02-28（星期六）</caption>
+        <thead>
+            <tr>
+                <th>时区分类</th>
+                <th>事项</th>
+                <th>事项定义<br>（四象限）</th>
+                <th>事项状态<br>（行动、等待、将来上日历、完成）</th>
+                <th>用时</th>
+                <th>复盘</th>
+                <th>备注</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="time-zone time-zone-morning" rowspan="6">上午区: 6-12</td>
+                <td>Phase 7.47.39 - TTS引擎异步初始化（启动优化）</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>30分钟</td>
+                <td class="review-yes">✅</td>
+                <td>程序启动时UI卡住5-10分钟，原因是Component.onCompleted同步调用PaddleSpeech初始化阻塞主线程。修复：新增switchTTSModelAsync()方法用QThread后台初始化，添加_startupComplete标志防止重复触发。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.40-41 - 模型名与文件命名统一</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>20分钟</td>
+                <td class="review-yes">✅</td>
+                <td>TTSConfigManager的MODEL_NAMES仍是旧Sherpa ONNX模型名，而系统已切换为PaddleSpeech，AudioPathMapper路径生成不匹配。修复MODEL_NAMES并统一音频文件命名规则。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.42 - 废弃VoiceFileList.h，统一音频命名</td>
+                <td>重要不紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>20分钟</td>
+                <td class="review-yes">✅</td>
+                <td>废弃旧的VoiceFileList.h硬编码文件名列表，改用真实文档（DeviceConfigManager数据库）的保护名称定义，确保音频文件命名与保护项名称严格一致。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.43 - 修复AudioPathMapper音频目录路径不一致</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>15分钟</td>
+                <td class="review-yes">✅</td>
+                <td>AudioPathMapper的音频基础目录与实际挂载路径不匹配，导致容器内找不到音频文件。统一路径引用，确保linaro用户和pi用户路径均正确。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.44 - 修复开关量保护参数设置界面5个问题</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>40分钟</td>
+                <td class="review-yes">✅</td>
+                <td>修复5个界面问题：音频来源模式不保存、保护延时字段无法编辑、模块类型下拉框为空、参数保存后刷新异常、默认音频路径生成错误。每个问题均追踪到C++/QML根因并修复。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.45 - uipro美化开关量保护参数界面</td>
+                <td>重要不紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>30分钟</td>
+                <td class="review-yes">✅</td>
+                <td>Cyberpunk工业风重新设计：[默认]按钮青色边框+LED点，[TTS合成]按钮绿色配色，未选中状态统一灰色。新增通道状态双环LED指示器（外环脉冲动画+内核球体）。TTS文字字段灰化代替隐藏。</td>
+            </tr>
+
+            <tr>
+                <td class="time-zone time-zone-noon" rowspan="1">中午区: 12-14</td>
+                <td>Phase 7.47.46 - 报警记录页面全面升级 + 保护触发自动记录</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>60分钟</td>
+                <td class="review-yes">✅</td>
+                <td>重写AlarmPage.qml：从空页面升级为完整的报警历史系统。新增AlarmHistoryDatabase类（SQLite存储），连接MqttProtectionMonitor的bitChanged信号，保护触发/恢复时自动写入DB。界面增加筛选、分页、统计功能，Cyberpunk工业风设计。</td>
+            </tr>
+
+            <tr>
+                <td class="time-zone time-zone-afternoon" rowspan="7">下午区: 14-22</td>
+                <td>Phase 7.47.47 - 通道状态实时同步 + LED图标2倍大小</td>
+                <td>重要不紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>25分钟</td>
+                <td class="review-yes">✅</td>
+                <td>修复保护触发后通道状态与实际不同步的问题。优化LED指示器尺寸为原来2倍（外环24px→48px，内核14px→28px），提升视觉辨识度。完善状态实时刷新逻辑。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.48 - 修复报警记录页面不自动刷新</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>20分钟</td>
+                <td class="review-yes">✅</td>
+                <td>保护触发后数据库写入成功，但AlarmPage不刷新。根因：AlarmHistoryDatabase写入后无信号通知QML，页面只在onCompleted加载一次。修复：新增alarmAdded()信号，saveAlarmTriggered/Restored成功后emit，QML监听信号触发loadAlarms()。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.49 - 修复模块类型为空 + 默认音频来源路径</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>30分钟</td>
+                <td class="review-yes">✅</td>
+                <td>① 旧数据库存"输入模块1"，新ComboBox只有"开关量输入模块1/2"，indexOf返回-1导致显示空白，修复：加名称映射+回退到0。② MqttProtectionMonitor始终使用TTS路径，修复：注入DeviceConfigManager查询use_text_to_speech字段，按来源选择路径。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.50 - 报警记录界面全面修复（5项）</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>35分钟</td>
+                <td class="review-yes">✅</td>
+                <td>修复5个问题：序号逆序（改为records.length-i）、总记录数停留在11（新增countAllAlarms()查DB）、急停/跑偏/撕裂过滤为空（加保护名称映射）、主机急停文字截断（列宽130→180）、时间格式不统一（统一hh:mm:ss格式）。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.51 - 修复音频来源加载===类型不匹配</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>15分钟</td>
+                <td class="review-yes">✅</td>
+                <td>保存的audioSource值为整型0/1，加载时用===严格比较与字符串类型不匹配导致默认选项始终无法恢复。修复：将loadProtectionData()中的比较改为==宽松比较，或统一类型转换。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.52 - 修复默认音频来源始终播放TTS</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>20分钟</td>
+                <td class="review-yes">✅</td>
+                <td>选择"默认音频"后保护触发仍播放TTS。根因：initDefaultDigitalProtections()的INSERT未指定use_text_to_speech字段，使用表默认值1（TTS）。修复：显式添加字段并绑定值0，增强数据库迁移脚本拆分为migration001/002。</td>
+            </tr>
+            <tr>
+                <td>Phase 7.47.53 - 修复皮带号硬编码导致音频路径错误</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>25分钟</td>
+                <td class="review-yes">✅</td>
+                <td>默认音频路径硬编码为"1#PD"，但设备配置中皮带号为动态值。根因：AudioPathMapper.getDefaultAudioPath()未从DeviceConfigManager读取当前皮带号，直接拼接固定字符串。修复：注入皮带号参数，动态生成正确路径。</td>
+            </tr>
+
+            <tr>
+                <td class="time-zone time-zone-rest" rowspan="1">休息区: 22-6</td>
+                <td>当日复盘（成果/技术要点/经验）</td>
+                <td>重要不紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>15分钟</td>
+                <td class="review-yes">✅</td>
+                <td>成果：完成启动优化（UI不再卡住）、音频路径体系统一（从模型名到文件命名全链路）、报警记录系统从零到完整（自动记录+筛选+分页）、默认音频来源全链路修复（DB默认值+类型比较+皮带号动态化）；技术要点：QML ComboBox比较值必须注意类型（===vs==）、SQLite触发信号需在写入成功后emit、TTS后台初始化需隔离主线程避免UI卡死；经验：多个相关联的bug往往需要从数据流（DB→C++→QML）全链路排查，单点修复可能遗留上游问题。</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>
