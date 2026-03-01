@@ -148,7 +148,9 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
         QString shortName = m_audioPathMapper->getShortProtectionName(bitIndex);
         QVariantMap protection = m_deviceConfigMgr->loadDigitalProtection(beltNumber, shortName);
         if (!protection.isEmpty()) {
-            useTTS = (protection.value("use_text_to_speech", 1).toInt() == 1);
+            // ✅ 2026-03-01 [Phase 7.47.56]: 默认回退值改为0（默认音频），旧值1导致字段缺失时也走TTS
+            // 旧：protection.value("use_text_to_speech", 1).toInt() == 1
+            useTTS = (protection.value("use_text_to_speech", 0).toInt() == 1);
             qDebug() << "📋 [MqttProtectionMonitor] 保护" << shortName
                      << "音频来源:" << (useTTS ? "TTS合成" : "默认(1#PD MP3)");
         }
