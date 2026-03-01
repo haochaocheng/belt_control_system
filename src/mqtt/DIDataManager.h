@@ -47,6 +47,9 @@ public:
     Q_INVOKABLE bool getBit(int moduleIndex, int bitIndex) const;
     Q_INVOKABLE quint8 getByte(int moduleIndex) const;
     Q_INVOKABLE QVariantMap getModuleData(int moduleIndex) const;
+    // ✅ 2026-03-01 [Phase 7.47.61]: 模块断开时重置数据为全false
+    // 原因：模块断开后 m_diData 保持最后值不清零，导致通道状态冻结
+    Q_INVOKABLE void resetModule(int moduleIndex);
 
 signals:
     // 数据变化信号

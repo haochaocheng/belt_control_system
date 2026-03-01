@@ -233,6 +233,16 @@ int main(int argc, char *argv[]) {
             }
         });
 
+        // ✅ 2026-03-01 [Phase 7.47.61]: 模块断开时重置DI数据
+        // 原因：模块断开后 DIDataManager 保持最后值不清零，导致通道状态冻结
+        // 效果：模块离线 → 对应DI模块数据立即清零 → QML通道状态LED熄灭
+        QObject::connect(&mqttController, &MQTTController::connectedChanged,
+                        [&diDataManager](int moduleIndex, bool connected) {
+            if (!connected && moduleIndex < 2) {
+                diDataManager.resetModule(moduleIndex);
+            }
+        });
+
         // 启动自动管理器
         mqttAutoManager.start();
         logMessage("MQTT Auto Manager started");

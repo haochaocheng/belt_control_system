@@ -173,9 +173,20 @@ Rectangle {
                         // ✅ 2026-02-28 [Phase 7.47.47]: 从 diDataManager 实时读取对应位状态（响应式绑定）
                         // 当 MQTT DI 模块对应位变化时自动刷新（通过访问 Q_PROPERTY 建立绑定依赖）
                         // Windows 无 MQTT 时 fallback 到 ListModel 的静态 active 值
+                        // ✅ 2026-03-01 [Phase 7.47.61]: 增加模块在线判断
+                        // 原因：模块断开后数据冻结，左侧列表状态指示也需要联合判断
                         readonly property bool _diIsActive: {
+                            var moduleIdx = (model.moduleType === "开关量输入模块1") ? 0 : 1
+
+                            // 模块离线时强制返回 false
+                            if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
+                                var hs = mqttAutoManager.healthStatus
+                                if (moduleIdx >= 0 && moduleIdx < hs.length && !hs[moduleIdx].connected) {
+                                    return false
+                                }
+                            }
+
                             if (typeof diDataManager !== 'undefined' && diDataManager !== null) {
-                                var moduleIdx = (model.moduleType === "开关量输入模块1") ? 0 : 1
                                 var bitIdx = model.channelNumber
                                 // 访问 Q_PROPERTY 建立绑定（module1DataChanged/module2DataChanged 触发时刷新）
                                 var _dep = (moduleIdx === 0) ? diDataManager.module1Data : diDataManager.module2Data
@@ -902,12 +913,23 @@ Rectangle {
                             // 通过访问 Q_PROPERTY (module1Data/module2Data) 建立响应式绑定
                             // 当 DI 模块的对应位发生变化时，此属性自动更新（无需手动监听信号）
                             // Windows 无 MQTT 时 fallback 到 ListModel 的静态 active 值
+                            // ✅ 2026-03-01 [Phase 7.47.61]: 增加模块在线判断（双重保险）
+                            // 原因：模块断开后 C++ 层已清零数据，QML 层额外检查防止边界情况
                             readonly property bool isActive: {
                                 if (root.currentProtectionIndex >= 0 &&
                                     root.currentProtectionIndex < digitalProtectionModel.count) {
                                     var item = digitalProtectionModel.get(root.currentProtectionIndex)
+                                    var moduleIdx = (item.moduleType === "开关量输入模块1") ? 0 : 1
+
+                                    // 模块离线时强制返回 false
+                                    if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
+                                        var hs = mqttAutoManager.healthStatus
+                                        if (moduleIdx >= 0 && moduleIdx < hs.length && !hs[moduleIdx].connected) {
+                                            return false
+                                        }
+                                    }
+
                                     if (typeof diDataManager !== 'undefined' && diDataManager !== null) {
-                                        var moduleIdx = (item.moduleType === "开关量输入模块1") ? 0 : 1
                                         var bitIdx = item.channelNumber
                                         // 访问 Q_PROPERTY 建立响应式依赖
                                         var _dep = (moduleIdx === 0) ? diDataManager.module1Data : diDataManager.module2Data

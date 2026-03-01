@@ -98,6 +98,32 @@ QVariantMap DIDataManager::getModuleData(int moduleIndex) const
     return data;
 }
 
+// ✅ 2026-03-01 [Phase 7.47.61]: 模块断开时重置数据为全false
+// 原因：模块断开后 m_diData 保持最后值不清零，导致通道状态冻结在断开前的值
+// 效果：模块离线 → 所有通道状态立即变为 false → QML LED 熄灭
+void DIDataManager::resetModule(int moduleIndex)
+{
+    if (moduleIndex < 0 || moduleIndex >= 2) {
+        return;
+    }
+
+    // 检测变化并发送信号
+    QVector<bool> zeroData(8, false);
+    detectChanges(moduleIndex, zeroData);
+
+    // 清零数据
+    m_diData[moduleIndex] = zeroData;
+
+    // 发送属性变化信号，触发 QML 绑定更新
+    if (moduleIndex == 0) {
+        emit module1DataChanged();
+    } else {
+        emit module2DataChanged();
+    }
+
+    qDebug() << "✅ [DIDataManager] 模块" << moduleIndex << "数据已重置（模块离线）";
+}
+
 // ========== 私有方法 ==========
 
 bool DIDataManager::parseJsonData(int moduleIndex, const QByteArray &payload)
