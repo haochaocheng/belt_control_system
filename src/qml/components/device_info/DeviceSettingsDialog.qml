@@ -2012,7 +2012,11 @@ Item {
                             }
                             break
                         case 1:  // 开关量输入
-                            // TODO: 调用开关量输入的保存函数
+                            // ✅ 2026-03-01 [Phase 7.47.57]: 调用开关量输入的保存函数
+                            // 旧：空（TODO注释），导致用户点保存后数据未写入DB
+                            if (switchInputPageLoader.item && typeof switchInputPageLoader.item.saveCurrentProtection === "function") {
+                                switchInputPageLoader.item.saveCurrentProtection()
+                            }
                             break
                         case 2:  // 模拟量输入
                             // TODO: 调用模拟量输入的保存函数
