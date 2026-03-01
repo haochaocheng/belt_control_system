@@ -997,6 +997,132 @@ Rectangle {
                             }
                         }
 
+                        // ✅ 2026-03-01 [Phase 7.47.60]: 模块状态指示器 - 第六行左侧
+                        // 根据当前选中保护项的模块类型，自动展示对应DI模块的在线/离线状态
+                        // 数据来源：mqttAutoManager.healthStatus[moduleIndex].connected
+                        Text {
+                            text: "模块状态:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 0
+                            Layout.row: 5
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            id: moduleStatusItem
+                            Layout.column: 1
+                            Layout.row: 5
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            Layout.columnSpan: 3
+                            implicitHeight: 60
+
+                            // ✅ 根据当前选中保护项的模块类型，读取对应模块在线状态
+                            readonly property int moduleIndex: {
+                                if (root.currentProtectionIndex >= 0 &&
+                                    root.currentProtectionIndex < digitalProtectionModel.count) {
+                                    var item = digitalProtectionModel.get(root.currentProtectionIndex)
+                                    return (item.moduleType === "开关量输入模块1") ? 0 : 1
+                                }
+                                return 0
+                            }
+
+                            readonly property bool isOnline: {
+                                if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
+                                    var hs = mqttAutoManager.healthStatus
+                                    if (moduleIndex >= 0 && moduleIndex < hs.length) {
+                                        return hs[moduleIndex].connected
+                                    }
+                                }
+                                return false
+                            }
+
+                            readonly property string statusText: {
+                                if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
+                                    var hs = mqttAutoManager.healthStatus
+                                    if (moduleIndex >= 0 && moduleIndex < hs.length) {
+                                        return hs[moduleIndex].status
+                                    }
+                                }
+                                return "未连接"
+                            }
+
+                            Row {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
+                                spacing: 12
+
+                                // LED 状态指示灯（与通道状态同风格）
+                                Item {
+                                    width: 48
+                                    height: 48
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    // 外环脉冲光晕
+                                    Rectangle {
+                                        id: moduleOuterRing
+                                        anchors.centerIn: parent
+                                        width: 48; height: 48; radius: 24
+                                        color: "transparent"
+                                        border.width: 2
+                                        border.color: moduleStatusItem.isOnline ? "#00d4ff" : "#ff4757"
+                                        opacity: 0.4
+
+                                        SequentialAnimation on opacity {
+                                            running: moduleStatusItem.isOnline
+                                            loops: Animation.Infinite
+                                            NumberAnimation { to: 0.05; duration: 1200; easing.type: Easing.InOutSine }
+                                            NumberAnimation { to: 0.55; duration: 1200; easing.type: Easing.InOutSine }
+                                        }
+                                    }
+
+                                    // 内核 LED 球体
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 28; height: 28; radius: 14
+                                        color: moduleStatusItem.isOnline ? "#00d4ff" : "#ff4757"
+
+                                        // 内部反光高亮点
+                                        Rectangle {
+                                            width: 8; height: 8; radius: 4
+                                            color: moduleStatusItem.isOnline ? "#7dd3fc" : "#fca5a5"
+                                            anchors.top: parent.top
+                                            anchors.left: parent.left
+                                            anchors.margins: 5
+                                        }
+                                    }
+                                }
+
+                                // 状态文字（双行：主状态 + 模块名称）
+                                Column {
+                                    spacing: 2
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Text {
+                                        text: moduleStatusItem.isOnline ? "在线" : "离线"
+                                        font.pixelSize: 15
+                                        font.weight: Font.Medium
+                                        color: moduleStatusItem.isOnline ? "#00d4ff" : "#ff4757"
+                                    }
+
+                                    Text {
+                                        text: {
+                                            if (root.currentProtectionIndex >= 0 &&
+                                                root.currentProtectionIndex < digitalProtectionModel.count) {
+                                                return digitalProtectionModel.get(root.currentProtectionIndex).moduleType
+                                            }
+                                            return "开关量输入模块1"
+                                        }
+                                        font.pixelSize: 12
+                                        color: moduleStatusItem.isOnline ? "#7dd3fc" : "#475569"
+                                    }
+                                }
+                            }
+                        }
+
                     }  // GridLayout 结束
 
                     // // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.17]: 临时移除 RowLayout，测试是否还卡住
