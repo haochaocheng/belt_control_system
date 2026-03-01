@@ -178,10 +178,11 @@ Rectangle {
                         readonly property bool _diIsActive: {
                             var moduleIdx = (model.moduleType === "开关量输入模块1") ? 0 : 1
 
-                            // 模块离线时强制返回 false
+                            // 模块离线或数据超时时强制返回 false
                             if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
                                 var hs = mqttAutoManager.healthStatus
-                                if (moduleIdx >= 0 && moduleIdx < hs.length && !hs[moduleIdx].connected) {
+                                if (moduleIdx >= 0 && moduleIdx < hs.length &&
+                                    (!hs[moduleIdx].connected || hs[moduleIdx].status === "数据超时")) {
                                     return false
                                 }
                             }
@@ -921,10 +922,11 @@ Rectangle {
                                     var item = digitalProtectionModel.get(root.currentProtectionIndex)
                                     var moduleIdx = (item.moduleType === "开关量输入模块1") ? 0 : 1
 
-                                    // 模块离线时强制返回 false
+                                    // 模块离线或数据超时时强制返回 false
                                     if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
                                         var hs = mqttAutoManager.healthStatus
-                                        if (moduleIdx >= 0 && moduleIdx < hs.length && !hs[moduleIdx].connected) {
+                                        if (moduleIdx >= 0 && moduleIdx < hs.length &&
+                                            (!hs[moduleIdx].connected || hs[moduleIdx].status === "数据超时")) {
                                             return false
                                         }
                                     }
@@ -1051,11 +1053,15 @@ Rectangle {
                                 return 0
                             }
 
+                            // ✅ 2026-03-01 [Phase 7.47.61]: 修复模块在线判断逻辑
+                            // 旧逻辑：只看 connected（MQTT客户端连上broker就算在线）
+                            // 新逻辑：connected + status不是"数据超时"（硬件模块真正有数据回来才算在线）
+                            // 原因：MQTT客户端连到broker成功，但DI硬件模块可能没有响应
                             readonly property bool isOnline: {
                                 if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
                                     var hs = mqttAutoManager.healthStatus
                                     if (moduleIndex >= 0 && moduleIndex < hs.length) {
-                                        return hs[moduleIndex].connected
+                                        return hs[moduleIndex].connected && hs[moduleIndex].status !== "数据超时"
                                     }
                                 }
                                 return false
