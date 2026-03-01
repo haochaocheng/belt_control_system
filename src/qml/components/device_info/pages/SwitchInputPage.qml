@@ -1057,18 +1057,35 @@ Rectangle {
                                 return 0
                             }
 
-                            // ✅ 2026-03-01 [Phase 7.47.62]: 修复模块在线判断逻辑
-                            // 旧逻辑：connected && status !== "数据超时"（连上broker+未超时就算在线）
-                            // 新逻辑：只有 status === "正常" 才算在线（硬件模块真正有数据回来）
-                            // 原因：连上broker但硬件未响应时status="已连接"，不应显示在线
-                            readonly property bool isOnline: {
+                            // ✅ 2026-03-01 [Phase 7.47.62]: 三色状态指示
+                            // "online" = 青色（status=正常，硬件持续发数据）
+                            // "connected" = 黄色（连上broker但无持续数据，如MQTTX手动测试）
+                            // "offline" = 红色（未连接broker）
+                            readonly property string moduleState: {
                                 if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
                                     var hs = mqttAutoManager.healthStatus
                                     if (moduleIndex >= 0 && moduleIndex < hs.length) {
-                                        return hs[moduleIndex].status === "正常"
+                                        if (hs[moduleIndex].status === "正常")
+                                            return "online"
+                                        if (hs[moduleIndex].connected)
+                                            return "connected"
                                     }
                                 }
-                                return false
+                                return "offline"
+                            }
+                            // 兼容旧引用
+                            readonly property bool isOnline: moduleState === "online"
+
+                            // LED颜色映射
+                            readonly property color ledColor: {
+                                if (moduleState === "online") return "#00d4ff"   // 青色
+                                if (moduleState === "connected") return "#f59e0b" // 黄色
+                                return "#ff4757"  // 红色
+                            }
+                            readonly property color ledHighlight: {
+                                if (moduleState === "online") return "#7dd3fc"
+                                if (moduleState === "connected") return "#fcd34d"
+                                return "#fca5a5"
                             }
 
                             readonly property string statusText: {
@@ -1100,11 +1117,11 @@ Rectangle {
                                         width: 48; height: 48; radius: 24
                                         color: "transparent"
                                         border.width: 2
-                                        border.color: moduleStatusItem.isOnline ? "#00d4ff" : "#ff4757"
+                                        border.color: moduleStatusItem.ledColor
                                         opacity: 0.4
 
                                         SequentialAnimation on opacity {
-                                            running: moduleStatusItem.isOnline
+                                            running: moduleStatusItem.moduleState !== "offline"
                                             loops: Animation.Infinite
                                             NumberAnimation { to: 0.05; duration: 1200; easing.type: Easing.InOutSine }
                                             NumberAnimation { to: 0.55; duration: 1200; easing.type: Easing.InOutSine }
@@ -1115,12 +1132,12 @@ Rectangle {
                                     Rectangle {
                                         anchors.centerIn: parent
                                         width: 28; height: 28; radius: 14
-                                        color: moduleStatusItem.isOnline ? "#00d4ff" : "#ff4757"
+                                        color: moduleStatusItem.ledColor
 
                                         // 内部反光高亮点
                                         Rectangle {
                                             width: 8; height: 8; radius: 4
-                                            color: moduleStatusItem.isOnline ? "#7dd3fc" : "#fca5a5"
+                                            color: moduleStatusItem.ledHighlight
                                             anchors.top: parent.top
                                             anchors.left: parent.left
                                             anchors.margins: 5
@@ -1134,10 +1151,14 @@ Rectangle {
                                     anchors.verticalCenter: parent.verticalCenter
 
                                     Text {
-                                        text: moduleStatusItem.isOnline ? "在线" : "离线"
+                                        text: {
+                                            if (moduleStatusItem.moduleState === "online") return "在线"
+                                            if (moduleStatusItem.moduleState === "connected") return "已连接"
+                                            return "离线"
+                                        }
                                         font.pixelSize: 15
                                         font.weight: Font.Medium
-                                        color: moduleStatusItem.isOnline ? "#00d4ff" : "#ff4757"
+                                        color: moduleStatusItem.ledColor
                                     }
 
                                     Text {
@@ -1149,7 +1170,7 @@ Rectangle {
                                             return "开关量输入模块1"
                                         }
                                         font.pixelSize: 12
-                                        color: moduleStatusItem.isOnline ? "#7dd3fc" : "#475569"
+                                        color: moduleStatusItem.ledHighlight
                                     }
                                 }
                             }
