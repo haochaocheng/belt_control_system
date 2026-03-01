@@ -1047,6 +1047,17 @@ Rectangle {
                             Layout.columnSpan: 3
                             implicitHeight: 60
 
+                            // ✅ 2026-03-01 [Phase 7.47.62.2]: 强制绑定刷新计数器
+                            // 原因：QML对QVariantList的变化检测不可靠，healthStatusChanged信号
+                            // 触发时readonly property可能不重新求值
+                            property int _healthTick: 0
+                            Connections {
+                                target: typeof mqttAutoManager !== 'undefined' ? mqttAutoManager : null
+                                function onHealthStatusChanged() {
+                                    moduleStatusItem._healthTick++
+                                }
+                            }
+
                             // ✅ 根据当前选中保护项的模块类型，读取对应模块在线状态
                             readonly property int moduleIndex: {
                                 if (root.currentProtectionIndex >= 0 &&
@@ -1062,6 +1073,7 @@ Rectangle {
                             // "connected" = 黄色（连上broker但无持续数据，如MQTTX手动测试）
                             // "offline" = 红色（未连接broker）
                             readonly property string moduleState: {
+                                var tick = _healthTick  // 强制绑定依赖，确保信号触发时重新求值
                                 if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
                                     var hs = mqttAutoManager.healthStatus
                                     if (moduleIndex >= 0 && moduleIndex < hs.length) {
