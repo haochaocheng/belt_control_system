@@ -1926,6 +1926,7 @@ Item {
 
                 // ✅ 2026-01-25 [工业科技感设计]: 关闭按钮
                 // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器
+                // ✅ 2026-03-01 [Phase 7.47.59]: 添加hover/pressed视觉反馈
                 Button {
                     id: closeButton
                     text: "关闭"
@@ -1933,20 +1934,26 @@ Item {
                     height: 35
                     flat: true
                     background: Rectangle {
-                        color: "transparent"
+                        // ✅ 2026-03-01 [Phase 7.47.59]: 按下时变深，悬停时显示背景
+                        color: closeButton.pressed ? "#37474F" :
+                               closeButton.hovered ? "#263238" : "transparent"
                         border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 0) ? "#2196F3" : "#3d4556"
                         border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 0) ? 3 : 2
-                        radius: 2
+                        radius: 4
                         opacity: 1.0
+                        Behavior on color { ColorAnimation { duration: 150 } }
                     }
                     contentItem: Text {
                         text: parent.text
-                        color: "#E0E0E0"  // ✅ 浅灰文字
+                        color: closeButton.hovered ? "#FFFFFF" : "#E0E0E0"
                         font.pixelSize: 14
                         font.weight: Font.Medium
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         opacity: 1.0
+                        scale: closeButton.pressed ? 0.92 : 1.0
+                        Behavior on scale { NumberAnimation { duration: 100 } }
+                        Behavior on color { ColorAnimation { duration: 150 } }
                     }
                     onClicked: {
                         // ✅ 2026-01-24: 关闭弹窗
@@ -1978,6 +1985,7 @@ Item {
                 // ✅ 2026-01-25 [工业科技感设计]: 保存按钮
                 // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器
                 // ✅ 2026-02-10 [Phase 7.45.4]: 只读模式时禁用
+                // ✅ 2026-03-01 [Phase 7.47.59]: 添加hover/pressed视觉反馈
                 Button {
                     id: saveButton
                     text: "保存"
@@ -1986,11 +1994,16 @@ Item {
                     flat: true
                     enabled: !root.isReadOnly  // 只读模式时禁用
                     background: Rectangle {
-                        color: root.isReadOnly ? "#757575" : "#2196F3"  // 禁用时灰色
+                        // ✅ 2026-03-01 [Phase 7.47.59]: 按下时变深，悬停时变亮
+                        color: root.isReadOnly ? "#757575" :
+                               saveButton.pressed ? "#1565C0" :
+                               saveButton.hovered ? "#42A5F5" : "#2196F3"
                         border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 1) ? "#FFFFFF" : (root.isReadOnly ? "#9E9E9E" : "#42A5F5")
                         border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 1) ? 3 : 1
-                        radius: 2
+                        radius: 4
                         opacity: root.isReadOnly ? 0.5 : 1.0  // 禁用时半透明
+                        // ✅ 2026-03-01 [Phase 7.47.59]: 平滑过渡动画
+                        Behavior on color { ColorAnimation { duration: 150 } }
                     }
                     contentItem: Text {
                         text: parent.text
@@ -2000,6 +2013,9 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         opacity: 1.0
+                        // ✅ 2026-03-01 [Phase 7.47.59]: 按下时缩放反馈
+                        scale: saveButton.pressed ? 0.92 : 1.0
+                        Behavior on scale { NumberAnimation { duration: 100 } }
                     }
                     onClicked: {
                         console.log("✅ [DeviceSettingsDialog] 保存参数 - 当前分类:", root.currentCategory)
@@ -2044,6 +2060,7 @@ Item {
                 // ✅ 2026-01-25 [工业科技感设计]: 重置按钮
                 // ✅ 2026-01-28 [FIX 100.300.101]: 添加焦点指示器
                 // ✅ 2026-02-10 [Phase 7.45.4]: 只读模式时禁用
+                // ✅ 2026-03-01 [Phase 7.47.59]: 添加hover/pressed视觉反馈
                 Button {
                     id: resetButton
                     text: "重置"
@@ -2052,11 +2069,15 @@ Item {
                     flat: true
                     enabled: !root.isReadOnly  // 只读模式时禁用
                     background: Rectangle {
-                        color: root.isReadOnly ? "#757575" : "#FF9800"  // 禁用时灰色
+                        // ✅ 2026-03-01 [Phase 7.47.59]: 按下时变深，悬停时变亮
+                        color: root.isReadOnly ? "#757575" :
+                               resetButton.pressed ? "#E65100" :
+                               resetButton.hovered ? "#FFB74D" : "#FF9800"
                         border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 2) ? "#FFFFFF" : (root.isReadOnly ? "#9E9E9E" : "#FF9800")
                         border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 2) ? 3 : 1
-                        radius: 2
+                        radius: 4
                         opacity: root.isReadOnly ? 0.5 : 1.0  // 禁用时半透明
+                        Behavior on color { ColorAnimation { duration: 150 } }
                     }
                     contentItem: Text {
                         text: parent.text
@@ -2066,6 +2087,8 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         opacity: 1.0
+                        scale: resetButton.pressed ? 0.92 : 1.0
+                        Behavior on scale { NumberAnimation { duration: 100 } }
                     }
                     onClicked: {
                         // ✅ 2026-01-24: 重置参数（待实现）
