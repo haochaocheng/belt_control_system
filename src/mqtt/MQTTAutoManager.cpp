@@ -411,6 +411,13 @@ void MQTTAutoManager::checkModuleHealth(int moduleIndex)
     qint64 timeSinceLastData = now - health.lastDataTime;
 
     if (timeSinceLastData > DATA_TIMEOUT_THRESHOLD) {
+        // ✅ 2026-03-01 [Phase 7.47.63]: 超过阈值立即降级 "正常" → "等待数据"
+        // 旧逻辑：超时计数达到3次才改 status，导致数据停止后 6~8 秒仍显示青色
+        // 新逻辑：超过阈值的第一次检查立即降级，用户断开测试工具后 5 秒内即可看到变化
+        if (health.status == "正常") {
+            health.status = "等待数据";
+            qDebug() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "数据中断，等待恢复";
+        }
         health.dataTimeoutCount++;
 
         if (health.dataTimeoutCount >= MAX_TIMEOUT_COUNT) {
@@ -527,6 +534,12 @@ void MQTTAutoManager::onModuleConnected(int moduleIndex, bool connected)
             }
         } else {
             m_healthStatus[moduleIndex].status = "未连接";
+            // ✅ 2026-03-01 [Phase 7.47.63]: 断开时重置数据状态
+            // 原因：重连后 lastDataTime 会保留旧值，若 EMQX 有 retained 消息重发
+            //       会刷新 lastDataTime，导致重连后误显示"正常"（青色）
+            //       重置为 0 后重连进入"等待数据"，只有新鲜数据才能进入"正常"
+            m_healthStatus[moduleIndex].lastDataTime = 0;
+            m_healthStatus[moduleIndex].dataTimeoutCount = 0;
             // ✅ 2026-02-12 [Phase 7.45.33]: 只在状态变化时输出
             if (m_lastConnectedStates[moduleIndex]) {
                 qDebug() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "已断开";
