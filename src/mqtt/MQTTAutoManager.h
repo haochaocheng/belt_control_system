@@ -37,6 +37,8 @@ struct ModuleHealthStatus
     qint64 connectingStartTime;  // 开始 Connecting 的时间戳（0=未追踪）
     // ✅ 2026-03-02 [Phase 7.47.69]: 模块离线语音去重标志
     bool offlineAlertSent;       // 模块离线语音是否已播放（防重复）
+    // ✅ 2026-03-02 [Phase 7.47.72]: 服务器中断检测（运行中断开）
+    qint64 serverLostTime;       // 已连接→断开的时刻（0=未追踪/未曾连接）
 
     ModuleHealthStatus()
         : connected(false)
@@ -46,6 +48,7 @@ struct ModuleHealthStatus
         , status("未连接")
         , connectingStartTime(0)
         , offlineAlertSent(false)
+        , serverLostTime(0)
     {}
 };
 

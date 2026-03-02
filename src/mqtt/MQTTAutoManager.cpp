@@ -513,7 +513,8 @@ void MQTTAutoManager::updateLastDataTime(int moduleIndex)
 }
 
 // ✅ 2026-03-02 [Phase 7.47.68]: 检查所有8个模块的 broker 连接超时
-// 触发条件：任意模块 Connecting 超过 m_brokerConnectTimeout 秒
+// 触发条件1（初始连接超时）：任意模块 Connecting 超过 m_brokerConnectTimeout 秒
+// 触发条件2（运行中断开）：任意模块曾连接成功，断开后 5 秒内未恢复
 // 去重策略：5分钟内只触发一次"连接服务器失败"语音
 void MQTTAutoManager::checkBrokerConnections()
 {
@@ -521,6 +522,21 @@ void MQTTAutoManager::checkBrokerConnections()
     for (int i = 0; i < 8; ++i) {
         ModuleHealthStatus &health = m_healthStatus[i];
         bool isConnecting = m_mqttController->isModuleConnecting(i);
+        bool isConnected  = m_mqttController->isModuleConnected(i);
+
+        // ✅ 2026-03-02 [Phase 7.47.72]: 检测运行中服务器中断（已连接 → 断开）
+        if (!isConnected && health.serverLostTime > 0) {
+            qint64 lostSeconds = now - health.serverLostTime;
+            if (lostSeconds >= 5) {  // 5秒宽限，避免瞬断误报
+                if ((now - m_lastBrokerAlertTime) > 300) {
+                    m_lastBrokerAlertTime = now;
+                    QString alertPath = AudioPathMapper::getBrokerConnectionFailedPath();
+                    qWarning() << "🔊 [MQTTAutoManager] 模块" << i
+                               << "服务器连接中断 (" << lostSeconds << "s)，触发语音:" << alertPath;
+                    emit voiceAlertRequested(alertPath);
+                }
+            }
+        }
 
         if (isConnecting) {
             // 记录开始连接时间
@@ -540,7 +556,7 @@ void MQTTAutoManager::checkBrokerConnections()
                 }
             }
         } else {
-            // 已连接或断开，重置追踪
+            // 已连接或断开，重置 Connecting 追踪
             health.connectingStartTime = 0;
         }
     }
@@ -610,6 +626,8 @@ void MQTTAutoManager::onModuleConnected(int moduleIndex, bool connected)
                 qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "已连接";
                 m_lastConnectedStates[moduleIndex] = true;
             }
+            // ✅ 2026-03-02 [Phase 7.47.72]: 重连成功后清除服务器中断记录
+            m_healthStatus[moduleIndex].serverLostTime = 0;
 
             // ✅ 2026-02-09 [Phase 7.44.20]: 连接成功后立即订阅主题
             // 原因：修复订阅失败问题，之前使用固定延迟500ms可能不够
@@ -647,6 +665,14 @@ void MQTTAutoManager::onModuleConnected(int moduleIndex, bool connected)
             if (m_lastConnectedStates[moduleIndex]) {
                 qDebug() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "已断开";
                 m_lastConnectedStates[moduleIndex] = false;
+                // ✅ 2026-03-02 [Phase 7.47.72]: 记录服务器中断时刻（仅首次断开记录）
+                // 条件：模块之前是已连接状态（m_lastConnectedStates[moduleIndex] 为 true）
+                // 触发：EMQX宕机或网络中断导致运行中的模块断开
+                if (m_healthStatus[moduleIndex].serverLostTime == 0) {
+                    m_healthStatus[moduleIndex].serverLostTime = QDateTime::currentSecsSinceEpoch();
+                    qDebug() << "🔌 [MQTTAutoManager] 模块" << moduleIndex
+                             << "服务器连接中断，记录时刻:" << m_healthStatus[moduleIndex].serverLostTime;
+                }
             }
         }
 
