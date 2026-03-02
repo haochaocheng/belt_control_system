@@ -757,8 +757,12 @@ void BatchAudioGenerator::generateSystemStatusTasks(const EngineConfig &engine)
 }
 
 // ✅ 2026-03-02 [Phase 7.47.69]: 模块在线状态语音（连接失败/模块离线）
-// 文件存储在 {outputFolder}/Status/ 目录（不绑定皮带号）
+// 文件存储在 {outputBaseDir}/Status/ 目录（不绑定皮带号，不绑定引擎子目录）
 // 路径与 AudioPathMapper::getBrokerConnectionFailedPath() 和 getModuleOfflinePath() 一致
+// ✅ 2026-03-02 [Phase 7.47.71 修复]: 去掉 engine.outputFolder 子目录
+//    旧逻辑: QString("%1/%2/Status/").arg(m_outputBaseDir).arg(engine.outputFolder)
+//    问题：生成路径包含引擎子目录，但 AudioPathMapper 不含引擎子目录，文件找不到
+//    新逻辑: 直接存到 {outputBaseDir}/Status/，与 AudioPathMapper 保持一致
 void BatchAudioGenerator::generateModuleStatusTasks(const EngineConfig &engine)
 {
     struct StatusDef {
@@ -774,9 +778,8 @@ void BatchAudioGenerator::generateModuleStatusTasks(const EngineConfig &engine)
         {"模拟量输入模块二离线，请检查设备连接",    "模拟量模块二离线"},
     };
 
-    QString statusDir = QString("%1/%2/Status/")
-                        .arg(m_outputBaseDir)
-                        .arg(engine.outputFolder);
+    // 直接存到 {outputBaseDir}/Status/，与 AudioPathMapper 路径一致
+    QString statusDir = QString("%1/Status/").arg(m_outputBaseDir);
 
     for (const StatusDef &def : DEFS) {
         FileTask task;
