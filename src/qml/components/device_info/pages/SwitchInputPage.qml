@@ -1043,13 +1043,11 @@ Rectangle {
                             Layout.column: 1
                             Layout.row: 5
                             Layout.fillWidth: true
-                            Layout.maximumWidth: 300
+                            Layout.maximumWidth: 420
                             Layout.columnSpan: 3
-                            implicitHeight: 60
+                            implicitHeight: 72
 
                             // ✅ 2026-03-01 [Phase 7.47.62.2]: 强制绑定刷新计数器
-                            // 原因：QML对QVariantList的变化检测不可靠，healthStatusChanged信号
-                            // 触发时readonly property可能不重新求值
                             property int _healthTick: 0
                             Connections {
                                 target: typeof mqttAutoManager !== 'undefined' ? mqttAutoManager : null
@@ -1068,121 +1066,181 @@ Rectangle {
                                 return 0
                             }
 
-                            // ✅ 2026-03-01 [Phase 7.47.62]: 三色状态指示
-                            // "online" = 青色（status=正常，硬件持续发数据）
-                            // "connected" = 黄色（连上broker但无持续数据，如MQTTX手动测试）
-                            // "offline" = 红色（未连接broker）
-                            readonly property string moduleState: {
-                                var tick = _healthTick  // 强制绑定依赖，确保信号触发时重新求值
+                            // ✅ 2026-03-02 [Phase 7.47.66]: 重新设计状态属性
+                            // MQTT架构：[程序] ──> [EMQX Broker] <── [硬件模块]
+                            // 分别表示两层连接状态，避免"已连接"误导客户
+
+                            // 层1：程序 ↔ EMQX 服务是否连通
+                            readonly property bool mqttServiceOnline: {
+                                var tick = _healthTick
                                 if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
                                     var hs = mqttAutoManager.healthStatus
-                                    if (moduleIndex >= 0 && moduleIndex < hs.length) {
-                                        if (hs[moduleIndex].status === "正常")
-                                            return "online"
-                                        if (hs[moduleIndex].connected)
-                                            return "connected"
-                                    }
+                                    if (moduleIndex >= 0 && moduleIndex < hs.length)
+                                        return hs[moduleIndex].connected
                                 }
+                                return false
+                            }
+
+                            // 层2：硬件模块是否在向 EMQX 发送数据（最近5秒内）
+                            readonly property bool hardwareOnline: {
+                                var tick = _healthTick
+                                if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
+                                    var hs = mqttAutoManager.healthStatus
+                                    if (moduleIndex >= 0 && moduleIndex < hs.length)
+                                        return hs[moduleIndex].status === "正常"
+                                }
+                                return false
+                            }
+
+                            // 兼容旧引用（isOnline 用于通道激活判断）
+                            readonly property bool isOnline: hardwareOnline
+                            // ✅ 废弃 moduleState 字符串，改用两个 bool 属性
+                            readonly property string moduleState: {
+                                if (hardwareOnline) return "online"
+                                if (mqttServiceOnline) return "connected"
                                 return "offline"
                             }
-                            // 兼容旧引用
-                            readonly property bool isOnline: moduleState === "online"
 
-                            // LED颜色映射
-                            readonly property color ledColor: {
-                                if (moduleState === "online") return "#00d4ff"   // 青色
-                                if (moduleState === "connected") return "#f59e0b" // 黄色
-                                return "#ff4757"  // 红色
-                            }
-                            readonly property color ledHighlight: {
-                                if (moduleState === "online") return "#7dd3fc"
-                                if (moduleState === "connected") return "#fcd34d"
-                                return "#fca5a5"
-                            }
-
-                            readonly property string statusText: {
-                                if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
-                                    var hs = mqttAutoManager.healthStatus
-                                    if (moduleIndex >= 0 && moduleIndex < hs.length) {
-                                        return hs[moduleIndex].status
-                                    }
-                                }
-                                return "未连接"
-                            }
-
+                            // ✅ 2026-03-02 [Phase 7.47.66]: 双层状态指示器
+                            // 左：MQTT服务状态（程序能否连上 EMQX Broker）
+                            // 右：硬件模块状态（模块是否发送数据给 EMQX）
                             Row {
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.left: parent.left
                                 anchors.leftMargin: 4
-                                spacing: 12
+                                spacing: 0
 
-                                // LED 状态指示灯（与通道状态同风格）
-                                Item {
-                                    width: 48
-                                    height: 48
+                                // ─── 左侧：MQTT 服务状态 ───
+                                Column {
+                                    id: mqttServiceCol
+                                    spacing: 2
                                     anchors.verticalCenter: parent.verticalCenter
+                                    width: 90
 
-                                    // 外环脉冲光晕
-                                    Rectangle {
-                                        id: moduleOuterRing
-                                        anchors.centerIn: parent
-                                        width: 48; height: 48; radius: 24
-                                        color: "transparent"
-                                        border.width: 2
-                                        border.color: moduleStatusItem.ledColor
-                                        opacity: 0.4
+                                    // LED 灯
+                                    Item {
+                                        width: 32; height: 32
+                                        anchors.horizontalCenter: parent.horizontalCenter
 
-                                        SequentialAnimation on opacity {
-                                            running: moduleStatusItem.moduleState !== "offline"
-                                            loops: Animation.Infinite
-                                            NumberAnimation { to: 0.05; duration: 1200; easing.type: Easing.InOutSine }
-                                            NumberAnimation { to: 0.55; duration: 1200; easing.type: Easing.InOutSine }
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 32; height: 32; radius: 16
+                                            color: "transparent"
+                                            border.width: 2
+                                            border.color: moduleStatusItem.mqttServiceOnline ? "#22C55E" : "#ff4757"
+                                            opacity: 0.35
+                                            SequentialAnimation on opacity {
+                                                running: moduleStatusItem.mqttServiceOnline
+                                                loops: Animation.Infinite
+                                                NumberAnimation { to: 0.05; duration: 1400; easing.type: Easing.InOutSine }
+                                                NumberAnimation { to: 0.5;  duration: 1400; easing.type: Easing.InOutSine }
+                                            }
+                                        }
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 18; height: 18; radius: 9
+                                            color: moduleStatusItem.mqttServiceOnline ? "#22C55E" : "#ff4757"
+                                            Rectangle {
+                                                width: 5; height: 5; radius: 3
+                                                color: moduleStatusItem.mqttServiceOnline ? "#86EFAC" : "#fca5a5"
+                                                anchors.top: parent.top; anchors.left: parent.left
+                                                anchors.margins: 3
+                                            }
                                         }
                                     }
 
-                                    // 内核 LED 球体
-                                    Rectangle {
-                                        anchors.centerIn: parent
-                                        width: 28; height: 28; radius: 14
-                                        color: moduleStatusItem.ledColor
-
-                                        // 内部反光高亮点
-                                        Rectangle {
-                                            width: 8; height: 8; radius: 4
-                                            color: moduleStatusItem.ledHighlight
-                                            anchors.top: parent.top
-                                            anchors.left: parent.left
-                                            anchors.margins: 5
-                                        }
+                                    Text {
+                                        text: moduleStatusItem.mqttServiceOnline ? "服务在线" : "服务离线"
+                                        font.pixelSize: 12; font.weight: Font.Medium
+                                        color: moduleStatusItem.mqttServiceOnline ? "#22C55E" : "#ff4757"
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
+                                    Text {
+                                        text: "MQTT服务"
+                                        font.pixelSize: 10
+                                        color: "#607080"
+                                        anchors.horizontalCenter: parent.horizontalCenter
                                     }
                                 }
 
-                                // 状态文字（双行：主状态 + 模块名称）
+                                // 竖向分隔线
+                                Rectangle {
+                                    width: 1; height: 52; color: "#2a3a4a"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.verticalCenterOffset: 0
+                                }
+
+                                // ─── 右侧：硬件模块状态 ───
                                 Column {
+                                    id: hardwareModuleCol
                                     spacing: 2
                                     anchors.verticalCenter: parent.verticalCenter
+                                    width: 120
+                                    leftPadding: 8
 
-                                    Text {
-                                        text: {
-                                            if (moduleStatusItem.moduleState === "online") return "在线"
-                                            if (moduleStatusItem.moduleState === "connected") return "已连接"
-                                            return "离线"
+                                    property color modColor: {
+                                        if (moduleStatusItem.hardwareOnline)    return "#00d4ff"  // 青色：模块在线
+                                        if (moduleStatusItem.mqttServiceOnline) return "#f59e0b"  // 黄色：服务正常但模块无响应
+                                        return "#475569"                                          // 灰色：服务不通，无法检测
+                                    }
+                                    property color modHighlight: {
+                                        if (moduleStatusItem.hardwareOnline)    return "#7dd3fc"
+                                        if (moduleStatusItem.mqttServiceOnline) return "#fcd34d"
+                                        return "#64748b"
+                                    }
+
+                                    // LED 灯
+                                    Item {
+                                        width: 32; height: 32
+                                        anchors.horizontalCenter: parent.horizontalCenter
+
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 32; height: 32; radius: 16
+                                            color: "transparent"
+                                            border.width: 2
+                                            border.color: hardwareModuleCol.modColor
+                                            opacity: 0.35
+                                            SequentialAnimation on opacity {
+                                                running: moduleStatusItem.hardwareOnline
+                                                loops: Animation.Infinite
+                                                NumberAnimation { to: 0.05; duration: 1200; easing.type: Easing.InOutSine }
+                                                NumberAnimation { to: 0.55; duration: 1200; easing.type: Easing.InOutSine }
+                                            }
                                         }
-                                        font.pixelSize: 15
-                                        font.weight: Font.Medium
-                                        color: moduleStatusItem.ledColor
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 18; height: 18; radius: 9
+                                            color: hardwareModuleCol.modColor
+                                            Rectangle {
+                                                width: 5; height: 5; radius: 3
+                                                color: hardwareModuleCol.modHighlight
+                                                anchors.top: parent.top; anchors.left: parent.left
+                                                anchors.margins: 3
+                                            }
+                                        }
                                     }
 
                                     Text {
                                         text: {
-                                            if (root.currentProtectionIndex >= 0 &&
-                                                root.currentProtectionIndex < digitalProtectionModel.count) {
-                                                return digitalProtectionModel.get(root.currentProtectionIndex).moduleType
-                                            }
-                                            return "开关量输入模块1"
+                                            if (moduleStatusItem.hardwareOnline)    return "模块在线"
+                                            if (moduleStatusItem.mqttServiceOnline) return "模块无响应"
+                                            return "无法检测"
                                         }
-                                        font.pixelSize: 12
-                                        color: moduleStatusItem.ledHighlight
+                                        font.pixelSize: 12; font.weight: Font.Medium
+                                        color: hardwareModuleCol.modColor
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
+                                    Text {
+                                        text: {
+                                            if (root.currentProtectionIndex >= 0 &&
+                                                root.currentProtectionIndex < digitalProtectionModel.count)
+                                                return digitalProtectionModel.get(root.currentProtectionIndex).moduleType
+                                            return "开关量输入模块"
+                                        }
+                                        font.pixelSize: 10
+                                        color: "#607080"
+                                        anchors.horizontalCenter: parent.horizontalCenter
                                     }
                                 }
                             }
