@@ -1029,9 +1029,9 @@ Rectangle {
                         // 左侧：超时时间设置（col 0-1）
                         // 右侧：模块状态指示器（col 2-3，内置双层指示器，不需要单独标签）
 
-                        // 左侧标签
+                        // 左侧标签（改为"数据超时:"）
                         Text {
-                            text: "超时时间:"
+                            text: "数据超时:"
                             font.pixelSize: 21
                             color: "#9E9E9E"
                             Layout.column: 0
@@ -1040,7 +1040,7 @@ Rectangle {
                             horizontalAlignment: Text.AlignRight
                         }
 
-                        // 超时时间输入框（1~60秒，默认2秒，实时保存）
+                        // 数据超时输入框（1~60秒，默认2秒，实时保存）
                         Item {
                             Layout.column: 1
                             Layout.row: 5
@@ -1063,6 +1063,44 @@ Rectangle {
                                 onValueModified: {
                                     if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null)
                                         mqttAutoManager.setDataTimeoutThreshold(value)
+                                }
+                            }
+                        }
+
+                        // ✅ 2026-03-02 [Phase 7.47.68]: 第七行 - 连接超时设置
+                        Text {
+                            text: "连接超时:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 0
+                            Layout.row: 6
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        // 连接超时输入框（5~120秒，默认30秒，实时保存）
+                        Item {
+                            Layout.column: 1
+                            Layout.row: 6
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 200
+                            implicitHeight: brokerTimeoutSpin.implicitHeight
+
+                            DeviceInfo.CustomSpinBox {
+                                id: brokerTimeoutSpin
+                                anchors.fill: parent
+                                from: 5
+                                to: 120
+                                // 从 MQTTAutoManager 读取当前值
+                                value: (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null)
+                                       ? mqttAutoManager.brokerConnectTimeout : 30
+                                editable: true
+                                textFromValue: function(val) { return val + " 秒" }
+                                valueFromText: function(text) { return parseInt(text) || 30 }
+                                keyboardManager: root.keyboardManager
+                                onValueModified: {
+                                    if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null)
+                                        mqttAutoManager.setBrokerConnectTimeout(value)
                                 }
                             }
                         }

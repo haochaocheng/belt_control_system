@@ -164,6 +164,8 @@ private:
     // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
     void generateBeltOperationTasks(const EngineConfig &engine);
     void generateSystemStatusTasks(const EngineConfig &engine);
+    // ✅ 2026-03-02 [Phase 7.47.69]: 新增 - 模块在线状态语音（离线提示）
+    void generateModuleStatusTasks(const EngineConfig &engine);
 
     // 执行单个任务
     bool executeTask(const FileTask &task);

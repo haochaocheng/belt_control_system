@@ -297,6 +297,12 @@ int main(int argc, char *argv[]) {
         mqttProtectionMonitor.start();
         logMessage("MQTT Protection Monitor started");
 
+        // ✅ 2026-03-02 [Phase 7.47.69]: 连接 MQTTAutoManager 语音提醒信号到 CommonControl 播放
+        // 触发场景：①模块离线（数据超时）②程序连接EMQX服务器超时
+        QObject::connect(&mqttAutoManager, &MQTTAutoManager::voiceAlertRequested,
+                         &commonControl, &CommonControl::playAudio);
+        logMessage("MQTT module offline voice alert connected");
+
         // ✅ 2026-02-28 [Phase 7.47.46]: 连接保护触发信号到报警历史数据库
         // 当DI位从0→1（保护触发）时，自动记录到报警历史数据库
         // protectionTriggered(moduleIndex, bitIndex, beltNumber, protectionName, audioPath)

@@ -130,6 +130,8 @@ public:
     Q_INVOKABLE void disconnectFromModule(int moduleIndex = -1);
     Q_INVOKABLE void disconnectAll();
     Q_INVOKABLE bool isModuleConnected(int moduleIndex) const;
+    // ✅ 2026-03-02 [Phase 7.47.68]: 检查模块是否正在连接（Connecting状态）
+    bool isModuleConnecting(int moduleIndex) const;
     Q_INVOKABLE QString getModuleConnectionState(int moduleIndex) const;
 
     // ========== 订阅管理（Q_INVOKABLE）==========

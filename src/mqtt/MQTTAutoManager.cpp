@@ -7,6 +7,7 @@
 
 #include "MQTTAutoManager.h"
 #include "MQTTController.h"
+#include "../control/AudioPathMapper.h"
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -25,6 +26,9 @@ MQTTAutoManager::MQTTAutoManager(MQTTController *mqttController, QObject *parent
     , m_healthCheckTimer(nullptr)
     // ✅ 2026-03-02 [Phase 7.47.67]: 从 QSettings 加载超时阈值，默认2秒
     , m_dataTimeoutThreshold(QSettings("BeltControl", "MQTTAutoManager").value("dataTimeoutThreshold", 2).toInt())
+    // ✅ 2026-03-02 [Phase 7.47.68]: 从 QSettings 加载 broker 连接超时，默认30秒
+    , m_brokerConnectTimeout(QSettings("BeltControl", "MQTTAutoManager").value("brokerConnectTimeout", 30).toInt())
+    , m_lastBrokerAlertTime(0)
 {
     qDebug() << "✅ [MQTTAutoManager] 初始化自动管理器";
 
@@ -201,6 +205,17 @@ void MQTTAutoManager::setDataTimeoutThreshold(int seconds)
     QSettings("BeltControl", "MQTTAutoManager").setValue("dataTimeoutThreshold", clamped);
     qDebug() << "✅ [MQTTAutoManager] 模块超时阈值已设置:" << clamped << "秒";
     emit dataTimeoutThresholdChanged();
+}
+
+// ✅ 2026-03-02 [Phase 7.47.68]: 设置 broker 连接超时阈值并持久化
+void MQTTAutoManager::setBrokerConnectTimeout(int seconds)
+{
+    int clamped = qBound(5, seconds, 120);  // 限制在 5~120 秒
+    if (m_brokerConnectTimeout == clamped) return;
+    m_brokerConnectTimeout = clamped;
+    QSettings("BeltControl", "MQTTAutoManager").setValue("brokerConnectTimeout", clamped);
+    qDebug() << "✅ [MQTTAutoManager] broker 连接超时已设置:" << clamped << "秒";
+    emit brokerConnectTimeoutChanged();
 }
 
 // ========== 公共方法 ==========
@@ -465,6 +480,20 @@ void MQTTAutoManager::checkModuleHealth(int moduleIndex)
             qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "恢复正常";
         }
     }
+
+    // ✅ 2026-03-02 [Phase 7.47.69]: 模块离线语音提示（只播放一次，恢复后重置）
+    if (health.status == "数据超时" && !health.offlineAlertSent) {
+        health.offlineAlertSent = true;
+        QString alertPath = AudioPathMapper::getModuleOfflinePath(moduleIndex);
+        if (!alertPath.isEmpty()) {
+            qDebug() << "🔊 [MQTTAutoManager] 模块" << moduleIndex << "触发离线语音:" << alertPath;
+            emit voiceAlertRequested(alertPath);
+        }
+    }
+    // 模块恢复正常时重置语音标志，下次离线可再次触发
+    if (health.status == "正常") {
+        health.offlineAlertSent = false;
+    }
 }
 
 void MQTTAutoManager::updateLastDataTime(int moduleIndex)
@@ -480,6 +509,40 @@ void MQTTAutoManager::updateLastDataTime(int moduleIndex)
         m_healthStatus[moduleIndex].lastDataTime = now;
         m_healthStatus[moduleIndex].dataTimeoutCount = 0;
         m_healthStatus[moduleIndex].status = "正常";
+    }
+}
+
+// ✅ 2026-03-02 [Phase 7.47.68]: 检查所有8个模块的 broker 连接超时
+// 触发条件：任意模块 Connecting 超过 m_brokerConnectTimeout 秒
+// 去重策略：5分钟内只触发一次"连接服务器失败"语音
+void MQTTAutoManager::checkBrokerConnections()
+{
+    qint64 now = QDateTime::currentSecsSinceEpoch();
+    for (int i = 0; i < 8; ++i) {
+        ModuleHealthStatus &health = m_healthStatus[i];
+        bool isConnecting = m_mqttController->isModuleConnecting(i);
+
+        if (isConnecting) {
+            // 记录开始连接时间
+            if (health.connectingStartTime == 0) {
+                health.connectingStartTime = now;
+            } else {
+                qint64 waited = now - health.connectingStartTime;
+                if (waited > m_brokerConnectTimeout) {
+                    // 5分钟去重
+                    if ((now - m_lastBrokerAlertTime) > 300) {
+                        m_lastBrokerAlertTime = now;
+                        QString alertPath = AudioPathMapper::getBrokerConnectionFailedPath();
+                        qWarning() << "🔊 [MQTTAutoManager] 模块" << i
+                                   << "连接超时 (" << waited << "s)，触发语音:" << alertPath;
+                        emit voiceAlertRequested(alertPath);
+                    }
+                }
+            }
+        } else {
+            // 已连接或断开，重置追踪
+            health.connectingStartTime = 0;
+        }
     }
 }
 
@@ -523,10 +586,12 @@ void MQTTAutoManager::onAIPollingTimerTimeout()
 
 void MQTTAutoManager::onHealthCheckTimerTimeout()
 {
-    // 检查前4个模块的健康状态
+    // 检查前4个模块的健康状态（硬件数据超时）
     for (int i = 0; i < 4; ++i) {
         checkModuleHealth(i);
     }
+    // ✅ 2026-03-02 [Phase 7.47.68]: 检查全部8个模块的 broker 连接超时
+    checkBrokerConnections();
 
     emit healthStatusChanged();
 }

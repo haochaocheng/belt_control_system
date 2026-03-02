@@ -177,3 +177,28 @@ QString AudioPathMapper::getShortProtectionName(int bitIndex) const
 {
     return SHORT_NAME_MAP.value(bitIndex, QString("未知保护%1").arg(bitIndex));
 }
+
+// ✅ 2026-03-02 [Phase 7.47.69]: 模块在线状态 - 静态路径方法
+
+// 获取"连接服务器失败"语音文件路径
+QString AudioPathMapper::getBrokerConnectionFailedPath()
+{
+    return DataPathConfig::getAudioBaseDirectory() + "/Status/连接服务器失败.wav";
+}
+
+// 获取模块离线语音文件路径
+// moduleIndex: 0=开关量模块一, 1=开关量模块二, 2=模拟量模块一, 3=模拟量模块二
+QString AudioPathMapper::getModuleOfflinePath(int moduleIndex)
+{
+    static const QStringList NAMES = {
+        "开关量模块一离线",
+        "开关量模块二离线",
+        "模拟量模块一离线",
+        "模拟量模块二离线"
+    };
+    if (moduleIndex < 0 || moduleIndex >= NAMES.size()) {
+        qWarning() << "⚠️ [AudioPathMapper] getModuleOfflinePath: 无效模块索引" << moduleIndex;
+        return QString();
+    }
+    return DataPathConfig::getAudioBaseDirectory() + "/Status/" + NAMES[moduleIndex] + ".wav";
+}

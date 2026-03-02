@@ -147,6 +147,20 @@ bool MQTTController::isModuleConnected(int moduleIndex) const
     return false;
 }
 
+// ✅ 2026-03-02 [Phase 7.47.68]: 检查模块是否处于 Connecting 状态
+bool MQTTController::isModuleConnecting(int moduleIndex) const
+{
+#ifdef MQTT_ENABLED
+    int idx = getValidModuleIndex(moduleIndex);
+    if (idx >= 0 && idx < m_clients.size() && m_clients[idx]) {
+        return m_clients[idx]->state() == QMqttClient::Connecting;
+    }
+#else
+    Q_UNUSED(moduleIndex)
+#endif
+    return false;
+}
+
 QString MQTTController::connectionState() const
 {
     return getModuleConnectionState(m_currentModuleIndex);
@@ -397,9 +411,11 @@ void MQTTController::connectClientSignals(int moduleIndex)
 
     connect(client, &QMqttClient::messageReceived, this,
             [this, moduleIndex](const QByteArray &message, const QMqttTopicName &topic) {
-        qDebug() << "✅ [MQTTController] 模块" << moduleIndex
-                 << "收到消息 - 主题:" << topic.name()
-                 << "内容:" << message.left(100);
+        // ✅ 2026-02-26 18:40 [Phase 7.47.13]: 移除收到消息日志
+        // 原因：高频日志（每秒多次），影响性能和日志可读性
+        // qDebug() << "✅ [MQTTController] 模块" << moduleIndex
+        //          << "收到消息 - 主题:" << topic.name()
+        //          << "内容:" << message.left(100);
         addReceivedMessage(moduleIndex, topic.name(), message);
         emit messageReceived(moduleIndex, topic.name(), message);
     });
@@ -578,8 +594,10 @@ bool MQTTController::publishBytes(const QString &topic, const QByteArray &data,
         return false;
     }
 
-    qDebug() << "✅ [MQTTController] 模块" << idx << "发布消息 - 主题:" << topic
-             << "QoS:" << qos << "Retain:" << retain << "长度:" << data.size();
+    // ✅ 2026-02-26 18:40 [Phase 7.47.13]: 移除发布消息日志
+    // 原因：高频日志（每秒多次），影响性能和日志可读性
+    // qDebug() << "✅ [MQTTController] 模块" << idx << "发布消息 - 主题:" << topic
+    //          << "QoS:" << qos << "Retain:" << retain << "长度:" << data.size();
 
     qint32 result = m_clients[idx]->publish(topic, data, qos, retain);
     return result != -1;

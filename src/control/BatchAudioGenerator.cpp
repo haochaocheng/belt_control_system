@@ -314,6 +314,9 @@ void BatchAudioGenerator::generateTasks()
                 generateBeltOperationTasks(engine);
             } else if (category == "systemStatus") {
                 generateSystemStatusTasks(engine);
+            // ✅ 2026-03-02 [Phase 7.47.69]: 新增模块在线状态语音分类
+            } else if (category == "moduleStatus") {
+                generateModuleStatusTasks(engine);
             }
         }
     }
@@ -750,6 +753,42 @@ void BatchAudioGenerator::generateSystemStatusTasks(const EngineConfig &engine)
             task.volume = engine.volume;
             m_tasks.append(task);
         }
+    }
+}
+
+// ✅ 2026-03-02 [Phase 7.47.69]: 模块在线状态语音（连接失败/模块离线）
+// 文件存储在 {outputFolder}/Status/ 目录（不绑定皮带号）
+// 路径与 AudioPathMapper::getBrokerConnectionFailedPath() 和 getModuleOfflinePath() 一致
+void BatchAudioGenerator::generateModuleStatusTasks(const EngineConfig &engine)
+{
+    struct StatusDef {
+        QString text;      // TTS 合成文本
+        QString fileName;  // 输出文件名（不含 .wav）
+    };
+
+    static const QList<StatusDef> DEFS = {
+        {"连接MQTT服务器失败，请检查网络连接",      "连接服务器失败"},
+        {"开关量输入模块一离线，请检查设备连接",    "开关量模块一离线"},
+        {"开关量输入模块二离线，请检查设备连接",    "开关量模块二离线"},
+        {"模拟量输入模块一离线，请检查设备连接",    "模拟量模块一离线"},
+        {"模拟量输入模块二离线，请检查设备连接",    "模拟量模块二离线"},
+    };
+
+    QString statusDir = QString("%1/%2/Status/")
+                        .arg(m_outputBaseDir)
+                        .arg(engine.outputFolder);
+
+    for (const StatusDef &def : DEFS) {
+        FileTask task;
+        task.category   = "moduleStatus";
+        task.text       = def.text;
+        task.outputPath = statusDir + def.fileName + ".wav";
+        task.engineName = engine.engineName;
+        task.modelName  = engine.modelName;
+        task.speakerId  = engine.speakerId;
+        task.rate       = engine.rate;
+        task.volume     = engine.volume;
+        m_tasks.append(task);
     }
 }
 

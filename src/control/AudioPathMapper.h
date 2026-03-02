@@ -17,6 +17,7 @@
 
 #include <QString>
 #include <QMap>
+#include "DataPathConfig.h"
 
 /**
  * @brief 音频文件路径映射器
@@ -117,6 +118,26 @@ public:
                           const QString &modelName,
                           int speakerId,
                           int beltNumber) const;
+
+    // ✅ 2026-03-02 [Phase 7.47.69]: 模块在线状态 - 静态路径方法（用于离线语音提示）
+
+    /**
+     * @brief 获取"连接服务器失败"语音文件路径
+     * @return 路径：{audioBaseDir}/Status/连接服务器失败.wav
+     *
+     * 触发时机：程序连接 EMQX broker 超时（brokerConnectTimeout秒无法连接）
+     */
+    static QString getBrokerConnectionFailedPath();
+
+    /**
+     * @brief 获取模块离线语音文件路径
+     * @param moduleIndex 模块索引（0=开关量模块一, 1=开关量模块二, 2=模拟量模块一, 3=模拟量模块二）
+     * @return 路径：{audioBaseDir}/Status/{模块名称}.wav
+     *         例：Status/开关量模块一离线.wav
+     *
+     * 触发时机：硬件模块数据超时（MQTTAutoManager.status == "数据超时"）
+     */
+    static QString getModuleOfflinePath(int moduleIndex);
 
 private:
     QString m_baseDir;  ///< 音频文件基础目录

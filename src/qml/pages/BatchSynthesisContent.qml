@@ -200,6 +200,17 @@ Rectangle {
                                 leftPadding: parent.indicator.width + 5
                             }
                         }
+                        // ✅ 2026-03-02 [Phase 7.47.69]: 新增 - 模块在线状态语音
+                        CheckBox {
+                            id: chkModuleStatus
+                            text: "模块在线状态"
+                            checked: true
+                            contentItem: Text {
+                                text: parent.text
+                                color: "#ffffff"
+                                leftPadding: parent.indicator.width + 5
+                            }
+                        }
                     }
                 }
 
@@ -656,6 +667,8 @@ Rectangle {
         // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
         if (chkBeltOperation.checked) total += (5 + motorCount + brakeCount + tensionCount) * beltCount  // 皮带操作：(5+电机+制动器+张紧)/皮带
         if (chkSystemStatus.checked) total += 7 * beltCount            // 系统/通讯状态：7个/皮带
+        // ✅ 2026-03-02 [Phase 7.47.69]: 模块在线状态：5个固定文件（不绑定皮带号）
+        if (chkModuleStatus.checked) total += 5
 
         return total.toString()
     }
@@ -741,6 +754,8 @@ Rectangle {
         // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
         if (chkBeltOperation.checked) categories.push("beltOperation")
         if (chkSystemStatus.checked) categories.push("systemStatus")
+        // ✅ 2026-03-02 [Phase 7.47.69]
+        if (chkModuleStatus.checked) categories.push("moduleStatus")
 
         var beltNumbers = []
         for (var i = 1; i <= spinBeltCount.value; i++) beltNumbers.push(i)
@@ -810,6 +825,7 @@ Rectangle {
         // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充新分类持久化
         TTSConfig.setValue("batch/chkBeltOperation", chkBeltOperation.checked)
         TTSConfig.setValue("batch/chkSystemStatus", chkSystemStatus.checked)
+        TTSConfig.setValue("batch/chkModuleStatus", chkModuleStatus.checked)
         TTSConfig.setValue("batch/beltCount", spinBeltCount.value)
         TTSConfig.setValue("batch/motorCount", spinMotorCount.value)
         TTSConfig.setValue("batch/brakeCount", spinBrakeCount.value)
@@ -832,6 +848,7 @@ Rectangle {
         // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充新分类恢复
         chkBeltOperation.checked = TTSConfig.getValue("batch/chkBeltOperation", true)
         chkSystemStatus.checked = TTSConfig.getValue("batch/chkSystemStatus", true)
+        chkModuleStatus.checked = TTSConfig.getValue("batch/chkModuleStatus", true)
         spinBeltCount.value = TTSConfig.getValue("batch/beltCount", 8)
         spinMotorCount.value = TTSConfig.getValue("batch/motorCount", 4)
         spinBrakeCount.value = TTSConfig.getValue("batch/brakeCount", 4)
@@ -884,6 +901,11 @@ Rectangle {
     }
     Connections {
         target: chkSystemStatus
+        function onCheckedChanged() { saveBatchConfig() }
+    }
+    // ✅ 2026-03-02 [Phase 7.47.69]
+    Connections {
+        target: chkModuleStatus
         function onCheckedChanged() { saveBatchConfig() }
     }
     Connections {

@@ -33,6 +33,10 @@ struct ModuleHealthStatus
     int dataTimeoutCount;        // 数据超时次数
     int reconnectCount;          // 重连次数
     QString status;              // 状态描述
+    // ✅ 2026-03-02 [Phase 7.47.68]: broker 连接超时追踪
+    qint64 connectingStartTime;  // 开始 Connecting 的时间戳（0=未追踪）
+    // ✅ 2026-03-02 [Phase 7.47.69]: 模块离线语音去重标志
+    bool offlineAlertSent;       // 模块离线语音是否已播放（防重复）
 
     ModuleHealthStatus()
         : connected(false)
@@ -40,6 +44,8 @@ struct ModuleHealthStatus
         , dataTimeoutCount(0)
         , reconnectCount(0)
         , status("未连接")
+        , connectingStartTime(0)
+        , offlineAlertSent(false)
     {}
 };
 
@@ -69,6 +75,9 @@ class MQTTAutoManager : public QObject
     // ✅ 2026-03-02 [Phase 7.47.67]: 数据超时阈值 - 可设置，默认2秒，保存到 QSettings
     Q_PROPERTY(int dataTimeoutThreshold READ dataTimeoutThreshold
                WRITE setDataTimeoutThreshold NOTIFY dataTimeoutThresholdChanged)
+    // ✅ 2026-03-02 [Phase 7.47.68]: broker 连接超时 - 可设置，默认30秒，保存到 QSettings
+    Q_PROPERTY(int brokerConnectTimeout READ brokerConnectTimeout
+               WRITE setBrokerConnectTimeout NOTIFY brokerConnectTimeoutChanged)
 
 public:
     explicit MQTTAutoManager(MQTTController *mqttController, QObject *parent = nullptr);
@@ -100,6 +109,9 @@ public:
     // ✅ 2026-03-02 [Phase 7.47.67]: 数据超时阈值访问器
     int dataTimeoutThreshold() const { return m_dataTimeoutThreshold; }
     Q_INVOKABLE void setDataTimeoutThreshold(int seconds);
+    // ✅ 2026-03-02 [Phase 7.47.68]: broker 连接超时访问器
+    int brokerConnectTimeout() const { return m_brokerConnectTimeout; }
+    Q_INVOKABLE void setBrokerConnectTimeout(int seconds);
 
 signals:
     // 属性变化信号
@@ -110,10 +122,15 @@ signals:
     void healthStatusChanged();
     // ✅ 2026-03-02 [Phase 7.47.67]
     void dataTimeoutThresholdChanged();
+    // ✅ 2026-03-02 [Phase 7.47.68]
+    void brokerConnectTimeoutChanged();
 
     // 健康状态信号
     void moduleHealthWarning(int moduleIndex, const QString &message);
     void moduleHealthRecovered(int moduleIndex);
+
+    // ✅ 2026-03-02 [Phase 7.47.69]: 语音提醒信号（连接 CommonControl::playAudio）
+    void voiceAlertRequested(const QString &audioPath);
 
     // 数据信号（转发给数据管理器）
     void moduleDataReceived(int moduleIndex, const QString &topic, const QByteArray &payload);
@@ -150,6 +167,8 @@ private:
     void stopHealthCheck();
     void checkModuleHealth(int moduleIndex);
     void updateLastDataTime(int moduleIndex);
+    // ✅ 2026-03-02 [Phase 7.47.68]: broker 连接超时检测（遍历全部8个模块）
+    void checkBrokerConnections();
 
 private:
     MQTTController *m_mqttController;
@@ -182,6 +201,9 @@ private:
     // 旧逻辑: static const int DATA_TIMEOUT_THRESHOLD = 5;  // 5秒无数据视为超时
     // 新逻辑: 通过 setDataTimeoutThreshold() 设置，保存到 QSettings，默认2秒
     int m_dataTimeoutThreshold;            // 数据超时阈值（秒），默认2
+    // ✅ 2026-03-02 [Phase 7.47.68]: broker 连接超时阈值
+    int m_brokerConnectTimeout;            // broker 连接超时（秒），默认30
+    qint64 m_lastBrokerAlertTime;          // 上次"连接失败"语音时间戳（5分钟去重）
     static const int MAX_TIMEOUT_COUNT = 3;            // 最大超时次数
 };
 
