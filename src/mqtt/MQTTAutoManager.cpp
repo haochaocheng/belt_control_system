@@ -682,8 +682,9 @@ void MQTTAutoManager::onModuleMessageReceived(int moduleIndex, const QString &to
     emit moduleDataReceived(moduleIndex, topic, payload);
 
     // ✅ 2026-03-01 [Phase 7.47.64]: 数据接收日志（调试用，诊断后可注释）
-    qDebug() << "📩 [MQTTAutoManager] 模块" << moduleIndex
-             << "消息到达 | 主题:" << topic
-             << "| 大小:" << payload.size() << "bytes"
-             << "| 更新健康状态:" << (isHardwareTopic ? "✅是" : "❌否(VoIP/其他)");
+    // ✅ 2026-03-02 [Phase 7.47.70]: 删除高频日志（每条消息都打印，包含VoIP心跳，日志量极大）
+    // qDebug() << "📩 [MQTTAutoManager] 模块" << moduleIndex
+    //          << "消息到达 | 主题:" << topic
+    //          << "| 大小:" << payload.size() << "bytes"
+    //          << "| 更新健康状态:" << (isHardwareTopic ? "✅是" : "❌否(VoIP/其他)");
 }
