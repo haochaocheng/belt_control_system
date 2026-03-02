@@ -179,11 +179,25 @@ QString AudioPathMapper::getShortProtectionName(int bitIndex) const
 }
 
 // ✅ 2026-03-02 [Phase 7.47.69]: 模块在线状态 - 静态路径方法
+// ✅ 2026-03-02 [Phase 7.47.71 修复]: 与 BatchAudioGenerator 路径一致，包含引擎子目录
+//    路径格式：{audioBaseDir}/paddlespeech-{modelName}-spk{speakerId}/Status/{name}.wav
+//    与 BatchSynthesisContent.qml 的 outputFolder 构造逻辑一致：
+//    "paddlespeech-" + TTSConfig.modelName(...) + "-spk" + TTSConfig.speakerId(...)
+
+static QString buildStatusEngineFolder()
+{
+    TTSConfigManager *config = TTSConfigManager::instance();
+    int modelIndex = config->modelIndex(TTSConfigManager::Test);
+    QString modelName = config->modelName(modelIndex);
+    int speakerId = config->speakerId(TTSConfigManager::Test);
+    return QString("paddlespeech-%1-spk%2").arg(modelName).arg(speakerId);
+}
 
 // 获取"连接服务器失败"语音文件路径
 QString AudioPathMapper::getBrokerConnectionFailedPath()
 {
-    return DataPathConfig::getAudioBaseDirectory() + "/Status/连接服务器失败.wav";
+    QString engineFolder = buildStatusEngineFolder();
+    return DataPathConfig::getAudioBaseDirectory() + "/" + engineFolder + "/Status/连接服务器失败.wav";
 }
 
 // 获取模块离线语音文件路径
@@ -200,5 +214,6 @@ QString AudioPathMapper::getModuleOfflinePath(int moduleIndex)
         qWarning() << "⚠️ [AudioPathMapper] getModuleOfflinePath: 无效模块索引" << moduleIndex;
         return QString();
     }
-    return DataPathConfig::getAudioBaseDirectory() + "/Status/" + NAMES[moduleIndex] + ".wav";
+    QString engineFolder = buildStatusEngineFolder();
+    return DataPathConfig::getAudioBaseDirectory() + "/" + engineFolder + "/Status/" + NAMES[moduleIndex] + ".wav";
 }
