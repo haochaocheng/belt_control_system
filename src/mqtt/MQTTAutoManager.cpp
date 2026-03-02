@@ -10,6 +10,7 @@
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSettings>
 
 MQTTAutoManager::MQTTAutoManager(MQTTController *mqttController, QObject *parent)
     : QObject(parent)
@@ -22,6 +23,8 @@ MQTTAutoManager::MQTTAutoManager(MQTTController *mqttController, QObject *parent
     , m_diPollingTimer(nullptr)
     , m_aiPollingTimer(nullptr)
     , m_healthCheckTimer(nullptr)
+    // ✅ 2026-03-02 [Phase 7.47.67]: 从 QSettings 加载超时阈值，默认2秒
+    , m_dataTimeoutThreshold(QSettings("BeltControl", "MQTTAutoManager").value("dataTimeoutThreshold", 2).toInt())
 {
     qDebug() << "✅ [MQTTAutoManager] 初始化自动管理器";
 
@@ -187,6 +190,17 @@ QVariantMap MQTTAutoManager::getModuleHealth(int moduleIndex) const
         status["status"] = m_healthStatus[moduleIndex].status;
     }
     return status;
+}
+
+// ✅ 2026-03-02 [Phase 7.47.67]: 设置数据超时阈值并持久化
+void MQTTAutoManager::setDataTimeoutThreshold(int seconds)
+{
+    int clamped = qBound(1, seconds, 60);  // 限制在 1~60 秒
+    if (m_dataTimeoutThreshold == clamped) return;
+    m_dataTimeoutThreshold = clamped;
+    QSettings("BeltControl", "MQTTAutoManager").setValue("dataTimeoutThreshold", clamped);
+    qDebug() << "✅ [MQTTAutoManager] 模块超时阈值已设置:" << clamped << "秒";
+    emit dataTimeoutThresholdChanged();
 }
 
 // ========== 公共方法 ==========
@@ -426,7 +440,7 @@ void MQTTAutoManager::checkModuleHealth(int moduleIndex)
 
     qint64 timeSinceLastData = now - health.lastDataTime;
 
-    if (timeSinceLastData > DATA_TIMEOUT_THRESHOLD) {
+    if (timeSinceLastData > m_dataTimeoutThreshold) {
         // ✅ 2026-03-01 [Phase 7.47.63]: 超过阈值立即降级 "正常" → "等待数据"
         // 旧逻辑：超时计数达到3次才改 status，导致数据停止后 6~8 秒仍显示青色
         // 新逻辑：超过阈值的第一次检查立即降级，用户断开测试工具后 5 秒内即可看到变化

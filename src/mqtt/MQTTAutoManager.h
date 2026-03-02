@@ -66,6 +66,9 @@ class MQTTAutoManager : public QObject
     Q_PROPERTY(int aiPollingInterval READ aiPollingInterval
                WRITE setAIPollingInterval NOTIFY aiPollingIntervalChanged)
     Q_PROPERTY(QVariantList healthStatus READ healthStatus NOTIFY healthStatusChanged)
+    // ✅ 2026-03-02 [Phase 7.47.67]: 数据超时阈值 - 可设置，默认2秒，保存到 QSettings
+    Q_PROPERTY(int dataTimeoutThreshold READ dataTimeoutThreshold
+               WRITE setDataTimeoutThreshold NOTIFY dataTimeoutThresholdChanged)
 
 public:
     explicit MQTTAutoManager(MQTTController *mqttController, QObject *parent = nullptr);
@@ -94,6 +97,10 @@ public:
     Q_INVOKABLE void reconnectModule(int moduleIndex);
     Q_INVOKABLE QVariantMap getModuleHealth(int moduleIndex) const;
 
+    // ✅ 2026-03-02 [Phase 7.47.67]: 数据超时阈值访问器
+    int dataTimeoutThreshold() const { return m_dataTimeoutThreshold; }
+    Q_INVOKABLE void setDataTimeoutThreshold(int seconds);
+
 signals:
     // 属性变化信号
     void autoConnectEnabledChanged();
@@ -101,6 +108,8 @@ signals:
     void diPollingIntervalChanged();
     void aiPollingIntervalChanged();
     void healthStatusChanged();
+    // ✅ 2026-03-02 [Phase 7.47.67]
+    void dataTimeoutThresholdChanged();
 
     // 健康状态信号
     void moduleHealthWarning(int moduleIndex, const QString &message);
@@ -169,7 +178,10 @@ private:
     // 常量
     static const int RECONNECT_CHECK_INTERVAL = 5000;  // 5秒
     static const int HEALTH_CHECK_INTERVAL = 1000;     // 1秒
-    static const int DATA_TIMEOUT_THRESHOLD = 5;       // 5秒无数据视为超时
+    // ✅ 2026-03-02 [Phase 7.47.67]: DATA_TIMEOUT_THRESHOLD 改为可设置成员变量
+    // 旧逻辑: static const int DATA_TIMEOUT_THRESHOLD = 5;  // 5秒无数据视为超时
+    // 新逻辑: 通过 setDataTimeoutThreshold() 设置，保存到 QSettings，默认2秒
+    int m_dataTimeoutThreshold;            // 数据超时阈值（秒），默认2
     static const int MAX_TIMEOUT_COUNT = 3;            // 最大超时次数
 };
 

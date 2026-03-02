@@ -1025,11 +1025,13 @@ Rectangle {
                             }
                         }
 
-                        // ✅ 2026-03-01 [Phase 7.47.60]: 模块状态指示器 - 第六行左侧
-                        // 根据当前选中保护项的模块类型，自动展示对应DI模块的在线/离线状态
-                        // 数据来源：mqttAutoManager.healthStatus[moduleIndex].connected
+                        // ✅ 2026-03-02 [Phase 7.47.67]: 第六行重排
+                        // 左侧：超时时间设置（col 0-1）
+                        // 右侧：模块状态指示器（col 2-3，内置双层指示器，不需要单独标签）
+
+                        // 左侧标签
                         Text {
-                            text: "模块状态:"
+                            text: "超时时间:"
                             font.pixelSize: 21
                             color: "#9E9E9E"
                             Layout.column: 0
@@ -1038,13 +1040,40 @@ Rectangle {
                             horizontalAlignment: Text.AlignRight
                         }
 
+                        // 超时时间输入框（1~60秒，默认2秒，实时保存）
                         Item {
-                            id: moduleStatusItem
                             Layout.column: 1
                             Layout.row: 5
                             Layout.fillWidth: true
-                            Layout.maximumWidth: 420
-                            Layout.columnSpan: 3
+                            Layout.maximumWidth: 200
+                            implicitHeight: timeoutSpin.implicitHeight
+
+                            DeviceInfo.CustomSpinBox {
+                                id: timeoutSpin
+                                anchors.fill: parent
+                                from: 1
+                                to: 60
+                                // 从 MQTTAutoManager 读取当前值
+                                value: (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null)
+                                       ? mqttAutoManager.dataTimeoutThreshold : 2
+                                editable: true
+                                textFromValue: function(val) { return val + " 秒" }
+                                valueFromText: function(text) { return parseInt(text) || 2 }
+                                keyboardManager: root.keyboardManager
+                                onValueModified: {
+                                    if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null)
+                                        mqttAutoManager.setDataTimeoutThreshold(value)
+                                }
+                            }
+                        }
+
+                        Item {
+                            id: moduleStatusItem
+                            Layout.column: 2
+                            Layout.row: 5
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 280
+                            Layout.columnSpan: 2
                             implicitHeight: 72
 
                             // ✅ 2026-03-01 [Phase 7.47.62.2]: 强制绑定刷新计数器
