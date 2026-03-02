@@ -163,6 +163,9 @@ private:
     // ✅ 2026-02-12 [Phase 7.45.33]: 添加连接状态跟踪，避免重复输出调试信息
     QVector<bool> m_lastConnectedStates;  // 记录每个模块的上次连接状态
 
+    // ✅ 2026-03-01 [Phase 7.47.64]: 健康检查日志计数器（每10次输出一次详细状态）
+    QVector<int> m_healthCheckLogCounter;  // 每个模块独立计数
+
     // 常量
     static const int RECONNECT_CHECK_INTERVAL = 5000;  // 5秒
     static const int HEALTH_CHECK_INTERVAL = 1000;     // 1秒

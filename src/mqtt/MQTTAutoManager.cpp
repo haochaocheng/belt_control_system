@@ -53,6 +53,8 @@ void MQTTAutoManager::initializeHealthStatus()
     m_healthStatus.resize(8);
     // ✅ 2026-02-12 [Phase 7.45.33]: 初始化连接状态跟踪
     m_lastConnectedStates.resize(8, false);
+    // ✅ 2026-03-01 [Phase 7.47.64]: 初始化健康检查日志计数器
+    m_healthCheckLogCounter.resize(8, 0);
 
     for (int i = 0; i < 8; ++i) {
         m_healthStatus[i] = ModuleHealthStatus();
@@ -390,6 +392,20 @@ void MQTTAutoManager::checkModuleHealth(int moduleIndex)
     ModuleHealthStatus &health = m_healthStatus[moduleIndex];
     qint64 now = QDateTime::currentSecsSinceEpoch();
 
+    // ✅ 2026-03-01 [Phase 7.47.64]: 周期性详细状态日志（每10秒输出一次）
+    // 原因：帮助诊断"模块状态停留在正常/青色"的问题，暴露 lastDataTime 和 timeSinceLastData 真实值
+    m_healthCheckLogCounter[moduleIndex]++;
+    if (m_healthCheckLogCounter[moduleIndex] >= 10) {
+        m_healthCheckLogCounter[moduleIndex] = 0;
+        qint64 tSince = (health.lastDataTime > 0) ? (now - health.lastDataTime) : -1;
+        qDebug() << "[MQTTAutoManager] 模块" << moduleIndex
+                 << "健康检查 | connected:" << health.connected
+                 << "| lastDataTime:" << health.lastDataTime
+                 << "| timeSinceLastData:" << tSince << "s"
+                 << "| status:" << health.status
+                 << "| timeoutCount:" << health.dataTimeoutCount;
+    }
+
     // 检查连接状态
     health.connected = m_mqttController->isModuleConnected(moduleIndex);
 
@@ -416,7 +432,8 @@ void MQTTAutoManager::checkModuleHealth(int moduleIndex)
         // 新逻辑：超过阈值的第一次检查立即降级，用户断开测试工具后 5 秒内即可看到变化
         if (health.status == "正常") {
             health.status = "等待数据";
-            qDebug() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "数据中断，等待恢复";
+            qDebug() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex
+                     << "数据中断，等待恢复 | timeSinceLastData:" << timeSinceLastData << "s";
         }
         health.dataTimeoutCount++;
 
@@ -439,7 +456,14 @@ void MQTTAutoManager::checkModuleHealth(int moduleIndex)
 void MQTTAutoManager::updateLastDataTime(int moduleIndex)
 {
     if (moduleIndex >= 0 && moduleIndex < m_healthStatus.size()) {
-        m_healthStatus[moduleIndex].lastDataTime = QDateTime::currentSecsSinceEpoch();
+        qint64 now = QDateTime::currentSecsSinceEpoch();
+        // ✅ 2026-03-01 [Phase 7.47.65]: 只在首次变"正常"或状态恢复时打印（减少日志量）
+        if (m_healthStatus[moduleIndex].status != "正常") {
+            qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex
+                     << "硬件数据到达，状态从"
+                     << m_healthStatus[moduleIndex].status << "→ 正常";
+        }
+        m_healthStatus[moduleIndex].lastDataTime = now;
         m_healthStatus[moduleIndex].dataTimeoutCount = 0;
         m_healthStatus[moduleIndex].status = "正常";
     }
@@ -553,13 +577,34 @@ void MQTTAutoManager::onModuleConnected(int moduleIndex, bool connected)
 
 void MQTTAutoManager::onModuleMessageReceived(int moduleIndex, const QString &topic, const QByteArray &payload)
 {
-    // 更新最后数据时间
-    updateLastDataTime(moduleIndex);
+    // ✅ 2026-03-01 [Phase 7.47.65]: 只有来自硬件模块状态主题的消息才更新健康状态
+    // 根因（voip.md 日志揭露）：
+    //   模块0 同时订阅了 belt_control/di/module1/status（硬件模块）
+    //   + station/status/+（VoIP控制站心跳，持续不断）
+    //   + device/status/+（VoIP设备心跳，持续不断）
+    //   VoIP 心跳消息不断触发 updateLastDataTime → lastDataTime 一直刷新
+    //   → status 永远是"正常" → LED 永远青色，即使硬件模块断电也不变
+    // 修复：仅硬件模块专属状态主题触发健康状态更新
+    QString expectedHardwareTopic;
+    if (moduleIndex < 2) {
+        // 开关量模块
+        expectedHardwareTopic = QString("belt_control/di/module%1/status").arg(moduleIndex + 1);
+    } else if (moduleIndex < 4) {
+        // 模拟量模块
+        expectedHardwareTopic = QString("belt_control/ai/module%1/status").arg(moduleIndex - 1);
+    }
 
-    // 转发给数据管理器
+    bool isHardwareTopic = (!expectedHardwareTopic.isEmpty() && topic == expectedHardwareTopic);
+    if (isHardwareTopic) {
+        updateLastDataTime(moduleIndex);
+    }
+
+    // 转发给数据管理器（无论什么主题都转发，各模块按 topic 自行处理）
     emit moduleDataReceived(moduleIndex, topic, payload);
 
-    // ✅ 2026-02-26 18:40 [Phase 7.47.13]: 移除收到数据日志
-    // 原因：高频日志（每秒多次），影响性能和日志可读性
-    // qDebug() << "📩 [MQTTAutoManager] 模块" << moduleIndex << "收到数据 - 主题:" << topic;
+    // ✅ 2026-03-01 [Phase 7.47.64]: 数据接收日志（调试用，诊断后可注释）
+    qDebug() << "📩 [MQTTAutoManager] 模块" << moduleIndex
+             << "消息到达 | 主题:" << topic
+             << "| 大小:" << payload.size() << "bytes"
+             << "| 更新健康状态:" << (isHardwareTopic ? "✅是" : "❌否(VoIP/其他)");
 }
