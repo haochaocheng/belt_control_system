@@ -646,35 +646,14 @@ Item {
                             }
                         }
                     } else {
+                        // ❌ 2026-03-03 [Phase 7.47.76]: 此块原用于"其他页面"（开关量/模拟量）按钮区上键导航
+                        // 修改：开关量/模拟量的按钮区已改为 focusSubArea=3，此代码成为死代码
+                        // 保留注释供参考，实际导航已移至 focusSubArea===3 的 else if 分支中
                         // 其他页面：focusSubArea=2是底部按钮区域
                         // ✅ 底部按钮区域：上键导航
-                        var buttonIndex = currentPage.focusButtonIndex
-
+                        // var buttonIndex = currentPage.focusButtonIndex
                         // 按钮布局：第一行(0,1) 第二行(2,3,4)
-                        if (buttonIndex >= 2) {
-                            // 第二行 → 第一行
-                            if (buttonIndex === 2) {
-                                currentPage.focusButtonIndex = 0  // 保存 → 添加输入
-                            } else if (buttonIndex === 3) {
-                                currentPage.focusButtonIndex = 1  // 删除 → 删除输入
-                            } else if (buttonIndex === 4) {
-                                currentPage.focusButtonIndex = 1  // 重置 → 删除输入
-                            }
-                            console.log("✅ [导航] 底部按钮上移:", buttonIndex, "→", currentPage.focusButtonIndex)
-                        } else {
-                            // 第一行 → 返回参数区域
-                            currentPage.focusSubArea = 1
-                            // 焦点移到参数区域最后一行
-                            var paramCount = currentPage.getParamFieldCount()
-                            if (buttonIndex === 0) {
-                                // 从添加输入返回 → 左列最后一个
-                                currentPage.focusParamIndex = (paramCount % 2 === 0) ? paramCount - 2 : paramCount - 1
-                            } else {
-                                // 从删除输入返回 → 右列最后一个
-                                currentPage.focusParamIndex = (paramCount % 2 === 0) ? paramCount - 1 : paramCount - 2
-                            }
-                            console.log("✅ [导航] 从底部按钮返回参数区域，索引:", currentPage.focusParamIndex)
-                        }
+                        // if (buttonIndex >= 2) { ... } else { currentPage.focusSubArea = 1 }
                     }
                 } else if (currentPage.focusSubArea === 3) {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.12]: 串口控制按钮区域使用NavigationManager
@@ -724,6 +703,35 @@ Item {
                             mqttPage.navigationManager.handleDirectionKey("Up")
                             event.accepted = true
                             return
+                        }
+                    } else {
+                        // ✅ 2026-03-03 [Phase 7.47.76]: 其他页面（开关量/模拟量输入）按钮区上键导航
+                        // 修复：将原来在 focusSubArea===2 else 块的代码移至此处（因为按钮区已改为 focusSubArea=3）
+                        var buttonIndex = currentPage.focusButtonIndex
+                        // 按钮布局：第一行(0,1) 第二行(2,3,4)
+                        if (buttonIndex >= 2) {
+                            // 第二行 → 第一行
+                            if (buttonIndex === 2) {
+                                currentPage.focusButtonIndex = 0  // 保存 → 添加输入
+                            } else if (buttonIndex === 3) {
+                                currentPage.focusButtonIndex = 1  // 删除 → 删除输入
+                            } else if (buttonIndex === 4) {
+                                currentPage.focusButtonIndex = 1  // 重置 → 删除输入
+                            }
+                            console.log("✅ [导航] 底部按钮上移:", buttonIndex, "→", currentPage.focusButtonIndex)
+                        } else {
+                            // 第一行 → 返回参数区域
+                            currentPage.focusSubArea = 1
+                            // 焦点移到参数区域最后一行
+                            var paramCount = currentPage.getParamFieldCount ? currentPage.getParamFieldCount() : 0
+                            if (buttonIndex === 0) {
+                                // 从添加输入返回 → 左列最后一个
+                                currentPage.focusParamIndex = (paramCount % 2 === 0) ? paramCount - 2 : paramCount - 1
+                            } else {
+                                // 从删除输入返回 → 右列最后一个
+                                currentPage.focusParamIndex = (paramCount % 2 === 0) ? paramCount - 1 : paramCount - 2
+                            }
+                            console.log("✅ [导航] 其他页面：从底部按钮返回参数区域，索引:", currentPage.focusParamIndex)
                         }
                     }
                 }
@@ -897,6 +905,13 @@ Item {
                             event.accepted = true
                             return
                         }
+                    } else {
+                        // ✅ 2026-03-03 [Phase 7.47.76]: 其他页面（开关量/模拟量输入）：参数区域下键 → 底部按钮区域
+                        // 修复：之前此处没有代码，导致下键在参数区域无法进入按钮区域（底部按钮完全无法通过键盘访问）
+                        // 说明：focusSubArea=3 是底部按钮区域（与 MotorControlPage 定义一致）
+                        currentPage.focusSubArea = 3
+                        currentPage.focusButtonIndex = 0
+                        console.log("✅ [导航] 其他页面：参数区域下键 → 底部按钮区域（focusSubArea=3，buttonIndex=0）")
                     }
 
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
@@ -904,7 +919,7 @@ Item {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.10]: 串口控制参数区域使用NavigationManager
                     // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: CAN控制参数区域也使用NavigationManager
                     // 原因：串口控制和CAN控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
-                    // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
+                    // ✅ 2026-03-03 [Phase 7.47.76]: 其他页面（开关量/模拟量）的按钮区已改为 focusSubArea=3，此块仅处理串口/CAN/TCP/MQTT
                     // 解决：在focusSubArea=2时，检查是否为串口控制或CAN控制页面，调用NavigationManager
                     console.log("🔍 [串口控制导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
@@ -1007,28 +1022,26 @@ Item {
                         }
                     }
 
-                    // ✅ 其他页面的底部按钮区域：下键导航
-                    var buttonIndex = currentPage.focusButtonIndex
-
+                    // ❌ 2026-03-03 [Phase 7.47.76]: 此块原用于"其他页面"（开关量/模拟量）按钮区下键导航
+                    // 修改：开关量/模拟量的按钮区已改为 focusSubArea=3，此代码成为死代码
+                    // 保留注释供参考，实际导航已移至 focusSubArea===3 的 else if 分支中
+                    // var buttonIndex = currentPage.focusButtonIndex
                     // 按钮布局：第一行(0,1) 第二行(2,3,4)
-                    if (buttonIndex < 2) {
-                        // 第一行 → 第二行
-                        if (buttonIndex === 0) {
-                            currentPage.focusButtonIndex = 2  // 添加输入 → 保存
-                        } else if (buttonIndex === 1) {
-                            currentPage.focusButtonIndex = 3  // 删除输入 → 删除
-                        }
-                        console.log("✅ [导航] 底部按钮下移:", buttonIndex, "→", currentPage.focusButtonIndex)
-                    } else {
-                        console.log("⚠️ [导航] 已到达底部按钮最后一行")
-                    }
+                    // if (buttonIndex < 2) {
+                    //     if (buttonIndex === 0) { currentPage.focusButtonIndex = 2 }
+                    //     else if (buttonIndex === 1) { currentPage.focusButtonIndex = 3 }
+                    //     console.log("✅ [导航] 底部按钮下移:", buttonIndex, "→", currentPage.focusButtonIndex)
+                    // } else {
+                    //     console.log("⚠️ [导航] 已到达底部按钮最后一行")
+                    // }
                 } else if (currentPage.focusSubArea === 3) {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.8.12]: 串口控制按钮区域使用NavigationManager
                     // ✅ 2026-02-07 [Phase 7.39.11 Fix v7]: CAN控制按钮区域也使用NavigationManager
+                    // ✅ 2026-03-03 [Phase 7.47.76]: 新增开关量/模拟量输入按钮区下键导航（focusSubArea=3）
                     // 原因：串口控制和CAN控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
-                    // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
-                    // 解决：在focusSubArea=3时，检查是否为串口控制或CAN控制页面，调用NavigationManager
-                    console.log("🔍 [串口控制导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
+                    //       开关量/模拟量输入页面已统一改为 focusSubArea=3 为按钮区
+                    // 解决：在focusSubArea=3时，检查是否为串口控制或CAN控制页面，调用NavigationManager；否则执行按钮行内导航
+                    console.log("🔍 [按钮区导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
                     if (currentCategory === 6) {
                         // 串口控制页面：使用 NavigationManager
                         var serialPage = serialPortControlPageLoader.item
@@ -1061,6 +1074,21 @@ Item {
                             tcpPage.navigationManager.handleDirectionKey("Down")
                             event.accepted = true
                             return
+                        }
+                    } else {
+                        // ✅ 2026-03-03 [Phase 7.47.76]: 其他页面（开关量/模拟量输入）按钮区下键导航
+                        // 按钮布局：第一行(0,1) 第二行(2,3,4)
+                        var buttonIndex = currentPage.focusButtonIndex
+                        if (buttonIndex < 2) {
+                            // 第一行 → 第二行
+                            if (buttonIndex === 0) {
+                                currentPage.focusButtonIndex = 2  // 添加输入 → 保存
+                            } else if (buttonIndex === 1) {
+                                currentPage.focusButtonIndex = 3  // 删除输入 → 删除
+                            }
+                            console.log("✅ [导航] 底部按钮下移:", buttonIndex, "→", currentPage.focusButtonIndex)
+                        } else {
+                            console.log("⚠️ [导航] 已到达底部按钮最后一行")
                         }
                     }
                 }

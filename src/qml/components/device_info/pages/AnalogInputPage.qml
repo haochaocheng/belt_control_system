@@ -31,8 +31,9 @@ Rectangle {
     property var virtualKeyboard: null
     // ✅ 2026-01-30 [FIX 100.300.105]: 导航焦点索引（从父对话框传递）
     property int focusItemIndex: -1  // -1 表示无焦点
-    // ✅ 2026-01-30 [FIX 100.300.105]: 导航子区域（0:列表 1:参数 2:底部按钮）
-    property int focusSubArea: 0  // 0:列表区域 1:参数区域 2:底部按钮区域
+    // ✅ 2026-01-30 [FIX 100.300.105]: 导航子区域（0:列表 1:参数 3:底部按钮）
+    // ❌ 2026-03-03 [Phase 7.47.76]: 旧注释：2:底部按钮区域 → 改为3，与MotorControlPage一致，修复键盘Enter误触发虚拟键盘
+    property int focusSubArea: 0  // 0:列表区域 1:参数区域 3:底部按钮区域
     property int focusParamIndex: 0  // 参数区域焦点索引
     property int focusButtonIndex: 0  // 底部按钮区域焦点索引
 
@@ -998,8 +999,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 0) ? 3 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -1037,8 +1038,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 1) ? 3 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? 3 : 0
                             radius: 4
                             z: 10
                         }
@@ -1077,8 +1078,8 @@ Rectangle {
                         Rectangle {
                             anchors.fill: parent
                             color: "transparent"
-                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 2) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 2) ? 3 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? 3 : 0
                             radius: 4
                             z: 10
                         }

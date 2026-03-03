@@ -35,8 +35,9 @@ Rectangle {
     property var virtualKeyboard: null
     // ✅ 2026-01-28 [FIX 100.300.101]: 导航焦点索引（从父对话框传递）
     property int focusItemIndex: -1  // -1 表示无焦点
-    // ✅ 2026-01-28 [FIX 100.300.101]: 导航子区域（0:列表 1:参数 2:底部按钮）
-    property int focusSubArea: 0  // 0:列表区域 1:参数区域 2:底部按钮区域
+    // ✅ 2026-01-28 [FIX 100.300.101]: 导航子区域（0:列表 1:参数 3:底部按钮）
+    // ❌ 2026-03-03 [Phase 7.47.76]: 旧注释：2:底部按钮区域 → 改为3，与MotorControlPage一致，修复键盘Enter误触发虚拟键盘
+    property int focusSubArea: 0  // 0:列表区域 1:参数区域 3:底部按钮区域
     property int focusParamIndex: 0  // 参数区域焦点索引
     property int focusButtonIndex: 0  // ✅ 2026-01-29 [Phase 2.30]: 底部按钮区域焦点索引（0-4）
     // ✅ 2026-02-28 [Phase 7.47.44]: 音频来源模式 0=默认 1=TTS合成
@@ -1886,8 +1887,8 @@ Rectangle {
                         background: Rectangle {
                             color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
                             radius: 2
-                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 0) ? 3 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? 3 : 0
                         }
 
                         contentItem: Text {
@@ -1914,8 +1915,8 @@ Rectangle {
                         background: Rectangle {
                             color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
                             radius: 2
-                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 1) ? 3 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? 3 : 0
                         }
 
                         contentItem: Text {
@@ -1948,8 +1949,8 @@ Rectangle {
                         background: Rectangle {
                             color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
                             radius: 2
-                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 2) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 2) ? 3 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? 3 : 0
                         }
 
                         contentItem: Text {
@@ -1975,8 +1976,8 @@ Rectangle {
                         background: Rectangle {
                             color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
                             radius: 2
-                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 3) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 3) ? 3 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 3) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 3) ? 3 : 0
                         }
 
                         contentItem: Text {
@@ -2003,8 +2004,8 @@ Rectangle {
                         background: Rectangle {
                             color: parent.pressed ? "#7f8c8d" : (parent.hovered ? "#95a5a6" : "#7f8c8d")
                             radius: 2
-                            border.color: (root.focusSubArea === 2 && root.focusButtonIndex === 4) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 2 && root.focusButtonIndex === 4) ? 3 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 4) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 4) ? 3 : 0
                         }
 
                         contentItem: Text {
