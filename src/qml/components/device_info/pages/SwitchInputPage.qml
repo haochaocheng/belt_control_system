@@ -1089,7 +1089,7 @@ Rectangle {
                             DeviceInfo.CustomSpinBox {
                                 id: brokerTimeoutSpin
                                 anchors.fill: parent
-                                from: 5
+                                from: 1   // ✅ 2026-03-03 [Phase 7.47.74]: 1秒起（原为5秒）
                                 to: 120
                                 // 从 MQTTAutoManager 读取当前值
                                 value: (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null)

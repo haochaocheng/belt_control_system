@@ -210,7 +210,7 @@ void MQTTAutoManager::setDataTimeoutThreshold(int seconds)
 // ✅ 2026-03-02 [Phase 7.47.68]: 设置 broker 连接超时阈值并持久化
 void MQTTAutoManager::setBrokerConnectTimeout(int seconds)
 {
-    int clamped = qBound(5, seconds, 120);  // 限制在 5~120 秒
+    int clamped = qBound(1, seconds, 120);  // 限制在 1~120 秒（最小1秒，原为5秒，2026-03-03改）
     if (m_brokerConnectTimeout == clamped) return;
     m_brokerConnectTimeout = clamped;
     QSettings("BeltControl", "MQTTAutoManager").setValue("brokerConnectTimeout", clamped);
@@ -525,9 +525,13 @@ void MQTTAutoManager::checkBrokerConnections()
         bool isConnected  = m_mqttController->isModuleConnected(i);
 
         // ✅ 2026-03-02 [Phase 7.47.72]: 检测运行中服务器中断（已连接 → 断开）
+        // ✅ 2026-03-03 [Phase 7.47.74 修复]: 宽限期从硬编码 5s 改为 m_brokerConnectTimeout
+        //    根因：旧代码 lostSeconds >= 5 与用户设置的"连接超时"无关
+        //    服务器断开后 5 秒必触发语音，30 秒设置形同虚设
+        //    修复后：用户设置 N 秒连接超时，服务器断开后等待 N 秒再播报
         if (!isConnected && health.serverLostTime > 0) {
             qint64 lostSeconds = now - health.serverLostTime;
-            if (lostSeconds >= 5) {  // 5秒宽限，避免瞬断误报
+            if (lostSeconds >= m_brokerConnectTimeout) {  // 使用用户配置的连接超时，不再硬编码 5 秒
                 if ((now - m_lastBrokerAlertTime) > 300) {
                     m_lastBrokerAlertTime = now;
                     QString alertPath = AudioPathMapper::getBrokerConnectionFailedPath();
