@@ -1313,7 +1313,9 @@ Item {
                         }
                     }
 
-                    // ✅ 2026-03-04 [Phase 7.47.84]: 更新底部按钮左键导航为单行布局
+                    // ✅ 2026-03-04 [Phase 7.47.85]: 其他页面：底部按钮区域：左键导航
+                } else if (currentPage.focusSubArea === 3) {
+                    // ✅ 2026-03-04 [Phase 7.47.85]: 底部按钮区左键导航（单行布局）
                     // 旧布局（Phase 7.47.76）：第一行(0,1) 第二行(2,3,4)
                     // 新布局（Phase 7.47.77）：单行(0,1,2)（添加输入 | 删除输入 | 删除保护项）
                     var buttonIndex = currentPage.focusButtonIndex
@@ -1645,7 +1647,9 @@ Item {
                         }
                     }
 
-                    // ✅ 2026-03-04 [Phase 7.47.84]: 更新底部按钮右键导航为单行布局
+                    // ✅ 2026-03-04 [Phase 7.47.84]: 其他页面：底部按钮区域：右键导航
+                } else if (currentPage.focusSubArea === 3) {
+                    // ✅ 2026-03-04 [Phase 7.47.84]: 底部按钮区右键导航（单行布局）
                     // 旧布局（Phase 7.47.76）：第一行(0,1) 第二行(2,3,4)
                     // 新布局（Phase 7.47.77）：单行(0,1,2)（添加输入 | 删除输入 | 删除保护项）
                     var buttonIndex = currentPage.focusButtonIndex
