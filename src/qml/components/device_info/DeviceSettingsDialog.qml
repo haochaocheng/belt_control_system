@@ -1132,8 +1132,17 @@ Item {
         console.log("✅ [导航] 左键 - 当前区域:", currentFocusArea)
 
         switch(currentFocusArea) {
-        case 0:  // 顶部按钮 → 底部按钮（循环）
-            currentFocusArea = 3
+        case 0:  // 顶部按钮 → 先在按钮内部左移，到开头才循环跳底部按钮
+            // ✅ 2026-03-04 [Phase 7.47.83]: 修复左键直接跳底部，应先在按钮间导航
+            // 旧逻辑：直接 currentFocusArea = 3（跳到底部按钮）
+            // 新逻辑：重置(2)→保存(1)→关闭(0)→底部按钮（循环）
+            if (currentTopButtonIndex > 0) {
+                currentTopButtonIndex--
+                console.log("✅ [导航] 顶部按钮左移:", currentTopButtonIndex + 1, "→", currentTopButtonIndex)
+            } else {
+                currentFocusArea = 3
+                console.log("✅ [导航] 顶部按钮开头左键 → 底部按钮区域（循环）")
+            }
             break
         case 1:  // 左侧类别 → 顶部按钮
             currentFocusArea = 0
@@ -1424,8 +1433,17 @@ Item {
         console.log("✅ [导航] 右键 - 当前区域:", currentFocusArea)
 
         switch(currentFocusArea) {
-        case 0:  // 顶部按钮 → 左侧类别
-            currentFocusArea = 1
+        case 0:  // 顶部按钮 → 先在按钮内部右移，到末尾才跳左侧类别
+            // ✅ 2026-03-04 [Phase 7.47.83]: 修复右键直接跳类别，应先在按钮间导航
+            // 旧逻辑：直接 currentFocusArea = 1（跳到左侧类别）
+            // 新逻辑：关闭(0)→保存(1)→重置(2)→左侧类别
+            if (currentTopButtonIndex < 2) {
+                currentTopButtonIndex++
+                console.log("✅ [导航] 顶部按钮右移:", currentTopButtonIndex - 1, "→", currentTopButtonIndex)
+            } else {
+                currentFocusArea = 1
+                console.log("✅ [导航] 顶部按钮末端右键 → 左侧类别区域")
+            }
             break
         case 1:  // 左侧类别 → 右侧内容
             currentFocusArea = 2
