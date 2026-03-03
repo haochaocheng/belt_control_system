@@ -453,7 +453,11 @@ Item {
                         currentContentItemIndex--
                         console.log("✅ [导航] 列表区域上移后 - 新索引:", currentContentItemIndex)
                     } else {
-                        console.log("⚠️ [导航] 已到达列表第一项")
+                        // ✅ 2026-03-03 [Phase 7.47.79]: 列表第一项上键 → 切换到顶部按钮区域
+                        // 修复：顶部3个按钮（关闭/保存/重置）无法通过键盘到达
+                        currentFocusArea = 0
+                        currentTopButtonIndex = 0
+                        console.log("✅ [导航] 列表第一项上键 → 顶部按钮区域")
                     }
                 } else if (currentPage.focusSubArea === 1) {
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.7]: 串口控制使用 NavigationManager
@@ -515,7 +519,10 @@ Item {
                             currentPage.focusParamIndex = currentIndex - 1
                             console.log("✅ [导航] 参数区域（一列）上移:", currentIndex, "→", currentIndex - 1)
                         } else {
-                            console.log("⚠️ [导航] 已到达第一个参数")
+                            // ✅ 2026-03-03 [Phase 7.47.79]: 一列参数第一项上键 → 顶部按钮区域
+                            currentFocusArea = 0
+                            currentTopButtonIndex = 0
+                            console.log("✅ [导航] 参数区域（一列）第一项上键 → 顶部按钮区域")
                         }
                     } else {
                         // ✅ 两列布局：同列向上移动
@@ -528,7 +535,10 @@ Item {
                                 currentPage.focusParamIndex = currentIndex - 2
                                 console.log("✅ [导航] 参数区域右列上移:", currentIndex, "→", currentIndex - 2)
                             } else {
-                                console.log("⚠️ [导航] 已到达右列第一个参数")
+                                // ✅ 2026-03-03 [Phase 7.47.79]: 右列第一个参数（index=1）上键 → 顶部按钮区域
+                                currentFocusArea = 0
+                                currentTopButtonIndex = 0
+                                console.log("✅ [导航] 右列第一个参数上键 → 顶部按钮区域")
                             }
                         } else {
                             // 左列：0→2→4→6→8，向上移动2步
@@ -536,7 +546,10 @@ Item {
                                 currentPage.focusParamIndex = currentIndex - 2
                                 console.log("✅ [导航] 参数区域左列上移:", currentIndex, "→", currentIndex - 2)
                             } else {
-                                console.log("⚠️ [导航] 已到达左列第一个参数")
+                                // ✅ 2026-03-03 [Phase 7.47.79]: 左列第一个参数（index=0）上键 → 顶部按钮区域
+                                currentFocusArea = 0
+                                currentTopButtonIndex = 0
+                                console.log("✅ [导航] 左列第一个参数上键 → 顶部按钮区域")
                             }
                         }
                     }
@@ -792,6 +805,11 @@ Item {
         case 0:  // 顶部按钮（3个按钮：关闭、保存、重置）
             if (currentTopButtonIndex < 2) {
                 currentTopButtonIndex++
+            } else {
+                // ✅ 2026-03-03 [Phase 7.47.79]: 顶部按钮最右键下 → 切换到左侧类别
+                // 配合 Up 键从内容区到顶部按钮，形成完整导航回路
+                currentFocusArea = 1
+                console.log("✅ [导航] 顶部按钮末端下键 → 左侧类别区域")
             }
             break
         case 1:  // 左侧类别（9个类别：0-8）

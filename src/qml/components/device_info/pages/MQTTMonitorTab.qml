@@ -122,9 +122,13 @@ Rectangle {
     Connections {
         target: mqttController
         enabled: mqttController !== null
+        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - QDS mock 无 onMessageReceived/onReceivedMessagesChanged
+        ignoreUnknownSignals: true
 
         function onMessageReceived(moduleIndex, topic, payload) {
-            console.log("✅ [MQTTMonitorTab] 收到消息 - 模块:", moduleIndex, "主题:", topic)
+            // ✅ 2026-02-26 18:40 [Phase 7.47.13]: 移除收到消息日志
+            // 原因：高频日志（每秒多次），影响性能和日志可读性
+            // console.log("✅ [MQTTMonitorTab] 收到消息 - 模块:", moduleIndex, "主题:", topic)
             // 将 QByteArray 转换为字符串
             var payloadStr = payload.toString()
             addMessage(topic, payloadStr, 1, false)

@@ -8,3 +8,7 @@ ModernButton 1.0 ModernButton.qml
 SmoothLineChart 1.0 SmoothLineChart.qml
 StationCard 1.0 StationCard.qml
 StatusBadge 1.0 StatusBadge.qml
+# ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - 注册 Theme 单例
+# 原因：GlowLed/ModernButton/MiniTrendChart 使用 Theme.glowRadius/darker()/lighter() 等
+#       没有此注册时 QDS 找不到 Theme 单例，报 "Unable to assign [undefined]" 和 TypeError
+singleton Theme 1.0 Theme.qml

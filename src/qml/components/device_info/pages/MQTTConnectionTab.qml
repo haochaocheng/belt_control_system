@@ -26,26 +26,29 @@ Rectangle {
 
     // ========== 参数数据（绑定到mqttController）==========
     // ✅ 2026-02-08 [Phase 7.43.11]: 使用mqttController的属性
-    property string brokerHost: mqttController ? mqttController.brokerHost : "192.168.10.1"
-    property int brokerPort: mqttController ? mqttController.brokerPort : 1883
-    property string clientId: mqttController ? mqttController.clientId : "belt_control_module_1"
-    property string username: mqttController ? mqttController.username : ""
-    property string password: mqttController ? mqttController.password : ""
-    property int keepAlive: mqttController ? mqttController.keepAlive : 60
-    property bool cleanSession: mqttController ? mqttController.cleanSession : true
-    property int defaultQos: mqttController ? mqttController.defaultQos : 1
-    property bool isConnected: mqttController ? mqttController.connected : false
-    property string connectionState: mqttController ? mqttController.connectionState : "未连接"
+    // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - mqttController 是 C++ context property，在 QDS 中不存在
+    //   原因：直接访问会报 ReferenceError: mqttController is not defined
+    //   修复：所有访问处加 typeof 守卫，QDS 中降级为 null 判断
+    property string brokerHost: (typeof mqttController !== "undefined" && mqttController) ? mqttController.brokerHost : "192.168.10.1"
+    property int brokerPort: (typeof mqttController !== "undefined" && mqttController) ? mqttController.brokerPort : 1883
+    property string clientId: (typeof mqttController !== "undefined" && mqttController) ? mqttController.clientId : "belt_control_module_1"
+    property string username: (typeof mqttController !== "undefined" && mqttController) ? mqttController.username : ""
+    property string password: (typeof mqttController !== "undefined" && mqttController) ? mqttController.password : ""
+    property int keepAlive: (typeof mqttController !== "undefined" && mqttController) ? mqttController.keepAlive : 60
+    property bool cleanSession: (typeof mqttController !== "undefined" && mqttController) ? mqttController.cleanSession : true
+    property int defaultQos: (typeof mqttController !== "undefined" && mqttController) ? mqttController.defaultQos : 1
+    property bool isConnected: (typeof mqttController !== "undefined" && mqttController) ? mqttController.connected : false
+    property string connectionState: (typeof mqttController !== "undefined" && mqttController) ? mqttController.connectionState : "未连接"
 
     // ========== 同步属性到控制器 ==========
-    onBrokerHostChanged: if (mqttController) mqttController.brokerHost = brokerHost
-    onBrokerPortChanged: if (mqttController) mqttController.brokerPort = brokerPort
-    onClientIdChanged: if (mqttController) mqttController.clientId = clientId
-    onUsernameChanged: if (mqttController) mqttController.username = username
-    onPasswordChanged: if (mqttController) mqttController.password = password
-    onKeepAliveChanged: if (mqttController) mqttController.keepAlive = keepAlive
-    onCleanSessionChanged: if (mqttController) mqttController.cleanSession = cleanSession
-    onDefaultQosChanged: if (mqttController) mqttController.defaultQos = defaultQos
+    onBrokerHostChanged: if (typeof mqttController !== "undefined" && mqttController) mqttController.brokerHost = brokerHost
+    onBrokerPortChanged: if (typeof mqttController !== "undefined" && mqttController) mqttController.brokerPort = brokerPort
+    onClientIdChanged: if (typeof mqttController !== "undefined" && mqttController) mqttController.clientId = clientId
+    onUsernameChanged: if (typeof mqttController !== "undefined" && mqttController) mqttController.username = username
+    onPasswordChanged: if (typeof mqttController !== "undefined" && mqttController) mqttController.password = password
+    onKeepAliveChanged: if (typeof mqttController !== "undefined" && mqttController) mqttController.keepAlive = keepAlive
+    onCleanSessionChanged: if (typeof mqttController !== "undefined" && mqttController) mqttController.cleanSession = cleanSession
+    onDefaultQosChanged: if (typeof mqttController !== "undefined" && mqttController) mqttController.defaultQos = defaultQos
 
     // ========== 获取参数数量 ==========
     function getParamFieldCount() {

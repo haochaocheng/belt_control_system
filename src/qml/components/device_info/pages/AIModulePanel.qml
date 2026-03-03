@@ -395,6 +395,8 @@ Rectangle {
 
     Connections {
         target: aiDataManager
+        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - QDS mock 无 onChannelChanged 信号
+        ignoreUnknownSignals: true
         function onChannelChanged(modIndex, channelIndex, data) {
             if (modIndex === moduleIndex) {
                 console.log("🔄 [AIModulePanel] 模块" + moduleIndex + "通道" + channelIndex +

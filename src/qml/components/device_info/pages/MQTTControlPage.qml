@@ -104,6 +104,8 @@ Rectangle {
     Connections {
         target: mqttController
         enabled: mqttController !== null
+        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - QDS mock 无 onModulesChanged 等信号
+        ignoreUnknownSignals: true
 
         function onModulesChanged() {
             console.log("✅ [MQTTControlPage] 模块列表已更新")

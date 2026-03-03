@@ -838,6 +838,12 @@ Rectangle {
 
     // ✅ 2026-02-27 02:15 [Phase 7.47.28]: 从持久化存储恢复批量合成参数
     function loadBatchConfig() {
+        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - QDS mock 无 TTSConfig.getValue() 方法
+        // 原因：直接调用在 QDS 运行时报 TypeError: getValue is not a function
+        if (typeof TTSConfig === "undefined" || typeof TTSConfig.getValue !== "function") {
+            console.warn("⚠️ [QDS] TTSConfig.getValue 不可用，跳过批量配置恢复")
+            return
+        }
         chkSwitchInput.checked = TTSConfig.getValue("batch/chkSwitchInput", true)
         chkAnalogInput.checked = TTSConfig.getValue("batch/chkAnalogInput", true)
         chkMotor.checked = TTSConfig.getValue("batch/chkMotor", true)

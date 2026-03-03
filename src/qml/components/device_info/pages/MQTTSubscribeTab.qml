@@ -97,6 +97,8 @@ Rectangle {
     Connections {
         target: mqttController
         enabled: mqttController !== null
+        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - QDS mock 无 onSubscriptionsChanged 信号
+        ignoreUnknownSignals: true
 
         function onSubscriptionsChanged() {
             console.log("✅ [MQTTSubscribeTab] 订阅列表已更新")

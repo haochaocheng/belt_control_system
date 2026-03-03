@@ -127,51 +127,77 @@ Rectangle {
                 anchors.margins: 15
                 spacing: 0
 
-                // Tab 标签栏
-                TabBar {
-                    id: rightTabBar
+                // ✅ 2026-02-26 22:30 [Phase 7.47.19]: 重新设计 Tab 标签栏，参考电机配置界面
+                // Tab 标签栏（自定义实现，更明显的样式）
+                Rectangle {
+                    id: tabBarContainer
                     Layout.fillWidth: true
-                    background: Rectangle {
-                        color: "transparent"
-                    }
+                    Layout.preferredHeight: 45
+                    color: "#252b3d"
+                    radius: 5
 
-                    TabButton {
-                        text: "🎯 批量识别"
-                        width: implicitWidth
-                        background: Rectangle {
-                            color: rightTabBar.currentIndex === 0 ? "#34495e" : "transparent"
-                            border.color: "#00d4ff"
-                            border.width: rightTabBar.currentIndex === 0 ? 1 : 0
-                            radius: 5
-                        }
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: rightTabBar.currentIndex === 0
-                            color: rightTabBar.currentIndex === 0 ? "#00d4ff" : "#95a5a6"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                    }
+                    Row {
+                        id: tabRow
+                        anchors.fill: parent
+                        anchors.margins: 5
+                        spacing: 10
 
-                    TabButton {
-                        text: "🎙️ 批量生成"
-                        width: implicitWidth
-                        background: Rectangle {
-                            color: rightTabBar.currentIndex === 1 ? "#34495e" : "transparent"
-                            border.color: "#00d4ff"
-                            border.width: rightTabBar.currentIndex === 1 ? 1 : 0
+                        // Tab 1: 批量识别
+                        Rectangle {
+                            id: tab1
+                            width: 120
+                            height: parent.height
                             radius: 5
+                            color: rightTabBar.currentIndex === 0 ? "#00d4ff" : "#34495e"
+                            border.color: "#00d4ff"
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "🎯 批量识别"
+                                font.pixelSize: 14
+                                font.bold: rightTabBar.currentIndex === 0
+                                color: rightTabBar.currentIndex === 0 ? "#1a1a1a" : "#ecf0f1"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: rightTabBar.currentIndex = 0
+                            }
                         }
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: rightTabBar.currentIndex === 1
-                            color: rightTabBar.currentIndex === 1 ? "#00d4ff" : "#95a5a6"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
+
+                        // Tab 2: 批量生成
+                        Rectangle {
+                            id: tab2
+                            width: 120
+                            height: parent.height
+                            radius: 5
+                            color: rightTabBar.currentIndex === 1 ? "#00d4ff" : "#34495e"
+                            border.color: "#00d4ff"
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "🎙️ 批量生成"
+                                font.pixelSize: 14
+                                font.bold: rightTabBar.currentIndex === 1
+                                color: rightTabBar.currentIndex === 1 ? "#1a1a1a" : "#ecf0f1"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: rightTabBar.currentIndex = 1
+                            }
                         }
                     }
+                }
+
+                // Tab 索引状态（隐藏的状态管理器）
+                QtObject {
+                    id: rightTabBar
+                    property int currentIndex: 0
                 }
 
                 // 分隔线
@@ -179,8 +205,8 @@ Rectangle {
                     Layout.fillWidth: true
                     height: 1
                     color: "#4a4a6a"
-                    Layout.topMargin: 10
-                    Layout.bottomMargin: 10
+                    Layout.topMargin: 5
+                    Layout.bottomMargin: 5
                 }
 
                 // Tab 内容区域
@@ -407,7 +433,9 @@ Rectangle {
                     // Tab 2: 批量生成（嵌入 BatchSynthesisContent）
                     BatchSynthesisContent {
                         showHeader: false  // 嵌入模式，隐藏标题栏
-                        batchGenerator: batchGeneratorController
+                        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - batchGeneratorController 在 QDS 中未定义
+                        // 原因：C++ context property 在 QDS 中不存在，报 ReferenceError
+                        batchGenerator: typeof batchGeneratorController !== "undefined" ? batchGeneratorController : null
                     }
                 }
             }

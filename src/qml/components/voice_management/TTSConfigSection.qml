@@ -772,7 +772,10 @@ ColumnLayout {
         // 原因：只有一个引擎选项时，onCurrentIndexChanged 不会触发
         // 效果：组件加载时自动初始化 PaddleSpeech 引擎
         console.log("🔄 自动初始化 TTS 引擎，索引:", engineComboBox.currentIndex)
-        commonControl.switchTTSEngine(engineComboBox.currentIndex)
+        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - QDS 中 commonControl 为 mock，无 switchTTSEngine()
+        // 原因：直接调用在 QDS 运行时报 TypeError: switchTTSEngine is not a function
+        if (typeof commonControl !== "undefined" && typeof commonControl.switchTTSEngine === "function")
+            commonControl.switchTTSEngine(engineComboBox.currentIndex)
         // 初始化模型列表（_startupComplete=false，不会触发同步初始化）
         updateModelList()
         // 初始化引擎状态
@@ -799,6 +802,9 @@ ColumnLayout {
     // 原因：PaddleSpeech 初始化需要 5-10 分钟，显示进度给用户
     Connections {
         target: commonControl
+        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - QDS mock 无 onTtsInitializationProgress/onTtsModelSwitchCompleted
+        // 原因：QDS 中 commonControl 为 QML mock，不含 C++ 信号 → 报 "signal handler not found" 警告
+        ignoreUnknownSignals: true
 
         function onTtsInitializationProgress(message) {
             console.log("📊 TTS 初始化进度:", message)

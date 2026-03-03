@@ -348,6 +348,8 @@ Rectangle {
 
     Connections {
         target: diDataManager
+        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - QDS mock 无 onBitChanged 信号
+        ignoreUnknownSignals: true
         function onBitChanged(modIndex, bitIndex, value) {
             if (modIndex === moduleIndex) {
                 console.log("🔄 [DIModulePanel] 模块" + moduleIndex + "位" + bitIndex + "变化:" + value)

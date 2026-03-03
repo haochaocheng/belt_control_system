@@ -38,7 +38,10 @@ Item {
     // 原因：保护触发后 saveAlarmTriggered() 写入DB，但AlarmPage不会主动刷新
     // 修复：alarmAdded 信号触发时，重新调用 loadAlarms() 更新界面
     Connections {
-        target: alarmHistoryDB
+        target: typeof alarmHistoryDB !== "undefined" ? alarmHistoryDB : null
+        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - QDS 中 alarmHistoryDB 为 undefined
+        // 原因：target 为 undefined 时报 "alarmHistoryDB is not defined"，信号也报警告
+        ignoreUnknownSignals: true
         function onAlarmAdded() {
             Qt.callLater(loadAlarms)
         }
@@ -47,6 +50,13 @@ Item {
     // ========== 加载数据函数 ==========
     function loadAlarms() {
         alarmModel.clear()
+
+        // ✅ 2026-03-03 [Phase 7.47.78]: QDS 兼容 - alarmHistoryDB 在 QDS 中未定义
+        // 原因：C++ context property 在 QDS 中不存在，直接调用会报 ReferenceError
+        if (typeof alarmHistoryDB === "undefined" || alarmHistoryDB === null) {
+            console.warn("⚠️ [QDS] alarmHistoryDB 不可用，跳过报警加载")
+            return
+        }
 
         var records
 
