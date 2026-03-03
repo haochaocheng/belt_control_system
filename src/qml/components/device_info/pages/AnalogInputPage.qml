@@ -986,90 +986,74 @@ Rectangle {
 
                 // 底部按钮
                 // ✅ 2026-01-30 [FIX 100.300.105]: 添加焦点指示器
+                // ✅ 2026-03-03 [Phase 7.47.77]: 重构底部按钮
+                //    旧布局：单行（保存 | 删除 | 重置）
+                //    新布局：单行（添加输入 | 删除输入 | 删除保护项）
+                //    保存/重置已由顶部按钮统一代理
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
 
-                    // 保存按钮（索引 0）
-                    Item {
+                    // 添加输入按钮（索引 0）
+                    // ✅ 2026-03-03 [Phase 7.47.77]: 新增，对齐 SwitchInputPage 布局
+                    Button {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
+                        text: "添加输入"
 
-                        // 焦点指示器
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "transparent"
+                        background: Rectangle {
+                            color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
+                            radius: 2
                             border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
                             border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? 3 : 0
-                            radius: 4
-                            z: 10
                         }
 
-                        Button {
-                            anchors.fill: parent
-                            text: "保存"
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 13
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
 
-                            background: Rectangle {
-                                color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
-                                radius: 2
-                            }
-
-                            contentItem: Text {
-                                text: parent.text
-                                font.pixelSize: 13
-                                font.bold: true
-                                color: "white"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            onClicked: {
-                                saveProtectionData()
-                            }
+                        onClicked: {
+                            console.log("添加输入（模拟量）")
+                            // TODO: 实现添加输入功能
                         }
                     }
 
-                    // 删除按钮（索引 1）
-                    Item {
+                    // 删除输入按钮（索引 1）
+                    // ✅ 2026-03-03 [Phase 7.47.77]: 新增，对齐 SwitchInputPage 布局
+                    Button {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
+                        text: "删除输入"
 
-                        // 焦点指示器
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "transparent"
+                        background: Rectangle {
+                            color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
+                            radius: 2
                             border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
                             border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? 3 : 0
-                            radius: 4
-                            z: 10
                         }
 
-                        Button {
-                            anchors.fill: parent
-                            text: "删除"
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 13
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
 
-                            background: Rectangle {
-                                color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
-                                radius: 2
-                            }
-
-                            contentItem: Text {
-                                text: parent.text
-                                font.pixelSize: 13
-                                font.bold: true
-                                color: "white"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            onClicked: {
-                                console.log("删除保护:", nameField.text)
-                                // TODO: 实现删除功能
-                            }
+                        onClicked: {
+                            console.log("删除输入（模拟量）:", nameField.text)
+                            // TODO: 实现删除输入功能
                         }
                     }
 
-                    // 重置按钮（索引 2）
+                    // 删除保护项按钮（索引 2）
+                    // ✅ 2026-03-03 [Phase 7.47.77]: 原"删除"按钮（索引 1）改名并移至 index=2
                     Item {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
@@ -1086,10 +1070,10 @@ Rectangle {
 
                         Button {
                             anchors.fill: parent
-                            text: "重置"
+                            text: "删除保护项"
 
                             background: Rectangle {
-                                color: parent.pressed ? "#7f8c8d" : (parent.hovered ? "#95a5a6" : "#7f8c8d")
+                                color: parent.pressed ? "#8e44ad" : (parent.hovered ? "#9b59b6" : "#8e44ad")
                                 radius: 2
                             }
 
@@ -1103,10 +1087,78 @@ Rectangle {
                             }
 
                             onClicked: {
-                                loadProtectionData(root.currentProtectionIndex)
+                                console.log("删除保护项:", nameField.text)
+                                // TODO: 实现删除功能
                             }
                         }
                     }
+
+                    // ❌ 2026-03-03 [Phase 7.47.77]: 以下原保存/删除/重置按钮已注释
+                    // 保存/重置由顶部统一代理；删除已改名为"删除保护项"（index=2）
+                    /*
+                    // 保存按钮（索引 0）
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? 3 : 0
+                            radius: 4
+                            z: 10
+                        }
+                        Button {
+                            anchors.fill: parent
+                            text: "保存"
+                            background: Rectangle { color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60"); radius: 2 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 13; font.bold: true; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            onClicked: { saveProtectionData() }
+                        }
+                    }
+
+                    // 删除按钮（索引 1）
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? 3 : 0
+                            radius: 4
+                            z: 10
+                        }
+                        Button {
+                            anchors.fill: parent
+                            text: "删除"
+                            background: Rectangle { color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400"); radius: 2 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 13; font.bold: true; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            onClicked: { console.log("删除保护:", nameField.text) }
+                        }
+                    }
+
+                    // 重置按钮（索引 2）
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? 3 : 0
+                            radius: 4
+                            z: 10
+                        }
+                        Button {
+                            anchors.fill: parent
+                            text: "重置"
+                            background: Rectangle { color: parent.pressed ? "#7f8c8d" : (parent.hovered ? "#95a5a6" : "#7f8c8d"); radius: 2 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 13; font.bold: true; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            onClicked: { loadProtectionData(root.currentProtectionIndex) }
+                        }
+                    }
+                    */
                 }
             }
         }
@@ -1345,20 +1397,25 @@ Rectangle {
     function triggerButton(buttonIndex) {
         console.log("✅ [AnalogInputPage] 触发底部按钮 - 索引:", buttonIndex)
 
+        // ✅ 2026-03-03 [Phase 7.47.77]: 更新为 3 按钮布局（0=添加输入, 1=删除输入, 2=删除保护项）
+        // 旧布局（3按钮）：0=保存, 1=删除, 2=重置
+        // 保存/重置已由顶部按钮代理；删除改名为"删除保护项"并移至 index=2
         switch(buttonIndex) {
-        case 0:  // 保存
-            console.log("✅ [AnalogInputPage] 触发：保存")
-            saveProtectionData()
+        case 0:  // 添加输入（新增）
+            console.log("✅ [AnalogInputPage] 触发：添加输入")
+            // TODO: 实现添加输入功能
             break
-        case 1:  // 删除
-            console.log("✅ [AnalogInputPage] 触发：删除")
+        case 1:  // 删除输入（新增）
+            console.log("✅ [AnalogInputPage] 触发：删除输入")
+            // TODO: 实现删除输入功能
+            break
+        case 2:  // 删除保护项（原 case 1：删除）
+            console.log("✅ [AnalogInputPage] 触发：删除保护项")
             console.log("删除保护:", nameField.text)
             // TODO: 实现删除功能
             break
-        case 2:  // 重置
-            console.log("✅ [AnalogInputPage] 触发：重置")
-            loadProtectionData(root.currentProtectionIndex)
-            break
+        // ❌ 2026-03-03 [Phase 7.47.77]: case 0 保存 → 由顶部保存代理
+        // ❌ 2026-03-03 [Phase 7.47.77]: case 2 重置 → 由顶部重置代理
         default:
             console.warn("⚠️ [AnalogInputPage] 未知的按钮索引:", buttonIndex)
             break

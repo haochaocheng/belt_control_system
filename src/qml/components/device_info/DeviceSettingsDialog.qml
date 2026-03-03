@@ -705,34 +705,21 @@ Item {
                             return
                         }
                     } else {
-                        // ✅ 2026-03-03 [Phase 7.47.76]: 其他页面（开关量/模拟量输入）按钮区上键导航
-                        // 修复：将原来在 focusSubArea===2 else 块的代码移至此处（因为按钮区已改为 focusSubArea=3）
+                        // ✅ 2026-03-03 [Phase 7.47.77]: 更新按钮布局为单行（修复按钮重复后）
+                        // 按钮布局：单行(0,1,2)（添加输入 | 删除输入 | 删除保护项）
+                        // 旧布局（Phase 7.47.76）：第一行(0,1) 第二行(2,3,4)，已废弃
                         var buttonIndex = currentPage.focusButtonIndex
-                        // 按钮布局：第一行(0,1) 第二行(2,3,4)
-                        if (buttonIndex >= 2) {
-                            // 第二行 → 第一行
-                            if (buttonIndex === 2) {
-                                currentPage.focusButtonIndex = 0  // 保存 → 添加输入
-                            } else if (buttonIndex === 3) {
-                                currentPage.focusButtonIndex = 1  // 删除 → 删除输入
-                            } else if (buttonIndex === 4) {
-                                currentPage.focusButtonIndex = 1  // 重置 → 删除输入
-                            }
-                            console.log("✅ [导航] 底部按钮上移:", buttonIndex, "→", currentPage.focusButtonIndex)
+                        // 单行所有按钮 → 直接返回参数区域
+                        currentPage.focusSubArea = 1
+                        var paramCount = currentPage.getParamFieldCount ? currentPage.getParamFieldCount() : 0
+                        if (buttonIndex === 0) {
+                            // 从添加输入返回 → 左列最后一个
+                            currentPage.focusParamIndex = (paramCount % 2 === 0) ? paramCount - 2 : paramCount - 1
                         } else {
-                            // 第一行 → 返回参数区域
-                            currentPage.focusSubArea = 1
-                            // 焦点移到参数区域最后一行
-                            var paramCount = currentPage.getParamFieldCount ? currentPage.getParamFieldCount() : 0
-                            if (buttonIndex === 0) {
-                                // 从添加输入返回 → 左列最后一个
-                                currentPage.focusParamIndex = (paramCount % 2 === 0) ? paramCount - 2 : paramCount - 1
-                            } else {
-                                // 从删除输入返回 → 右列最后一个
-                                currentPage.focusParamIndex = (paramCount % 2 === 0) ? paramCount - 1 : paramCount - 2
-                            }
-                            console.log("✅ [导航] 其他页面：从底部按钮返回参数区域，索引:", currentPage.focusParamIndex)
+                            // 从删除输入/删除保护项返回 → 右列最后一个
+                            currentPage.focusParamIndex = (paramCount % 2 === 0) ? paramCount - 1 : paramCount - 2
                         }
+                        console.log("✅ [导航] 其他页面：从底部按钮返回参数区域，索引:", currentPage.focusParamIndex)
                     }
                 }
             } else {
@@ -1076,20 +1063,11 @@ Item {
                             return
                         }
                     } else {
-                        // ✅ 2026-03-03 [Phase 7.47.76]: 其他页面（开关量/模拟量输入）按钮区下键导航
-                        // 按钮布局：第一行(0,1) 第二行(2,3,4)
-                        var buttonIndex = currentPage.focusButtonIndex
-                        if (buttonIndex < 2) {
-                            // 第一行 → 第二行
-                            if (buttonIndex === 0) {
-                                currentPage.focusButtonIndex = 2  // 添加输入 → 保存
-                            } else if (buttonIndex === 1) {
-                                currentPage.focusButtonIndex = 3  // 删除输入 → 删除
-                            }
-                            console.log("✅ [导航] 底部按钮下移:", buttonIndex, "→", currentPage.focusButtonIndex)
-                        } else {
-                            console.log("⚠️ [导航] 已到达底部按钮最后一行")
-                        }
+                        // ✅ 2026-03-03 [Phase 7.47.77]: 更新按钮布局为单行（修复按钮重复后）
+                        // 按钮布局：单行(0,1,2)（添加输入 | 删除输入 | 删除保护项）
+                        // 旧布局（Phase 7.47.76）：第一行(0,1) 第二行(2,3,4)，已废弃
+                        // 单行内无行间导航，到达末尾保持不变
+                        console.log("⚠️ [导航] 已到达底部按钮最后一行（单行布局）")
                     }
                 }
             } else {
@@ -3478,11 +3456,29 @@ Item {
             break
         case 1:  // 保存
             console.log("✅ [导航] 触发：保存")
-            // 保存逻辑（待实现）
+            // ✅ 2026-03-03 [Phase 7.47.77]: 代理到当前页面的保存函数，消除顶部保存无效问题
+            // 旧：// 保存逻辑（待实现）
+            var p1 = getCurrentPage(currentCategory)
+            if (p1) {
+                if (typeof p1.saveProtectionData === "function") {
+                    p1.saveProtectionData()
+                } else if (typeof p1.saveMotorConfig === "function") {
+                    p1.saveMotorConfig()
+                }
+            }
             break
         case 2:  // 重置
             console.log("✅ [导航] 触发：重置")
-            // 重置逻辑（待实现）
+            // ✅ 2026-03-03 [Phase 7.47.77]: 代理到当前页面的重置函数，消除顶部重置无效问题
+            // 旧：// 重置逻辑（待实现）
+            var p2 = getCurrentPage(currentCategory)
+            if (p2) {
+                if (typeof p2.loadProtectionData === "function") {
+                    p2.loadProtectionData(p2.currentProtectionIndex)
+                } else if (typeof p2.loadMotorConfig === "function") {
+                    p2.loadMotorConfig()
+                }
+            }
             break
         }
     }

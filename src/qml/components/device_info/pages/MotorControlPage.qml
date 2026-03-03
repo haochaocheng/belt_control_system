@@ -476,7 +476,9 @@ Rectangle {
 
                     Button {
                         id: addInputButton
-                        text: "添加输入"
+                        // ✅ 2026-03-03 [Phase 7.47.77]: 修改标签
+                        // 旧："添加输入"（从 SwitchInputPage 复制，未针对电机控制场景修改）
+                        text: "添加电机保护"
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
 
@@ -517,7 +519,9 @@ Rectangle {
 
                     Button {
                         id: deleteInputButton
-                        text: "删除输入"
+                        // ✅ 2026-03-03 [Phase 7.47.77]: 修改标签
+                        // 旧："删除输入"（从 SwitchInputPage 复制，未针对电机控制场景修改）
+                        text: "删除电机保护"
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
 

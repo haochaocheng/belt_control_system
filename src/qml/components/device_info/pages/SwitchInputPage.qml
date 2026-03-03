@@ -1933,8 +1933,43 @@ Rectangle {
                             // TODO: 实现删除输入功能
                         }
                     }
+
+                    // ✅ 2026-03-03 [Phase 7.47.77]: 新增"删除保护项"按钮（原第二行独立按钮，合并入第一行）
+                    // 将原第二行的"删除"功能移至此处，与添加/删除输入统一为单行布局
+                    Button {
+                        id: deleteProtectionButton
+                        text: "删除保护项"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+
+                        background: Rectangle {
+                            color: parent.pressed ? "#8e44ad" : (parent.hovered ? "#9b59b6" : "#8e44ad")
+                            radius: 2
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? 3 : 0
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 13
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            console.log("删除保护项:", nameField.text)
+                            // TODO: 实现删除保护项功能
+                        }
+                    }
                 }
 
+                // ❌ 2026-03-03 [Phase 7.47.77]: 注释掉第二行按钮（保存/删除/重置）
+                // 原因：保存/重置功能已由顶部按钮统一代理（triggerTopButton(1/2)）
+                //       删除功能已移至第一行末尾"删除保护项"按钮
+                // 旧代码保留供参考
+                /*
                 // 第二行：保存、删除、重置
                 RowLayout {
                     Layout.fillWidth: true
@@ -2022,6 +2057,7 @@ Rectangle {
                         }
                     }
                 }
+                */
             }
         }
     }
@@ -2220,6 +2256,9 @@ Rectangle {
         console.log("✅ [SwitchInputPage] 触发底部按钮 - 索引:", buttonIndex)
 
         // 根据索引触发对应按钮的点击事件
+        // ✅ 2026-03-03 [Phase 7.47.77]: 更新为 3 按钮布局（0=添加输入, 1=删除输入, 2=删除保护项）
+        // 旧布局（5按钮）：0=添加输入, 1=删除输入, 2=保存, 3=删除, 4=重置
+        // 保存/重置已由顶部按钮代理，删除已改名为"删除保护项"并移至 index=2
         switch(buttonIndex) {
         case 0:  // 添加输入
             console.log("✅ [SwitchInputPage] 触发：添加输入")
@@ -2229,18 +2268,13 @@ Rectangle {
             console.log("✅ [SwitchInputPage] 触发：删除输入 -", nameField.text)
             // TODO: 实现删除输入功能
             break
-        case 2:  // 保存
-            console.log("✅ [SwitchInputPage] 触发：保存")
-            saveProtectionData()
+        case 2:  // 删除保护项（原 case 3：删除，从第二行移至第一行）
+            console.log("✅ [SwitchInputPage] 触发：删除保护项 -", nameField.text)
+            // TODO: 实现删除保护项功能
             break
-        case 3:  // 删除
-            console.log("✅ [SwitchInputPage] 触发：删除 -", nameField.text)
-            // TODO: 实现删除功能
-            break
-        case 4:  // 重置
-            console.log("✅ [SwitchInputPage] 触发：重置")
-            loadProtectionData(root.currentProtectionIndex)
-            break
+        // ❌ 2026-03-03 [Phase 7.47.77]: case 2 保存 → 由顶部保存代理
+        // ❌ 2026-03-03 [Phase 7.47.77]: case 3 删除 → 合并为 case 2（删除保护项）
+        // ❌ 2026-03-03 [Phase 7.47.77]: case 4 重置 → 由顶部重置代理
         default:
             console.warn("⚠️ [SwitchInputPage] 无效的按钮索引:", buttonIndex)
             break
