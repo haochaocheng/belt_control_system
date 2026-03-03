@@ -266,6 +266,14 @@ private:
     // SherpaOnnxTTS *m_tts;  // TTS 语音合成器（用于起车预警语音）
     TTSEngineManager *m_ttsEngineManager;  // TTS 引擎管理器（支持多引擎切换）
 
+    // ✅ 2026-03-04 [Phase 7.47.87]: 音频播放队列（防止多个离线语音互相打断）
+    QStringList m_audioQueue;              // 音频播放队列
+    bool m_isPlayingFromQueue;             // 是否正在播放队列中的音频
+
+    // ✅ 2026-03-04 [Phase 7.47.89]: 延迟 play() 到 BufferedMedia 后执行
+    // 原因：play() 在 LoadingMedia 阶段调用会导致 125ms 静音 + 突变卡顿
+    bool m_pendingPlay;                    // 等待 BufferedMedia 后再调用 play()
+
     // 预警播放相关
     QTimer *m_warningTimer;        // 按时间模式的定时器
     int m_currentPlayCount;        // 当前已播放次数
@@ -333,6 +341,10 @@ private:
     // 原因：TTS模型对阿拉伯数字"1"发音不清晰，改用中文数字"一"
     // 用途：将皮带编号（1-10）转换为中文数字（一-十）用于TTS文本生成
     QString numberToChinese(int number) const;
+
+    // ✅ 2026-03-04 [Phase 7.47.87]: 音频队列处理方法
+    void playNextInQueue();                // 播放队列中的下一个音频
+    void playAudioInternal(const QString &audioPath);  // 内部播放方法（不加入队列）
 
     // ✅ 2026-02-13 [Phase 7.46.7]: 添加 TTS 引擎注册方法
     /**

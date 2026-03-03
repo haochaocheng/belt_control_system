@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作日报 - 2026-03-03</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        caption {
+            caption-side: top;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            padding: 12px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #4CAF50;
+            color: #fff;
+            font-weight: bold;
+            text-align: center;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .time-zone {
+            font-weight: bold;
+            text-align: center;
+        }
+        .time-zone-morning {
+            background-color: #fff3e0;
+        }
+        .time-zone-noon {
+            background-color: #e8f5e9;
+        }
+        .time-zone-afternoon {
+            background-color: #e1f5fe;
+        }
+        .time-zone-rest {
+            background-color: #f3e5f5;
+        }
+        .status-complete {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .status-pending {
+            color: #ff9800;
+            font-weight: bold;
+        }
+        .review-yes {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <table>
+        <caption>工作日报 - 2026-03-03（星期二）</caption>
+        <thead>
+            <tr>
+                <th>时区分类</th>
+                <th>事项</th>
+                <th>事项定义<br>（四象限）</th>
+                <th>事项状态<br>（行动、等待、将来上日历、完成）</th>
+                <th>用时</th>
+                <th>复盘</th>
+                <th>备注</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="time-zone time-zone-morning" rowspan="2">上午区: 6-12</td>
+                <td>部署后语音完全静默 — 回退音频播放方案，调整采样率</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>45 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>部署新版本后所有语音提示音完全静默，无任何声音输出。根因双重：① QSoundEffect 在 Docker 容器中找不到 PulseAudio，Qt 枚举音频设备返回空列表，输出 "No audio device detected"；② play() 调用时文件仍在 Loading 状态，playingChanged 立即误触 onPlaybackFinished()，记录播放时长 0 秒。方案：注释掉 QSoundEffect 路径，恢复 QMediaPlayer；同步将 ALSA 混音器采样率从 48kHz 改为 24kHz（与 TTS 生成的 WAV 一致），消除 GStreamer 强制重采样带来的卡顿主因。voip 日志确认：无 StalledMedia/BufferingMedia 状态，实际播放时长 2.04s、2.42s，设备聆听无异常。</td>
+            </tr>
+            <tr>
+                <td>键盘方向键无法到达底部按钮，按下 Enter 弹出虚拟键盘</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>40 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>开关量输入 / 模拟量输入界面中，用方向键无法将焦点移到底部按钮区；在参数区按 Enter 会弹出虚拟键盘而非触发按钮。双重根因：① focusSubArea 判断值写错（=== 2 应为 === 3），导致 Enter 被路由到 triggerParamInput() 而非 triggerButton()；② 参数区末尾 Down 键无任何跳转逻辑，按钮区完全不可达。涉及 SwitchInputPage.qml（10 处）、AnalogInputPage.qml（6 处）、DeviceSettingsDialog.qml（4 处导航路径）共 20 处改动；新增参数区末尾 Down 键进入按钮区的路径，确保键盘可完整遍历所有可交互区域。</td>
+            </tr>
+
+            <tr>
+                <td class="time-zone time-zone-noon" rowspan="2">中午区: 12-14</td>
+                <td>顶部与底部保存按钮重复，操作意义不明确</td>
+                <td>重要不紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>30 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>顶部栏和底部区域均有"保存""重置"按钮，界面冗余且容易造成误操作。顶部按钮改为委托当前页面执行 saveProtectionData() / loadProtectionData()，实现全局入口；底部简化为两个语义明确的操作按钮："添加保护项""删除保护项"，消除功能重复。同步更正 MotorControlPage 按钮标签错误。</td>
+            </tr>
+            <tr>
+                <td>模拟器（QDS）启动时出现大量 TypeError / ReferenceError</td>
+                <td>重要不紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>40 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>QDS 模拟器启动后日志充斥 TypeError 和 ReferenceError，严重干扰调试。根因：多处 QML 文件直接访问 C++ 对象属性/信号，未检查对象是否存在。涉及 10 个文件：device_monitor/qmldir 补充 singleton 声明；TTSConfigSection、BatchSynthesisContent、AlarmPage、VoiceManagement、MQTTConnectionTab 添加 typeof 空值守卫；AIModulePanel、DIModulePanel、MQTTMonitorTab、MQTTSubscribeTab、MQTTControlPage 添加 ignoreUnknownSignals: true。处理后 QDS 日志恢复干净。</td>
+            </tr>
+
+            <tr>
+                <td class="time-zone time-zone-afternoon" rowspan="7">下午区: 14-22</td>
+                <td>方向键无法从列表导航到顶部按钮区，回路断开</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>20 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>保护参数设置界面中，键盘导航存在单向死路：列表第一项按 Up 无任何跳转，无法进入顶部按钮区；顶部按钮末端按 Down 也无法回到列表。新增双向路径：列表第一项 Up → 切换到顶部按钮区（currentFocusArea=0）；参数区单列/双列第一行 Up → 同上；顶部按钮末端 Down → 切换回列表区（currentFocusArea=1），形成完整闭合回路。</td>
+            </tr>
+            <tr>
+                <td>连接超时 / 数据超时 SpinBox 无法用键盘到达</td>
+                <td>重要不紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>40 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>开关量输入界面中，"连接超时"和"数据超时"两个 SpinBox 与通道状态 LED、模块状态文字混排在同一 GridLayout，视觉层次混乱，键盘焦点索引未覆盖这两项，方向键跳过直达底部按钮。方案：将通道状态 LED、模块状态文字提取到 ScrollView 下方的独立只读区域；两个 SpinBox 纳入焦点导航索引（index 10、12），中间用占位索引（9、11）保持 GridLayout 布局；triggerParamInput() 补充对应 case，确保 Enter 键能聚焦到 SpinBox 进行调整。</td>
+            </tr>
+            <tr>
+                <td>多模块同时离线，语音提示互相打断，每段只播约 0.14 秒</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>60 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>开关量模块一与模拟量模块一几乎同时离线，voip 日志显示后触发的语音立即调用 stop() 打断前一个，每段音频仅播放 0.14 秒，用户听到明显卡顿。同时发现每次播放前 setSource(QUrl()) 会销毁 GStreamer pipeline，下次重建需 111ms（LoadingMedia→LoadedMedia），形成第二层卡顿。双重方案：① 新增 m_audioQueue 队列，所有离线语音先入队，当前播放完成后（onPlaybackFinished）自动取下一条；② 去掉清空源操作，改为直接 setSource(新路径)，GStreamer 可在不销毁 pipeline 的前提下切换源。voip 日志验证：两段语音均完整播放（4.05s + 4.03s），队列依次执行，无打断。</td>
+            </tr>
+            <tr>
+                <td>超时参数调整后重启程序，数值还原为默认值</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>20 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>将连接超时从 30 秒逐步调整为 1 秒（voip 日志可见 29→28→...→1 的触发记录），关闭程序后重启，日志显示连接超时仍为 30 秒（默认值）。根因：MQTTAutoManager 使用 QSettings("BeltControl", "MQTTAutoManager") 原生格式，保存路径为容器内 ~/.config/BeltControl/；启动脚本每次都删除旧容器并创建新容器，~/.config/ 目录随容器消失，所有设置丢失。其他组件（SipPhoneManager、AudioNetworkTcpSender）均已改用 /app/appdata/ 持久化目录。统一改为 QSettings("/app/appdata/mqtt_settings.ini", IniFormat)，与项目其余组件一致，容器重建后数据保留。</td>
+            </tr>
+            <tr>
+                <td>CustomSpinBox 缺少 valueModified 信号声明</td>
+                <td>重要不紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>15 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>SwitchInputPage.qml 中 SpinBox 使用 onValueModified 监听用户修改并实时持久化，但 Qt 标准 SpinBox 只有 valueChanged 信号，不存在 valueModified。在 CustomSpinBox.qml 中补充 signal valueModified() 声明，并在 onValueChanged 中判断控件是否处于活动焦点或上/下按钮按下状态，仅在用户交互时触发，避免程序初始化赋值时误触发保存。</td>
+            </tr>
+            <tr>
+                <td>语音起始仍有短暂卡顿 — 延迟 play() 至 BufferedMedia 后，设备完全无声</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 已定位根因</td>
+                <td>30 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>日志分析发现 play() 在 LoadingMedia 阶段调用，文件尚未加载，导致 GStreamer 向 ALSA 输出 125ms 静音；静音→有声的突变造成可闻的起始卡顿。首次方案：将 play() 调用推迟到 BufferedMedia 事件触发后执行。部署后设备完全无声，日志显示 LoadingMedia → LoadedMedia（141ms）后再无任何状态变化，BufferedMedia 始终不出现。根因：Qt6 QMediaPlayer 的 BufferedMedia 只在 play() 已被调用后才会触发——先等 BufferedMedia 再调 play() 形成死循环，play() 永远不会执行。</td>
+            </tr>
+            <tr>
+                <td>语音起始卡顿彻底解决 — 改用 LoadedMedia 触发 play()</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>20 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>LoadedMedia 表示本地 WAV 文件元数据与解码器已完全就绪，此时数据可用。在 LoadedMedia 触发 play()，GStreamer 立即有音频数据输出，不再有静音期；相比旧方案（play() 在 LoadingMedia 时调用）的 125ms 静音 + 突变，新方案音频从第一个采样点开始干净输出。同步加入 &lt; 200ms 虚假完成过滤，防止 GStreamer 源切换时产生的 EndOfMedia 误触队列推进。修改文件：CommonControl.h（新增 m_pendingPlay 标志）、CommonControl.cpp（mediaStatusChanged 在 LoadedMedia 触发 play()，三处播放分支改为设置 m_pendingPlay，onPlaybackFinished 过滤短时完成事件）。</td>
+            </tr>
+
+            <tr>
+                <td class="time-zone time-zone-rest" rowspan="1">休息区: 22-6</td>
+                <td>当日复盘（成果 / 技术要点 / 经验）</td>
+                <td>重要不紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>15 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>成果：① 语音系统从静默到正常，采样率统一消除重采样卡顿；② 键盘导航全链路贯通（列表区↔参数区↔按钮区↔顶部按钮）；③ 多模块离线语音队列化，彻底消除互相打断；④ 超时参数持久化从容器内迁移到挂载目录；⑤ 语音起始卡顿彻底解决——play() 延迟到 LoadedMedia 后触发，消除 GStreamer 125ms 静音期。技术要点：Qt6 QMediaPlayer 的 BufferedMedia 必须在 play() 已调用后才触发，等待它再调 play() 是死循环；LoadedMedia 才是本地文件加载完毕的正确信号；Docker 容器每次重建会清空 ~/.config/，持久化设置必须写入 /app/appdata/；Qt SpinBox 只有 valueChanged，自定义 valueModified 需手动声明并加交互判断。经验：对框架内部状态机的错误假设会导致表面合理实际致命的方案（BufferedMedia 死循环）；必须通过日志验证每个中间状态是否符合预期，不能仅依赖理论推导。</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

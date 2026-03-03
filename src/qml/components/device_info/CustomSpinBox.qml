@@ -22,6 +22,19 @@ SpinBox {
     // ✅ 2026-01-28 [虚拟键盘支持]: 键盘管理器属性
     property var keyboardManager: null
 
+    // ✅ 2026-03-04 [Phase 7.47.87]: 添加 valueModified 信号
+    // 原因：Qt SpinBox 只有 valueChanged，但我们需要区分用户修改和程序修改
+    // 用途：用户通过键盘/鼠标修改值时触发，用于实时保存到 QSettings
+    signal valueModified()
+
+    // ✅ 2026-03-04 [Phase 7.47.87]: 监听 value 变化，触发 valueModified
+    onValueChanged: {
+        // 只在用户交互时触发（不是初始化时）
+        if (root.activeFocus || root.up.pressed || root.down.pressed) {
+            valueModified()
+        }
+    }
+
     // ========== 默认样式 ==========
     // ✅ 2026-01-27 [FIX 100.300.34]: 高度增加到1.5倍（40px → 60px）
     implicitHeight: 60

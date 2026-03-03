@@ -8,6 +8,7 @@
 #include "MQTTAutoManager.h"
 #include "MQTTController.h"
 #include "../control/AudioPathMapper.h"
+#include "../control/DataPathConfig.h"
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -24,13 +25,23 @@ MQTTAutoManager::MQTTAutoManager(MQTTController *mqttController, QObject *parent
     , m_diPollingTimer(nullptr)
     , m_aiPollingTimer(nullptr)
     , m_healthCheckTimer(nullptr)
-    // ✅ 2026-03-02 [Phase 7.47.67]: 从 QSettings 加载超时阈值，默认2秒
-    , m_dataTimeoutThreshold(QSettings("BeltControl", "MQTTAutoManager").value("dataTimeoutThreshold", 2).toInt())
-    // ✅ 2026-03-02 [Phase 7.47.68]: 从 QSettings 加载 broker 连接超时，默认30秒
-    , m_brokerConnectTimeout(QSettings("BeltControl", "MQTTAutoManager").value("brokerConnectTimeout", 30).toInt())
+    // ❌ 2026-03-04 [Phase 7.47.88]: 弃用原方案（容器删除后 ~/.config/ 丢失）
+    // 原问题：QSettings("BeltControl", "MQTTAutoManager") 保存到容器内 ~/.config/，容器重启后数据全部丢失
+    // , m_dataTimeoutThreshold(QSettings("BeltControl", "MQTTAutoManager").value("dataTimeoutThreshold", 2).toInt())
+    // , m_brokerConnectTimeout(QSettings("BeltControl", "MQTTAutoManager").value("brokerConnectTimeout", 30).toInt())
+    // ✅ 2026-03-04 [Phase 7.47.88]: 改用持久化目录（/app/appdata/mqtt_settings.ini）
+    // 参考：SipPhoneManager、AudioNetworkTcpSender 的做法
+    , m_dataTimeoutThreshold(QSettings(DataPathConfig::getDataDirectory() + "/mqtt_settings.ini", QSettings::IniFormat).value("dataTimeoutThreshold", 2).toInt())
+    , m_brokerConnectTimeout(QSettings(DataPathConfig::getDataDirectory() + "/mqtt_settings.ini", QSettings::IniFormat).value("brokerConnectTimeout", 30).toInt())
     , m_lastBrokerAlertTime(0)
 {
     qDebug() << "✅ [MQTTAutoManager] 初始化自动管理器";
+    // ✅ 2026-03-04 [Phase 7.47.87]: 打印加载的超时参数，便于调试
+    // ✅ 2026-03-04 [Phase 7.47.88]: 显示持久化文件路径
+    QString settingsPath = DataPathConfig::getDataDirectory() + "/mqtt_settings.ini";
+    qDebug() << "   配置文件:" << settingsPath;
+    qDebug() << "   数据超时阈值:" << m_dataTimeoutThreshold << "秒（从 QSettings 加载）";
+    qDebug() << "   连接超时阈值:" << m_brokerConnectTimeout << "秒（从 QSettings 加载）";
 
     // 初始化健康状态
     initializeHealthStatus();
@@ -202,7 +213,10 @@ void MQTTAutoManager::setDataTimeoutThreshold(int seconds)
     int clamped = qBound(1, seconds, 60);  // 限制在 1~60 秒
     if (m_dataTimeoutThreshold == clamped) return;
     m_dataTimeoutThreshold = clamped;
-    QSettings("BeltControl", "MQTTAutoManager").setValue("dataTimeoutThreshold", clamped);
+    // ❌ 2026-03-04 [Phase 7.47.88]: 弃用（容器删除后 ~/.config/ 丢失）
+    // QSettings("BeltControl", "MQTTAutoManager").setValue("dataTimeoutThreshold", clamped);
+    // ✅ 2026-03-04 [Phase 7.47.88]: 改用持久化目录
+    QSettings(DataPathConfig::getDataDirectory() + "/mqtt_settings.ini", QSettings::IniFormat).setValue("dataTimeoutThreshold", clamped);
     qDebug() << "✅ [MQTTAutoManager] 模块超时阈值已设置:" << clamped << "秒";
     emit dataTimeoutThresholdChanged();
 }
@@ -213,7 +227,10 @@ void MQTTAutoManager::setBrokerConnectTimeout(int seconds)
     int clamped = qBound(1, seconds, 120);  // 限制在 1~120 秒（最小1秒，原为5秒，2026-03-03改）
     if (m_brokerConnectTimeout == clamped) return;
     m_brokerConnectTimeout = clamped;
-    QSettings("BeltControl", "MQTTAutoManager").setValue("brokerConnectTimeout", clamped);
+    // ❌ 2026-03-04 [Phase 7.47.88]: 弃用（容器删除后 ~/.config/ 丢失）
+    // QSettings("BeltControl", "MQTTAutoManager").setValue("brokerConnectTimeout", clamped);
+    // ✅ 2026-03-04 [Phase 7.47.88]: 改用持久化目录
+    QSettings(DataPathConfig::getDataDirectory() + "/mqtt_settings.ini", QSettings::IniFormat).setValue("brokerConnectTimeout", clamped);
     qDebug() << "✅ [MQTTAutoManager] broker 连接超时已设置:" << clamped << "秒";
     emit brokerConnectTimeoutChanged();
 }
