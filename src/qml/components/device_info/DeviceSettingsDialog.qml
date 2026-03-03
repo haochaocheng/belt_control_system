@@ -1313,27 +1313,18 @@ Item {
                         }
                     }
 
-                    // ✅ 其他页面的底部按钮区域：左键导航
+                    // ✅ 2026-03-04 [Phase 7.47.84]: 更新底部按钮左键导航为单行布局
+                    // 旧布局（Phase 7.47.76）：第一行(0,1) 第二行(2,3,4)
+                    // 新布局（Phase 7.47.77）：单行(0,1,2)（添加输入 | 删除输入 | 删除保护项）
                     var buttonIndex = currentPage.focusButtonIndex
 
-                    // 按钮布局：第一行(0,1) 第二行(2,3,4)
-                    if (buttonIndex === 1) {
-                        // 删除输入 → 添加输入
-                        currentPage.focusButtonIndex = 0
-                        console.log("✅ [导航] 底部按钮左移:", buttonIndex, "→", 0)
-                        return
-                    } else if (buttonIndex === 3) {
-                        // 删除 → 保存
-                        currentPage.focusButtonIndex = 2
-                        console.log("✅ [导航] 底部按钮左移:", buttonIndex, "→", 2)
-                        return
-                    } else if (buttonIndex === 4) {
-                        // 重置 → 删除
-                        currentPage.focusButtonIndex = 3
-                        console.log("✅ [导航] 底部按钮左移:", buttonIndex, "→", 3)
+                    if (buttonIndex > 0) {
+                        // 单行左移：2→1→0
+                        currentPage.focusButtonIndex = buttonIndex - 1
+                        console.log("✅ [导航] 底部按钮左移:", buttonIndex, "→", buttonIndex - 1)
                         return
                     } else {
-                        // 已在最左侧，保持焦点
+                        // 已在最左侧（添加输入），保持焦点
                         console.log("⚠️ [导航] 已在底部按钮最左侧")
                         return
                     }
@@ -1654,27 +1645,18 @@ Item {
                         }
                     }
 
-                    // ✅ 其他页面：底部按钮区域：右键导航
+                    // ✅ 2026-03-04 [Phase 7.47.84]: 更新底部按钮右键导航为单行布局
+                    // 旧布局（Phase 7.47.76）：第一行(0,1) 第二行(2,3,4)
+                    // 新布局（Phase 7.47.77）：单行(0,1,2)（添加输入 | 删除输入 | 删除保护项）
                     var buttonIndex = currentPage.focusButtonIndex
 
-                    // 按钮布局：第一行(0,1) 第二行(2,3,4)
-                    if (buttonIndex === 0) {
-                        // 添加输入 → 删除输入
-                        currentPage.focusButtonIndex = 1
-                        console.log("✅ [导航] 底部按钮右移:", buttonIndex, "→", 1)
-                        return
-                    } else if (buttonIndex === 2) {
-                        // 保存 → 删除
-                        currentPage.focusButtonIndex = 3
-                        console.log("✅ [导航] 底部按钮右移:", buttonIndex, "→", 3)
-                        return
-                    } else if (buttonIndex === 3) {
-                        // 删除 → 重置
-                        currentPage.focusButtonIndex = 4
-                        console.log("✅ [导航] 底部按钮右移:", buttonIndex, "→", 4)
+                    if (buttonIndex < 2) {
+                        // 单行右移：0→1→2
+                        currentPage.focusButtonIndex = buttonIndex + 1
+                        console.log("✅ [导航] 底部按钮右移:", buttonIndex, "→", buttonIndex + 1)
                         return
                     } else {
-                        // 已在最右侧，保持焦点
+                        // 已在最右侧（删除保护项），保持焦点
                         console.log("⚠️ [导航] 已在底部按钮最右侧")
                         return
                     }
