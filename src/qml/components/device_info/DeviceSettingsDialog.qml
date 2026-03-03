@@ -911,12 +911,20 @@ Item {
                             return
                         }
                     } else {
-                        // ✅ 2026-03-03 [Phase 7.47.76]: 其他页面（开关量/模拟量输入）：参数区域下键 → 底部按钮区域
-                        // 修复：之前此处没有代码，导致下键在参数区域无法进入按钮区域（底部按钮完全无法通过键盘访问）
-                        // 说明：focusSubArea=3 是底部按钮区域（与 MotorControlPage 定义一致）
-                        currentPage.focusSubArea = 3
-                        currentPage.focusButtonIndex = 0
-                        console.log("✅ [导航] 其他页面：参数区域下键 → 底部按钮区域（focusSubArea=3，buttonIndex=0）")
+                        // ✅ 2026-03-04 [Phase 7.47.80]: 其他页面（开关量/模拟量）：参数区两列Down导航
+                        // 旧逻辑（Phase 7.47.76）：直接跳到底部按钮（不支持数据超时/连接超时导航）
+                        // 新逻辑：两列布局同列+2步，到达末尾才跳到底部按钮
+                        var cIdx = currentPage.focusParamIndex
+                        var pCount = currentPage.getParamFieldCount()
+                        var nextDown = cIdx + 2  // 两列布局：同列下移
+                        if (nextDown < pCount) {
+                            currentPage.focusParamIndex = nextDown
+                            console.log("✅ [导航] 其他页面参数区两列下键:", cIdx, "→", nextDown)
+                        } else {
+                            currentPage.focusSubArea = 3
+                            currentPage.focusButtonIndex = 0
+                            console.log("✅ [导航] 其他页面参数区末尾下键 → 底部按钮区域")
+                        }
                     }
 
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
@@ -1581,13 +1589,20 @@ Item {
                         var currentIndex = currentPage.focusParamIndex
                         var paramCount = currentPage.getParamFieldCount()
 
-                        // 两列交叉导航：左列（0,2,4,6,8） vs 右列（1,3,5,7）
+                        // 两列交叉导航：左列（0,2,4,6,8,10,12） vs 右列（1,3,5,7,9,11）
                         if (currentIndex % 2 === 0) {
                             // 当前在左列，切换到右列
                             var nextIndex = currentIndex + 1
                             if (nextIndex < paramCount) {
-                                currentPage.focusParamIndex = nextIndex
-                                console.log("✅ [导航] 参数区域：左列 → 右列，索引:", currentIndex, "→", nextIndex)
+                                // ✅ 2026-03-04 [Phase 7.47.80]: 检查右列是否为非交互占位
+                                var isInteractive = (typeof currentPage.isInteractiveParam === "function")
+                                                    ? currentPage.isInteractiveParam(nextIndex) : true
+                                if (isInteractive) {
+                                    currentPage.focusParamIndex = nextIndex
+                                    console.log("✅ [导航] 参数区域：左列 → 右列，索引:", currentIndex, "→", nextIndex)
+                                } else {
+                                    console.log("⚠️ [导航] 参数区域：右列为占位，保持左列（索引:", currentIndex, "）")
+                                }
                                 return  // 不切换到底部按钮
                             }
                         }

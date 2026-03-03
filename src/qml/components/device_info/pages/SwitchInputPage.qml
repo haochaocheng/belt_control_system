@@ -891,10 +891,11 @@ Rectangle {
                             }
                         }
 
-                        // ✅ 2026-02-28 [Phase 7.47.44 uipro]: 通道状态指示器 - 第五行右侧
-                        // uipro 设计: Cyberpunk 工业 LED 风格
-                        // - 灰色LED (不亮): channel = 0 / 未激活
-                        // - 绿色LED (脉冲闪烁): channel = 1 / 已激活
+                        /* ✅ 2026-03-04 [Phase 7.47.80]: 注释掉GridLayout内通道状态指示器
+                         * 原因：通道状态/MQTT服务/模块状态属于只读显示，不参与参数导航
+                         * 已移至 ScrollView 下方独立的「模块状态（只读）」区域
+                         */
+                        /*
                         Text {
                             text: "通道状态:"
                             font.pixelSize: 21
@@ -1025,6 +1026,7 @@ Rectangle {
                                 }
                             }
                         }
+                        */
 
                         // ✅ 2026-03-02 [Phase 7.47.67]: 第六行重排
                         // 左侧：超时时间设置（col 0-1）
@@ -1066,6 +1068,16 @@ Rectangle {
                                         mqttAutoManager.setDataTimeoutThreshold(value)
                                 }
                             }
+
+                            // ✅ 2026-03-04 [Phase 7.47.80]: 数据超时焦点指示器（参数索引10）
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 10) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 10) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
                         }
 
                         // ✅ 2026-03-02 [Phase 7.47.68]: 第七行 - 连接超时设置
@@ -1104,8 +1116,22 @@ Rectangle {
                                         mqttAutoManager.setBrokerConnectTimeout(value)
                                 }
                             }
+
+                            // ✅ 2026-03-04 [Phase 7.47.80]: 连接超时焦点指示器（参数索引12）
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 12) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 12) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
                         }
 
+                        /* ✅ 2026-03-04 [Phase 7.47.80]: 注释掉GridLayout内模块状态指示器
+                         * 原因：已移至 ScrollView 下方独立的「模块状态（只读）」区域
+                         */
+                        /*
                         Item {
                             id: moduleStatusItem
                             Layout.column: 2
@@ -1313,6 +1339,7 @@ Rectangle {
                                 }
                             }
                         }
+                        */
 
                     }  // GridLayout 结束
 
@@ -1865,6 +1892,301 @@ Rectangle {
                 */
             }  // ScrollView 结束
 
+            // ✅ 2026-03-04 [Phase 7.47.80]: 模块状态只读显示区
+            // 原因：通道状态/MQTT服务/模块状态为只读指示，不参与参数导航
+            //       从 GridLayout（参数区）移出，独立放在参数区下方、底部按钮上方
+            // 分隔线
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.leftMargin: 8
+                Layout.rightMargin: 8
+                height: 1
+                color: "#334455"
+                opacity: 0.7
+            }
+
+            // 状态显示行
+            Item {
+                Layout.fillWidth: true
+                implicitHeight: 80
+
+                // ── 标题 ──
+                Text {
+                    id: statusSectionLabel
+                    text: "模块状态（只读）"
+                    font.pixelSize: 11
+                    color: "#5a6f8f"
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.leftMargin: 8
+                }
+
+                Row {
+                    anchors.top: statusSectionLabel.bottom
+                    anchors.topMargin: 4
+                    anchors.left: parent.left
+                    anchors.leftMargin: 8
+                    spacing: 20
+                    height: 60
+
+                    // ── 通道状态 LED ──
+                    Item {
+                        id: channelStatusItem
+                        width: 160
+                        height: parent.height
+
+                        // 复用 GridLayout 中原 channelStatusItem 的 isActive 计算逻辑
+                        readonly property bool isActive: {
+                            if (root.currentProtectionIndex >= 0 &&
+                                root.currentProtectionIndex < digitalProtectionModel.count) {
+                                var item = digitalProtectionModel.get(root.currentProtectionIndex)
+                                var moduleIdx = (item.moduleType === "开关量输入模块1") ? 0 : 1
+                                if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
+                                    var hs = mqttAutoManager.healthStatus
+                                    if (moduleIdx >= 0 && moduleIdx < hs.length &&
+                                        hs[moduleIdx].status !== "正常")
+                                        return false
+                                }
+                                if (typeof diDataManager !== 'undefined' && diDataManager !== null) {
+                                    var _dep = (moduleIdx === 0) ? diDataManager.module1Data : diDataManager.module2Data
+                                    return diDataManager.getBit(moduleIdx, item.channelNumber)
+                                }
+                                return item.active
+                            }
+                            return false
+                        }
+
+                        Row {
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            spacing: 8
+
+                            Text {
+                                text: "通道:"
+                                font.pixelSize: 13
+                                color: "#9E9E9E"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            // LED 外环
+                            Item {
+                                width: 36; height: 36
+                                anchors.verticalCenter: parent.verticalCenter
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 36; height: 36; radius: 18
+                                    color: "transparent"
+                                    border.width: 2
+                                    border.color: channelStatusItem.isActive ? "#22C55E" : "#475569"
+                                    opacity: 0.4
+                                    SequentialAnimation on opacity {
+                                        running: channelStatusItem.isActive
+                                        loops: Animation.Infinite
+                                        NumberAnimation { to: 0.05; duration: 900; easing.type: Easing.InOutSine }
+                                        NumberAnimation { to: 0.55; duration: 900; easing.type: Easing.InOutSine }
+                                    }
+                                }
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 20; height: 20; radius: 10
+                                    color: channelStatusItem.isActive ? "#22C55E" : "#475569"
+                                    Rectangle {
+                                        width: 6; height: 6; radius: 3
+                                        color: channelStatusItem.isActive ? "#86EFAC" : "#64748B"
+                                        anchors.top: parent.top; anchors.left: parent.left
+                                        anchors.margins: 4
+                                    }
+                                }
+                            }
+
+                            Column {
+                                spacing: 1
+                                anchors.verticalCenter: parent.verticalCenter
+                                Text {
+                                    text: channelStatusItem.isActive ? "激活(1)" : "正常(0)"
+                                    font.pixelSize: 12; font.weight: Font.Medium
+                                    color: channelStatusItem.isActive ? "#22C55E" : "#64748B"
+                                }
+                                Text {
+                                    text: channelStatusItem.isActive ? "保护触发" : "通道正常"
+                                    font.pixelSize: 10
+                                    color: channelStatusItem.isActive ? "#86EFAC" : "#475569"
+                                }
+                            }
+                        }
+                    }
+
+                    // 竖向分隔线
+                    Rectangle {
+                        width: 1; height: parent.height * 0.8
+                        color: "#2a3a4a"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    // ── 模块状态双层指示器 ──
+                    Item {
+                        id: moduleStatusItem
+                        width: 230
+                        height: parent.height
+
+                        property int _healthTick: 0
+                        Connections {
+                            target: typeof mqttAutoManager !== 'undefined' ? mqttAutoManager : null
+                            ignoreUnknownSignals: true
+                            function onHealthStatusChanged() { moduleStatusItem._healthTick++ }
+                        }
+
+                        readonly property int moduleIndex: {
+                            if (root.currentProtectionIndex >= 0 &&
+                                root.currentProtectionIndex < digitalProtectionModel.count) {
+                                var item = digitalProtectionModel.get(root.currentProtectionIndex)
+                                return (item.moduleType === "开关量输入模块1") ? 0 : 1
+                            }
+                            return 0
+                        }
+                        readonly property bool mqttServiceOnline: {
+                            var tick = _healthTick
+                            if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
+                                var hs = mqttAutoManager.healthStatus
+                                if (moduleIndex >= 0 && moduleIndex < hs.length)
+                                    return hs[moduleIndex].connected
+                            }
+                            return false
+                        }
+                        readonly property bool hardwareOnline: {
+                            var tick = _healthTick
+                            if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
+                                var hs = mqttAutoManager.healthStatus
+                                if (moduleIndex >= 0 && moduleIndex < hs.length)
+                                    return hs[moduleIndex].status === "正常"
+                            }
+                            return false
+                        }
+
+                        Row {
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            spacing: 0
+
+                            // 左：MQTT服务状态
+                            Column {
+                                spacing: 2
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 84
+
+                                Item {
+                                    width: 28; height: 28
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 28; height: 28; radius: 14
+                                        color: "transparent"; border.width: 2
+                                        border.color: moduleStatusItem.mqttServiceOnline ? "#22C55E" : "#ff4757"
+                                        opacity: 0.35
+                                        SequentialAnimation on opacity {
+                                            running: moduleStatusItem.mqttServiceOnline
+                                            loops: Animation.Infinite
+                                            NumberAnimation { to: 0.05; duration: 1400; easing.type: Easing.InOutSine }
+                                            NumberAnimation { to: 0.5;  duration: 1400; easing.type: Easing.InOutSine }
+                                        }
+                                    }
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 16; height: 16; radius: 8
+                                        color: moduleStatusItem.mqttServiceOnline ? "#22C55E" : "#ff4757"
+                                        Rectangle {
+                                            width: 4; height: 4; radius: 2
+                                            color: moduleStatusItem.mqttServiceOnline ? "#86EFAC" : "#fca5a5"
+                                            anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 3
+                                        }
+                                    }
+                                }
+                                Text {
+                                    text: moduleStatusItem.mqttServiceOnline ? "服务在线" : "服务离线"
+                                    font.pixelSize: 11; font.weight: Font.Medium
+                                    color: moduleStatusItem.mqttServiceOnline ? "#22C55E" : "#ff4757"
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                                Text {
+                                    text: "MQTT服务"
+                                    font.pixelSize: 9; color: "#607080"
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                            }
+
+                            Rectangle { width: 1; height: 48; color: "#2a3a4a"; anchors.verticalCenter: parent.verticalCenter }
+
+                            // 右：硬件模块状态
+                            Column {
+                                spacing: 2
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 108
+                                leftPadding: 8
+
+                                property color modColor: {
+                                    if (moduleStatusItem.hardwareOnline)    return "#00d4ff"
+                                    if (moduleStatusItem.mqttServiceOnline) return "#f59e0b"
+                                    return "#475569"
+                                }
+                                property color modHighlight: {
+                                    if (moduleStatusItem.hardwareOnline)    return "#7dd3fc"
+                                    if (moduleStatusItem.mqttServiceOnline) return "#fcd34d"
+                                    return "#64748b"
+                                }
+
+                                Item {
+                                    width: 28; height: 28
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 28; height: 28; radius: 14
+                                        color: "transparent"; border.width: 2
+                                        border.color: parent.parent.modColor
+                                        opacity: 0.35
+                                        SequentialAnimation on opacity {
+                                            running: moduleStatusItem.hardwareOnline
+                                            loops: Animation.Infinite
+                                            NumberAnimation { to: 0.05; duration: 1200; easing.type: Easing.InOutSine }
+                                            NumberAnimation { to: 0.55; duration: 1200; easing.type: Easing.InOutSine }
+                                        }
+                                    }
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 16; height: 16; radius: 8
+                                        color: parent.parent.modColor
+                                        Rectangle {
+                                            width: 4; height: 4; radius: 2
+                                            color: parent.parent.modHighlight
+                                            anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 3
+                                        }
+                                    }
+                                }
+                                Text {
+                                    text: {
+                                        if (moduleStatusItem.hardwareOnline)    return "模块在线"
+                                        if (moduleStatusItem.mqttServiceOnline) return "模块无响应"
+                                        return "无法检测"
+                                    }
+                                    font.pixelSize: 11; font.weight: Font.Medium
+                                    color: parent.modColor
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                                Text {
+                                    text: {
+                                        if (root.currentProtectionIndex >= 0 &&
+                                            root.currentProtectionIndex < digitalProtectionModel.count)
+                                            return digitalProtectionModel.get(root.currentProtectionIndex).moduleType
+                                        return "开关量输入模块"
+                                    }
+                                    font.pixelSize: 9; color: "#607080"
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
                 Rectangle {
                     Layout.fillWidth: true
                     height: 1
@@ -2174,11 +2496,23 @@ Rectangle {
 
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.29]: 获取参数字段数量
     function getParamFieldCount() {
-        // 返回参数区域的输入组件数量
-        // 已添加全部9个控件：
-        // 保护名称(0)、播放次数(1)、模块类型(2)、播放时长(3)
-        // 寄存器地址(4)、TTS文字(5)、通道编号(6)、音频文件(7)、保护延时(8)
-        return 9
+        // ✅ 2026-03-04 [Phase 7.47.80]: 扩展为13（新增数据超时/连接超时可导航）
+        // 旧值：9（仅保护参数0-8）
+        // 新值：13（包含数据超时10、连接超时12；9/11为占位，不可交互）
+        // 索引说明：
+        //   0-8:  保护参数（保护名称0、播放次数1、模块类型2、播放时长3、
+        //          寄存器地址4、TTS文字5、通道编号6、音频文件7、保护延时8）
+        //   9:    占位（row4右列，通道状态已移出，不可交互）
+        //   10:   数据超时 SpinBox（可交互）
+        //   11:   占位（row5右列，模块状态已移出，不可交互）
+        //   12:   连接超时 SpinBox（可交互）
+        return 13
+    }
+
+    // ✅ 2026-03-04 [Phase 7.47.80]: 判断索引是否为可交互参数
+    // 返回 false 表示该索引是占位行（原通道状态/模块状态的位置），右键不应导航到此处
+    function isInteractiveParam(paramIndex) {
+        return (paramIndex !== 9 && paramIndex !== 11)
     }
 
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.32]: 触发参数输入（弹出虚拟键盘）
@@ -2225,6 +2559,22 @@ Rectangle {
             break
         case 8:
             inputField = delaySpin           // 保护延时（SpinBox）
+            inputMode = "numeric"
+            break
+        // ✅ 2026-03-04 [Phase 7.47.80]: 新增数据超时(10)、连接超时(12)的输入处理
+        // 索引9/11为占位（通道状态/模块状态已移出），不触发输入
+        case 9:
+            console.warn("⚠️ [SwitchInputPage] 索引9为占位（通道状态已移出），跳过触发")
+            return
+        case 10:
+            inputField = timeoutSpin         // 数据超时（SpinBox）
+            inputMode = "numeric"
+            break
+        case 11:
+            console.warn("⚠️ [SwitchInputPage] 索引11为占位（模块状态已移出），跳过触发")
+            return
+        case 12:
+            inputField = brokerTimeoutSpin   // 连接超时（SpinBox）
             inputMode = "numeric"
             break
         default:
