@@ -1315,18 +1315,18 @@ Item {
 
                     // ✅ 2026-03-04 [Phase 7.47.85]: 其他页面：底部按钮区域：左键导航
                 } else if (currentPage.focusSubArea === 3) {
-                    // ✅ 2026-03-04 [Phase 7.47.85]: 底部按钮区左键导航（单行布局）
-                    // 旧布局（Phase 7.47.76）：第一行(0,1) 第二行(2,3,4)
-                    // 新布局（Phase 7.47.77）：单行(0,1,2)（添加输入 | 删除输入 | 删除保护项）
+                    // ✅ 2026-03-04 [Phase 7.47.86]: 底部按钮区左键导航（2 按钮布局）
+                    // 旧布局（Phase 7.47.77）：单行(0,1,2)（添加输入 | 删除输入 | 删除保护项）
+                    // 新布局（Phase 7.47.86）：单行(0,1)（添加保护项 | 删除保护项）
                     var buttonIndex = currentPage.focusButtonIndex
 
                     if (buttonIndex > 0) {
-                        // 单行左移：2→1→0
+                        // 2 按钮左移：1→0
                         currentPage.focusButtonIndex = buttonIndex - 1
                         console.log("✅ [导航] 底部按钮左移:", buttonIndex, "→", buttonIndex - 1)
                         return
                     } else {
-                        // 已在最左侧（添加输入），保持焦点
+                        // 已在最左侧（添加保护项），保持焦点
                         console.log("⚠️ [导航] 已在底部按钮最左侧")
                         return
                     }
@@ -1649,13 +1649,13 @@ Item {
 
                     // ✅ 2026-03-04 [Phase 7.47.84]: 其他页面：底部按钮区域：右键导航
                 } else if (currentPage.focusSubArea === 3) {
-                    // ✅ 2026-03-04 [Phase 7.47.84]: 底部按钮区右键导航（单行布局）
-                    // 旧布局（Phase 7.47.76）：第一行(0,1) 第二行(2,3,4)
-                    // 新布局（Phase 7.47.77）：单行(0,1,2)（添加输入 | 删除输入 | 删除保护项）
+                    // ✅ 2026-03-04 [Phase 7.47.86]: 底部按钮区右键导航（2 按钮布局）
+                    // 旧布局（Phase 7.47.77）：单行(0,1,2)（添加输入 | 删除输入 | 删除保护项）
+                    // 新布局（Phase 7.47.86）：单行(0,1)（添加保护项 | 删除保护项）
                     var buttonIndex = currentPage.focusButtonIndex
 
-                    if (buttonIndex < 2) {
-                        // 单行右移：0→1→2
+                    if (buttonIndex < 1) {
+                        // 2 按钮右移：0→1
                         currentPage.focusButtonIndex = buttonIndex + 1
                         console.log("✅ [导航] 底部按钮右移:", buttonIndex, "→", buttonIndex + 1)
                         return

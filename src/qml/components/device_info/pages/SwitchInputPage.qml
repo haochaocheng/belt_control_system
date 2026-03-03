@@ -2196,15 +2196,15 @@ Rectangle {
                     opacity: 0.3
                 }
 
-                // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.30]: 底部按钮区域（两行布局）
-                // 第一行：添加输入、删除输入
+                // ✅ 2026-03-04 [Phase 7.47.86]: 简化为 2 个按钮（添加保护项 | 删除保护项）
+                // 旧布局（Phase 7.47.77）：3 个按钮（添加输入 | 删除输入 | 删除保护项）
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
 
                     Button {
-                        id: addInputButton
-                        text: "添加输入"
+                        id: addProtectionButton
+                        text: "添加保护项"
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
 
@@ -2225,41 +2225,11 @@ Rectangle {
                         }
 
                         onClicked: {
-                            console.log("添加输入")
-                            // TODO: 实现添加输入功能
+                            console.log("添加保护项")
+                            // TODO: 实现添加保护项功能
                         }
                     }
 
-                    Button {
-                        id: deleteInputButton
-                        text: "删除输入"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
-                            radius: 2
-                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? 3 : 0
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 13
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("删除输入:", nameField.text)
-                            // TODO: 实现删除输入功能
-                        }
-                    }
-
-                    // ✅ 2026-03-03 [Phase 7.47.77]: 新增"删除保护项"按钮（原第二行独立按钮，合并入第一行）
-                    // 将原第二行的"删除"功能移至此处，与添加/删除输入统一为单行布局
                     Button {
                         id: deleteProtectionButton
                         text: "删除保护项"
@@ -2269,8 +2239,8 @@ Rectangle {
                         background: Rectangle {
                             color: parent.pressed ? "#8e44ad" : (parent.hovered ? "#9b59b6" : "#8e44ad")
                             radius: 2
-                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? 3 : 0
+                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
+                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? 3 : 0
                         }
 
                         contentItem: Text {
