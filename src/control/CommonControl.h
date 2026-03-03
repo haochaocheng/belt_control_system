@@ -4,11 +4,16 @@
 #include <QObject>
 #include <QMediaPlayer>
 #include <QAudioOutput>
+// ❌ 2026-03-03 [Phase 7.47.75]: 回退 QSoundEffect，在 Docker 容器中失败
+// 原因：QSoundEffect 通过 QAudioSink 需要 Qt 枚举音频设备
+//        容器无 PulseAudio → Qt 枚举为空 → "No audio device detected"
+//        与当初改用 QMediaPlayer+GStreamer 的原因完全一致
+//        另外：play() 调用时文件仍在 Loading，isPlaying()=false → playingChanged 立刻误触发
 // ✅ 2026-03-03 [Phase 7.47.73]: 添加 QSoundEffect，用于替代 QMediaPlayer 本地播放
-// 原因：QMediaPlayer 依赖 GStreamer 流式 pipeline，每次 setSource() 重建 pipeline
-//        引发 Buffer Underrun，导致语音卡顿。QSoundEffect 预加载 WAV 到内存后
-//        通过 QAudioSink 直接写 ALSA，与 aplay 路径相同，无流式重采样卡顿。
-#include <QSoundEffect>
+// // 原因：QMediaPlayer 依赖 GStreamer 流式 pipeline，每次 setSource() 重建 pipeline
+// //        引发 Buffer Underrun，导致语音卡顿。QSoundEffect 预加载 WAV 到内存后
+// //        通过 QAudioSink 直接写 ALSA，与 aplay 路径相同，无流式重采样卡顿。
+// #include <QSoundEffect>
 #include <QKeyEvent>
 #include <QTimer>
 #include <QElapsedTimer>  // ✅ 2026-02-26 [Phase 7.47.8]: 播放时长计时器
@@ -234,13 +239,16 @@ private slots:
 private:
     QMediaPlayer *m_mediaPlayer;   // 音频播放器（GStreamer 后端，用于网络/复杂场景）
     QAudioOutput *m_audioOutput;   // 音频输出（配套 QMediaPlayer）
+    // ❌ 2026-03-03 [Phase 7.47.75]: QSoundEffect 在 Docker 容器中失败，已回退
+    //    "No audio device detected"：QAudioSink 需枚举设备，容器无 PulseAudio → 枚举为空
+    //    play() 时 isPlaying()=false → playingChanged 立刻误触发 onPlaybackFinished()（0秒）
     // ✅ 2026-03-03 [Phase 7.47.73]: QSoundEffect 本地播放（优先，低延迟无卡顿）
-    // 历史原因：选 QMediaPlayer 是因为容器无 PulseAudio 时 Qt 无法枚举 ALSA 设备
-    //   但枚举失败 ≠ 播放失败。QSoundEffect 用 QAudioSink 直接写 ALSA default
-    //   与 aplay 同路径，不受枚举限制，且无 GStreamer 流式 pipeline 开销。
-    // 策略：本地播放优先用 QSoundEffect；失败（status=Error）时回退 QMediaPlayer
-    QSoundEffect *m_soundEffect;       // 低延迟本地播放（QAudioSink → ALSA direct）
-    bool m_usingSoundEffect;           // 当前是否正在用 QSoundEffect 播放
+    // // 历史原因：选 QMediaPlayer 是因为容器无 PulseAudio 时 Qt 无法枚举 ALSA 设备
+    // //   但枚举失败 ≠ 播放失败。QSoundEffect 用 QAudioSink 直接写 ALSA default
+    // //   与 aplay 同路径，不受枚举限制，且无 GStreamer 流式 pipeline 开销。
+    // // 策略：本地播放优先用 QSoundEffect；失败（status=Error）时回退 QMediaPlayer
+    // QSoundEffect *m_soundEffect;       // 低延迟本地播放（QAudioSink → ALSA direct）
+    // bool m_usingSoundEffect;           // 当前是否正在用 QSoundEffect 播放
     SystemConfig *m_systemConfig;  // 系统配置
     NetworkTask *m_networkTask;    // 网络任务（Modbus控制）
     class OperationLogDatabase *m_operationLogDB;  // 运行日志数据库
