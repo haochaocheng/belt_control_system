@@ -1976,8 +1976,8 @@ Item {
                         // ✅ 2026-03-01 [Phase 7.47.59]: 按下时变深，悬停时显示背景
                         color: closeButton.pressed ? "#37474F" :
                                closeButton.hovered ? "#263238" : "transparent"
-                        border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 0) ? "#2196F3" : "#3d4556"
-                        border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 0) ? 3 : 2
+                        border.color: (root.currentFocusArea === 0 && root.currentTopButtonIndex === 0) ? "#2196F3" : "#3d4556"
+                        border.width: (root.currentFocusArea === 0 && root.currentTopButtonIndex === 0) ? 3 : 2
                         radius: 4
                         opacity: 1.0
                         Behavior on color { ColorAnimation { duration: 150 } }
@@ -2037,8 +2037,8 @@ Item {
                         color: root.isReadOnly ? "#757575" :
                                saveButton.pressed ? "#1565C0" :
                                saveButton.hovered ? "#42A5F5" : "#2196F3"
-                        border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 1) ? "#FFFFFF" : (root.isReadOnly ? "#9E9E9E" : "#42A5F5")
-                        border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 1) ? 3 : 1
+                        border.color: (root.currentFocusArea === 0 && root.currentTopButtonIndex === 1) ? "#FFFFFF" : (root.isReadOnly ? "#9E9E9E" : "#42A5F5")
+                        border.width: (root.currentFocusArea === 0 && root.currentTopButtonIndex === 1) ? 3 : 1
                         radius: 4
                         opacity: root.isReadOnly ? 0.5 : 1.0  // 禁用时半透明
                         // ✅ 2026-03-01 [Phase 7.47.59]: 平滑过渡动画
@@ -2112,8 +2112,8 @@ Item {
                         color: root.isReadOnly ? "#757575" :
                                resetButton.pressed ? "#E65100" :
                                resetButton.hovered ? "#FFB74D" : "#FF9800"
-                        border.color: (root.currentFocusArea === 0 && currentTopButtonIndex === 2) ? "#FFFFFF" : (root.isReadOnly ? "#9E9E9E" : "#FF9800")
-                        border.width: (root.currentFocusArea === 0 && currentTopButtonIndex === 2) ? 3 : 1
+                        border.color: (root.currentFocusArea === 0 && root.currentTopButtonIndex === 2) ? "#FFFFFF" : (root.isReadOnly ? "#9E9E9E" : "#FF9800")
+                        border.width: (root.currentFocusArea === 0 && root.currentTopButtonIndex === 2) ? 3 : 1
                         radius: 4
                         opacity: root.isReadOnly ? 0.5 : 1.0  // 禁用时半透明
                         Behavior on color { ColorAnimation { duration: 150 } }
