@@ -21,6 +21,8 @@ CommonControl::CommonControl(QObject *parent)
     : QObject(parent)
     , m_mediaPlayer(new QMediaPlayer(this))
     , m_audioOutput(nullptr)  // ✅ 2026-01-21 [音频设备] 延迟初始化，需要先选择设备
+    , m_soundEffect(new QSoundEffect(this))   // ✅ 2026-03-03 [Phase 7.47.73]: 低延迟本地播放
+    , m_usingSoundEffect(false)
     , m_systemConfig(nullptr)
     , m_networkTask(nullptr)
     , m_operationLogDB(nullptr)
@@ -77,6 +79,35 @@ CommonControl::CommonControl(QObject *parent)
 
     qDebug() << "🔊 CommonControl: 音频输出已配置（使用 ALSA 默认设备 → ES8388）";
 
+    // ✅ 2026-03-03 [Phase 7.47.73]: 初始化 QSoundEffect（低延迟本地播放）
+    // QSoundEffect 通过 QAudioSink 直接写 ALSA default，与 aplay 路径相同
+    // 不依赖 GStreamer 流式 pipeline，无重采样卡顿，无 pipeline 重建开销
+    m_soundEffect->setVolume(1.0);
+
+    // ① QSoundEffect 播放结束 → 触发 onPlaybackFinished()（仅当由 QSoundEffect 主播时）
+    connect(m_soundEffect, &QSoundEffect::playingChanged, this, [this]() {
+        if (!m_soundEffect->isPlaying() && m_usingSoundEffect) {
+            m_usingSoundEffect = false;
+            qint64 playbackMs = m_playbackTimer.elapsed();
+            qDebug() << "✅ [QSoundEffect] 播放结束，时长:" << QString::number(playbackMs / 1000.0, 'f', 2) << "秒";
+            onPlaybackFinished();
+        }
+    });
+
+    // ② QSoundEffect 加载失败 → 回退到 QMediaPlayer
+    connect(m_soundEffect, &QSoundEffect::statusChanged, this, [this]() {
+        if (m_soundEffect->status() == QSoundEffect::Error && m_usingSoundEffect) {
+            qWarning() << "⚠️ [QSoundEffect] 加载失败，回退到 QMediaPlayer:" << m_soundEffect->source();
+            m_usingSoundEffect = false;
+            // 重置 QMediaPlayer 并用旧方式播放
+            m_mediaPlayer->setSource(QUrl());
+            m_mediaPlayer->setSource(m_soundEffect->source());
+            m_mediaPlayer->play();
+        }
+        qDebug() << "   [QSoundEffect] status:" << m_soundEffect->status()
+                 << "| source:" << m_soundEffect->source().fileName();
+    });
+
     // ✅ 2026-01-21 16:00 [DEBUG] 连接播放状态变化信号
     // 原因：监控播放状态转换时间，定位卡顿发生的阶段
     connect(m_mediaPlayer, &QMediaPlayer::errorOccurred,
@@ -104,7 +135,14 @@ CommonControl::CommonControl(QObject *parent)
                 }
 
                 if (state == QMediaPlayer::StoppedState) {
-                    onPlaybackFinished();
+                    // ✅ 2026-03-03 [Phase 7.47.73]: 守卫：QSoundEffect 播放期间忽略 QMediaPlayer 停止信号
+                    // 原因：playAudio() 开头调用 m_mediaPlayer->stop() 会触发此信号
+                    //        若此时 QSoundEffect 正在（或即将）播放，不应提前触发 onPlaybackFinished()
+                    if (!m_usingSoundEffect) {
+                        onPlaybackFinished();
+                    } else {
+                        qDebug() << "   [守卫] QSoundEffect 播放中，忽略 QMediaPlayer Stopped 信号";
+                    }
                 }
             });
 
@@ -346,12 +384,17 @@ void CommonControl::playAudio(const QString &audioPath)
 
     switch (m_audioOutputMode) {
         case LocalOnly: {
-            // ❌ 2026-01-21 20:55 [编译修复] 添加大括号隔离作用域（避免"跨越变量初始化"错误）
-            // 仅播放到本地 ES8388
-            qDebug() << "   [本地播放] 开始播放到 ES8388...";
-            qint64 playTime = timer.elapsed();
-            m_mediaPlayer->play();
-            qDebug() << "   [播放] play() 调用耗时:" << (timer.elapsed() - playTime) << "ms";
+            // ✅ 2026-03-03 [Phase 7.47.73]: 优先使用 QSoundEffect 播放（无 GStreamer pipeline 重建，无卡顿）
+            // 历史用 QMediaPlayer 是因为容器无 PulseAudio 无法枚举 ALSA 设备
+            // 但 QSoundEffect 走 QAudioSink → ALSA direct，不需要枚举，与 aplay 路径相同
+            // ❌ 旧代码: m_mediaPlayer->play()
+            qDebug() << "   [本地播放] 尝试 QSoundEffect（直接 ALSA，无流式卡顿）...";
+            m_usingSoundEffect = true;
+            m_playbackTimer.start();
+            m_soundEffect->setSource(QUrl::fromLocalFile(audioPath));
+            m_soundEffect->play();
+            // 若 QSoundEffect 加载失败（status=Error），statusChanged 信号会自动回退到 QMediaPlayer
+            qDebug() << "   [QSoundEffect] play() 调用耗时:" << timer.elapsed() << "ms";
             break;
         }
 
@@ -381,13 +424,16 @@ void CommonControl::playAudio(const QString &audioPath)
             if (m_audioNetworkTcpSender->isConnected()) {
                 m_audioNetworkTcpSender->playAudioToNetwork(audioPath);
             } else {
-                // ✅ 2026-02-25 [Phase 7.47.8]: TCP 未连接时回退到本地播放
-                // 原因：用户需要同时保留 TCP 网络播放和本地播放两种模式
-                // 效果：TCP 服务器未连接时，自动使用本地 ES8388 播放
-                qWarning() << "   [TCP发送] ⚠️ 未连接到 TCP 服务器，回退到本地播放";
-                qint64 playTime = timer.elapsed();
-                m_mediaPlayer->play();
-                qDebug() << "   [本地播放] play() 调用耗时:" << (timer.elapsed() - playTime) << "ms";
+                // ✅ 2026-03-03 [Phase 7.47.73]: TCP 未连接时回退到 QSoundEffect（替代旧的 QMediaPlayer 回退）
+                // 旧代码: m_mediaPlayer->play()  → GStreamer 流式卡顿
+                // 新代码: QSoundEffect → QAudioSink → ALSA direct（与 aplay 路径相同，无卡顿）
+                // 若 QSoundEffect 失败（status=Error），statusChanged 信号自动回退到 QMediaPlayer
+                qWarning() << "   [TCP发送] ⚠️ 未连接到 TCP 服务器，用 QSoundEffect 本地播放";
+                m_usingSoundEffect = true;
+                m_playbackTimer.start();
+                m_soundEffect->setSource(QUrl::fromLocalFile(audioPath));
+                m_soundEffect->play();
+                qDebug() << "   [QSoundEffect] play() 调用耗时:" << timer.elapsed() << "ms";
             }
             break;
         }
