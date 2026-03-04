@@ -17,6 +17,7 @@ AlarmPlaybackService::AlarmPlaybackService(QObject *parent)
     , m_playTimer(new QTimer(this))
     , m_durationTimer(new QTimer(this))
     , m_isPlaying(false)
+    , m_hasStartedPlaying(false)
 {
     qDebug() << "✅ AlarmPlaybackService: 报警播放服务已创建";
 
@@ -200,6 +201,9 @@ void AlarmPlaybackService::playAudioFile(const QString &audioFile)
 
     qDebug() << "🔊 AlarmPlaybackService: 播放音频文件:" << audioFile;
 
+    // ✅ 2026-03-04 [Phase 7.48.1]: 重置播放标志，防止 setSource 虚假 StoppedState 触发定时器
+    m_hasStartedPlaying = false;
+
     // 检查是否是同一个音频文件（重复播放场景）
     QUrl currentSource = m_mediaPlayer->source();
     QUrl newSource = QUrl::fromLocalFile(audioFile);
@@ -264,6 +268,7 @@ void AlarmPlaybackService::stopCurrentPlayback()
     m_durationTimer->stop();
 
     m_isPlaying = false;
+    m_hasStartedPlaying = false;
 }
 
 void AlarmPlaybackService::handleNextPlayback()
@@ -315,6 +320,11 @@ void AlarmPlaybackService::handleNextPlayback()
         } else {
             playAudioFile(m_currentPlayback.audioFile);
         }
+    // ✅ 2026-03-04 [Phase 7.48.0]: 修复缺少 } else if 导致 count/duration 模式代码混在一起
+    // 旧代码：count 模式的代码块没有关闭，duration 模式的代码直接跟在后面
+    // 问题：count 模式时，currentPlayCount 被双重递增（count模式+1，duration模式+1=每次+2）
+    //       导致 playCount=3 时只播放 2 次（count: 0→2→4→停止）
+    } else if (m_currentPlayback.playMode == "duration") {
         // ========== 按时长播放模式 ==========
         // 增加播放计数（用于首次播放判断）
         m_currentPlayback.currentPlayCount++;
@@ -381,12 +391,32 @@ void AlarmPlaybackService::handleNextPlayback()
 
 void AlarmPlaybackService::onMediaPlayerStateChanged(QMediaPlayer::PlaybackState state)
 {
-    qDebug() << "📻 AlarmPlaybackService: 媒体播放器状态变化:" << state;
+    qDebug() << "📻 AlarmPlaybackService: 媒体播放器状态变化:" << state
+             << "mediaStatus:" << m_mediaPlayer->mediaStatus()
+             << "hasStartedPlaying:" << m_hasStartedPlaying;
+
+    // ✅ 2026-03-04 [Phase 7.48.1]: 使用 m_hasStartedPlaying 标志区分虚假和真实的 StoppedState
+    // 旧代码 [Phase 7.48.0]: 检查 mediaStatus == EndOfMedia（过于严格）
+    // 问题：RK3588 GStreamer 后端，音频自然播放结束时 mediaStatus 是 BufferedMedia 而非 EndOfMedia
+    //       导致自然结束也被忽略 → 定时器永不启动 → 只播放一次就卡住
+    // 修复：PlayingState 时设置 m_hasStartedPlaying=true，
+    //       StoppedState 时只有 m_hasStartedPlaying==true 才启动定时器
+    //       这样 setSource() 触发的虚假 StoppedState（发生在 PlayingState 之前）被正确过滤
+
+    if (state == QMediaPlayer::PlayingState) {
+        m_hasStartedPlaying = true;
+    }
 
     if (state == QMediaPlayer::StoppedState) {
-        // 播放结束，延时后进行下一次播放
-        // 延时500ms，避免播放过快
-        m_playTimer->start(500);
+        if (m_isPlaying && m_hasStartedPlaying) {
+            // 音频已经进入过 PlayingState，说明是自然播放结束
+            m_hasStartedPlaying = false;
+            m_playTimer->start(500);
+            qDebug() << "  ✅ 音频自然播放结束，500ms后进行下一次播放";
+        } else {
+            qDebug() << "  ℹ️  忽略非自然结束的StoppedState (isPlaying:"
+                     << m_isPlaying << "hasStartedPlaying:" << m_hasStartedPlaying << ")";
+        }
     }
 }
 

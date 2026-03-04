@@ -129,6 +129,10 @@ private:
     // 播放状态
     bool m_isPlaying;
 
+    // ✅ 2026-03-04 [Phase 7.48.1]: 标记音频是否已进入播放状态
+    // 用于区分 setSource() 虚假 StoppedState 和自然播放结束的 StoppedState
+    bool m_hasStartedPlaying;
+
     // ✅ 2026-03-04 [Phase 7.47.99]: 注释掉TTS缓存成员变量
     // QMap<QString, QString> m_ttsCache;  // 文本 -> 缓存文件路径
     // QString m_ttsCacheDir;  // TTS缓存目录
