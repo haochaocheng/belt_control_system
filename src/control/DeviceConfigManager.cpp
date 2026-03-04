@@ -122,7 +122,7 @@ bool DeviceConfigManager::createTables()
             protection_delay REAL DEFAULT 1.0,
             play_count INTEGER DEFAULT 3,
             play_duration REAL DEFAULT 5.0,
-            // ✅ 2026-02-28 [Phase 7.47.52]: 默认改为0（默认音频），旧值1导致新建保护默认TTS
+            -- 2026-02-28 Phase 7.47.52: 默认改为0（默认音频），旧值1导致新建保护默认TTS
             use_text_to_speech BOOLEAN DEFAULT 0,
             tts_text TEXT,
             audio_file TEXT,
@@ -135,10 +135,12 @@ bool DeviceConfigManager::createTables()
     )";
 
     if (!query.exec(createDigitalProtectionsTable)) {
+        // ✅ 2026-03-04 [Phase 7.48.3]: 表已存在时不中断，允许后续 ALTER TABLE 迁移执行
+        // 旧代码：return false; 导致 ALTER TABLE 永远不执行，新列无法添加
         QString error = "创建device_digital_protections表失败: " + query.lastError().text();
         qCritical() << error;
         emit databaseError(error);
-        return false;
+        // return false;  // ✅ 2026-03-04: 不再提前退出，继续执行迁移
     }
 
     query.exec("CREATE INDEX IF NOT EXISTS idx_digital_protections_device ON device_digital_protections(device_id)");
@@ -168,7 +170,7 @@ bool DeviceConfigManager::createTables()
             protection_delay REAL DEFAULT 1.0,
             play_count INTEGER DEFAULT 3,
             play_duration REAL DEFAULT 5.0,
-            // ✅ 2026-02-28 [Phase 7.47.52]: 默认改为0（默认音频）
+            -- 2026-02-28 Phase 7.47.52: 默认改为0（默认音频）
             use_text_to_speech BOOLEAN DEFAULT 0,
             tts_text TEXT,
             audio_file TEXT,
@@ -181,10 +183,11 @@ bool DeviceConfigManager::createTables()
     )";
 
     if (!query.exec(createAnalogProtectionsTable)) {
+        // ✅ 2026-03-04 [Phase 7.48.3]: 与 digital_protections 表一致，不提前退出
         QString error = "创建device_analog_protections表失败: " + query.lastError().text();
         qCritical() << error;
         emit databaseError(error);
-        return false;
+        // return false;  // ✅ 2026-03-04: 不再提前退出，继续执行迁移
     }
 
     query.exec("CREATE INDEX IF NOT EXISTS idx_analog_protections_device ON device_analog_protections(device_id)");
