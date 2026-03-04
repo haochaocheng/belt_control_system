@@ -3,6 +3,7 @@
 #include "CommonControl.h"
 #include "DataPathConfig.h"      // ✅ 2026-02-28 [Phase 7.47.43]: 统一音频路径
 #include "DeviceConfigManager.h" // ✅ 2026-02-28 [Phase 7.47.49]: 查询use_text_to_speech
+#include "AlarmPlaybackService.h" // ✅ 2026-03-04 [Phase 7.47.95]: 按次数/按时长播放
 #include <QDebug>
 #include <QFile>
 
@@ -21,6 +22,7 @@ MqttProtectionMonitor::MqttProtectionMonitor(DIDataManager *diManager,
     //       AudioPathMapper("/app/audio") 会查找不存在的路径，导致音频文件找不到
     , m_audioPathMapper(new AudioPathMapper())
     , m_deviceConfigMgr(nullptr)  // ✅ 2026-02-28 [Phase 7.47.49]: 由main.cpp通过setDeviceConfigManager注入
+    , m_alarmPlaybackService(nullptr) // ✅ 2026-03-04 [Phase 7.47.95]: 由main.cpp通过setAlarmPlaybackService注入
     , m_isRunning(false)
 {
     // ✅ 2026-02-28 [Phase 7.47.43]: 使用DataPathConfig统一音频目录
@@ -142,6 +144,11 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
     // 旧：bool useTTS = true;
     QString audioPath;
     bool useTTS = false;
+    // ✅ 2026-03-04 [Phase 7.47.95]: 读取播放方式参数
+    QString playMode = "count";  // 默认按次数
+    int playCount = 3;           // 默认3次
+    double playDuration = 5.0;   // 默认5秒
+    QString ttsText;
 
     if (m_deviceConfigMgr) {
         // 查询DB获取该保护的音频来源设置
@@ -151,8 +158,15 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
             // ✅ 2026-03-01 [Phase 7.47.56]: 默认回退值改为0（默认音频），旧值1导致字段缺失时也走TTS
             // 旧：protection.value("use_text_to_speech", 1).toInt() == 1
             useTTS = (protection.value("use_text_to_speech", 0).toInt() == 1);
+            // ✅ 2026-03-04 [Phase 7.47.95]: 读取播放方式、次数、时长
+            playMode = protection.value("play_mode", "count").toString();
+            playCount = protection.value("play_count", 3).toInt();
+            playDuration = protection.value("play_duration", 5.0).toDouble();
+            ttsText = protection.value("tts_text", "").toString();
             qDebug() << "📋 [MqttProtectionMonitor] 保护" << shortName
-                     << "音频来源:" << (useTTS ? "TTS合成" : "默认(1#PD MP3)");
+                     << "音频来源:" << (useTTS ? "TTS合成" : "默认(1#PD MP3)")
+                     << "播放方式:" << playMode
+                     << "次数:" << playCount << "时长:" << playDuration;
         }
     }
 
@@ -175,10 +189,18 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
     emit protectionTriggered(moduleIndex, bitIndex, beltNumber, protectionName, audioPath);
 
     // 播放音频
-    if (m_commonControl) {
-        qDebug() << "🔊 [MqttProtectionMonitor] 触发音频播放:" << audioPath;
+    // ✅ 2026-03-04 [Phase 7.47.95]: 改用 AlarmPlaybackService 支持按次数/按时长播放
+    // 旧代码（Phase 7.47.49）：m_commonControl->playAudio(audioPath) — 只播放一遍
+    if (m_alarmPlaybackService) {
+        qDebug() << "🔊 [MqttProtectionMonitor] 通过AlarmPlaybackService触发播放:"
+                 << audioPath << "模式:" << playMode;
+        m_alarmPlaybackService->playAlarm(protectionName, ttsText, audioPath,
+                                          useTTS, playMode, playCount, playDuration);
+    } else if (m_commonControl) {
+        // 回退：如果AlarmPlaybackService未注入，使用旧的单次播放
+        qDebug() << "🔊 [MqttProtectionMonitor] 回退到CommonControl单次播放:" << audioPath;
         m_commonControl->playAudio(audioPath);
     } else {
-        qWarning() << "⚠️ [MqttProtectionMonitor] CommonControl为空，无法播放音频";
+        qWarning() << "⚠️ [MqttProtectionMonitor] AlarmPlaybackService和CommonControl均为空，无法播放音频";
     }
 }

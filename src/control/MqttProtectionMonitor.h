@@ -23,6 +23,7 @@
 class DIDataManager;
 class CommonControl;
 class DeviceConfigManager;  // ✅ 2026-02-28 [Phase 7.47.49]
+class AlarmPlaybackService; // ✅ 2026-03-04 [Phase 7.47.95]
 
 /**
  * @brief MQTT开关量保护监控器
@@ -67,6 +68,9 @@ public:
 
     // ✅ 2026-02-28 [Phase 7.47.49]: 新增 - 设置设备配置管理器（用于查询 use_text_to_speech）
     void setDeviceConfigManager(DeviceConfigManager *mgr) { m_deviceConfigMgr = mgr; }
+
+    // ✅ 2026-03-04 [Phase 7.47.95]: 新增 - 设置报警播放服务（用于按次数/按时长播放）
+    void setAlarmPlaybackService(AlarmPlaybackService *svc) { m_alarmPlaybackService = svc; }
 
     /**
      * @brief 设置皮带编号映射
@@ -113,6 +117,7 @@ private:
     CommonControl *m_commonControl;    ///< 公共控制器
     AudioPathMapper *m_audioPathMapper; ///< 音频路径映射器
     DeviceConfigManager *m_deviceConfigMgr; ///< 设备配置管理器（查询use_text_to_speech）✅ Phase 7.47.49
+    AlarmPlaybackService *m_alarmPlaybackService; ///< 报警播放服务（按次数/按时长播放）✅ Phase 7.47.95
     bool m_isRunning;                  ///< 是否正在运行
 
     /**

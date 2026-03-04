@@ -289,6 +289,8 @@ int main(int argc, char *argv[]) {
         MqttProtectionMonitor mqttProtectionMonitor(&diDataManager, &commonControl);
         // ✅ 2026-02-28 [Phase 7.47.49]: 注入DeviceConfigManager，用于查询每个保护的use_text_to_speech
         mqttProtectionMonitor.setDeviceConfigManager(&deviceConfigMgr);
+        // ✅ 2026-03-04 [Phase 7.47.95]: 注入AlarmPlaybackService，用于按次数/按时长播放
+        mqttProtectionMonitor.setAlarmPlaybackService(&alarmPlayback);
         // ✅ 2026-02-28 [Phase 7.47.53]: 用systemConfig.machineNumber()覆盖硬编码的模块0→1号皮带映射
         // 旧值：构造函数内 m_beltMapping[0] = 1（硬编码）
         // 原因：非1号皮带设备，loadDigitalProtection(1, ...) 查不到配置，导致useTTS回退true，
