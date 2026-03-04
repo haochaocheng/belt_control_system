@@ -23,6 +23,7 @@ enum class TTSEngineType {
  * @brief TTS 参数结构
  *
  * ✅ 2026-02-13 [Phase 7.46.1]: 创建 TTS 参数结构
+ * ✅ 2026-02-26 [Phase 7.47.19]: 添加采样率参数
  */
 struct TTSParameters {
     int speakerId = 0;          // 说话人ID
@@ -31,6 +32,9 @@ struct TTSParameters {
     double pitch = 1.0;         // 音调（0.5-2.0，部分引擎支持）
     QString modelPath;          // 模型路径
     int modelIndex = 0;         // 模型索引
+    // ❌ 2026-03-04 18:30 [Phase 7.47.91]: 旧值 24000 — dmix 不支持 24kHz（ES8388 硬件限制）
+    // ✅ 2026-03-04 18:30 [Phase 7.47.91]: 改为 48000 — 与 dmix/硬件一致，全链路零重采样
+    int sampleRate = 48000;     // 采样率（16000, 22050, 24000, 44100, 48000）
 };
 
 /**

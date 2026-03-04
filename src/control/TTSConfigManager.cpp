@@ -62,8 +62,10 @@ void TTSConfigManager::loadConfig()
         config.speakerId = m_settings->value(key + "/speakerId", 0).toInt();
         config.rate = m_settings->value(key + "/rate", 1.0).toDouble();
         config.volume = m_settings->value(key + "/volume", 0.8).toDouble();
-        // ✅ 2026-02-26 [Phase 7.47.19]: 加载采样率配置，默认 24000
-        config.sampleRate = m_settings->value(key + "/sampleRate", 24000).toInt();
+        // ✅ 2026-02-26 [Phase 7.47.19]: 加载采样率配置
+        // ❌ 2026-03-04 18:30 [Phase 7.47.91]: 旧默认值 24000 — dmix 需重采样且 ES8388 不支持 24kHz
+        // ✅ 2026-03-04 18:30 [Phase 7.47.91]: 新默认值 48000 — 与 dmix/硬件一致，全链路零重采样
+        config.sampleRate = m_settings->value(key + "/sampleRate", 48000).toInt();
 
         m_configs[scene] = config;
 

@@ -61,21 +61,28 @@ plug 层将应用的采样率转换为 dmix 的采样率，但 dmix 到硬件之
 ### 2. asound.conf：rate 24000 → 48000
 同步修复静态配置文件。
 
-### 3. 保留的改进
+### 3. TTS 默认采样率 24000 → 48000
+TTS 合成直接输出 48kHz WAV 文件，全链路零重采样：
+- `TTSEngineAdapter.h`：TTSParameters 默认 sampleRate = 48000
+- `TTSConfigManager.cpp`：加载配置默认值 48000
+- PaddleSpeech 在合成时将 24kHz 模型输出上采样到 48kHz（一次性操作，非实时）
+
+### 4. 保留的改进
 - `buffer_time 400000`（400ms）保留，增大缓冲区减少 Underrun
 - Phase 7.47.90 的 m_pendingPlay 修复保留
 
-### 重采样流程（修复后）
+### 修复后的全链路（零重采样）
 ```
-TTS WAV (24kHz) → GStreamer → alsasink → plug (24kHz→48kHz SRC) → dmix (48kHz) → hw:1,0 (48kHz) ✅
+TTS 合成 (48kHz WAV) → GStreamer → alsasink → plug (48kHz, 无需转换) → dmix (48kHz) → hw:1,0 (48kHz) ✅
 ```
-24kHz→48kHz 是整数倍（2x upsampling），重采样效率高且音质无损。
 
 ## 修改文件
 | 文件 | 修改内容 |
 |------|---------|
 | docker/rk3588/detect-audio-device.sh | rate 24000 → 48000 |
 | docker/rk3588/asound.conf | rate 24000 → 48000 |
+| src/control/tts/TTSEngineAdapter.h | TTSParameters 默认 sampleRate 24000 → 48000 |
+| src/control/TTSConfigManager.cpp | 加载配置默认值 24000 → 48000 |
 
 ## 技术教训
 1. **dmix 的 rate 必须是硬件原生支持的值**：dmix 直接设置硬件参数，不做重采样
