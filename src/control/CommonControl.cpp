@@ -46,8 +46,8 @@ CommonControl::CommonControl(QObject *parent)
     , m_ttsEngineManager(new TTSEngineManager(this))
     // ✅ 2026-03-04 [Phase 7.47.87]: 初始化音频播放队列
     , m_isPlayingFromQueue(false)
-    // ✅ 2026-03-04 [Phase 7.47.89]: 初始化延迟播放标志
-    , m_pendingPlay(false)
+    // ❌ 2026-03-04 17:00 [Phase 7.47.90]: 移除 m_pendingPlay（延迟播放导致设备无声）
+    // , m_pendingPlay(false)
     , m_warningTimer(new QTimer(this))
     , m_currentPlayCount(0)
     , m_isWarningPlaying(false)
@@ -157,9 +157,10 @@ CommonControl::CommonControl(QObject *parent)
 
     // ✅ 2026-01-21 16:00 [DEBUG] 连接媒体状态变化信号
     // 原因：监控媒体加载过程（LoadingMedia → LoadedMedia → BufferedMedia）
-    // ✅ 2026-03-04 [Phase 7.47.89]: 在 BufferedMedia 时触发 play()
-    // 原因：play() 在 LoadingMedia 时调用会导致 125ms 静音 + 突变卡顿
-    //       改为等待 BufferedMedia（文件已完全加载并缓冲）再播放，彻底消除起始卡顿
+    // ❌ 2026-03-04 17:00 [Phase 7.47.90]: 移除 m_pendingPlay 延迟播放机制
+    // 原因：从 mediaStatusChanged 信号处理器内部调用 play() 导致 GStreamer 管道状态异常
+    //       QMediaPlayer 报告 Playing 状态（3.95秒），但实际不向 ALSA 输出音频数据
+    //       设备完全无声。恢复直接调用 play()（在 setSource 后立即调用）
     connect(m_mediaPlayer, &QMediaPlayer::mediaStatusChanged,
             this, [this](QMediaPlayer::MediaStatus status) {
                 static QElapsedTimer mediaTimer;
@@ -186,25 +187,13 @@ CommonControl::CommonControl(QObject *parent)
                 qDebug() << "   [媒体状态] " << statusName
                          << "| 距上次状态变化:" << elapsed << "ms";
 
-                // ✅ 2026-03-04 [Phase 7.47.89]: 文件加载完毕后立即播放
-                // ❌ 原方案 BufferedMedia 是死循环：BufferedMedia 只在 play() 调用后才触发
-                //    等待 BufferedMedia → play() 永远不会被调用 → 无声音
-                // ✅ 改用 LoadedMedia：本地 WAV 文件元数据和解码器已就绪，数据可用
-                //    在此调用 play()，GStreamer 立即有数据输出，消除起始静音
-                if (status == QMediaPlayer::LoadedMedia && m_pendingPlay) {
-                    m_pendingPlay = false;
-                    qDebug() << "   [延迟播放] LoadedMedia 触发 play()（文件已就绪，消除起始静音）";
-                    m_mediaPlayer->play();
-                }
-
-                // 安全处理：文件加载失败时重置 pendingPlay，避免卡死
-                if (status == QMediaPlayer::InvalidMedia && m_pendingPlay) {
-                    m_pendingPlay = false;
-                    qWarning() << "   [延迟播放] ❌ InvalidMedia，放弃播放，尝试队列下一个";
-                    if (m_isPlayingFromQueue) {
-                        playNextInQueue();
-                    }
-                }
+                // ❌ 2026-03-04 17:00 [Phase 7.47.90]: 以下延迟播放代码已移除
+                // 问题：从 mediaStatusChanged 回调内部调用 m_mediaPlayer->play()
+                //       GStreamer 管道在状态转换回调中收到 play() 请求
+                //       导致管道内部状态与 ALSA 输出不同步 → 报告 Playing 但无实际音频输出
+                // 方案：恢复在 setSource() 后立即调用 play()（3月3日之前的工作方式）
+                // if (status == QMediaPlayer::LoadedMedia && m_pendingPlay) { ... }
+                // if (status == QMediaPlayer::InvalidMedia && m_pendingPlay) { ... }
             });
 
     // 连接预警定时器
@@ -432,17 +421,16 @@ void CommonControl::playAudioInternal(const QString &audioPath)
     //       m_mediaPlayer->setPosition(0);  ← 慢！
     //   }
 
-    // ❌ 2026-03-04 [Phase 7.47.87]: 弃用清空源方案（导致 pipeline 重建，111ms 延迟）
-    // 问题：setSource(QUrl()) 销毁 GStreamer pipeline，下次 setSource() 需要重建
-    //   [媒体状态] "LoadedMedia" | 距上次状态变化: 111 ms  ← 加载延迟
-    // 原因：每次清空源都会销毁 pipeline，重建需要打开文件、解析头、创建解码器
-    // 旧代码：
-    //   m_mediaPlayer->setSource(QUrl());  // 清空源 ← 导致 pipeline 销毁
-    //   m_mediaPlayer->setSource(newSource);  // 重建 pipeline ← 111ms 延迟
+    // ❌ 2026-03-04 [Phase 7.47.87]: 曾尝试移除清空源操作（避免 pipeline 重建，111ms 延迟）
+    // ✅ 2026-03-04 17:00 [Phase 7.47.90]: 恢复清空源操作
+    // 原因：不清空源直接设置新源，GStreamer 管道在文件切换时未正确重置
+    //       可能导致管道内部状态残留，配合延迟播放机制产生"报告 Playing 但无音频输出"的问题
+    //       恢复先清空再设置的安全方式，确保 pipeline 完全重建
+    qDebug() << "   [清空] 清空音频源";
+    qint64 clearTime = timer.elapsed();
+    m_mediaPlayer->setSource(QUrl());  // 清空源，确保 pipeline 重建
+    qDebug() << "   [清空] 清空源耗时:" << (timer.elapsed() - clearTime) << "ms";
 
-    // ✅ 2026-03-04 [Phase 7.47.87]: 直接设置新源（避免 pipeline 重建）
-    // 原理：GStreamer 可以在不销毁 pipeline 的情况下切换源
-    // 效果：消除 111ms 加载延迟，音频播放更流畅
     qDebug() << "   [新源] 设置新音频源:" << fileName;
     qint64 setSourceTime = timer.elapsed();
     QUrl newSource = QUrl::fromLocalFile(audioPath);
@@ -459,12 +447,10 @@ void CommonControl::playAudioInternal(const QString &audioPath)
         case LocalOnly: {
             // ❌ 2026-03-03 [Phase 7.47.75]: QSoundEffect 在 Docker 容器失败，已回退 QMediaPlayer
             // ✅ 2026-03-03 [Phase 7.47.75]: 恢复 QMediaPlayer（卡顿由 asound.conf rate=24kHz 缓解）
-            // ❌ 2026-03-04 [Phase 7.47.89]: 弃用立即调用 play()（会在 LoadingMedia 时触发，125ms 静音）
-            // 旧代码：m_mediaPlayer->play();
-            // ✅ 2026-03-04 [Phase 7.47.89]: 改为等待 BufferedMedia 再播放
+            // ❌ 2026-03-04 [Phase 7.47.89]: 曾改为 m_pendingPlay 延迟播放（导致设备完全无声）
+            // ✅ 2026-03-04 17:00 [Phase 7.47.90]: 恢复直接调用 play()
             qDebug() << "   [本地播放] QMediaPlayer（GStreamer → ALSA default）";
-            qDebug() << "   [延迟播放] 设置 m_pendingPlay=true，等待 BufferedMedia";
-            m_pendingPlay = true;
+            m_mediaPlayer->play();
             break;
         }
 
@@ -478,10 +464,9 @@ void CommonControl::playAudioInternal(const QString &audioPath)
         case DualOutput: {
             // 本地 + 网络同时
             qDebug() << "   [双输出] 本地播放 + 网络发送...";
-            // ❌ 2026-03-04 [Phase 7.47.89]: 弃用立即 play()，改为延迟播放
-            // 旧代码：m_mediaPlayer->play();
-            // ✅ 2026-03-04 [Phase 7.47.89]: 等待 BufferedMedia 再播放
-            m_pendingPlay = true;
+            // ❌ 2026-03-04 [Phase 7.47.89]: 曾改为 m_pendingPlay 延迟播放（导致设备完全无声）
+            // ✅ 2026-03-04 17:00 [Phase 7.47.90]: 恢复直接调用 play()
+            m_mediaPlayer->play();
 
             qint64 networkTime = timer.elapsed();
             m_audioNetworkSender->playAudioToNetwork(audioPath);
@@ -496,12 +481,10 @@ void CommonControl::playAudioInternal(const QString &audioPath)
                 m_audioNetworkTcpSender->playAudioToNetwork(audioPath);
             } else {
                 // ❌ 2026-03-03 [Phase 7.47.75]: QSoundEffect 在 Docker 容器失败，回退 QMediaPlayer
-                // ❌ 2026-03-04 [Phase 7.47.89]: 弃用立即调用 play()（125ms 静音）
-                // 旧代码：m_mediaPlayer->play();
-                // ✅ 2026-03-04 [Phase 7.47.89]: 等待 BufferedMedia 再播放
+                // ❌ 2026-03-04 [Phase 7.47.89]: 曾改为 m_pendingPlay 延迟播放（导致设备完全无声）
+                // ✅ 2026-03-04 17:00 [Phase 7.47.90]: 恢复直接调用 play()
                 qWarning() << "   [TCP发送] ⚠️ 未连接到 TCP 服务器，本地播放（QMediaPlayer）";
-                qDebug() << "   [延迟播放] 设置 m_pendingPlay=true，等待 BufferedMedia";
-                m_pendingPlay = true;
+                m_mediaPlayer->play();
             }
             break;
         }

@@ -56,8 +56,14 @@ pcm.dmixer {
     slave {
         pcm "hw:${AUDIO_CARD},0"
         period_time 20000    # 20ms per period
-        buffer_time 200000   # 200ms total buffer
-        rate 48000           # 固定采样率 48kHz
+        # ✅ 2026-03-04 [Phase 7.47.90]: 从 200ms 扩大到 400ms（与 asound.conf 一致）
+        # 原因：给 GStreamer 更多容错时间，减少 Buffer Underrun 风险
+        buffer_time 400000   # 400ms total buffer
+        # ✅ 2026-03-04 [Phase 7.47.90]: 从 48kHz 改为 24kHz（与 asound.conf 一致）
+        # 原因：TTS WAV 文件采样率为 24kHz（PaddleSpeech fastspeech2 输出）
+        #       dmix 使用 24kHz 后，GStreamer 无需实时重采样 → 消除卡顿主因
+        #       ALSA plug 层负责将 24kHz 适配硬件支持的采样率（块式转换，更稳定）
+        rate 24000           # 与 TTS WAV 一致
     }
     bindings {
         0 0  # 左声道

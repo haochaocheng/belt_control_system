@@ -270,9 +270,13 @@ private:
     QStringList m_audioQueue;              // 音频播放队列
     bool m_isPlayingFromQueue;             // 是否正在播放队列中的音频
 
-    // ✅ 2026-03-04 [Phase 7.47.89]: 延迟 play() 到 BufferedMedia 后执行
+    // ❌ 2026-03-04 17:00 [Phase 7.47.90]: 移除延迟播放机制
+    // 原因：从 mediaStatusChanged 回调内部调用 play() 导致 GStreamer 管道状态异常
+    //       QMediaPlayer 报告 Playing（3.95秒）但 ALSA 无音频输出，设备完全无声
+    //       恢复在 setSource() 后直接调用 play()（3月3日之前的工作方式）
+    // ❌ 2026-03-04 [Phase 7.47.89]: 延迟 play() 到 BufferedMedia 后执行
     // 原因：play() 在 LoadingMedia 阶段调用会导致 125ms 静音 + 突变卡顿
-    bool m_pendingPlay;                    // 等待 BufferedMedia 后再调用 play()
+    // bool m_pendingPlay;                    // 等待 BufferedMedia 后再调用 play()
 
     // 预警播放相关
     QTimer *m_warningTimer;        // 按时间模式的定时器
