@@ -542,12 +542,15 @@ ColumnLayout {
                 model: ListModel {
                     ListElement { text: "16000 Hz (电话质量)"; value: 16000 }
                     ListElement { text: "22050 Hz (低质量)"; value: 22050 }
-                    ListElement { text: "24000 Hz (默认)"; value: 24000 }
+                    ListElement { text: "24000 Hz"; value: 24000 }
                     ListElement { text: "44100 Hz (CD质量)"; value: 44100 }
-                    ListElement { text: "48000 Hz (专业)"; value: 48000 }
+                    // ✅ 2026-03-04 18:30 [Phase 7.47.91]: 默认改为 48kHz（与 dmix/ES8388 硬件一致）
+                    ListElement { text: "48000 Hz (默认)"; value: 48000 }
                 }
 
-                currentIndex: 2  // 默认 24000 Hz
+                // ❌ 2026-03-04 [Phase 7.47.91]: 旧默认 currentIndex: 2 (24000 Hz)
+                // ✅ 2026-03-04 [Phase 7.47.91]: 新默认 48000 Hz — 与硬件一致，零重采样
+                currentIndex: 4  // 默认 48000 Hz
 
                 textRole: "text"
                 valueRole: "value"
