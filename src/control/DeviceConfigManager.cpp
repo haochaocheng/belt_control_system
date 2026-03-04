@@ -147,6 +147,8 @@ bool DeviceConfigManager::createTables()
     // ✅ 2026-03-04 [Phase 7.47.94]: 迁移 - 添加 play_mode 列（已有数据库不会重建表，需要 ALTER TABLE）
     // SQLite 的 ALTER TABLE 对已存在的列会报错但不影响，直接忽略错误即可
     query.exec("ALTER TABLE device_digital_protections ADD COLUMN play_mode TEXT DEFAULT 'count'");
+    // ✅ 2026-03-04 [Phase 7.47.96]: 迁移 - 添加 protection_level 列（0=紧急停车预警 1=正常停车预警 2=仅预警 3=不处理）
+    query.exec("ALTER TABLE device_digital_protections ADD COLUMN protection_level INTEGER DEFAULT 1");
 
     // 4. 模拟量保护表
     QString createAnalogProtectionsTable = R"(
@@ -190,6 +192,8 @@ bool DeviceConfigManager::createTables()
 
     // ✅ 2026-03-04 [Phase 7.47.94]: 迁移 - 添加 play_mode 列（与开关量保护表一致）
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN play_mode TEXT DEFAULT 'count'");
+    // ✅ 2026-03-04 [Phase 7.47.96]: 迁移 - 添加 protection_level 列（与开关量保护表一致）
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN protection_level INTEGER DEFAULT 1");
 
     // ✅ 2026-02-02 [参数持久化]: 添加电机配置表
     // 5. 电机配置表
@@ -649,8 +653,8 @@ bool DeviceConfigManager::saveDigitalProtection(int deviceId, const QVariantMap 
         INSERT OR REPLACE INTO device_digital_protections
         (device_id, protection_name, module_type, register_address, channel_number,
          protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file,
-         play_mode, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         play_mode, protection_level, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -668,6 +672,8 @@ bool DeviceConfigManager::saveDigitalProtection(int deviceId, const QVariantMap 
     query.addBindValue(protection.value("audio_file", "").toString());
     // ✅ 2026-03-04 [Phase 7.47.94]: 新增播放方式字段（count=按次数, duration=按时长）
     query.addBindValue(protection.value("play_mode", "count").toString());
+    // ✅ 2026-03-04 [Phase 7.47.96]: 新增保护级别字段（0=紧急停车预警 1=正常停车预警 2=仅预警 3=不处理）
+    query.addBindValue(protection.value("protection_level", 1).toInt());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {

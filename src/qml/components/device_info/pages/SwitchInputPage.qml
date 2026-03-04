@@ -44,6 +44,8 @@ Rectangle {
     property int audioSourceMode: 0
     // ✅ 2026-03-04 [Phase 7.47.94]: 播放方式 0=按次数 1=按时长
     property int playModeSelection: 0
+    // ✅ 2026-03-04 [Phase 7.47.96]: 保护级别 0=预警+紧急停车 1=预警+正常停车(默认) 2=仅预警不停车 3=不预警不停车
+    property int protectionLevel: 1
 
     // ✅ 2026-02-28 [Phase 7.47.49]: 音频来源模式切换时，自动刷新音频文件名
     // 原因：getAudioFileName() 依赖 audioSourceMode，切换模式后需更新显示
@@ -1306,6 +1308,52 @@ Rectangle {
                             }
                         }
 
+                        // ✅ 2026-03-04 [Phase 7.47.96]: 保护级别 - 第七行左侧（索引12）
+                        // 功能：选择保护触发时的响应级别（预警+停车 / 仅预警 / 不处理）
+                        Text {
+                            text: "保护级别:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 0
+                            Layout.row: 6
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 1
+                            Layout.row: 6
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: protectionLevelCombo.implicitHeight
+
+                            DeviceInfo.CustomComboBox {
+                                id: protectionLevelCombo
+                                anchors.fill: parent
+                                keyboardManager: root.keyboardManager
+                                // ✅ 2026-03-04 [Phase 7.47.96]: 4个保护级别选项
+                                // 索引0: 预警+紧急停车
+                                // 索引1: 预警+正常停车（默认）
+                                // 索引2: 仅预警不停车
+                                // 索引3: 不预警不停车
+                                model: ["预警+紧急停车", "预警+正常停车", "仅预警不停车", "不预警不停车"]
+                                currentIndex: root.protectionLevel
+                                onCurrentIndexChanged: {
+                                    root.protectionLevel = currentIndex
+                                }
+                            }
+
+                            // ✅ 焦点指示器（参数索引12）
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 12) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 12) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
                         /* ✅ 2026-03-04 [Phase 7.47.80]: 注释掉GridLayout内模块状态指示器
                          * 原因：已移至 ScrollView 下方独立的「模块状态（只读）」区域
                          */
@@ -2483,6 +2531,8 @@ Rectangle {
             audioFileField.text = protection.audio_file || getAudioFileName(item.name)
             // ✅ 2026-03-04 [Phase 7.47.94]: 加载播放方式
             root.playModeSelection = (protection.play_mode === "duration") ? 1 : 0
+            // ✅ 2026-03-04 [Phase 7.47.96]: 加载保护级别（默认1=预警+正常停车）
+            root.protectionLevel = (protection.protection_level !== undefined) ? protection.protection_level : 1
 
             console.log("✅ [SwitchInputPage] 从数据库加载完整参数:", item.name)
         } else {
@@ -2509,6 +2559,8 @@ Rectangle {
             audioFileField.text = getAudioFileName(item.name)
             // ✅ 2026-03-04 [Phase 7.47.94]: 默认播放方式 - 按次数
             root.playModeSelection = 0
+            // ✅ 2026-03-04 [Phase 7.47.96]: 默认保护级别 - 预警+正常停车
+            root.protectionLevel = 1
 
             console.log("⚠️ [SwitchInputPage] 数据库中没有详细参数，使用默认值:", item.name)
         }
@@ -2545,7 +2597,9 @@ Rectangle {
             // 旧错误代码: "audio_file": audioField.text  （audioField在注释块中）
             "audio_file": audioFileField.text,
             // ✅ 2026-03-04 [Phase 7.47.94]: 新增播放方式字段
-            "play_mode": root.playModeSelection === 0 ? "count" : "duration"
+            "play_mode": root.playModeSelection === 0 ? "count" : "duration",
+            // ✅ 2026-03-04 [Phase 7.47.96]: 新增保护级别字段（0-3，默认1）
+            "protection_level": root.protectionLevel
         }
 
         if (deviceConfigMgr.saveDigitalProtection(root.deviceId, protection)) {
@@ -2557,16 +2611,17 @@ Rectangle {
 
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.29]: 获取参数字段数量
     function getParamFieldCount() {
-        // ✅ 2026-03-04 [Phase 7.47.94]: 更新为12（新增播放方式索引11）
-        // 旧值（Phase 7.47.81）：11
-        // 新值：12（新增播放方式=11在row5右列）
+        // ✅ 2026-03-04 [Phase 7.47.96]: 更新为13（新增保护级别索引12）
+        // 旧值（Phase 7.47.94）：12
+        // 新值：13（新增保护级别=12在row6左列）
         // 索引说明：
         //   0-8:  保护参数（保护名称0、播放次数1、模块类型2、播放时长3、
         //          寄存器地址4、TTS文字5、通道编号6、音频文件7、保护延时8）
         //   9:    数据超时 SpinBox（row4 右列，与保护延时同行）
         //   10:   连接超时 SpinBox（row5 左列）
         //   11:   播放方式 按钮组（row5 右列，按次数/按时长切换）
-        return 12
+        //   12:   保护级别 ComboBox（row6 左列，4级下拉选择）
+        return 13
     }
 
     // ✅ 2026-03-04 [Phase 7.47.81]: 所有索引0-10均可交互，无占位
@@ -2636,6 +2691,13 @@ Rectangle {
             // 直接切换播放方式，不弹出虚拟键盘（与音频来源case 4同类设计）
             root.playModeSelection = (root.playModeSelection === 0) ? 1 : 0
             console.log("✅ [SwitchInputPage] 切换播放方式:", root.playModeSelection === 0 ? "按次数" : "按时长")
+            return
+        // ✅ 2026-03-04 [Phase 7.47.96]: 保护级别循环切换（0→1→2→3→0）
+        case 12:
+            // 直接循环切换保护级别，不弹出虚拟键盘
+            root.protectionLevel = (root.protectionLevel + 1) % 4
+            console.log("✅ [SwitchInputPage] 切换保护级别:", root.protectionLevel,
+                        ["预警+紧急停车", "预警+正常停车", "仅预警不停车", "不预警不停车"][root.protectionLevel])
             return
         default:
             console.warn("⚠️ [SwitchInputPage] 无效的参数索引:", paramIndex)
