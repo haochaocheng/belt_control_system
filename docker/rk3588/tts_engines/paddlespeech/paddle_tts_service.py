@@ -298,18 +298,62 @@ def synthesize_speech(text, output_path, speaker_id=0, speed=1.0, volume=0.8, sa
             logger.error(f"❌ 输出文件不存在: {output_path}")
             return False
 
-        # 调整音量（使用 pydub）
-        if volume != 1.0:
-            try:
-                from pydub import AudioSegment
-                audio = AudioSegment.from_wav(output_path)
-                # 转换音量（0.0-1.0 -> dB）
-                volume_db = 20 * (volume - 1)  # 0.8 -> -4dB, 1.0 -> 0dB
-                audio = audio + volume_db
-                audio.export(output_path, format='wav')
-                logger.info(f"🔊 调整音量: {volume} ({volume_db:.1f}dB)")
-            except ImportError:
-                logger.warning("⚠️ pydub 未安装，跳过音量调整")
+        # ✅ 2026-03-04 19:30 [Phase 7.47.92]: 后处理 — 重采样 + 音量归一化
+        # 原因1：PaddleSpeech fastspeech2_csmsc 模型固定输出 24kHz，忽略 fs 参数
+        #         需要手动重采样到目标采样率（48kHz）
+        # 原因2：旧音量公式 volume_db=20*(volume-1) 只能降低音量（volume=0.8 → -4dB）
+        #         TTS 原始输出本身音量小，需要先归一化到峰值再应用音量系数
+        try:
+            import numpy as np
+            import soundfile as sf
+            from scipy.signal import resample_poly
+
+            data, actual_sr = sf.read(output_path)
+            logger.info(f"📊 合成输出: 采样率={actual_sr}Hz, 样本数={len(data)}")
+
+            # 1. 重采样：如果实际采样率与目标不一致
+            if actual_sr != sample_rate:
+                # 计算最大公约数以使用 resample_poly（比 resample 更高效）
+                from math import gcd
+                g = gcd(sample_rate, actual_sr)
+                up = sample_rate // g
+                down = actual_sr // g
+                data = resample_poly(data, up, down)
+                logger.info(f"🔄 重采样: {actual_sr}Hz → {sample_rate}Hz (up={up}, down={down})")
+                actual_sr = sample_rate
+
+            # 2. 音量归一化 + 缩放
+            # 先归一化到峰值 -1dB（0.891），再乘以用户音量系数
+            # ❌ 旧方案：volume_db = 20 * (volume - 1)  # volume=0.8 → -4dB（只能降低）
+            # ✅ 新方案：先归一化峰值，再按 volume 缩放
+            peak = np.max(np.abs(data))
+            if peak > 0:
+                # 归一化到 -1dB 峰值（留余量避免削波）
+                target_peak = 0.891  # -1dB = 10^(-1/20) ≈ 0.891
+                normalized = data * (target_peak / peak)
+                # 应用用户音量系数（volume=1.0 → 满音量，volume=0.5 → 一半）
+                data = normalized * volume
+                logger.info(f"🔊 音量处理: 峰值归一化 {peak:.4f}→{target_peak:.3f}, 用户音量={volume}")
+
+            sf.write(output_path, data, actual_sr, subtype='PCM_16')
+            logger.info(f"💾 后处理完成: {output_path} ({actual_sr}Hz, PCM_16)")
+
+        except Exception as e:
+            logger.warning(f"⚠️ 后处理失败（保留原始文件）: {e}")
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+
+        # ❌ 2026-03-04 19:30 [Phase 7.47.92]: 旧音量调整代码（只能降低音量，已被上方新逻辑替代）
+        # if volume != 1.0:
+        #     try:
+        #         from pydub import AudioSegment
+        #         audio = AudioSegment.from_wav(output_path)
+        #         volume_db = 20 * (volume - 1)  # 0.8 -> -4dB, 1.0 -> 0dB
+        #         audio = audio + volume_db
+        #         audio.export(output_path, format='wav')
+        #         logger.info(f"🔊 调整音量: {volume} ({volume_db:.1f}dB)")
+        #     except ImportError:
+        #         logger.warning("⚠️ pydub 未安装，跳过音量调整")
 
         logger.info(f"✅ 合成成功: {output_path}")
         return True
