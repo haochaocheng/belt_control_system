@@ -525,6 +525,20 @@ Rectangle {
                                 value: 10
                                 editable: true
                                 keyboardManager: root.keyboardManager
+
+                                // ✅ 2026-03-04 [Phase 7.47.98]: 修复 - 添加缺失的 realValue 和格式化函数
+                                // 原因：缺少这些属性导致 playDurationSpin.realValue 为 undefined，
+                                //       DB 保存 play_duration = 0，MqttProtectionMonitor 读取时长为0
+                                property int decimals: 1
+                                property real realValue: value / 10
+
+                                textFromValue: function(value, locale) {
+                                    return Number(value / 10).toLocaleString(locale, 'f', 1) + " 秒"
+                                }
+
+                                valueFromText: function(text, locale) {
+                                    return Number.fromLocaleString(locale, text.replace(" 秒", "")) * 10
+                                }
                             }
 
                             // 焦点指示器
@@ -882,6 +896,19 @@ Rectangle {
                                 value: 0
                                 editable: true
                                 keyboardManager: root.keyboardManager
+
+                                // ✅ 2026-03-04 [Phase 7.47.98]: 修复 - 添加缺失的 realValue 和格式化函数
+                                // 原因：与 playDurationSpin 相同，缺少 realValue 导致 DB 保存 protection_delay = 0
+                                property int decimals: 1
+                                property real realValue: value / 10
+
+                                textFromValue: function(value, locale) {
+                                    return Number(value / 10).toLocaleString(locale, 'f', 1) + " 秒"
+                                }
+
+                                valueFromText: function(text, locale) {
+                                    return Number.fromLocaleString(locale, text.replace(" 秒", "")) * 10
+                                }
                             }
 
                             // 焦点指示器
