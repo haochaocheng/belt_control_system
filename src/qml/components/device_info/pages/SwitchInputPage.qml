@@ -41,7 +41,8 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property int focusButtonIndex: 0  // ✅ 2026-01-29 [Phase 2.30]: 底部按钮区域焦点索引（0-4）
     // ✅ 2026-02-28 [Phase 7.47.44]: 音频来源模式 0=默认 1=TTS合成
-    property int audioSourceMode: 0
+    // ✅ 2026-03-04 [Phase 7.48.4]: 默认改为1（TTS合成），旧值0导致新建保护默认使用默认音频
+    property int audioSourceMode: 1
     // ✅ 2026-03-04 [Phase 7.47.94]: 播放方式 0=按次数 1=按时长
     property int playModeSelection: 0
     // ✅ 2026-03-04 [Phase 7.47.96]: 保护级别 0=预警+紧急停车 1=预警+正常停车(默认) 2=仅预警不停车 3=不预警不停车
@@ -570,7 +571,7 @@ Rectangle {
                             Layout.row: 2
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            implicitHeight: 60
+                            implicitHeight: 48
 
                             // ✅ 隐藏的寄存器地址（由moduleTypeCombo自动设置，数据库兼容用）
                             DeviceInfo.CustomSpinBox {
@@ -943,7 +944,7 @@ Rectangle {
                             Layout.row: 4
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            implicitHeight: 60
+                            implicitHeight: 48
 
                             // ✅ 2026-02-28 [Phase 7.47.47]: 从 diDataManager 实时读取对应位状态
                             // 通过访问 Q_PROPERTY (module1Data/module2Data) 建立响应式绑定
@@ -1177,7 +1178,7 @@ Rectangle {
                             Layout.row: 5
                             Layout.fillWidth: true
                             Layout.maximumWidth: 300
-                            implicitHeight: 60
+                            implicitHeight: 48
 
                             // 播放方式切换按钮行
                             RowLayout {

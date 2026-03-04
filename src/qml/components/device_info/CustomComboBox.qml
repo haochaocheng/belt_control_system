@@ -15,7 +15,8 @@ ComboBox {
 
     // ========== 默认样式 ==========
     // ✅ 高度与 CustomSpinBox 一致（60px）
-    implicitHeight: 60
+    // ✅ 2026-03-04 [Phase 7.48.4]: 高度缩小到80%（60px → 48px），优化参数面板空间利用
+    implicitHeight: 48
 
     // ✅ 2026-01-28 [键盘导航]: 启用焦点和键盘导航
     focus: true
