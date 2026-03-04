@@ -90,10 +90,11 @@ private:
     // 处理下一个播放（重复播放或持续播放）
     void handleNextPlayback();
 
-    // TTS缓存相关
-    void initializeTtsCache();  // 初始化TTS缓存
-    QString getCachedTtsFile(const QString &text);  // 获取缓存的TTS文件
-    void precacheTtsText(const QString &text);  // 预缓存TTS文本
+    // ✅ 2026-03-04 [Phase 7.47.99]: 注释掉TTS缓存相关声明
+    // 原因：已有完整的预合成音频文件，不再需要TTS缓存机制
+    // void initializeTtsCache();  // 初始化TTS缓存
+    // QString getCachedTtsFile(const QString &text);  // 获取缓存的TTS文件
+    // void precacheTtsText(const QString &text);  // 预缓存TTS文本
 
 private:
     // 运行状态
@@ -128,9 +129,9 @@ private:
     // 播放状态
     bool m_isPlaying;
 
-    // TTS缓存
-    QMap<QString, QString> m_ttsCache;  // 文本 -> 缓存文件路径
-    QString m_ttsCacheDir;  // TTS缓存目录
+    // ✅ 2026-03-04 [Phase 7.47.99]: 注释掉TTS缓存成员变量
+    // QMap<QString, QString> m_ttsCache;  // 文本 -> 缓存文件路径
+    // QString m_ttsCacheDir;  // TTS缓存目录
 };
 
 #endif // ALARMPLAYBACKSERVICE_H

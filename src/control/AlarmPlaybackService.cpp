@@ -65,8 +65,9 @@ AlarmPlaybackService::AlarmPlaybackService(QObject *parent)
         connect(m_tts, &SherpaOnnxTTS::stateChanged,
                 this, &AlarmPlaybackService::onTtsStateChanged);
 
-        // 初始化TTS缓存
-        initializeTtsCache();
+        // ✅ 2026-03-04 [Phase 7.47.99]: 移除TTS缓存初始化
+        // 旧代码: initializeTtsCache();
+        // 原因：已有完整的预合成音频文件，不再需要TTS缓存机制
     } else {
         qWarning() << "❌ Sherpa-ONNX TTS初始化失败，TTS功能不可用";
         qWarning() << "   请确保模型文件存在于:" << modelDir;
@@ -230,18 +231,12 @@ void AlarmPlaybackService::playTtsText(const QString &ttsText)
         return;
     }
 
-    qDebug() << "🗣️  AlarmPlaybackService: 播放TTS语音:" << ttsText;
+    qDebug() << "🗣️  AlarmPlaybackService: 实时TTS合成播放:" << ttsText;
 
-    // 尝试使用缓存文件
-    QString cachedFile = getCachedTtsFile(ttsText);
-    if (!cachedFile.isEmpty()) {
-        // 使用缓存文件直接播放（更快）
-        playAudioFile(cachedFile);
-    } else {
-        // 回退到实时合成
-        qDebug() << "  ⚠️  缓存未命中，使用实时合成";
-        m_tts->say(ttsText);
-    }
+    // ✅ 2026-03-04 [Phase 7.47.99]: 移除TTS缓存逻辑，直接使用实时合成
+    // 旧逻辑：先查缓存 getCachedTtsFile() → 命中则 playAudioFile(cachedFile)
+    // 新逻辑：直接实时合成（此函数仅在音频文件不存在时作为回退）
+    m_tts->say(ttsText);
 }
 
 void AlarmPlaybackService::stopCurrentPlayback()
@@ -307,14 +302,19 @@ void AlarmPlaybackService::handleNextPlayback()
             emit alarmPlaybackStarted(m_currentPlayback.protectionName);
         }
 
-        // 根据配置选择播放方式
-        if (m_currentPlayback.useTextToSpeech) {
+        // ✅ 2026-03-04 [Phase 7.47.99]: 始终优先使用预合成音频文件
+        // 原因：批量合成工具已生成完整音频文件，不再需要TTS缓存机制
+        // 旧逻辑：useTextToSpeech ? playTtsText() : playAudioFile()
+        // 新逻辑：始终 playAudioFile()，文件不存在时回退到实时TTS
+        if (!m_currentPlayback.audioFile.isEmpty() && QFile::exists(m_currentPlayback.audioFile)) {
+            playAudioFile(m_currentPlayback.audioFile);
+        } else if (m_currentPlayback.useTextToSpeech) {
+            // 音频文件不存在，回退到实时TTS合成
+            qDebug() << "  ⚠️  音频文件不存在，回退到实时TTS合成";
             playTtsText(m_currentPlayback.ttsText);
         } else {
             playAudioFile(m_currentPlayback.audioFile);
         }
-
-    } else if (m_currentPlayback.playMode == "duration") {
         // ========== 按时长播放模式 ==========
         // 增加播放计数（用于首次播放判断）
         m_currentPlayback.currentPlayCount++;
@@ -363,8 +363,11 @@ void AlarmPlaybackService::handleNextPlayback()
             emit alarmPlaybackStarted(m_currentPlayback.protectionName);
         }
 
-        // 根据配置选择播放方式
-        if (m_currentPlayback.useTextToSpeech) {
+        // ✅ 2026-03-04 [Phase 7.47.99]: 始终优先使用预合成音频文件（与count模式一致）
+        if (!m_currentPlayback.audioFile.isEmpty() && QFile::exists(m_currentPlayback.audioFile)) {
+            playAudioFile(m_currentPlayback.audioFile);
+        } else if (m_currentPlayback.useTextToSpeech) {
+            qDebug() << "  ⚠️  音频文件不存在，回退到实时TTS合成";
             playTtsText(m_currentPlayback.ttsText);
         } else {
             playAudioFile(m_currentPlayback.audioFile);
@@ -445,6 +448,13 @@ void AlarmPlaybackService::onDurationTimerTimeout()
     }
 }
 
+/* ✅ 2026-03-04 [Phase 7.47.99]: 注释掉TTS缓存相关函数
+ * 原因：已有完整的预合成音频文件（批量合成工具生成），
+ *       不再需要TTS缓存机制（/app/appdata/tts_cache/xxx.wav）
+ *       保护触发时直接使用 /home/linaro/belt-control-data/audio/ 下的音频文件
+ */
+
+/*
 // TTS缓存相关函数实现
 
 void AlarmPlaybackService::initializeTtsCache()
@@ -529,3 +539,4 @@ void AlarmPlaybackService::precacheTtsText(const QString &text)
     }
 #endif
 }
+*/
