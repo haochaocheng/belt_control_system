@@ -172,15 +172,23 @@ void AlarmPlaybackService::onAlarmTriggered(const QString &protectionName, const
     info.playDuration = playDuration;
     info.startTime = 0;
 
-    // 如果当前没有播放，立即播放；否则加入队列
-    if (!m_isPlaying) {
-        m_currentPlayback = info;
-        handleNextPlayback();
-    } else {
-        // 加入队列
-        m_playbackQueue.append(info);
-        qDebug() << "  当前正在播放其他报警，已加入队列（队列长度:" << m_playbackQueue.size() << "）";
+    // ✅ 2026-03-04 [Phase 7.48.2]: "最后触发优先"逻辑
+    // 旧逻辑：当前播放中则加入队列，依次播放（每次触发独立计数，N次触发=N×playCount次播放）
+    // 新逻辑：新触发立即替代旧触发，停止当前播放，清空队列，从0开始计数
+    // 原因：用户要求"每一个保护触发，都是从最后一个触发开始从0计次数，
+    //       之前保护触发如果在播放次数之内没有播放完成，被新的触发代替，旧的不再播放，次数清零"
+    if (m_isPlaying) {
+        qDebug() << "  🔄 新触发替代旧触发，停止当前播放并清空队列";
+        qDebug() << "    旧保护:" << m_currentPlayback.protectionName
+                 << "已播放:" << m_currentPlayback.currentPlayCount << "次";
+        if (!m_playbackQueue.isEmpty()) {
+            qDebug() << "    清空队列（丢弃" << m_playbackQueue.size() << "个待播放项）";
+        }
+        stopCurrentPlayback();
+        m_playbackQueue.clear();
     }
+    m_currentPlayback = info;
+    handleNextPlayback();
 }
 
 void AlarmPlaybackService::playAudioFile(const QString &audioFile)
