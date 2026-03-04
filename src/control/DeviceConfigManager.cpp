@@ -144,6 +144,10 @@ bool DeviceConfigManager::createTables()
     query.exec("CREATE INDEX IF NOT EXISTS idx_digital_protections_device ON device_digital_protections(device_id)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_digital_protections_active ON device_digital_protections(active)");
 
+    // ✅ 2026-03-04 [Phase 7.47.94]: 迁移 - 添加 play_mode 列（已有数据库不会重建表，需要 ALTER TABLE）
+    // SQLite 的 ALTER TABLE 对已存在的列会报错但不影响，直接忽略错误即可
+    query.exec("ALTER TABLE device_digital_protections ADD COLUMN play_mode TEXT DEFAULT 'count'");
+
     // 4. 模拟量保护表
     QString createAnalogProtectionsTable = R"(
         CREATE TABLE IF NOT EXISTS device_analog_protections (
@@ -183,6 +187,9 @@ bool DeviceConfigManager::createTables()
 
     query.exec("CREATE INDEX IF NOT EXISTS idx_analog_protections_device ON device_analog_protections(device_id)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_analog_protections_active ON device_analog_protections(active)");
+
+    // ✅ 2026-03-04 [Phase 7.47.94]: 迁移 - 添加 play_mode 列（与开关量保护表一致）
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN play_mode TEXT DEFAULT 'count'");
 
     // ✅ 2026-02-02 [参数持久化]: 添加电机配置表
     // 5. 电机配置表
@@ -641,8 +648,9 @@ bool DeviceConfigManager::saveDigitalProtection(int deviceId, const QVariantMap 
     query.prepare(R"(
         INSERT OR REPLACE INTO device_digital_protections
         (device_id, protection_name, module_type, register_address, channel_number,
-         protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file,
+         play_mode, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -658,6 +666,8 @@ bool DeviceConfigManager::saveDigitalProtection(int deviceId, const QVariantMap 
     query.addBindValue(protection.value("use_text_to_speech", false).toBool() ? 1 : 0);
     query.addBindValue(protection.value("tts_text", protectionName + "保护报警").toString());
     query.addBindValue(protection.value("audio_file", "").toString());
+    // ✅ 2026-03-04 [Phase 7.47.94]: 新增播放方式字段（count=按次数, duration=按时长）
+    query.addBindValue(protection.value("play_mode", "count").toString());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {

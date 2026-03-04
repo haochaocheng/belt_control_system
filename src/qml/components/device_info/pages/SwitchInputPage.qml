@@ -42,6 +42,8 @@ Rectangle {
     property int focusButtonIndex: 0  // ✅ 2026-01-29 [Phase 2.30]: 底部按钮区域焦点索引（0-4）
     // ✅ 2026-02-28 [Phase 7.47.44]: 音频来源模式 0=默认 1=TTS合成
     property int audioSourceMode: 0
+    // ✅ 2026-03-04 [Phase 7.47.94]: 播放方式 0=按次数 1=按时长
+    property int playModeSelection: 0
 
     // ✅ 2026-02-28 [Phase 7.47.49]: 音频来源模式切换时，自动刷新音频文件名
     // 原因：getAudioFileName() 依赖 audioSourceMode，切换模式后需更新显示
@@ -1129,14 +1131,189 @@ Rectangle {
                             }
                         }
 
+                        // ✅ 2026-03-04 [Phase 7.47.94]: 播放方式 - 第六行右侧（索引11）
+                        // 功能：选择保护触发时按次数播放还是按时长播放
+                        Text {
+                            text: "播放方式:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 2
+                            Layout.row: 5
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 3
+                            Layout.row: 5
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: 60
+
+                            // 播放方式切换按钮行
+                            RowLayout {
+                                anchors.fill: parent
+                                spacing: 8
+
+                                // ✅ 2026-03-04 [Phase 7.47.94]: Cyberpunk 工业风（参考音频来源按钮）
+                                // 选中按次数: 深蓝背景 + 青色边框 + 顶部青色高亮线 + LED点
+                                // 选中按时长: 深橙背景 + 橙色边框 + 顶部橙色高亮线 + LED点
+                                // 未选中: 深灰背景 + 板岩边框 + 灰色LED点
+
+                                // [按次数] 按钮
+                                Button {
+                                    id: playModeCountBtn
+                                    text: "按次数"
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 50
+                                    checkable: true
+                                    checked: root.playModeSelection === 0
+
+                                    background: Rectangle {
+                                        color: playModeCountBtn.checked ? "#0d1b2e" :
+                                               (playModeCountBtn.hovered ? "#1e2d42" : "#141920")
+                                        radius: 6
+                                        border.color: playModeCountBtn.checked ? "#00d4ff" :
+                                                      (playModeCountBtn.hovered ? "#2196F3" : "#334155")
+                                        border.width: playModeCountBtn.checked ? 2 : 1
+
+                                        // 顶部青色高亮线（选中状态）
+                                        Rectangle {
+                                            visible: playModeCountBtn.checked
+                                            anchors.top: parent.top
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.leftMargin: 1
+                                            anchors.rightMargin: 1
+                                            anchors.topMargin: 1
+                                            height: 2
+                                            radius: 1
+                                            color: "#00d4ff"
+                                        }
+                                    }
+
+                                    contentItem: Item {
+                                        Row {
+                                            anchors.centerIn: parent
+                                            spacing: 8
+
+                                            // LED状态指示点
+                                            Rectangle {
+                                                width: 8
+                                                height: 8
+                                                radius: 4
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                color: playModeCountBtn.checked ? "#00d4ff" : "#475569"
+
+                                                // 内部高亮
+                                                Rectangle {
+                                                    width: 4
+                                                    height: 4
+                                                    radius: 2
+                                                    anchors.centerIn: parent
+                                                    color: playModeCountBtn.checked ? "#e0f7ff" : "#64748B"
+                                                }
+                                            }
+
+                                            Text {
+                                                text: playModeCountBtn.text
+                                                font.pixelSize: 16
+                                                font.weight: playModeCountBtn.checked ? Font.Medium : Font.Normal
+                                                color: playModeCountBtn.checked ? "#00d4ff" : "#9E9E9E"
+                                                verticalAlignment: Text.AlignVCenter
+                                            }
+                                        }
+                                    }
+                                    onClicked: root.playModeSelection = 0
+                                }
+
+                                // [按时长] 按钮
+                                Button {
+                                    id: playModeDurationBtn
+                                    text: "按时长"
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 50
+                                    checkable: true
+                                    checked: root.playModeSelection === 1
+
+                                    background: Rectangle {
+                                        color: playModeDurationBtn.checked ? "#1b1500" :
+                                               (playModeDurationBtn.hovered ? "#1e2d42" : "#141920")
+                                        radius: 6
+                                        border.color: playModeDurationBtn.checked ? "#F59E0B" :
+                                                      (playModeDurationBtn.hovered ? "#2196F3" : "#334155")
+                                        border.width: playModeDurationBtn.checked ? 2 : 1
+
+                                        // 顶部橙色高亮线（选中状态）
+                                        Rectangle {
+                                            visible: playModeDurationBtn.checked
+                                            anchors.top: parent.top
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.leftMargin: 1
+                                            anchors.rightMargin: 1
+                                            anchors.topMargin: 1
+                                            height: 2
+                                            radius: 1
+                                            color: "#F59E0B"
+                                        }
+                                    }
+
+                                    contentItem: Item {
+                                        Row {
+                                            anchors.centerIn: parent
+                                            spacing: 8
+
+                                            // LED状态指示点
+                                            Rectangle {
+                                                width: 8
+                                                height: 8
+                                                radius: 4
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                color: playModeDurationBtn.checked ? "#F59E0B" : "#475569"
+
+                                                // 内部高亮
+                                                Rectangle {
+                                                    width: 4
+                                                    height: 4
+                                                    radius: 2
+                                                    anchors.centerIn: parent
+                                                    color: playModeDurationBtn.checked ? "#FDE68A" : "#64748B"
+                                                }
+                                            }
+
+                                            Text {
+                                                text: playModeDurationBtn.text
+                                                font.pixelSize: 16
+                                                font.weight: playModeDurationBtn.checked ? Font.Medium : Font.Normal
+                                                color: playModeDurationBtn.checked ? "#F59E0B" : "#9E9E9E"
+                                                verticalAlignment: Text.AlignVCenter
+                                            }
+                                        }
+                                    }
+                                    onClicked: root.playModeSelection = 1
+                                }
+                            }
+
+                            // ✅ 焦点指示器（参数索引11）
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
                         /* ✅ 2026-03-04 [Phase 7.47.80]: 注释掉GridLayout内模块状态指示器
                          * 原因：已移至 ScrollView 下方独立的「模块状态（只读）」区域
                          */
                         /*
                         Item {
-                            id: moduleStatusItem
+                            id: moduleStatusItem_old
                             Layout.column: 2
-                            Layout.row: 5
+                            Layout.row: 6
                             Layout.fillWidth: true
                             Layout.maximumWidth: 280
                             Layout.columnSpan: 2
@@ -2304,6 +2481,8 @@ Rectangle {
             // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - audioField → audioFileField（正确ID）
             // 旧错误代码: audioField.text = protection.audio_file || ""
             audioFileField.text = protection.audio_file || getAudioFileName(item.name)
+            // ✅ 2026-03-04 [Phase 7.47.94]: 加载播放方式
+            root.playModeSelection = (protection.play_mode === "duration") ? 1 : 0
 
             console.log("✅ [SwitchInputPage] 从数据库加载完整参数:", item.name)
         } else {
@@ -2328,6 +2507,8 @@ Rectangle {
             // ✅ 2026-02-28 [Phase 7.47.44]: 修复 - audioField → audioFileField + 显示实际文件名
             // 旧错误代码: audioField.text = ""
             audioFileField.text = getAudioFileName(item.name)
+            // ✅ 2026-03-04 [Phase 7.47.94]: 默认播放方式 - 按次数
+            root.playModeSelection = 0
 
             console.log("⚠️ [SwitchInputPage] 数据库中没有详细参数，使用默认值:", item.name)
         }
@@ -2362,7 +2543,9 @@ Rectangle {
             "use_text_to_speech": root.audioSourceMode === 1 ? 1 : 0,
             "tts_text": ttsTextField.text,
             // 旧错误代码: "audio_file": audioField.text  （audioField在注释块中）
-            "audio_file": audioFileField.text
+            "audio_file": audioFileField.text,
+            // ✅ 2026-03-04 [Phase 7.47.94]: 新增播放方式字段
+            "play_mode": root.playModeSelection === 0 ? "count" : "duration"
         }
 
         if (deviceConfigMgr.saveDigitalProtection(root.deviceId, protection)) {
@@ -2374,15 +2557,16 @@ Rectangle {
 
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.29]: 获取参数字段数量
     function getParamFieldCount() {
-        // ✅ 2026-03-04 [Phase 7.47.81]: 更新为11（无占位索引）
-        // 旧值（Phase 7.47.80）：13（含占位9/11）
-        // 新值：11（无占位，数据超时=9在row4右列，连接超时=10在row5左列）
+        // ✅ 2026-03-04 [Phase 7.47.94]: 更新为12（新增播放方式索引11）
+        // 旧值（Phase 7.47.81）：11
+        // 新值：12（新增播放方式=11在row5右列）
         // 索引说明：
         //   0-8:  保护参数（保护名称0、播放次数1、模块类型2、播放时长3、
         //          寄存器地址4、TTS文字5、通道编号6、音频文件7、保护延时8）
         //   9:    数据超时 SpinBox（row4 右列，与保护延时同行）
         //   10:   连接超时 SpinBox（row5 左列）
-        return 11
+        //   11:   播放方式 按钮组（row5 右列，按次数/按时长切换）
+        return 12
     }
 
     // ✅ 2026-03-04 [Phase 7.47.81]: 所有索引0-10均可交互，无占位
@@ -2447,6 +2631,12 @@ Rectangle {
             inputField = brokerTimeoutSpin   // 连接超时（SpinBox，row5左列）
             inputMode = "numeric"
             break
+        // ✅ 2026-03-04 [Phase 7.47.94]: 播放方式切换（按次数/按时长）
+        case 11:
+            // 直接切换播放方式，不弹出虚拟键盘（与音频来源case 4同类设计）
+            root.playModeSelection = (root.playModeSelection === 0) ? 1 : 0
+            console.log("✅ [SwitchInputPage] 切换播放方式:", root.playModeSelection === 0 ? "按次数" : "按时长")
+            return
         default:
             console.warn("⚠️ [SwitchInputPage] 无效的参数索引:", paramIndex)
             return
