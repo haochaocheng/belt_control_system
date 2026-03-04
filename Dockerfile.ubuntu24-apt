@@ -21,6 +21,16 @@ COPY qml /app/qml
 #       /app/tts_engines/melotts/melo_tts_service.py
 COPY tts_engines /app/tts_engines
 
+# ✅ 2026-03-04 19:40 [Phase 7.47.93] 安装 gstreamer1.0-alsa（GStreamer ALSA 音频输出插件）
+# 问题：容器缺少 gstreamer1.0-alsa，GStreamer autoaudiosink 回退链：
+#   PulseAudio(失败) → Jack(失败) → OSS4(失败) → PipeWire(失败) → OpenAL → ALSA
+#   经过 4 次失败尝试（~100ms 延迟），最终通过 OpenAL 间接输出 ALSA，导致音频卡顿
+# 修复：安装 gstreamer1.0-alsa 后，autoaudiosink 直接使用 alsasink（Rank primary 256）
+#   回退链缩短为：PulseAudio(失败) → alsasink(成功)，消除卡顿
+# 方案：使用预下载的 .deb 文件 dpkg 安装，不需要 apt-get update，不触碰基础镜像
+COPY packages/gstreamer1.0-alsa_1.24.2-1ubuntu0.3_arm64.deb /tmp/gstreamer1.0-alsa.deb
+RUN dpkg -i /tmp/gstreamer1.0-alsa.deb && rm -f /tmp/gstreamer1.0-alsa.deb
+
 # ✅ 2026-01-23 16:15 [FIX 100.299] TTS/ASR 模型改用 Volume 挂载
 # 原因：模型文件大（~1.4GB），打包进镜像导致：
 #   1. 镜像体积大（2.5GB → 1.1GB，减少 56%）

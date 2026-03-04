@@ -1523,6 +1523,23 @@ foreach ($script in $scripts) {
 }
 
 Write-Host "  [OK] Audio detection scripts copied and converted" -ForegroundColor Green
+
+# ✅ 2026-03-04 19:40 [Phase 7.47.93] 复制 GStreamer ALSA 插件 deb 包到构建上下文
+# 问题：容器缺少 gstreamer1.0-alsa，导致 GStreamer 音频输出回退链过长，音频卡顿
+# 修复：将预下载的 .deb 文件复制到构建上下文，Dockerfile 中 dpkg -i 安装
+# 效果：不需要 apt-get update，不触碰基础镜像，应用层镜像快速安装
+$PackagesDir = "$ProjectRoot\docker\rk3588\packages"
+if (Test-Path $PackagesDir) {
+    Write-Host "  Copying GStreamer packages..." -ForegroundColor Yellow
+    if (-not (Test-Path "$DockerContextDir\packages")) {
+        New-Item -ItemType Directory -Path "$DockerContextDir\packages" -Force | Out-Null
+    }
+    Copy-Item "$PackagesDir\*.deb" "$DockerContextDir\packages\" -Force -ErrorAction SilentlyContinue
+    Write-Host "  [OK] GStreamer packages copied" -ForegroundColor Green
+} else {
+    Write-Host "  [!] No packages directory found at $PackagesDir (skipping)" -ForegroundColor Yellow
+}
+
 Write-Host ""
 
 # ============================================================
