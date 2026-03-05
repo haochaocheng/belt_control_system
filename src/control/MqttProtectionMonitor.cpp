@@ -119,6 +119,25 @@ int MqttProtectionMonitor::getBeltMapping(int moduleIndex) const
     return m_beltMapping.value(moduleIndex, 1);  // 默认返回1号皮带
 }
 
+// ✅ 2026-03-05 [Phase 7.48.10]: 电机启动/停止通知（用于速度保护延时启动）
+void MqttProtectionMonitor::notifyMotorStarted(int beltNumber)
+{
+    m_motorRunning[beltNumber] = true;
+    m_motorStartTimers[beltNumber].start();
+    // 重置低速打滑计时器
+    m_slipTimerActive[beltNumber] = false;
+    qDebug() << "🏭 [MqttProtectionMonitor] 电机启动通知 - 皮带" << beltNumber
+             << "速度保护延时计时开始";
+}
+
+void MqttProtectionMonitor::notifyMotorStopped(int beltNumber)
+{
+    m_motorRunning[beltNumber] = false;
+    m_slipTimerActive[beltNumber] = false;
+    qDebug() << "🛑 [MqttProtectionMonitor] 电机停止通知 - 皮带" << beltNumber
+             << "速度保护状态已重置";
+}
+
 void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool value)
 {
     if (!m_isRunning) {
@@ -279,16 +298,90 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         // ✅ 2026-03-05 [Phase 7.48.9]: 记录超限方向，用于方向性音频选择（速度/张力/电压）
         bool exceeded = false;
         AudioPathMapper::LimitDirection limitDirection = AudioPathMapper::UpperLimit;
-        if (engineeringValue > upperLimit) {
-            qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量保护触发（超上限）:" << protName
-                       << "工程量:" << engineeringValue << ">" << upperLimit;
-            exceeded = true;
-            limitDirection = AudioPathMapper::UpperLimit;
-        } else if (engineeringValue < lowerLimit) {
-            qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量保护触发（低于下限）:" << protName
-                       << "工程量:" << engineeringValue << "<" << lowerLimit;
-            exceeded = true;
-            limitDirection = AudioPathMapper::LowerLimit;
+
+        // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护特殊处理（延时启动 + 额定百分比检测模式）
+        bool speedHandled = false;
+        if (protName == "速度") {
+            // 1. 延时启动检查：电机启动后延时X秒才开始检测
+            double startDelay = prot.value("speed_start_delay", 0.0).toDouble();
+            if (startDelay > 0 && m_motorRunning.value(beltNumber, false)) {
+                double elapsed = m_motorStartTimers[beltNumber].elapsed() / 1000.0;
+                if (elapsed < startDelay) {
+                    qDebug() << "   ⏳ 速度保护延时中:" << elapsed << "/" << startDelay << "秒";
+                    continue;  // 延时未到，跳过检测
+                }
+            }
+
+            // 2. 检测模式分支
+            QString detectMode = prot.value("speed_detect_mode", "limit").toString();
+            if (detectMode == "percent") {
+                // 模式B：额定速度百分比检测
+                double ratedSpeed = prot.value("rated_speed", 0.0).toDouble();
+                double slipDelay = prot.value("slip_delay", 10.0).toDouble();
+                speedHandled = true;
+
+                if (ratedSpeed <= 0) {
+                    qWarning() << "⚠️ [MqttProtectionMonitor] 速度保护额定速度未设置，跳过百分比检测";
+                    continue;
+                }
+
+                double ratio = engineeringValue / ratedSpeed;
+                qDebug() << "   速度百分比检测: 工程量=" << engineeringValue
+                         << "额定=" << ratedSpeed << "比值=" << (ratio * 100) << "%";
+
+                if (ratio > 1.1) {
+                    // > 110% 额定速度 → 立即报速度超速
+                    qWarning() << "⚠️ [MqttProtectionMonitor] 速度超速（>110%额定）:" << engineeringValue
+                               << ">" << (ratedSpeed * 1.1);
+                    exceeded = true;
+                    limitDirection = AudioPathMapper::UpperLimit;
+                } else if (ratio >= 0.7) {
+                    // 70%~110% → 正常，重置打滑计时器
+                    if (m_slipTimerActive.value(beltNumber, false)) {
+                        m_slipTimerActive[beltNumber] = false;
+                        qDebug() << "   速度恢复正常区间，重置打滑计时器";
+                    }
+                } else if (ratio >= 0.5) {
+                    // 50%~70% → 启动/检查打滑计时器
+                    if (!m_slipTimerActive.value(beltNumber, false)) {
+                        m_slipTimers[beltNumber].start();
+                        m_slipTimerActive[beltNumber] = true;
+                        qDebug() << "   进入低速区间(50%~70%)，启动打滑计时器，延时:" << slipDelay << "秒";
+                    } else {
+                        double slipElapsed = m_slipTimers[beltNumber].elapsed() / 1000.0;
+                        if (slipElapsed >= slipDelay) {
+                            // 持续超过延时 → 报低速打滑
+                            qWarning() << "⚠️ [MqttProtectionMonitor] 低速打滑（50%~70%持续" << slipElapsed << "秒）";
+                            exceeded = true;
+                            limitDirection = AudioPathMapper::LowerLimit;
+                        } else {
+                            qDebug() << "   低速区间计时中:" << slipElapsed << "/" << slipDelay << "秒";
+                        }
+                    }
+                } else {
+                    // < 50% 额定速度 → 立即报低速打滑
+                    qWarning() << "⚠️ [MqttProtectionMonitor] 低速打滑（<50%额定）:" << engineeringValue
+                               << "<" << (ratedSpeed * 0.5);
+                    exceeded = true;
+                    limitDirection = AudioPathMapper::LowerLimit;
+                }
+            }
+            // else: detectMode == "limit"，走下面的通用上下限逻辑
+        }
+
+        // 通用上下限检测（非速度保护，或速度保护的limit模式）
+        if (!speedHandled) {
+            if (engineeringValue > upperLimit) {
+                qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量保护触发（超上限）:" << protName
+                           << "工程量:" << engineeringValue << ">" << upperLimit;
+                exceeded = true;
+                limitDirection = AudioPathMapper::UpperLimit;
+            } else if (engineeringValue < lowerLimit) {
+                qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量保护触发（低于下限）:" << protName
+                           << "工程量:" << engineeringValue << "<" << lowerLimit;
+                exceeded = true;
+                limitDirection = AudioPathMapper::LowerLimit;
+            }
         }
 
         if (!exceeded) {

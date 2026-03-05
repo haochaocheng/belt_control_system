@@ -17,6 +17,7 @@
 #define MQTTPROTECTIONMONITOR_H
 
 #include <QObject>
+#include <QElapsedTimer>
 #include "AudioPathMapper.h"
 #include "../mqtt/AIDataManager.h"  // ✅ 2026-03-05 [Phase 7.48.5]: 包含 ChannelData 定义
 
@@ -124,6 +125,19 @@ public slots:
      */
     void onAIChannelChanged(int moduleIndex, int channelIndex, const ChannelData &data);
 
+    // ✅ 2026-03-05 [Phase 7.48.10]: 电机启动/停止通知（用于速度保护延时启动）
+    /**
+     * @brief 通知电机已启动（开始速度保护延时计时）
+     * @param beltNumber 皮带编号（1-8）
+     */
+    void notifyMotorStarted(int beltNumber);
+
+    /**
+     * @brief 通知电机已停止（重置速度保护状态）
+     * @param beltNumber 皮带编号（1-8）
+     */
+    void notifyMotorStopped(int beltNumber);
+
 signals:
     /**
      * @brief 保护触发信号
@@ -174,6 +188,12 @@ private:
      * - 默认：{0: 1, 1: 2}
      */
     QMap<int, int> m_aiBeltMapping;
+
+    // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护状态（延时启动 + 低速打滑计时）
+    QMap<int, QElapsedTimer> m_motorStartTimers;  ///< 电机启动计时器（key=beltNumber）
+    QMap<int, bool> m_motorRunning;               ///< 电机运行状态（key=beltNumber）
+    QMap<int, QElapsedTimer> m_slipTimers;        ///< 低速打滑计时器（key=beltNumber）
+    QMap<int, bool> m_slipTimerActive;            ///< 低速打滑计时器是否激活（key=beltNumber）
 };
 
 #endif // MQTTPROTECTIONMONITOR_H

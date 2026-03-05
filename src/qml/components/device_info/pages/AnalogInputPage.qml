@@ -43,6 +43,20 @@ Rectangle {
     property int protectionLevel: 1  // 保护级别：0=预警+紧急停车, 1=预警+正常停车, 2=仅预警, 3=不处理
     property string inputType: "4-20mA"  // 输入类型：4-20mA, 0-20mA, 0-5V, 0-10V, 1-5V
 
+    // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用属性
+    property real speedStartDelay: 0.0      // 电机启动延时（秒）
+    property string speedDetectMode: "limit" // 检测模式：limit=上下限, percent=额定百分比
+    property real ratedSpeed: 0.0           // 额定速度（m/s）
+    property real slipDelay: 10.0           // 低速打滑延时（秒）
+
+    // 判断当前选中的是否为速度保护
+    readonly property bool isSpeedProtection: {
+        if (currentProtectionIndex >= 0 && currentProtectionIndex < analogProtectionModel.count) {
+            return analogProtectionModel.get(currentProtectionIndex).name === "速度"
+        }
+        return false
+    }
+
     // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 监听焦点变化，同步更新 currentProtectionIndex
     // 当焦点在列表区域移动时，同步更新选中项索引
     onFocusItemIndexChanged: {
@@ -1367,6 +1381,174 @@ Rectangle {
                                 }
                             }
 
+                            // ✅ 2026-03-05 [Phase 7.48.10]: 新增 Row 9 - 检测模式和启动延时（仅速度保护可见）
+
+                            // 参数索引: 18 - 检测模式（左列，行9）
+                            Text {
+                                text: "检测模式:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 9
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                                visible: root.isSpeedProtection
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 9
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: speedDetectModeCombo.implicitHeight
+                                visible: root.isSpeedProtection
+
+                                DeviceInfo.CustomComboBox {
+                                    id: speedDetectModeCombo
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+                                    model: ["上下限比较", "额定速度百分比"]
+                                    currentIndex: root.speedDetectMode === "percent" ? 1 : 0
+                                    onCurrentIndexChanged: {
+                                        root.speedDetectMode = (currentIndex === 1) ? "percent" : "limit"
+                                    }
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 18) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 18) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // 参数索引: 19 - 启动延时（右列，行9）
+                            Text {
+                                text: "启动延时(秒):"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 9
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                                visible: root.isSpeedProtection
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 9
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: speedStartDelaySpin.implicitHeight
+                                visible: root.isSpeedProtection
+
+                                SpinBox {
+                                    id: speedStartDelaySpin
+                                    anchors.fill: parent
+                                    from: 0
+                                    to: 300
+                                    value: root.speedStartDelay
+                                    editable: true
+                                    font.pixelSize: 18
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 19) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 19) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // ✅ 2026-03-05 [Phase 7.48.10]: 新增 Row 10 - 额定速度和打滑延时（仅速度保护+百分比模式可见）
+
+                            // 参数索引: 20 - 额定速度（左列，行10）
+                            Text {
+                                text: "额定速度(m/s):"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 10
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                                visible: root.isSpeedProtection && root.speedDetectMode === "percent"
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 10
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: ratedSpeedSpin.implicitHeight
+                                visible: root.isSpeedProtection && root.speedDetectMode === "percent"
+
+                                SpinBox {
+                                    id: ratedSpeedSpin
+                                    anchors.fill: parent
+                                    from: 0
+                                    to: 1000
+                                    value: root.ratedSpeed * 10
+                                    editable: true
+                                    font.pixelSize: 18
+
+                                    property int decimals: 1
+                                    property real realValue: value / 10
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 20) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 20) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // 参数索引: 21 - 打滑延时（右列，行10）
+                            Text {
+                                text: "打滑延时(秒):"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 10
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                                visible: root.isSpeedProtection && root.speedDetectMode === "percent"
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 10
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: slipDelaySpin.implicitHeight
+                                visible: root.isSpeedProtection && root.speedDetectMode === "percent"
+
+                                SpinBox {
+                                    id: slipDelaySpin
+                                    anchors.fill: parent
+                                    from: 1
+                                    to: 120
+                                    value: root.slipDelay
+                                    editable: true
+                                    font.pixelSize: 18
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 21) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 21) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
                         }  // GridLayout 结束
                     }
                 }
@@ -1726,6 +1908,18 @@ Rectangle {
             dataTimeoutSpin.value = protection.data_timeout || 30
             connectionTimeoutSpin.value = protection.connection_timeout || 60
 
+            // ✅ 2026-03-05 [Phase 7.48.10]: 加载速度保护专用字段
+            if (item.name === "速度") {
+                root.speedStartDelay = protection.speed_start_delay || 0.0
+                speedStartDelaySpin.value = root.speedStartDelay
+                root.speedDetectMode = protection.speed_detect_mode || "limit"
+                speedDetectModeCombo.currentIndex = (root.speedDetectMode === "percent") ? 1 : 0
+                root.ratedSpeed = protection.rated_speed || 0.0
+                ratedSpeedSpin.value = root.ratedSpeed * 10
+                root.slipDelay = protection.slip_delay || 10.0
+                slipDelaySpin.value = root.slipDelay
+            }
+
             console.log("✅ [AnalogInputPage] 从数据库加载完整参数:", item.name)
         } else {
             // 数据库中没有，使用ListModel中的基本数据
@@ -1763,6 +1957,18 @@ Rectangle {
 
             dataTimeoutSpin.value = 30
             connectionTimeoutSpin.value = 60
+
+            // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用字段默认值
+            if (item.name === "速度") {
+                root.speedStartDelay = 30.0
+                speedStartDelaySpin.value = 30
+                root.speedDetectMode = "limit"
+                speedDetectModeCombo.currentIndex = 0
+                root.ratedSpeed = 2.5
+                ratedSpeedSpin.value = 25
+                root.slipDelay = 10.0
+                slipDelaySpin.value = 10
+            }
 
             console.log("⚠️ [AnalogInputPage] 数据库中没有详细参数，使用默认值:", item.name)
         }
@@ -1807,6 +2013,14 @@ Rectangle {
             "input_type": root.inputType,
             "data_timeout": dataTimeoutSpin.value,
             "connection_timeout": connectionTimeoutSpin.value
+        }
+
+        // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用字段
+        if (root.isSpeedProtection) {
+            protection["speed_start_delay"] = speedStartDelaySpin.value
+            protection["speed_detect_mode"] = root.speedDetectMode
+            protection["rated_speed"] = ratedSpeedSpin.realValue
+            protection["slip_delay"] = slipDelaySpin.value
         }
 
         if (deviceConfigMgr.saveAnalogProtection(root.deviceId, protection)) {
@@ -1857,8 +2071,9 @@ Rectangle {
 
     // 返回参数区域的字段数量
     function getParamFieldCount() {
-        return 18  // ✅ 2026-03-05 [Phase 7.48.6]: 改为18个参数字段（9行布局）
-        // ❌ 2026-01-31 [注释]: 旧值 14（7行布局）已废弃
+        // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护时返回22（18+4个速度专用参数），其他保护返回18
+        return root.isSpeedProtection ? 22 : 18
+        // ❌ 2026-03-05 [Phase 7.48.6]: 旧值 18（9行布局）已废弃
     }
 
     // 触发参数输入（打开虚拟键盘）
@@ -1957,6 +2172,23 @@ Rectangle {
         case 17:  // 保护级别
             inputField = protectionLevelCombo
             inputMode = "english"
+            break
+        // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用参数（case 18-21）
+        case 18:  // 检测模式（ComboBox切换）
+            inputField = speedDetectModeCombo
+            inputMode = "english"
+            break
+        case 19:  // 启动延时
+            inputField = speedStartDelaySpin
+            inputMode = "numeric"
+            break
+        case 20:  // 额定速度
+            inputField = ratedSpeedSpin
+            inputMode = "numeric"
+            break
+        case 21:  // 打滑延时
+            inputField = slipDelaySpin
+            inputMode = "numeric"
             break
         default:
             console.warn("⚠️ [AnalogInputPage] 未知的参数索引:", paramIndex)

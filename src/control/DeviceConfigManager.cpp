@@ -201,6 +201,11 @@ bool DeviceConfigManager::createTables()
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN data_timeout REAL DEFAULT 30.0");
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN connection_timeout REAL DEFAULT 60.0");
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN input_type TEXT DEFAULT '4-20mA'");
+    // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用字段（延时启动 + 额定速度百分比检测模式）
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN speed_start_delay REAL DEFAULT 0.0");
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN speed_detect_mode TEXT DEFAULT 'limit'");
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN rated_speed REAL DEFAULT 0.0");
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN slip_delay REAL DEFAULT 10.0");
 
     // ✅ 2026-02-02 [参数持久化]: 添加电机配置表
     // 5. 电机配置表
@@ -480,6 +485,21 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移003已执行过，跳过";
     }
+
+    // ✅ 2026-03-05 [Phase 7.48.10]: 迁移004 - 速度保护专用字段默认值
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 004（速度保护额定速度+延时字段）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '004_speed_protection_fields'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移004: 设置速度保护默认值";
+        QSqlQuery fix(m_database);
+        // 将已有速度保护的 rated_speed 设为 rated_value（2.5），speed_start_delay 设为 30秒
+        fix.exec("UPDATE device_analog_protections SET rated_speed = rated_value, speed_start_delay = 30.0 WHERE protection_name = '速度' AND rated_speed = 0.0");
+        int affected = fix.numRowsAffected();
+        qDebug() << "  ✅ 迁移004: 更新" << affected << "条速度保护的额定速度和启动延时";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('004_speed_protection_fields')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移004已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -631,23 +651,49 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
     for (const auto &p : protections) {
         // ✅ 2026-02-28 [Phase 7.47.53]: 修复 - 添加 use_text_to_speech = 0（默认为默认音频）
         // 与initDefaultDigitalProtections保持一致
-        query.prepare(R"(
-            INSERT INTO device_analog_protections
-            (device_id, protection_name, module_type, register_address, unit,
-             upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        )");
-        query.addBindValue(deviceId);
-        query.addBindValue(p.name);
-        query.addBindValue("模拟量模块1");
-        query.addBindValue(p.registerAddress);
-        query.addBindValue(p.unit);
-        query.addBindValue(p.upperLimit);
-        query.addBindValue(p.lowerLimit);
-        query.addBindValue(p.range);
-        query.addBindValue(p.rated);
-        query.addBindValue(p.name + "保护报警");
-        query.addBindValue(0);  // ✅ 默认为0（使用默认音频）
+        // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护额外写入4个专用字段
+        if (p.name == "速度") {
+            query.prepare(R"(
+                INSERT INTO device_analog_protections
+                (device_id, protection_name, module_type, register_address, unit,
+                 upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech,
+                 speed_start_delay, speed_detect_mode, rated_speed, slip_delay)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            )");
+            query.addBindValue(deviceId);
+            query.addBindValue(p.name);
+            query.addBindValue("模拟量模块1");
+            query.addBindValue(p.registerAddress);
+            query.addBindValue(p.unit);
+            query.addBindValue(p.upperLimit);
+            query.addBindValue(p.lowerLimit);
+            query.addBindValue(p.range);
+            query.addBindValue(p.rated);
+            query.addBindValue(p.name + "保护报警");
+            query.addBindValue(0);  // 默认音频
+            query.addBindValue(30.0);   // speed_start_delay: 电机启动后延时30秒开始检测
+            query.addBindValue("limit"); // speed_detect_mode: 默认上下限模式
+            query.addBindValue(p.rated); // rated_speed: 默认等于rated_value（2.5 m/s）
+            query.addBindValue(10.0);   // slip_delay: 低速打滑延时10秒
+        } else {
+            query.prepare(R"(
+                INSERT INTO device_analog_protections
+                (device_id, protection_name, module_type, register_address, unit,
+                 upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            )");
+            query.addBindValue(deviceId);
+            query.addBindValue(p.name);
+            query.addBindValue("模拟量模块1");
+            query.addBindValue(p.registerAddress);
+            query.addBindValue(p.unit);
+            query.addBindValue(p.upperLimit);
+            query.addBindValue(p.lowerLimit);
+            query.addBindValue(p.range);
+            query.addBindValue(p.rated);
+            query.addBindValue(p.name + "保护报警");
+            query.addBindValue(0);  // ✅ 默认为0（使用默认音频）
+        }
 
         if (!query.exec()) {
             QString error = QString("初始化设备%1的模拟量保护'%2'失败: %3")
@@ -890,13 +936,16 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
 
     QSqlQuery query(m_database);
     // ✅ 2026-03-05 [Phase 7.48.5]: 扩展INSERT语句，添加3个新列
+    // ✅ 2026-03-05 [Phase 7.48.10]: 扩展INSERT语句，添加4个速度保护专用列（共25列）
     query.prepare(R"(
         INSERT OR REPLACE INTO device_analog_protections
         (device_id, protection_name, module_type, register_address, unit,
          upper_limit, lower_limit, range_value, rated_value,
          protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file,
-         play_mode, protection_level, data_timeout, connection_timeout, input_type, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         play_mode, protection_level, data_timeout, connection_timeout, input_type,
+         speed_start_delay, speed_detect_mode, rated_speed, slip_delay,
+         updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -922,6 +971,11 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     query.addBindValue(protection.value("data_timeout", 30.0).toDouble());
     query.addBindValue(protection.value("connection_timeout", 60.0).toDouble());
     query.addBindValue(protection.value("input_type", "4-20mA").toString());
+    // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用字段
+    query.addBindValue(protection.value("speed_start_delay", 0.0).toDouble());
+    query.addBindValue(protection.value("speed_detect_mode", "limit").toString());
+    query.addBindValue(protection.value("rated_speed", 0.0).toDouble());
+    query.addBindValue(protection.value("slip_delay", 10.0).toDouble());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
