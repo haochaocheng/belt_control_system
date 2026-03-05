@@ -369,6 +369,117 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移002已执行过，跳过";
     }
+
+    // 迁移 003：扩展模拟量保护从7-8项到18项
+    // ✅ 2026-03-05 [Phase 7.48.8]: 修改 - 速度/张力/电压为单一保护项，根据上下限播放不同音频
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 003（模拟量保护扩展至18项）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '003_expand_analog_protections'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔄 [DeviceConfigManager] 开始执行迁移003...";
+
+        // 1. 删除旧的"电流一"和"电流二"保护项
+        QSqlQuery deleteQuery(m_database);
+        deleteQuery.exec("DELETE FROM device_analog_protections WHERE protection_name IN ('电流一', '电流二')");
+        int deletedCount = deleteQuery.numRowsAffected();
+        qDebug() << "  ✅ 删除旧保护项（电流一/电流二）:" << deletedCount << "条";
+
+        // 2. 删除可能存在的拆分保护项（速度超速/低速打滑/张力上限/张力下限/电压过压/电压欠压）
+        deleteQuery.exec("DELETE FROM device_analog_protections WHERE protection_name IN ('速度超速', '低速打滑', '张力上限', '张力下限', '电压过压', '电压欠压')");
+        int deletedSplitCount = deleteQuery.numRowsAffected();
+        qDebug() << "  ✅ 删除拆分保护项:" << deletedSplitCount << "条";
+
+        // 3. 更新旧保护项名称（保持单一保护项）
+        QSqlQuery updateQuery(m_database);
+        updateQuery.exec("UPDATE device_analog_protections SET protection_name = '温度一' WHERE protection_name = '红外温度一'");
+        updateQuery.exec("UPDATE device_analog_protections SET protection_name = '温度二' WHERE protection_name = '红外温度二'");
+        // 速度、张力、电压保持原名不变
+        qDebug() << "  ✅ 更新旧保护项名称完成";
+
+        // 4. 为每个设备补充缺失的保护项
+        QSqlQuery deviceQuery(m_database);
+        deviceQuery.exec("SELECT device_id FROM devices ORDER BY device_id");
+
+        // 定义需要补充的保护项（11项新增）
+        struct NewProtection {
+            QString name;
+            QString unit;
+            int registerAddress;
+            double upperLimit;
+            double lowerLimit;
+            double range;
+            double rated;
+        };
+
+        QList<NewProtection> newProtections = {
+            // 设备运行保护（2项新增）
+            {"煤流",       "t/h",  7, 2000.0, 0.0, 2000.0, 500.0},
+            {"煤仓高度",   "m",    8, 30.0, 0.0, 30.0, 15.0},
+            // 环境安全监测（8项新增）
+            {"温度",       "℃",   12, 50.0, 0.0, 50.0, 26.0},
+            {"湿度",       "%RH",  13, 100.0, 0.0, 100.0, 95.0},
+            {"烟雾",       "mg/m³",14, 1000.0, 0.0, 1000.0, 500.0},
+            {"气压",       "kPa",  15, 120.0, 80.0, 40.0, 101.0},
+            {"氧气",       "%O₂",  16, 25.0, 0.0, 25.0, 20.0},
+            {"甲烷",       "%CH₄", 17, 4.0, 0.0, 4.0, 1.0},
+            {"一氧化碳",   "ppm",  18, 1000.0, 0.0, 1000.0, 24.0},
+            {"硫化氢",     "ppm",  19, 100.0, 0.0, 100.0, 6.6},
+            // 安全规程补充（3项新增）
+            {"二氧化碳",   "%CO₂", 20, 5.0, 0.0, 5.0, 1.5},
+            {"风速",       "m/s",  21, 15.0, 0.3, 14.7, 4.0},
+            {"粉尘浓度",   "mg/m³",22, 1000.0, 0.0, 1000.0, 100.0}
+        };
+
+        int deviceCount = 0;
+        int totalAdded = 0;
+        while (deviceQuery.next()) {
+            int deviceId = deviceQuery.value(0).toInt();
+            deviceCount++;
+
+            for (const auto &p : newProtections) {
+                // 检查是否已存在
+                QSqlQuery checkQuery(m_database);
+                checkQuery.prepare("SELECT COUNT(*) FROM device_analog_protections WHERE device_id = ? AND protection_name = ?");
+                checkQuery.addBindValue(deviceId);
+                checkQuery.addBindValue(p.name);
+
+                if (checkQuery.exec() && checkQuery.next() && checkQuery.value(0).toInt() == 0) {
+                    // 不存在，插入新保护项
+                    QSqlQuery insertQuery(m_database);
+                    insertQuery.prepare(R"(
+                        INSERT INTO device_analog_protections
+                        (device_id, protection_name, module_type, register_address, unit,
+                         upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    )");
+                    insertQuery.addBindValue(deviceId);
+                    insertQuery.addBindValue(p.name);
+                    insertQuery.addBindValue("模拟量模块1");
+                    insertQuery.addBindValue(p.registerAddress);
+                    insertQuery.addBindValue(p.unit);
+                    insertQuery.addBindValue(p.upperLimit);
+                    insertQuery.addBindValue(p.lowerLimit);
+                    insertQuery.addBindValue(p.range);
+                    insertQuery.addBindValue(p.rated);
+                    insertQuery.addBindValue(p.name + "保护报警");
+                    insertQuery.addBindValue(0);  // 默认使用默认音频
+
+                    if (insertQuery.exec()) {
+                        totalAdded++;
+                    } else {
+                        qWarning() << "  ⚠️ 设备" << deviceId << "添加保护项" << p.name << "失败:" << insertQuery.lastError().text();
+                    }
+                }
+            }
+        }
+
+        qDebug() << "  ✅ 为" << deviceCount << "个设备补充了" << totalAdded << "条新保护项";
+        qDebug() << "✅ [DeviceConfigManager] 迁移003完成";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('003_expand_analog_protections')");
+    } else if (!query.exec()) {
+        qWarning() << "⚠️ [DeviceConfigManager] 迁移003查询失败:" << query.lastError().text();
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移003已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -487,22 +598,20 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
         double rated;
     };
 
-    // ✅ 2026-03-05 [Phase 7.48.5]: 扩展模拟量保护从7项到21项
+    // ✅ 2026-03-05 [Phase 7.48.8]: 扩展模拟量保护从7项到18项
     // 删除：电流一/电流二（属于电机运行范围）
-    // 改名：速度→速度超速、张力→张力上限、红外温度一→温度一、红外温度二→温度二、电压→电压过压
-    // 新增：低速打滑、张力下限、煤流、煤仓高度、电压欠压、温度、湿度、烟雾、气压、氧气、甲烷、一氧化碳、硫化氢、二氧化碳、风速、粉尘浓度
+    // 保持：速度、张力、电压（单一保护项，根据上下限播放不同音频）
+    // 改名：红外温度一→温度一、红外温度二→温度二
+    // 新增：煤流、煤仓高度、温度、湿度、烟雾、气压、氧气、甲烷、一氧化碳、硫化氢、二氧化碳、风速、粉尘浓度
     QList<AnalogProtection> protections = {
-        // 设备运行保护（10项）
-        {"速度超速",   "m/s",  5, 10.0,  0.0, 10.0, 2.5},    // 原"速度"改名
-        {"低速打滑",   "m/s",  5, 10.0,  0.0, 10.0, 2.5},    // 新增
-        {"张力上限",   "T",    6, 100.0, 0.0, 100.0, 50.0},  // 原"张力"改名
-        {"张力下限",   "T",    6, 100.0, 0.0, 100.0, 50.0},  // 新增
-        {"煤流",       "t/h",  7, 2000.0, 0.0, 2000.0, 500.0}, // 新增
-        {"煤仓高度",   "m",    8, 30.0, 0.0, 30.0, 15.0},    // 新增
-        {"温度一",     "℃",   9, 150.0, 0.0, 150.0, 40.0},   // 原"红外温度一"改名
-        {"温度二",     "℃",   10, 150.0, 0.0, 150.0, 40.0},  // 原"红外温度二"改名
-        {"电压过压",   "V",    11, 1200.0, 0.0, 1200.0, 380.0}, // 原"电压"改名
-        {"电压欠压",   "V",    11, 1200.0, 0.0, 1200.0, 380.0}, // 新增（由电压拆分）
+        // 设备运行保护（7项）
+        {"速度",       "m/s",  5, 10.0,  0.5, 9.5, 2.5},     // 上限→速度超速，下限→低速打滑
+        {"张力",       "T",    6, 100.0, 10.0, 90.0, 50.0},  // 上限→张力上限，下限→张力下限
+        {"煤流",       "t/h",  7, 2000.0, 0.0, 2000.0, 500.0},
+        {"煤仓高度",   "m",    8, 30.0, 0.0, 30.0, 15.0},
+        {"温度一",     "℃",   9, 150.0, 0.0, 150.0, 40.0},
+        {"温度二",     "℃",   10, 150.0, 0.0, 150.0, 40.0},
+        {"电压",       "V",    11, 450.0, 320.0, 130.0, 380.0}, // 上限→电压过压，下限→电压欠压
         // 环境安全监测（8项）
         {"温度",       "℃",   12, 50.0, 0.0, 50.0, 26.0},
         {"湿度",       "%RH",  13, 100.0, 0.0, 100.0, 95.0},
