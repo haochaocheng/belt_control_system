@@ -23,35 +23,45 @@
 
 ## 二、修复内容
 
-### 修改文件
-`src/qml/pages/BatchSynthesisDialog.qml`
+### 修改文件（2个）
+1. `src/qml/pages/BatchSynthesisDialog.qml` - Popup模式
+2. `src/qml/pages/BatchSynthesisContent.qml` - 嵌入模式
+
+### 问题根源
+项目中有两个批量生成界面文件，它们的 `calculateTotalFiles()` 函数独立维护：
+- **BatchSynthesisDialog.qml**：第563行，原值 `16 * beltCount`
+- **BatchSynthesisContent.qml**：第661行，原值 `8 * beltCount` ⚠️
+
+用户看到的界面使用 `BatchSynthesisContent.qml`，所以显示64个文件（8 × 8 = 64）。
 
 ### 修改位置
-第 552-570 行：`calculateTotalFiles()` 函数
 
-### 修改前
+**文件1：BatchSynthesisDialog.qml**
+- 第 552-570 行：`calculateTotalFiles()` 函数
+- 第 563 行：`16 * beltCount` → `21 * beltCount`
+
+**文件2：BatchSynthesisContent.qml**
+- 第 649-674 行：`calculateTotalFiles()` 函数
+- 第 661 行：`8 * beltCount` → `21 * beltCount`
+
+### 修改前后对比
+
+**BatchSynthesisDialog.qml（第563行）**：
 ```javascript
-function calculateTotalFiles() {
-    var total = 0
-    var beltCount = spinBeltCount.value
-    // ...
-    if (chkAnalogInput.checked) total += 16 * beltCount  // ❌ 旧计数
-    // ...
-    return total.toString()
-}
+// 修改前
+if (chkAnalogInput.checked) total += 16 * beltCount  // ❌ 旧计数
+
+// 修改后
+if (chkAnalogInput.checked) total += 21 * beltCount  // ✅ 新计数（原16项，现21项）
 ```
 
-### 修改后
+**BatchSynthesisContent.qml（第661行）**：
 ```javascript
-// ✅ 2026-03-05 [Phase 7.48.5]: 模拟量输入从16项更新为21项（设备保护10项+环境监测8项+安规补充3项）
-function calculateTotalFiles() {
-    var total = 0
-    var beltCount = spinBeltCount.value
-    // ...
-    if (chkAnalogInput.checked) total += 21 * beltCount  // ✅ 新计数
-    // ...
-    return total.toString()
-}
+// 修改前
+if (chkAnalogInput.checked) total += 8 * beltCount   // ❌ 旧计数
+
+// 修改后
+if (chkAnalogInput.checked) total += 21 * beltCount  // ✅ 新计数（原8项，2026-03-05更新）
 ```
 
 ---

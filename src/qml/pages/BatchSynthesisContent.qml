@@ -648,6 +648,7 @@ Rectangle {
 
     // 计算预计文件数
     // ✅ 2026-02-26 23:25 [Phase 7.47.20]: 更新文件数量计算，与后端一致
+    // ✅ 2026-03-05 [Phase 7.48.7]: 模拟量输入从8项更新为21项（设备保护10项+环境监测8项+安规补充3项）
     function calculateTotalFiles() {
         var total = 0
         var beltCount = spinBeltCount.value
@@ -658,7 +659,7 @@ Rectangle {
 
         // 按设计方案的文件数量
         if (chkSwitchInput.checked) total += 8 * beltCount           // 开关量：8个/皮带
-        if (chkAnalogInput.checked) total += 8 * beltCount           // 模拟量：8个/皮带
+        if (chkAnalogInput.checked) total += 21 * beltCount          // 模拟量：21个/皮带（原8项，2026-03-05更新）
         if (chkMotor.checked) total += 9 * beltCount * motorCount    // 电机：9个/皮带/电机（与MotorControlPage Tab对应）
         if (chkBrake.checked) total += 3 * beltCount * brakeCount    // 制动器：3个/皮带/制动器
         if (chkTension.checked) total += 3 * beltCount * tensionCount // 张紧：3个/皮带/张紧
