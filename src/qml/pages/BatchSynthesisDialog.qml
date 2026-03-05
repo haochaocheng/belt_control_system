@@ -550,6 +550,7 @@ Popup {
     }
 
     // 计算预计文件数
+    // ✅ 2026-03-05 [Phase 7.48.5]: 模拟量输入从16项更新为21项（设备保护10项+环境监测8项+安规补充3项）
     function calculateTotalFiles() {
         var total = 0
         var beltCount = spinBeltCount.value
@@ -559,7 +560,7 @@ Popup {
         var lineCount = spinLineEnd.value - spinLineStart.value + 1
 
         if (chkSwitchInput.checked) total += 33 * beltCount
-        if (chkAnalogInput.checked) total += 16 * beltCount
+        if (chkAnalogInput.checked) total += 21 * beltCount  // 原16项，现21项（2026-03-05更新）
         if (chkMotor.checked) total += 12 * beltCount * motorCount
         if (chkBrake.checked) total += 8 * beltCount * brakeCount
         if (chkTension.checked) total += 10 * beltCount * tensionCount
