@@ -18,10 +18,10 @@
 
 #include <QObject>
 #include "AudioPathMapper.h"
+#include "../mqtt/AIDataManager.h"  // ✅ 2026-03-05 [Phase 7.48.5]: 包含 ChannelData 定义
 
 // 前向声明
 class DIDataManager;
-class AIDataManager;  // ✅ 2026-03-05 [Phase 7.48.5]
 class CommonControl;
 class DeviceConfigManager;  // ✅ 2026-02-28 [Phase 7.47.49]
 class AlarmPlaybackService; // ✅ 2026-03-04 [Phase 7.47.95]
@@ -107,6 +107,23 @@ public:
      */
     Q_INVOKABLE int getBeltMapping(int moduleIndex) const;
 
+public slots:
+    // ✅ 2026-03-05 [Phase 7.48.5]: AI通道变化槽函数（移至 public slots）
+    /**
+     * @brief AI通道变化槽函数（模拟量保护监控）
+     * @param moduleIndex AI模块索引（0或1）
+     * @param channelIndex 通道索引（0-7）
+     * @param data 通道数据（包含AD值、工程量等）
+     *
+     * 说明：
+     * - 从AIDataManager接收channelChanged信号
+     * - 查询该皮带的所有模拟量保护配置
+     * - 从data中获取AD值和工程量
+     * - 对比上下限阈值
+     * - 超限时触发AlarmPlaybackService
+     */
+    void onAIChannelChanged(int moduleIndex, int channelIndex, const ChannelData &data);
+
 signals:
     /**
      * @brief 保护触发信号
@@ -127,22 +144,6 @@ private slots:
      * @param value 位值（true=1, false=0）
      */
     void onBitChanged(int moduleIndex, int bitIndex, bool value);
-
-    // ✅ 2026-03-05 [Phase 7.48.5]: 新增 - AI通道变化槽函数
-    /**
-     * @brief AI通道变化槽函数（模拟量保护监控）
-     * @param moduleIndex AI模块索引（0或1）
-     * @param channelIndex 通道索引（0-7）
-     * @param adValue AD转换值（0-65535）
-     *
-     * 说明：
-     * - 从AIDataManager接收channelChanged信号
-     * - 查询该皮带的所有模拟量保护配置
-     * - 将AD值转换为工程量
-     * - 对比上下限阈值
-     * - 超限时触发AlarmPlaybackService
-     */
-    void onAIChannelChanged(int moduleIndex, int channelIndex, double adValue);
 
 private:
     DIDataManager *m_diManager;        ///< DI数据管理器

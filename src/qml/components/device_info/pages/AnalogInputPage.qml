@@ -37,6 +37,12 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property int focusButtonIndex: 0  // 底部按钮区域焦点索引
 
+    // ✅ 2026-03-05 [Phase 7.48.6]: 新增属性支持18参数布局
+    property string audioSourceMode: "tts"  // 音频来源模式：default=默认音频, tts=TTS合成
+    property string playModeSelection: "count"  // 播放方式：count=按次数, duration=按时长
+    property int protectionLevel: 1  // 保护级别：0=预警+紧急停车, 1=预警+正常停车, 2=仅预警, 3=不处理
+    property string inputType: "4-20mA"  // 输入类型：4-20mA, 0-20mA, 0-5V, 0-10V, 1-5V
+
     // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 监听焦点变化，同步更新 currentProtectionIndex
     // 当焦点在列表区域移动时，同步更新选中项索引
     onFocusItemIndexChanged: {
@@ -60,14 +66,31 @@ Rectangle {
     // ========== 模拟量保护模型 ==========
     ListModel {
         id: analogProtectionModel
-        // ✅ 2026-01-26 [FIX 100.300.23]: 移除所有电机相关的模拟量保护
-        // 电流、电机温度、振动、绕组等都应该在电机控制里设置
-        // 只保留皮带系统级别的模拟量保护
-        ListElement { name: "速度"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 5 }
-        ListElement { name: "张力"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 6 }
-        ListElement { name: "红外温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 7 }
-        ListElement { name: "红外温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 8 }
-        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 11 }
+        // ✅ 2026-03-05 [Phase 7.48.6]: 扩展模拟量保护从5项到21项
+        // 设备运行保护（10项）
+        ListElement { name: "速度超速"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 5 }
+        ListElement { name: "低速打滑"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 5 }
+        ListElement { name: "张力上限"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 6 }
+        ListElement { name: "张力下限"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 6 }
+        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "模拟量模块1"; registerAddress: 7 }
+        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "模拟量模块1"; registerAddress: 8 }
+        ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 9 }
+        ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 10 }
+        ListElement { name: "电压过压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 11 }
+        ListElement { name: "电压欠压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 11 }
+        // 环境安全监测（8项）
+        ListElement { name: "温度"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 12 }
+        ListElement { name: "湿度"; active: false; currentValue: 0.0; unit: "%RH"; moduleType: "模拟量模块1"; registerAddress: 13 }
+        ListElement { name: "烟雾"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块1"; registerAddress: 14 }
+        ListElement { name: "气压"; active: false; currentValue: 0.0; unit: "kPa"; moduleType: "模拟量模块1"; registerAddress: 15 }
+        ListElement { name: "氧气"; active: false; currentValue: 0.0; unit: "%O₂"; moduleType: "模拟量模块1"; registerAddress: 16 }
+        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "模拟量模块1"; registerAddress: 17 }
+        ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块1"; registerAddress: 18 }
+        ListElement { name: "硫化氢"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块1"; registerAddress: 19 }
+        // 安全规程补充（3项）
+        ListElement { name: "二氧化碳"; active: false; currentValue: 0.0; unit: "%CO₂"; moduleType: "模拟量模块1"; registerAddress: 20 }
+        ListElement { name: "风速"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 21 }
+        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块1"; registerAddress: 22 }
     }
 
     // ========== 主布局：左右分栏 ==========
@@ -365,9 +388,10 @@ Rectangle {
                                 }
                             }
 
-                            // 参数索引: 1 - 保护延时（右列，行0）
+                            // ✅ 2026-03-05 [Phase 7.48.6]: 参数索引1改为播放次数
+                            // 参数索引: 1 - 播放次数（右列，行0）
                             Text {
-                                text: "保护延时(秒):"
+                                text: "播放次数:"
                                 font.pixelSize: 21
                                 color: "#9E9E9E"
                                 Layout.column: 2
@@ -381,28 +405,16 @@ Rectangle {
                                 Layout.row: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300
-                                implicitHeight: delaySpin.implicitHeight
+                                implicitHeight: playCountSpin.implicitHeight
 
                                 DeviceInfo.CustomSpinBox {
-                                    id: delaySpin
-                                    from: 0
-                                    to: 600
-                                    value: 10
-                                    stepSize: 1
+                                    id: playCountSpin
+                                    from: 1
+                                    to: 99
+                                    value: 3
                                     editable: true
                                     anchors.fill: parent
                                     keyboardManager: root.keyboardManager
-
-                                    property int decimals: 1
-                                    property real realValue: value / 10
-
-                                    textFromValue: function(value, locale) {
-                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
-                                    }
-
-                                    valueFromText: function(text, locale) {
-                                        return Number.fromLocaleString(locale, text) * 10
-                                    }
                                 }
 
                                 Rectangle {
@@ -466,98 +478,21 @@ Rectangle {
                                 }
                             }
 
-                            // 参数索引: 3 - 播放次数（右列，行1）
-                            Text {
-                                text: "播放次数:"
-                                font.pixelSize: 21
-                                color: "#9E9E9E"
-                                Layout.column: 2
-                                Layout.row: 1
-                                Layout.preferredWidth: 160
-                                horizontalAlignment: Text.AlignRight
-                            }
-
-                            Item {
-                                Layout.column: 3
-                                Layout.row: 1
-                                Layout.fillWidth: true
-                                Layout.maximumWidth: 300
-                                implicitHeight: playCountSpin.implicitHeight
-
-                                DeviceInfo.CustomSpinBox {
-                                    id: playCountSpin
-                                    from: 1
-                                    to: 99
-                                    value: 3
-                                    editable: true
-                                    anchors.fill: parent
-                                    keyboardManager: root.keyboardManager
-                                }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
-                                    radius: 4
-                                    z: 10
-                                }
-                            }
-
-                            // ========== 第三行：寄存器地址（左）、播放时长（右）==========
-                            // 参数索引: 4 - 寄存器地址（左列，行2）
-                            Text {
-                                text: "寄存器地址:"
-                                font.pixelSize: 21
-                                color: "#9E9E9E"
-                                Layout.column: 0
-                                Layout.row: 2
-                                Layout.preferredWidth: 160
-                                horizontalAlignment: Text.AlignRight
-                                visible: moduleTypeCombo.currentText !== "主模块"
-                            }
-
-                            Item {
-                                Layout.column: 1
-                                Layout.row: 2
-                                Layout.fillWidth: true
-                                Layout.maximumWidth: 300
-                                implicitHeight: registerAddressSpin.implicitHeight
-                                visible: moduleTypeCombo.currentText !== "主模块"
-
-                                DeviceInfo.CustomSpinBox {
-                                    id: registerAddressSpin
-                                    from: 0
-                                    to: 255
-                                    editable: true
-                                    anchors.fill: parent
-                                    keyboardManager: root.keyboardManager
-                                }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
-                                    radius: 4
-                                    z: 10
-                                }
-                            }
-
-                            // 参数索引: 5 - 播放时长（右列，行2）
+                            // ✅ 2026-03-05 [Phase 7.48.6]: 参数索引3改为播放时长
+                            // 参数索引: 3 - 播放时长（右列，行1）
                             Text {
                                 text: "播放时长(秒):"
                                 font.pixelSize: 21
                                 color: "#9E9E9E"
                                 Layout.column: 2
-                                Layout.row: 2
+                                Layout.row: 1
                                 Layout.preferredWidth: 160
                                 horizontalAlignment: Text.AlignRight
                             }
 
                             Item {
                                 Layout.column: 3
-                                Layout.row: 2
+                                Layout.row: 1
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300
                                 implicitHeight: durationSpin.implicitHeight
@@ -582,6 +517,226 @@ Rectangle {
                                     valueFromText: function(text, locale) {
                                         return Number.fromLocaleString(locale, text) * 10
                                     }
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 3) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // ========== 第三行：音频来源（左）、TTS文字（右）==========
+                            // ✅ 2026-03-05 [Phase 7.48.6]: 参数索引4改为音频来源按钮组
+                            // 参数索引: 4 - 音频来源（左列，行2）
+                            Text {
+                                text: "音频来源:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 2
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 2
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: 48
+
+                                // 音频来源切换按钮行
+                                RowLayout {
+                                    id: audioSourceButtonGroup
+                                    anchors.fill: parent
+                                    spacing: 8
+
+                                    // ✅ 2026-03-05 [Phase 7.48.6]: Cyberpunk 工业风（与开关量一致）
+                                    // 选中默认: 深蓝背景 + 青色边框 + 顶部青色高亮线 + LED点
+                                    // 选中TTS: 深绿背景 + 绿色边框 + 顶部绿色高亮线 + LED点
+                                    // 未选中: 深灰背景 + 板岩边框 + 灰色LED点
+
+                                    // [默认] 按钮
+                                    Button {
+                                        id: defaultAudioButton
+                                        text: "默认"
+                                        checkable: true
+                                        checked: root.audioSourceMode === "default"
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 50
+
+                                        background: Rectangle {
+                                            color: defaultAudioButton.checked ? "#0a1929" :
+                                                   (defaultAudioButton.hovered ? "#1e2d42" : "#141920")
+                                            radius: 6
+                                            border.color: defaultAudioButton.checked ? "#00d4ff" :
+                                                          (defaultAudioButton.hovered ? "#2196F3" : "#334155")
+                                            border.width: defaultAudioButton.checked ? 2 : 1
+
+                                            // 顶部青色高亮线（选中状态）
+                                            Rectangle {
+                                                visible: defaultAudioButton.checked
+                                                anchors.top: parent.top
+                                                anchors.left: parent.left
+                                                anchors.right: parent.right
+                                                anchors.leftMargin: 1
+                                                anchors.rightMargin: 1
+                                                anchors.topMargin: 1
+                                                height: 2
+                                                radius: 1
+                                                color: "#00d4ff"
+                                            }
+                                        }
+
+                                        contentItem: Item {
+                                            Row {
+                                                anchors.centerIn: parent
+                                                spacing: 8
+
+                                                // LED状态指示点
+                                                Rectangle {
+                                                    width: 8
+                                                    height: 8
+                                                    radius: 4
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    color: defaultAudioButton.checked ? "#00d4ff" : "#475569"
+
+                                                    // 内部高亮
+                                                    Rectangle {
+                                                        width: 4
+                                                        height: 4
+                                                        radius: 2
+                                                        anchors.centerIn: parent
+                                                        color: defaultAudioButton.checked ? "#7dd3fc" : "#64748B"
+                                                    }
+                                                }
+
+                                                Text {
+                                                    text: defaultAudioButton.text
+                                                    font.pixelSize: 13
+                                                    font.bold: defaultAudioButton.checked
+                                                    color: defaultAudioButton.checked ? "#E0E0E0" : "#9E9E9E"
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                }
+                                            }
+                                        }
+
+                                        onClicked: {
+                                            root.audioSourceMode = "default"
+                                            ttsAudioButton.checked = false
+                                        }
+                                    }
+
+                                    // [TTS] 按钮
+                                    Button {
+                                        id: ttsAudioButton
+                                        text: "TTS"
+                                        checkable: true
+                                        checked: root.audioSourceMode === "tts"
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 50
+
+                                        background: Rectangle {
+                                            color: ttsAudioButton.checked ? "#0d2218" :
+                                                   (ttsAudioButton.hovered ? "#1e2d42" : "#141920")
+                                            radius: 6
+                                            border.color: ttsAudioButton.checked ? "#22C55E" :
+                                                          (ttsAudioButton.hovered ? "#2196F3" : "#334155")
+                                            border.width: ttsAudioButton.checked ? 2 : 1
+
+                                            // 顶部绿色高亮线（选中状态）
+                                            Rectangle {
+                                                visible: ttsAudioButton.checked
+                                                anchors.top: parent.top
+                                                anchors.left: parent.left
+                                                anchors.right: parent.right
+                                                anchors.leftMargin: 1
+                                                anchors.rightMargin: 1
+                                                anchors.topMargin: 1
+                                                height: 2
+                                                radius: 1
+                                                color: "#22C55E"
+                                            }
+                                        }
+
+                                        contentItem: Item {
+                                            Row {
+                                                anchors.centerIn: parent
+                                                spacing: 8
+
+                                                // LED状态指示点
+                                                Rectangle {
+                                                    width: 8
+                                                    height: 8
+                                                    radius: 4
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    color: ttsAudioButton.checked ? "#22C55E" : "#475569"
+
+                                                    // 内部高亮
+                                                    Rectangle {
+                                                        width: 4
+                                                        height: 4
+                                                        radius: 2
+                                                        anchors.centerIn: parent
+                                                        color: ttsAudioButton.checked ? "#86EFAC" : "#64748B"
+                                                    }
+                                                }
+
+                                                Text {
+                                                    text: ttsAudioButton.text
+                                                    font.pixelSize: 13
+                                                    font.bold: ttsAudioButton.checked
+                                                    color: ttsAudioButton.checked ? "#E0E0E0" : "#9E9E9E"
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                }
+                                            }
+                                        }
+
+                                        onClicked: {
+                                            root.audioSourceMode = "tts"
+                                            defaultAudioButton.checked = false
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 4) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // ✅ 2026-03-05 [Phase 7.48.6]: 参数索引5改为TTS文字
+                            // 参数索引: 5 - TTS文字（右列，行2）
+                            Text {
+                                text: "TTS文字:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 2
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 2
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: ttsTextField.implicitHeight
+
+                                DeviceInfo.CustomTextField {
+                                    id: ttsTextField
+                                    placeholderText: "输入报警文字内容..."
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
                                 }
 
                                 Rectangle {
@@ -632,9 +787,10 @@ Rectangle {
                                 }
                             }
 
-                            // 参数索引: 7 - 语音报警（右列，行3）
+                            // ✅ 2026-03-05 [Phase 7.48.6]: 参数索引7改为音频文件
+                            // 参数索引: 7 - 音频文件（右列，行3）
                             Text {
-                                text: "语音报警:"
+                                text: "音频文件:"
                                 font.pixelSize: 21
                                 color: "#9E9E9E"
                                 Layout.column: 2
@@ -648,84 +804,14 @@ Rectangle {
                                 Layout.row: 3
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300
-                                implicitHeight: voiceAlarmRow.implicitHeight
+                                implicitHeight: audioField.implicitHeight
 
-                                RowLayout {
-                                    id: voiceAlarmRow
+                                DeviceInfo.CustomTextField {
+                                    id: audioField
+                                    placeholderText: "音频文件路径（只读）"
                                     anchors.fill: parent
-                                    spacing: 10
-
-                                    RadioButton {
-                                        id: ttsRadio
-                                        text: "文字转语音"
-                                        checked: true
-                                        font.pixelSize: 12
-
-                                        indicator: Rectangle {
-                                            implicitWidth: 18
-                                            implicitHeight: 18
-                                            x: ttsRadio.leftPadding
-                                            y: parent.height / 2 - height / 2
-                                            radius: 9
-                                            border.color: ttsRadio.checked ? "#00d4ff" : "#7f8c8d"
-                                            border.width: 2
-                                            color: "transparent"
-
-                                            Rectangle {
-                                                width: 10
-                                                height: 10
-                                                x: 4
-                                                y: 4
-                                                radius: 5
-                                                color: "#3d4556"
-                                                visible: ttsRadio.checked
-                                            }
-                                        }
-
-                                        contentItem: Text {
-                                            text: ttsRadio.text
-                                            font: ttsRadio.font
-                                            color: "#E0E0E0"
-                                            leftPadding: ttsRadio.indicator.width + 8
-                                            verticalAlignment: Text.AlignVCenter
-                                        }
-                                    }
-
-                                    RadioButton {
-                                        id: fileRadio
-                                        text: "音频文件"
-                                        checked: false
-                                        font.pixelSize: 12
-
-                                        indicator: Rectangle {
-                                            implicitWidth: 18
-                                            implicitHeight: 18
-                                            x: fileRadio.leftPadding
-                                            y: parent.height / 2 - height / 2
-                                            radius: 9
-                                            border.color: fileRadio.checked ? "#00d4ff" : "#7f8c8d"
-                                            border.width: 2
-                                            color: "transparent"
-
-                                            Rectangle {
-                                                width: 10
-                                                height: 10
-                                                x: 4
-                                                y: 4
-                                                radius: 5
-                                                color: "#3d4556"
-                                                visible: fileRadio.checked
-                                            }
-                                        }
-
-                                        contentItem: Text {
-                                            text: fileRadio.text
-                                            font: fileRadio.font
-                                            color: "#E0E0E0"
-                                            leftPadding: fileRadio.indicator.width + 8
-                                            verticalAlignment: Text.AlignVCenter
-                                        }
-                                    }
+                                    keyboardManager: root.keyboardManager
+                                    readOnly: true
                                 }
 
                                 Rectangle {
@@ -778,17 +864,16 @@ Rectangle {
                                 }
                             }
 
-                            // 参数索引: 9 - TTS文字（右列，行4，条件显示）
+                            // ✅ 2026-03-05 [Phase 7.48.6]: 参数索引9改为保护延时
+                            // 参数索引: 9 - 保护延时（右列，行4）
                             Text {
-                                text: "TTS文字:"
+                                text: "保护延时(秒):"
                                 font.pixelSize: 21
                                 color: "#9E9E9E"
                                 Layout.column: 2
                                 Layout.row: 4
                                 Layout.preferredWidth: 160
                                 horizontalAlignment: Text.AlignRight
-                                visible: ttsRadio.checked
-                                Layout.preferredHeight: visible ? implicitHeight : 0
                             }
 
                             Item {
@@ -796,15 +881,28 @@ Rectangle {
                                 Layout.row: 4
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300
-                                implicitHeight: ttsTextField.implicitHeight
-                                visible: ttsRadio.checked
-                                Layout.preferredHeight: visible ? implicitHeight : 0
+                                implicitHeight: delaySpin.implicitHeight
 
-                                DeviceInfo.CustomTextField {
-                                    id: ttsTextField
-                                    placeholderText: "输入报警文字内容..."
+                                DeviceInfo.CustomSpinBox {
+                                    id: delaySpin
+                                    from: 0
+                                    to: 600
+                                    value: 10
+                                    stepSize: 1
+                                    editable: true
                                     anchors.fill: parent
                                     keyboardManager: root.keyboardManager
+
+                                    property int decimals: 1
+                                    property real realValue: value / 10
+
+                                    textFromValue: function(value, locale) {
+                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                    }
+
+                                    valueFromText: function(text, locale) {
+                                        return Number.fromLocaleString(locale, text) * 10
+                                    }
                                 }
 
                                 Rectangle {
@@ -812,45 +910,6 @@ Rectangle {
                                     color: "transparent"
                                     border.color: (root.focusSubArea === 1 && root.focusParamIndex === 9) ? "#2196F3" : "transparent"
                                     border.width: (root.focusSubArea === 1 && root.focusParamIndex === 9) ? 3 : 0
-                                    radius: 4
-                                    z: 10
-                                }
-                            }
-
-                            // 参数索引: 11 - 音频文件（右列，行4，条件显示，与TTS文字共用同一行）
-                            Text {
-                                text: "音频文件:"
-                                font.pixelSize: 21
-                                color: "#9E9E9E"
-                                Layout.column: 2
-                                Layout.row: 4
-                                Layout.preferredWidth: 160
-                                horizontalAlignment: Text.AlignRight
-                                visible: fileRadio.checked
-                                Layout.preferredHeight: visible ? implicitHeight : 0
-                            }
-
-                            Item {
-                                Layout.column: 3
-                                Layout.row: 4
-                                Layout.fillWidth: true
-                                Layout.maximumWidth: 300
-                                implicitHeight: audioField.implicitHeight
-                                visible: fileRadio.checked
-                                Layout.preferredHeight: visible ? implicitHeight : 0
-
-                                DeviceInfo.CustomTextField {
-                                    id: audioField
-                                    placeholderText: "选择音频文件..."
-                                    anchors.fill: parent
-                                    keyboardManager: root.keyboardManager
-                                }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? 3 : 0
                                     radius: 4
                                     z: 10
                                 }
@@ -896,6 +955,46 @@ Rectangle {
                                 }
                             }
 
+                            // ✅ 2026-03-05 [Phase 7.48.6]: 新增参数索引11 - 数据超时
+                            // 参数索引: 11 - 数据超时（右列，行5）
+                            Text {
+                                text: "数据超时(秒):"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 5
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 5
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: dataTimeoutSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: dataTimeoutSpin
+                                    from: 1
+                                    to: 600
+                                    value: 30
+                                    stepSize: 1
+                                    editable: true
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 11) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
                             // ========== 第六行：单位（左）、量程（右）==========
                             // 参数索引: 12 - 单位（左列，行6）
                             Text {
@@ -934,9 +1033,10 @@ Rectangle {
                                 }
                             }
 
-                            // 参数索引: 13 - 量程（右列，行6）
+                            // ✅ 2026-03-05 [Phase 7.48.6]: 参数索引13改为连接超时
+                            // 参数索引: 13 - 连接超时（右列，行6）
                             Text {
-                                text: "量程:"
+                                text: "连接超时(秒):"
                                 font.pixelSize: 21
                                 color: "#9E9E9E"
                                 Layout.column: 2
@@ -948,6 +1048,47 @@ Rectangle {
                             Item {
                                 Layout.column: 3
                                 Layout.row: 6
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: connectionTimeoutSpin.implicitHeight
+
+                                DeviceInfo.CustomSpinBox {
+                                    id: connectionTimeoutSpin
+                                    from: 1
+                                    to: 600
+                                    value: 60
+                                    stepSize: 1
+                                    editable: true
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 13) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 13) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // ✅ 2026-03-05 [Phase 7.48.6]: 新增 Row 7 - 量程和播放方式
+                            // ========== 第七行：量程（左）、播放方式（右）==========
+                            // 参数索引: 14 - 量程（左列，行7）
+                            Text {
+                                text: "量程:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 7
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 7
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300
                                 implicitHeight: rangeSpin.implicitHeight
@@ -966,14 +1107,426 @@ Rectangle {
                                 Rectangle {
                                     anchors.fill: parent
                                     color: "transparent"
-                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 13) ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 13) ? 3 : 0
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 14) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 14) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // 参数索引: 15 - 播放方式（右列，行7）
+                            Text {
+                                text: "播放方式:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 7
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 7
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: 48
+
+                                // 播放方式切换按钮行
+                                RowLayout {
+                                    id: playModeButtonGroup
+                                    anchors.fill: parent
+                                    spacing: 8
+
+                                    // ✅ 2026-03-05 [Phase 7.48.6]: Cyberpunk 工业风（与开关量一致）
+                                    // 选中按次数: 深蓝背景 + 青色边框 + 顶部青色高亮线 + LED点
+                                    // 选中按时长: 深橙背景 + 橙色边框 + 顶部橙色高亮线 + LED点
+                                    // 未选中: 深灰背景 + 板岩边框 + 灰色LED点
+
+                                    // [按次数] 按钮
+                                    Button {
+                                        id: playByCountButton
+                                        text: "按次数"
+                                        checkable: true
+                                        checked: root.playModeSelection === "count"
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 50
+
+                                        background: Rectangle {
+                                            color: playByCountButton.checked ? "#0a1929" :
+                                                   (playByCountButton.hovered ? "#1e2d42" : "#141920")
+                                            radius: 6
+                                            border.color: playByCountButton.checked ? "#00d4ff" :
+                                                          (playByCountButton.hovered ? "#2196F3" : "#334155")
+                                            border.width: playByCountButton.checked ? 2 : 1
+
+                                            // 顶部青色高亮线（选中状态）
+                                            Rectangle {
+                                                visible: playByCountButton.checked
+                                                anchors.top: parent.top
+                                                anchors.left: parent.left
+                                                anchors.right: parent.right
+                                                anchors.leftMargin: 1
+                                                anchors.rightMargin: 1
+                                                anchors.topMargin: 1
+                                                height: 2
+                                                radius: 1
+                                                color: "#00d4ff"
+                                            }
+                                        }
+
+                                        contentItem: Item {
+                                            Row {
+                                                anchors.centerIn: parent
+                                                spacing: 8
+
+                                                // LED状态指示点
+                                                Rectangle {
+                                                    width: 8
+                                                    height: 8
+                                                    radius: 4
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    color: playByCountButton.checked ? "#00d4ff" : "#475569"
+
+                                                    // 内部高亮
+                                                    Rectangle {
+                                                        width: 4
+                                                        height: 4
+                                                        radius: 2
+                                                        anchors.centerIn: parent
+                                                        color: playByCountButton.checked ? "#7DD3FC" : "#64748B"
+                                                    }
+                                                }
+
+                                                Text {
+                                                    text: playByCountButton.text
+                                                    font.pixelSize: 13
+                                                    font.bold: playByCountButton.checked
+                                                    color: playByCountButton.checked ? "#E0E0E0" : "#9E9E9E"
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                }
+                                            }
+                                        }
+
+                                        onClicked: {
+                                            root.playModeSelection = "count"
+                                            playByDurationButton.checked = false
+                                        }
+                                    }
+
+                                    // [按时长] 按钮
+                                    Button {
+                                        id: playByDurationButton
+                                        text: "按时长"
+                                        checkable: true
+                                        checked: root.playModeSelection === "duration"
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 50
+
+                                        background: Rectangle {
+                                            color: playByDurationButton.checked ? "#1b1500" :
+                                                   (playByDurationButton.hovered ? "#1e2d42" : "#141920")
+                                            radius: 6
+                                            border.color: playByDurationButton.checked ? "#F59E0B" :
+                                                          (playByDurationButton.hovered ? "#2196F3" : "#334155")
+                                            border.width: playByDurationButton.checked ? 2 : 1
+
+                                            // 顶部橙色高亮线（选中状态）
+                                            Rectangle {
+                                                visible: playByDurationButton.checked
+                                                anchors.top: parent.top
+                                                anchors.left: parent.left
+                                                anchors.right: parent.right
+                                                anchors.leftMargin: 1
+                                                anchors.rightMargin: 1
+                                                anchors.topMargin: 1
+                                                height: 2
+                                                radius: 1
+                                                color: "#F59E0B"
+                                            }
+                                        }
+
+                                        contentItem: Item {
+                                            Row {
+                                                anchors.centerIn: parent
+                                                spacing: 8
+
+                                                // LED状态指示点
+                                                Rectangle {
+                                                    width: 8
+                                                    height: 8
+                                                    radius: 4
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    color: playByDurationButton.checked ? "#F59E0B" : "#475569"
+
+                                                    // 内部高亮
+                                                    Rectangle {
+                                                        width: 4
+                                                        height: 4
+                                                        radius: 2
+                                                        anchors.centerIn: parent
+                                                        color: playByDurationButton.checked ? "#FDE68A" : "#64748B"
+                                                    }
+                                                }
+
+                                                Text {
+                                                    text: playByDurationButton.text
+                                                    font.pixelSize: 13
+                                                    font.bold: playByDurationButton.checked
+                                                    color: playByDurationButton.checked ? "#E0E0E0" : "#9E9E9E"
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                }
+                                            }
+                                        }
+
+                                        onClicked: {
+                                            root.playModeSelection = "duration"
+                                            playByCountButton.checked = false
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 15) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 15) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // ✅ 2026-03-05 [Phase 7.48.6]: 新增 Row 8 - 输入类型和保护级别
+                            // ========== 第八行：输入类型（左）、保护级别（右）==========
+                            // 参数索引: 16 - 输入类型（左列，行8）
+                            Text {
+                                text: "输入类型:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 8
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 8
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: inputTypeCombo.implicitHeight
+
+                                DeviceInfo.CustomComboBox {
+                                    id: inputTypeCombo
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+                                    model: ["4-20mA电流型", "0-20mA电流型", "0-5V电压型", "0-10V电压型", "1-5V电压型"]
+                                    currentIndex: 0
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 16) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 16) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
+                            // 参数索引: 17 - 保护级别（右列，行8）
+                            Text {
+                                text: "保护级别:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 8
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 8
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: protectionLevelCombo.implicitHeight
+
+                                DeviceInfo.CustomComboBox {
+                                    id: protectionLevelCombo
+                                    anchors.fill: parent
+                                    keyboardManager: root.keyboardManager
+                                    model: ["预警+紧急停车", "预警+正常停车", "仅预警", "不处理"]
+                                    currentIndex: 1
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 17) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 17) ? 3 : 0
                                     radius: 4
                                     z: 10
                                 }
                             }
 
                         }  // GridLayout 结束
+                    }
+                }
+
+                // ✅ 2026-03-05 [Phase 7.48.6]: 新增只读区域 - AD值、工程量、状态LED
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 80
+                    color: "transparent"
+                    border.color: "#00d4ff"
+                    border.width: 1
+                    radius: 4
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 15
+
+                        // 左侧：AD值和工程量显示
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            // AD值
+                            RowLayout {
+                                spacing: 10
+                                Text {
+                                    text: "AD值:"
+                                    font.pixelSize: 14
+                                    color: "#9E9E9E"
+                                    Layout.preferredWidth: 60
+                                }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 28
+                                    color: "#1a1a1a"
+                                    border.color: "#555555"
+                                    border.width: 1
+                                    radius: 3
+
+                                    Text {
+                                        id: adValueText
+                                        anchors.centerIn: parent
+                                        text: "0"
+                                        font.pixelSize: 13
+                                        color: "#00d4ff"
+                                    }
+                                }
+                            }
+
+                            // 工程量
+                            RowLayout {
+                                spacing: 10
+                                Text {
+                                    text: "工程量:"
+                                    font.pixelSize: 14
+                                    color: "#9E9E9E"
+                                    Layout.preferredWidth: 60
+                                }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 28
+                                    color: "#1a1a1a"
+                                    border.color: "#555555"
+                                    border.width: 1
+                                    radius: 3
+
+                                    Text {
+                                        id: engineeringValueText
+                                        anchors.centerIn: parent
+                                        text: "0.00 m/s"
+                                        font.pixelSize: 13
+                                        color: "#4CAF50"
+                                    }
+                                }
+                            }
+                        }
+
+                        // 右侧：状态LED
+                        ColumnLayout {
+                            Layout.preferredWidth: 150
+                            spacing: 8
+
+                            // MQTT服务状态
+                            RowLayout {
+                                spacing: 8
+
+                                // ✅ 2026-03-05 [Phase 7.48.6]: 双层 LED（与开关量一致）
+                                Item {
+                                    width: 34
+                                    height: 34
+
+                                    Rectangle {
+                                        id: mqttStatusLed
+                                        anchors.centerIn: parent
+                                        width: 34
+                                        height: 34
+                                        radius: 17
+                                        color: "#4CAF50"  // 绿色=在线
+                                        border.color: "#2E7D32"
+                                        border.width: 2
+
+                                        // 内部高亮
+                                        Rectangle {
+                                            width: 18
+                                            height: 18
+                                            radius: 9
+                                            anchors.centerIn: parent
+                                            color: "#81C784"
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: "MQTT在线"
+                                    font.pixelSize: 12
+                                    color: "#9E9E9E"
+                                }
+                            }
+
+                            // 模块状态
+                            RowLayout {
+                                spacing: 8
+
+                                // ✅ 2026-03-05 [Phase 7.48.6]: 双层 LED（与开关量一致）
+                                Item {
+                                    width: 34
+                                    height: 34
+
+                                    Rectangle {
+                                        id: moduleStatusLed
+                                        anchors.centerIn: parent
+                                        width: 34
+                                        height: 34
+                                        radius: 17
+                                        color: "#4CAF50"  // 绿色=在线
+                                        border.color: "#2E7D32"
+                                        border.width: 2
+
+                                        // 内部高亮
+                                        Rectangle {
+                                            width: 18
+                                            height: 18
+                                            radius: 9
+                                            anchors.centerIn: parent
+                                            color: "#81C784"
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: "模块在线"
+                                    font.pixelSize: 12
+                                    color: "#9E9E9E"
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -986,20 +1539,19 @@ Rectangle {
 
                 // 底部按钮
                 // ✅ 2026-01-30 [FIX 100.300.105]: 添加焦点指示器
-                // ✅ 2026-03-03 [Phase 7.47.77]: 重构底部按钮
-                //    旧布局：单行（保存 | 删除 | 重置）
-                //    新布局：单行（添加输入 | 删除输入 | 删除保护项）
+                // ✅ 2026-03-05 [Phase 7.48.6]: 简化为2按钮布局（与开关量一致）
+                //    新布局：单行（添加保护项 | 删除保护项）
                 //    保存/重置已由顶部按钮统一代理
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
 
-                    // 添加输入按钮（索引 0）
-                    // ✅ 2026-03-03 [Phase 7.47.77]: 新增，对齐 SwitchInputPage 布局
+                    // 添加保护项按钮（索引 0）
                     Button {
+                        id: addProtectionButton
+                        text: "添加保护项"
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
-                        text: "添加输入"
 
                         background: Rectangle {
                             color: parent.pressed ? "#27ae60" : (parent.hovered ? "#2ecc71" : "#27ae60")
@@ -1018,20 +1570,20 @@ Rectangle {
                         }
 
                         onClicked: {
-                            console.log("添加输入（模拟量）")
-                            // TODO: 实现添加输入功能
+                            console.log("添加保护项（模拟量）")
+                            // TODO: 实现添加保护项功能
                         }
                     }
 
-                    // 删除输入按钮（索引 1）
-                    // ✅ 2026-03-03 [Phase 7.47.77]: 新增，对齐 SwitchInputPage 布局
+                    // 删除保护项按钮（索引 1）
                     Button {
+                        id: deleteProtectionButton
+                        text: "删除保护项"
                         Layout.fillWidth: true
                         Layout.preferredHeight: 35
-                        text: "删除输入"
 
                         background: Rectangle {
-                            color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#d35400")
+                            color: parent.pressed ? "#8e44ad" : (parent.hovered ? "#9b59b6" : "#8e44ad")
                             radius: 2
                             border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
                             border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? 3 : 0
@@ -1047,51 +1599,11 @@ Rectangle {
                         }
 
                         onClicked: {
-                            console.log("删除输入（模拟量）:", nameField.text)
-                            // TODO: 实现删除输入功能
+                            console.log("删除保护项:", nameField.text)
+                            // TODO: 实现删除保护项功能
                         }
                     }
-
-                    // 删除保护项按钮（索引 2）
-                    // ✅ 2026-03-03 [Phase 7.47.77]: 原"删除"按钮（索引 1）改名并移至 index=2
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        // 焦点指示器
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "transparent"
-                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? 3 : 0
-                            radius: 4
-                            z: 10
-                        }
-
-                        Button {
-                            anchors.fill: parent
-                            text: "删除保护项"
-
-                            background: Rectangle {
-                                color: parent.pressed ? "#8e44ad" : (parent.hovered ? "#9b59b6" : "#8e44ad")
-                                radius: 2
-                            }
-
-                            contentItem: Text {
-                                text: parent.text
-                                font.pixelSize: 13
-                                font.bold: true
-                                color: "white"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            onClicked: {
-                                console.log("删除保护项:", nameField.text)
-                                // TODO: 实现删除功能
-                            }
-                        }
-                    }
+                }
 
                     // ❌ 2026-03-03 [Phase 7.47.77]: 以下原保存/删除/重置按钮已注释
                     // 保存/重置由顶部统一代理；删除已改名为"删除保护项"（index=2）
@@ -1159,7 +1671,6 @@ Rectangle {
                         }
                     }
                     */
-                }
             }
         }
     }
@@ -1167,6 +1678,7 @@ Rectangle {
     // ========== 辅助函数 ==========
 
     // 加载保护数据到右侧编辑区域
+    // ✅ 2026-03-05 [Phase 7.48.6]: 更新以支持新增字段
     function loadProtectionData(index) {
         if (index < 0 || index >= analogProtectionModel.count) {
             return
@@ -1181,27 +1693,47 @@ Rectangle {
             // 从数据库加载完整参数
             nameField.text = protection.protection_name
             moduleTypeCombo.currentIndex = moduleTypeCombo.model.indexOf(protection.module_type)
-            registerAddressSpin.value = protection.register_address
-            channelSpin.value = protection.register_address
+            channelSpin.value = protection.channel_number || protection.register_address
+
             // ✅ 2026-01-27 [FIX 100.300.31]: 加载上限值、下限值、量程、单位
             upperLimitSpin.value = protection.upper_limit || 100
             lowerLimitSpin.value = protection.lower_limit || 0
             rangeSpin.value = protection.range || 100
             unitCombo.currentIndex = unitCombo.model.indexOf(protection.unit || item.unit)
+
+            // 基本参数
             delaySpin.value = protection.protection_delay * 10  // 转换为整数（0.1秒精度）
             playCountSpin.value = protection.play_count
             durationSpin.value = protection.play_duration * 10  // 转换为整数（0.1秒精度）
-            ttsRadio.checked = protection.use_text_to_speech === 1
-            fileRadio.checked = protection.use_text_to_speech === 0
             ttsTextField.text = protection.tts_text || (item.name + "保护报警")
             audioField.text = protection.audio_file || ""
+
+            // ✅ 2026-03-05 [Phase 7.48.6]: 加载新增字段
+            root.audioSourceMode = protection.audio_source_mode || "tts"
+            defaultAudioButton.checked = (root.audioSourceMode === "default")
+            ttsAudioButton.checked = (root.audioSourceMode === "tts")
+
+            root.playModeSelection = protection.play_mode || "count"
+            playByCountButton.checked = (root.playModeSelection === "count")
+            playByDurationButton.checked = (root.playModeSelection === "duration")
+
+            root.protectionLevel = protection.protection_level || 1
+            protectionLevelCombo.currentIndex = root.protectionLevel
+
+            root.inputType = protection.input_type || "4-20mA"
+            var inputTypeIndex = inputTypeCombo.model.indexOf(root.inputType + "电流型")
+            if (inputTypeIndex < 0) inputTypeIndex = inputTypeCombo.model.indexOf(root.inputType + "电压型")
+            if (inputTypeIndex < 0) inputTypeIndex = 0
+            inputTypeCombo.currentIndex = inputTypeIndex
+
+            dataTimeoutSpin.value = protection.data_timeout || 30
+            connectionTimeoutSpin.value = protection.connection_timeout || 60
 
             console.log("✅ [AnalogInputPage] 从数据库加载完整参数:", item.name)
         } else {
             // 数据库中没有，使用ListModel中的基本数据
             nameField.text = item.name
             moduleTypeCombo.currentIndex = moduleTypeCombo.model.indexOf(item.moduleType)
-            registerAddressSpin.value = item.registerAddress
             channelSpin.value = item.registerAddress
 
             // ✅ 2026-01-27 [FIX 100.300.31]: 设置默认值
@@ -1214,15 +1746,33 @@ Rectangle {
             delaySpin.value = 10  // 1.0秒
             playCountSpin.value = 3
             durationSpin.value = 50  // 5.0秒
-            ttsRadio.checked = true
             ttsTextField.text = item.name + "保护报警"
             audioField.text = ""
+
+            // ✅ 2026-03-05 [Phase 7.48.6]: 新增字段默认值
+            root.audioSourceMode = "tts"
+            defaultAudioButton.checked = false
+            ttsAudioButton.checked = true
+
+            root.playModeSelection = "count"
+            playByCountButton.checked = true
+            playByDurationButton.checked = false
+
+            root.protectionLevel = 1
+            protectionLevelCombo.currentIndex = 1
+
+            root.inputType = "4-20mA"
+            inputTypeCombo.currentIndex = 0
+
+            dataTimeoutSpin.value = 30
+            connectionTimeoutSpin.value = 60
 
             console.log("⚠️ [AnalogInputPage] 数据库中没有详细参数，使用默认值:", item.name)
         }
     }
 
     // 保存保护数据
+    // ✅ 2026-03-05 [Phase 7.48.6]: 更新以支持新增字段
     function saveProtectionData() {
         if (root.currentProtectionIndex < 0 || root.currentProtectionIndex >= analogProtectionModel.count) {
             return
@@ -1231,7 +1781,6 @@ Rectangle {
         // 更新ListModel
         analogProtectionModel.setProperty(root.currentProtectionIndex, "name", nameField.text)
         analogProtectionModel.setProperty(root.currentProtectionIndex, "moduleType", moduleTypeCombo.currentText)
-        analogProtectionModel.setProperty(root.currentProtectionIndex, "registerAddress", registerAddressSpin.value)
         analogProtectionModel.setProperty(root.currentProtectionIndex, "registerAddress", channelSpin.value)
         // ✅ 2026-01-27 [FIX 100.300.31]: 更新单位到 ListModel
         analogProtectionModel.setProperty(root.currentProtectionIndex, "unit", unitCombo.editable ? unitCombo.editText : unitCombo.displayText)
@@ -1242,7 +1791,7 @@ Rectangle {
         var protection = {
             "protection_name": nameField.text,
             "module_type": moduleTypeCombo.currentText,
-            "register_address": registerAddressSpin.value,
+            "register_address": channelSpin.value,
             "channel_number": channelSpin.value,
             // ✅ 2026-01-27 [FIX 100.300.31]: 保存上限值、下限值、量程、单位
             "upper_limit": upperLimitSpin.value,
@@ -1252,9 +1801,15 @@ Rectangle {
             "protection_delay": delaySpin.realValue,
             "play_count": playCountSpin.value,
             "play_duration": durationSpin.realValue,
-            "use_text_to_speech": ttsRadio.checked,
             "tts_text": ttsTextField.text,
-            "audio_file": audioField.text
+            "audio_file": audioField.text,
+            // ✅ 2026-03-05 [Phase 7.48.6]: 保存新增字段
+            "audio_source_mode": root.audioSourceMode,
+            "play_mode": root.playModeSelection,
+            "protection_level": root.protectionLevel,
+            "input_type": root.inputType,
+            "data_timeout": dataTimeoutSpin.value,
+            "connection_timeout": connectionTimeoutSpin.value
         }
 
         if (deviceConfigMgr.saveAnalogProtection(root.deviceId, protection)) {
@@ -1305,11 +1860,12 @@ Rectangle {
 
     // 返回参数区域的字段数量
     function getParamFieldCount() {
-        return 14  // ✅ 2026-01-31 [FIX 100.300.110]: 改为14个参数字段（GridLayout 4列布局）
-        // ❌ 2026-01-31 [注释]: 旧值 16（左列8个 + 右列8个）已废弃
+        return 18  // ✅ 2026-03-05 [Phase 7.48.6]: 改为18个参数字段（9行布局）
+        // ❌ 2026-01-31 [注释]: 旧值 14（7行布局）已废弃
     }
 
     // 触发参数输入（打开虚拟键盘）
+    // ✅ 2026-03-05 [Phase 7.48.6]: 更新为18参数布局
     function triggerParamInput(paramIndex) {
         console.log("✅ [AnalogInputPage] 触发参数输入 - 索引:", paramIndex)
 
@@ -1321,61 +1877,89 @@ Rectangle {
             inputField = nameField
             inputMode = "chinese"
             break
-        case 1:  // 保护延时
-            inputField = delaySpin
+        case 1:  // 播放次数
+            inputField = playCountSpin
             inputMode = "numeric"
             break
         case 2:  // 模块类型
             inputField = moduleTypeCombo
             inputMode = "english"
             break
-        case 3:  // 播放次数
-            inputField = playCountSpin
-            inputMode = "numeric"
-            break
-        case 4:  // 寄存器地址
-            inputField = registerAddressSpin
-            inputMode = "numeric"
-            break
-        case 5:  // 播放时长
+        case 3:  // 播放时长
             inputField = durationSpin
             inputMode = "numeric"
+            break
+        case 4:  // 音频来源（按钮组，切换选中状态）
+            if (root.audioSourceMode === "default") {
+                root.audioSourceMode = "tts"
+                ttsAudioButton.checked = true
+                defaultAudioButton.checked = false
+            } else {
+                root.audioSourceMode = "default"
+                defaultAudioButton.checked = true
+                ttsAudioButton.checked = false
+            }
+            console.log("✅ [AnalogInputPage] 切换音频来源:", root.audioSourceMode)
+            return  // 按钮组不需要打开虚拟键盘
+        case 5:  // TTS文字
+            inputField = ttsTextField
+            inputMode = "chinese"
             break
         case 6:  // 通道编号
             inputField = channelSpin
             inputMode = "numeric"
             break
-        case 7:  // 语音报警类型（RadioButton 组，切换选中状态）
-            if (ttsRadio.checked) {
-                fileRadio.checked = true
-            } else {
-                ttsRadio.checked = true
-            }
-            console.log("✅ [AnalogInputPage] 切换语音报警类型:", ttsRadio.checked ? "文字转语音" : "音频文件")
-            return  // RadioButton 不需要打开虚拟键盘
+        case 7:  // 音频文件
+            inputField = audioField
+            inputMode = "english"
+            break
         case 8:  // 上限值
             inputField = upperLimitSpin
             inputMode = "numeric"
             break
-        case 9:  // TTS文字
-            inputField = ttsTextField
-            inputMode = "chinese"
+        case 9:  // 保护延时
+            inputField = delaySpin
+            inputMode = "numeric"
             break
         case 10:  // 下限值
             inputField = lowerLimitSpin
             inputMode = "numeric"
             break
-        case 11:  // 音频文件
-            inputField = audioField
-            inputMode = "english"
+        case 11:  // 数据超时
+            inputField = dataTimeoutSpin
+            inputMode = "numeric"
             break
         case 12:  // 单位
             inputField = unitCombo
             inputMode = "english"
             break
-        case 13:  // 量程
+        case 13:  // 连接超时
+            inputField = connectionTimeoutSpin
+            inputMode = "numeric"
+            break
+        case 14:  // 量程
             inputField = rangeSpin
             inputMode = "numeric"
+            break
+        case 15:  // 播放方式（按钮组，切换选中状态）
+            if (root.playModeSelection === "count") {
+                root.playModeSelection = "duration"
+                playByDurationButton.checked = true
+                playByCountButton.checked = false
+            } else {
+                root.playModeSelection = "count"
+                playByCountButton.checked = true
+                playByDurationButton.checked = false
+            }
+            console.log("✅ [AnalogInputPage] 切换播放方式:", root.playModeSelection)
+            return  // 按钮组不需要打开虚拟键盘
+        case 16:  // 输入类型
+            inputField = inputTypeCombo
+            inputMode = "english"
+            break
+        case 17:  // 保护级别
+            inputField = protectionLevelCombo
+            inputMode = "english"
             break
         default:
             console.warn("⚠️ [AnalogInputPage] 未知的参数索引:", paramIndex)
@@ -1394,28 +1978,20 @@ Rectangle {
     }
 
     // 触发底部按钮
+    // ✅ 2026-03-05 [Phase 7.48.6]: 更新为2按钮布局
     function triggerButton(buttonIndex) {
         console.log("✅ [AnalogInputPage] 触发底部按钮 - 索引:", buttonIndex)
 
-        // ✅ 2026-03-03 [Phase 7.47.77]: 更新为 3 按钮布局（0=添加输入, 1=删除输入, 2=删除保护项）
-        // 旧布局（3按钮）：0=保存, 1=删除, 2=重置
-        // 保存/重置已由顶部按钮代理；删除改名为"删除保护项"并移至 index=2
         switch(buttonIndex) {
-        case 0:  // 添加输入（新增）
-            console.log("✅ [AnalogInputPage] 触发：添加输入")
-            // TODO: 实现添加输入功能
+        case 0:  // 添加保护项
+            console.log("✅ [AnalogInputPage] 触发：添加保护项")
+            // TODO: 实现添加保护项功能
             break
-        case 1:  // 删除输入（新增）
-            console.log("✅ [AnalogInputPage] 触发：删除输入")
-            // TODO: 实现删除输入功能
-            break
-        case 2:  // 删除保护项（原 case 1：删除）
+        case 1:  // 删除保护项
             console.log("✅ [AnalogInputPage] 触发：删除保护项")
             console.log("删除保护:", nameField.text)
             // TODO: 实现删除功能
             break
-        // ❌ 2026-03-03 [Phase 7.47.77]: case 0 保存 → 由顶部保存代理
-        // ❌ 2026-03-03 [Phase 7.47.77]: case 2 重置 → 由顶部重置代理
         default:
             console.warn("⚠️ [AnalogInputPage] 未知的按钮索引:", buttonIndex)
             break

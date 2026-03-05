@@ -226,7 +226,7 @@ void MqttProtectionMonitor::setAIBeltMapping(int moduleIndex, int beltNumber)
 }
 
 // ✅ 2026-03-05 [Phase 7.48.5]: AI通道变化处理（模拟量保护监控）
-void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex, double adValue)
+void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex, const ChannelData &data)
 {
     if (!m_isRunning) {
         return;  // 监控未启动，忽略
@@ -236,7 +236,7 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
     int beltNumber = m_aiBeltMapping.value(moduleIndex, 1);
 
     qDebug() << "📊 [MqttProtectionMonitor] AI通道变化 - 模块:" << moduleIndex
-             << "通道:" << channelIndex << "AD值:" << adValue
+             << "通道:" << channelIndex << "AD值:" << data.adValue
              << "→ 皮带" << beltNumber;
 
     // 查询该皮带的所有模拟量保护配置
@@ -269,7 +269,8 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
 
         // AD值转工程量（简化公式：线性映射）
         // 工程量 = 下限 + (AD值 / 65535) × 范围值
-        double engineeringValue = lowerLimit + (adValue / 65535.0) * rangeValue;
+        // ✅ 2026-03-05 [Phase 7.48.5]: 从 ChannelData 获取 AD 值
+        double engineeringValue = lowerLimit + (data.adValue / 65535.0) * rangeValue;
 
         qDebug() << "   保护:" << protName << "工程量:" << engineeringValue
                  << "阈值:[" << lowerLimit << "," << upperLimit << "]";
