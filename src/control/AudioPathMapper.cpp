@@ -219,22 +219,24 @@ QString AudioPathMapper::getModuleOfflinePath(int moduleIndex)
 }
 
 // ✅ 2026-03-05 [Phase 7.48.5]: 模拟量保护音频路径映射
+// ✅ 2026-03-05 [Phase 7.48.9]: 重构为18项保护（去掉速度超速/低速打滑/张力上限/张力下限/电压过压/电压欠压，改为方向性映射）
 
-// 初始化模拟量保护名称映射表（DB保护名 → 音频文件名）
+// 初始化模拟量保护名称映射表（DB保护名 → 音频文件名，18项）
+// 旧代码（21项直接映射）已废弃：
+// map["速度超速"] = "速度超速"; map["低速打滑"] = "低速打滑";
+// map["张力上限"] = "张力上限"; map["张力下限"] = "张力下限";
+// map["电压过压"] = "电压过压"; map["电压欠压"] = "电压欠压";
 QMap<QString, QString> initAnalogProtectionAudioMap()
 {
     QMap<QString, QString> map;
-    // 设备运行保护（10项）
-    map["速度超速"] = "速度超速";
-    map["低速打滑"] = "低速打滑";
-    map["张力上限"] = "张力上限";
-    map["张力下限"] = "张力下限";
+    // 设备运行保护（7项，其中速度/张力/电压的方向性映射在 DIRECTIONAL_AUDIO_MAP 中）
+    map["速度"]     = "速度";       // 方向性：上限→速度超速，下限→低速打滑（见DIRECTIONAL_AUDIO_MAP）
+    map["张力"]     = "张力";       // 方向性：上限→张力上限，下限→张力下限（见DIRECTIONAL_AUDIO_MAP）
     map["煤流"]     = "煤流";
     map["煤仓高度"] = "煤仓高度";
     map["温度一"]   = "温度一";
     map["温度二"]   = "温度二";
-    map["电压过压"] = "电压过压";
-    map["电压欠压"] = "电压欠压";
+    map["电压"]     = "电压";       // 方向性：上限→电压过压，下限→电压欠压（见DIRECTIONAL_AUDIO_MAP）
     // 环境安全监测（8项）
     map["温度"]     = "温度";
     map["湿度"]     = "湿度";
@@ -251,13 +253,32 @@ QMap<QString, QString> initAnalogProtectionAudioMap()
     return map;
 }
 
+// ✅ 2026-03-05 [Phase 7.48.9]: 方向性音频映射（3项保护，上下限播放不同音频）
+// DB保护名 → {超上限音频文件名, 低于下限音频文件名}
+QMap<QString, QPair<QString, QString>> initDirectionalAudioMap()
+{
+    QMap<QString, QPair<QString, QString>> map;
+    map["速度"] = qMakePair(QString("速度超速"), QString("低速打滑"));   // 上限→速度超速，下限→低速打滑
+    map["张力"] = qMakePair(QString("张力上限"), QString("张力下限"));   // 上限→张力上限，下限→张力下限
+    map["电压"] = qMakePair(QString("电压过压"), QString("电压欠压"));   // 上限→电压过压，下限→电压欠压
+    return map;
+}
+
 // 静态成员初始化
 const QMap<QString, QString> AudioPathMapper::ANALOG_PROTECTION_AUDIO_MAP = initAnalogProtectionAudioMap();
+const QMap<QString, QPair<QString, QString>> AudioPathMapper::DIRECTIONAL_AUDIO_MAP = initDirectionalAudioMap();
 
-// 获取模拟量保护音频文件名（从DB保护名映射到文件名）
-QString AudioPathMapper::getAnalogAudioFileName(const QString &dbProtectionName)
+// 获取模拟量保护音频文件名（从DB保护名映射到文件名，带方向）
+QString AudioPathMapper::getAnalogAudioFileName(const QString &dbProtectionName, LimitDirection direction)
 {
-    // 查找映射表
+    // ✅ 2026-03-05 [Phase 7.48.9]: 优先检查方向性映射（速度/张力/电压）
+    if (DIRECTIONAL_AUDIO_MAP.contains(dbProtectionName)) {
+        QPair<QString, QString> audioPair = DIRECTIONAL_AUDIO_MAP[dbProtectionName];
+        // 根据方向选择音频文件名
+        return (direction == UpperLimit) ? audioPair.first : audioPair.second;
+    }
+
+    // 查找普通映射表（其他15项保护）
     if (ANALOG_PROTECTION_AUDIO_MAP.contains(dbProtectionName)) {
         return ANALOG_PROTECTION_AUDIO_MAP[dbProtectionName];
     }
@@ -267,11 +288,11 @@ QString AudioPathMapper::getAnalogAudioFileName(const QString &dbProtectionName)
     return dbProtectionName;
 }
 
-// 获取模拟量保护音频路径（使用当前TTS配置）
-QString AudioPathMapper::getAnalogAudioPath(int beltNumber, const QString &dbProtectionName) const
+// 获取模拟量保护音频路径（使用当前TTS配置，带方向）
+QString AudioPathMapper::getAnalogAudioPath(int beltNumber, const QString &dbProtectionName, LimitDirection direction) const
 {
-    // 获取音频文件名
-    QString audioFileName = getAnalogAudioFileName(dbProtectionName);
+    // 获取音频文件名（根据方向）
+    QString audioFileName = getAnalogAudioFileName(dbProtectionName, direction);
 
     // 使用当前TTS配置生成路径
     return getAudioPath(beltNumber, audioFileName);

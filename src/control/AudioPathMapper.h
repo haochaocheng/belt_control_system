@@ -17,6 +17,7 @@
 
 #include <QString>
 #include <QMap>
+#include <QPair>
 #include "DataPathConfig.h"
 
 /**
@@ -140,29 +141,46 @@ public:
     static QString getModuleOfflinePath(int moduleIndex);
 
     // ✅ 2026-03-05 [Phase 7.48.5]: 模拟量保护音频路径映射
+    // ✅ 2026-03-05 [Phase 7.48.9]: 重构 - 支持方向性音频选择（速度/张力/电压根据上下限播放不同音频）
 
     /**
-     * @brief 获取模拟量保护音频文件名（从DB保护名映射到文件名）
-     * @param dbProtectionName DB中的保护名称（例如："速度超速"、"烟雾"）
-     * @return 音频文件名（不含.wav后缀，例如："速度超速"、"烟雾浓度"）
+     * @brief 超限方向枚举（用于速度/张力/电压等有上下限不同音频的保护）
+     */
+    enum LimitDirection {
+        UpperLimit,  ///< 超上限（速度→速度超速，张力→张力上限，电压→电压过压）
+        LowerLimit   ///< 低于下限（速度→低速打滑，张力→张力下限，电压→电压欠压）
+    };
+
+    /**
+     * @brief 获取模拟量保护音频文件名（从DB保护名映射到文件名，带方向）
+     * @param dbProtectionName DB中的保护名称（例如："速度"、"烟雾"）
+     * @param direction 超限方向（仅速度/张力/电压需要，其他保护忽略此参数）
+     * @return 音频文件名（不含.wav后缀）
      *
      * 说明：
-     * - 大部分DB名与文件名一致
-     * - 特殊映射：烟雾→烟雾浓度（DB名"烟雾"，文件名"烟雾浓度"）
+     * - 速度+UpperLimit→"速度超速"，速度+LowerLimit→"低速打滑"
+     * - 张力+UpperLimit→"张力上限"，张力+LowerLimit→"张力下限"
+     * - 电压+UpperLimit→"电压过压"，电压+LowerLimit→"电压欠压"
+     * - 其他保护：直接映射（烟雾→烟雾浓度，其余DB名=文件名）
      */
-    static QString getAnalogAudioFileName(const QString &dbProtectionName);
+    static QString getAnalogAudioFileName(const QString &dbProtectionName,
+                                          LimitDirection direction = UpperLimit);
 
     /**
-     * @brief 获取模拟量保护音频路径（使用当前TTS配置）
+     * @brief 获取模拟量保护音频路径（使用当前TTS配置，带方向）
      * @param beltNumber 皮带编号（1-8）
-     * @param dbProtectionName DB保护名称（例如："速度超速"、"温度一"）
+     * @param dbProtectionName DB保护名称（例如："速度"、"温度一"）
+     * @param direction 超限方向（仅速度/张力/电压需要）
      * @return 完整的音频文件路径
      *
      * 示例：
-     * - 输入：1, "速度超速"
+     * - 输入：1, "速度", UpperLimit
      * - 输出：/app/audio/paddlespeech-fastspeech2_csmsc-spk0/1#PD/速度超速.wav
+     * - 输入：1, "速度", LowerLimit
+     * - 输出：/app/audio/paddlespeech-fastspeech2_csmsc-spk0/1#PD/低速打滑.wav
      */
-    QString getAnalogAudioPath(int beltNumber, const QString &dbProtectionName) const;
+    QString getAnalogAudioPath(int beltNumber, const QString &dbProtectionName,
+                               LimitDirection direction = UpperLimit) const;
 
 private:
     QString m_baseDir;  ///< 音频文件基础目录
@@ -185,8 +203,11 @@ private:
     static const QMap<int, QString> SHORT_NAME_MAP;
 
     // ✅ 2026-03-05 [Phase 7.48.5]: 模拟量保护名称映射（DB保护名 → 音频文件名）
-    // 21项保护的映射表
+    // ✅ 2026-03-05 [Phase 7.48.9]: 重构为18项保护，15项直接映射 + 3项方向性映射（速度/张力/电压）
     static const QMap<QString, QString> ANALOG_PROTECTION_AUDIO_MAP;
+
+    // ✅ 2026-03-05 [Phase 7.48.9]: 方向性音频映射（速度/张力/电压的上限和下限对应不同音频文件名）
+    static const QMap<QString, QPair<QString, QString>> DIRECTIONAL_AUDIO_MAP;  // DB名 → {上限文件名, 下限文件名}
 
     /**
      * @brief 初始化保护名称映射表

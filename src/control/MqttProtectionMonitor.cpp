@@ -276,15 +276,19 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
                  << "阈值:[" << lowerLimit << "," << upperLimit << "]";
 
         // 检查是否超限
+        // ✅ 2026-03-05 [Phase 7.48.9]: 记录超限方向，用于方向性音频选择（速度/张力/电压）
         bool exceeded = false;
+        AudioPathMapper::LimitDirection limitDirection = AudioPathMapper::UpperLimit;
         if (engineeringValue > upperLimit) {
             qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量保护触发（超上限）:" << protName
                        << "工程量:" << engineeringValue << ">" << upperLimit;
             exceeded = true;
+            limitDirection = AudioPathMapper::UpperLimit;
         } else if (engineeringValue < lowerLimit) {
             qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量保护触发（低于下限）:" << protName
                        << "工程量:" << engineeringValue << "<" << lowerLimit;
             exceeded = true;
+            limitDirection = AudioPathMapper::LowerLimit;
         }
 
         if (!exceeded) {
@@ -300,13 +304,14 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         QString ttsText = prot.value("tts_text", protName + "保护报警").toString();
 
         // 生成音频路径
+        // ✅ 2026-03-05 [Phase 7.48.9]: 传递超限方向，速度/张力/电压根据方向播放不同音频
         QString audioPath;
         if (useTTS) {
-            // TTS合成路径
-            audioPath = m_audioPathMapper->getAnalogAudioPath(beltNumber, protName);
+            // TTS合成路径（带方向）
+            audioPath = m_audioPathMapper->getAnalogAudioPath(beltNumber, protName, limitDirection);
         } else {
-            // 默认音频路径（使用模拟量映射）
-            audioPath = m_audioPathMapper->getAnalogAudioPath(beltNumber, protName);
+            // 默认音频路径（带方向）
+            audioPath = m_audioPathMapper->getAnalogAudioPath(beltNumber, protName, limitDirection);
         }
 
         qDebug() << "🔊 [MqttProtectionMonitor] 模拟量保护触发播放:" << audioPath
