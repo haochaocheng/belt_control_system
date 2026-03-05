@@ -139,6 +139,31 @@ public:
      */
     static QString getModuleOfflinePath(int moduleIndex);
 
+    // ✅ 2026-03-05 [Phase 7.48.5]: 模拟量保护音频路径映射
+
+    /**
+     * @brief 获取模拟量保护音频文件名（从DB保护名映射到文件名）
+     * @param dbProtectionName DB中的保护名称（例如："速度超速"、"烟雾"）
+     * @return 音频文件名（不含.wav后缀，例如："速度超速"、"烟雾浓度"）
+     *
+     * 说明：
+     * - 大部分DB名与文件名一致
+     * - 特殊映射：烟雾→烟雾浓度（DB名"烟雾"，文件名"烟雾浓度"）
+     */
+    static QString getAnalogAudioFileName(const QString &dbProtectionName);
+
+    /**
+     * @brief 获取模拟量保护音频路径（使用当前TTS配置）
+     * @param beltNumber 皮带编号（1-8）
+     * @param dbProtectionName DB保护名称（例如："速度超速"、"温度一"）
+     * @return 完整的音频文件路径
+     *
+     * 示例：
+     * - 输入：1, "速度超速"
+     * - 输出：/app/audio/paddlespeech-fastspeech2_csmsc-spk0/1#PD/速度超速.wav
+     */
+    QString getAnalogAudioPath(int beltNumber, const QString &dbProtectionName) const;
+
 private:
     QString m_baseDir;  ///< 音频文件基础目录
 
@@ -158,6 +183,10 @@ private:
     // ✅ 2026-02-28 [Phase 7.47.49]: 新增 - 保护短名称映射（通道号 → UI显示名/DB名）
     // 与 SwitchInputPage.qml digitalProtectionModel 的 name 字段一致
     static const QMap<int, QString> SHORT_NAME_MAP;
+
+    // ✅ 2026-03-05 [Phase 7.48.5]: 模拟量保护名称映射（DB保护名 → 音频文件名）
+    // 21项保护的映射表
+    static const QMap<QString, QString> ANALOG_PROTECTION_AUDIO_MAP;
 
     /**
      * @brief 初始化保护名称映射表

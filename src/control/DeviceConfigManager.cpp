@@ -197,6 +197,10 @@ bool DeviceConfigManager::createTables()
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN play_mode TEXT DEFAULT 'count'");
     // ✅ 2026-03-04 [Phase 7.47.96]: 迁移 - 添加 protection_level 列（与开关量保护表一致）
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN protection_level INTEGER DEFAULT 1");
+    // ✅ 2026-03-05 [Phase 7.48.5]: 迁移 - 添加模拟量特有的3个新列
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN data_timeout REAL DEFAULT 30.0");
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN connection_timeout REAL DEFAULT 60.0");
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN input_type TEXT DEFAULT '4-20mA'");
 
     // ✅ 2026-02-02 [参数持久化]: 添加电机配置表
     // 5. 电机配置表
@@ -483,14 +487,35 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
         double rated;
     };
 
+    // ✅ 2026-03-05 [Phase 7.48.5]: 扩展模拟量保护从7项到21项
+    // 删除：电流一/电流二（属于电机运行范围）
+    // 改名：速度→速度超速、张力→张力上限、红外温度一→温度一、红外温度二→温度二、电压→电压过压
+    // 新增：低速打滑、张力下限、煤流、煤仓高度、电压欠压、温度、湿度、烟雾、气压、氧气、甲烷、一氧化碳、硫化氢、二氧化碳、风速、粉尘浓度
     QList<AnalogProtection> protections = {
-        {"速度", "m/s", 5, 3.0, 0.0, 3.0, 2.5},
-        {"张力", "T", 6, 100.0, 0.0, 100.0, 50.0},
-        {"红外温度一", "℃", 7, 80.0, 0.0, 100.0, 40.0},
-        {"红外温度二", "℃", 8, 80.0, 0.0, 100.0, 40.0},
-        {"电流一", "A", 9, 100.0, 0.0, 100.0, 50.0},
-        {"电流二", "A", 10, 100.0, 0.0, 100.0, 50.0},
-        {"电压", "V", 11, 500.0, 0.0, 500.0, 380.0}
+        // 设备运行保护（10项）
+        {"速度超速",   "m/s",  5, 10.0,  0.0, 10.0, 2.5},    // 原"速度"改名
+        {"低速打滑",   "m/s",  5, 10.0,  0.0, 10.0, 2.5},    // 新增
+        {"张力上限",   "T",    6, 100.0, 0.0, 100.0, 50.0},  // 原"张力"改名
+        {"张力下限",   "T",    6, 100.0, 0.0, 100.0, 50.0},  // 新增
+        {"煤流",       "t/h",  7, 2000.0, 0.0, 2000.0, 500.0}, // 新增
+        {"煤仓高度",   "m",    8, 30.0, 0.0, 30.0, 15.0},    // 新增
+        {"温度一",     "℃",   9, 150.0, 0.0, 150.0, 40.0},   // 原"红外温度一"改名
+        {"温度二",     "℃",   10, 150.0, 0.0, 150.0, 40.0},  // 原"红外温度二"改名
+        {"电压过压",   "V",    11, 1200.0, 0.0, 1200.0, 380.0}, // 原"电压"改名
+        {"电压欠压",   "V",    11, 1200.0, 0.0, 1200.0, 380.0}, // 新增（由电压拆分）
+        // 环境安全监测（8项）
+        {"温度",       "℃",   12, 50.0, 0.0, 50.0, 26.0},
+        {"湿度",       "%RH",  13, 100.0, 0.0, 100.0, 95.0},
+        {"烟雾",       "mg/m³",14, 1000.0, 0.0, 1000.0, 500.0},
+        {"气压",       "kPa",  15, 120.0, 80.0, 40.0, 101.0},
+        {"氧气",       "%O₂",  16, 25.0, 0.0, 25.0, 20.0},
+        {"甲烷",       "%CH₄", 17, 4.0, 0.0, 4.0, 1.0},
+        {"一氧化碳",   "ppm",  18, 1000.0, 0.0, 1000.0, 24.0},
+        {"硫化氢",     "ppm",  19, 100.0, 0.0, 100.0, 6.6},
+        // 安全规程补充（3项）
+        {"二氧化碳",   "%CO₂", 20, 5.0, 0.0, 5.0, 1.5},
+        {"风速",       "m/s",  21, 15.0, 0.3, 14.7, 4.0},
+        {"粉尘浓度",   "mg/m³",22, 1000.0, 0.0, 1000.0, 100.0}
     };
 
     QSqlQuery query(m_database);
@@ -755,12 +780,14 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     }
 
     QSqlQuery query(m_database);
+    // ✅ 2026-03-05 [Phase 7.48.5]: 扩展INSERT语句，添加3个新列
     query.prepare(R"(
         INSERT OR REPLACE INTO device_analog_protections
         (device_id, protection_name, module_type, register_address, unit,
          upper_limit, lower_limit, range_value, rated_value,
-         protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file,
+         play_mode, protection_level, data_timeout, connection_timeout, input_type, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -780,6 +807,12 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     query.addBindValue(protection.value("use_text_to_speech", false).toBool() ? 1 : 0);
     query.addBindValue(protection.value("tts_text", protectionName + "保护报警").toString());
     query.addBindValue(protection.value("audio_file", "").toString());
+    // ✅ 2026-03-05 [Phase 7.48.5]: 新增字段
+    query.addBindValue(protection.value("play_mode", "count").toString());
+    query.addBindValue(protection.value("protection_level", 1).toInt());
+    query.addBindValue(protection.value("data_timeout", 30.0).toDouble());
+    query.addBindValue(protection.value("connection_timeout", 60.0).toDouble());
+    query.addBindValue(protection.value("input_type", "4-20mA").toString());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {

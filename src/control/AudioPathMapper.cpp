@@ -217,3 +217,62 @@ QString AudioPathMapper::getModuleOfflinePath(int moduleIndex)
     QString engineFolder = buildStatusEngineFolder();
     return DataPathConfig::getAudioBaseDirectory() + "/" + engineFolder + "/Status/" + NAMES[moduleIndex] + ".wav";
 }
+
+// ✅ 2026-03-05 [Phase 7.48.5]: 模拟量保护音频路径映射
+
+// 初始化模拟量保护名称映射表（DB保护名 → 音频文件名）
+QMap<QString, QString> initAnalogProtectionAudioMap()
+{
+    QMap<QString, QString> map;
+    // 设备运行保护（10项）
+    map["速度超速"] = "速度超速";
+    map["低速打滑"] = "低速打滑";
+    map["张力上限"] = "张力上限";
+    map["张力下限"] = "张力下限";
+    map["煤流"]     = "煤流";
+    map["煤仓高度"] = "煤仓高度";
+    map["温度一"]   = "温度一";
+    map["温度二"]   = "温度二";
+    map["电压过压"] = "电压过压";
+    map["电压欠压"] = "电压欠压";
+    // 环境安全监测（8项）
+    map["温度"]     = "温度";
+    map["湿度"]     = "湿度";
+    map["烟雾"]     = "烟雾浓度";  // 注意：DB名"烟雾" → 文件名"烟雾浓度"
+    map["气压"]     = "气压";
+    map["氧气"]     = "氧气";
+    map["甲烷"]     = "甲烷";
+    map["一氧化碳"] = "一氧化碳";
+    map["硫化氢"]   = "硫化氢";
+    // 安全规程补充（3项）
+    map["二氧化碳"] = "二氧化碳";
+    map["风速"]     = "风速";
+    map["粉尘浓度"] = "粉尘浓度";
+    return map;
+}
+
+// 静态成员初始化
+const QMap<QString, QString> AudioPathMapper::ANALOG_PROTECTION_AUDIO_MAP = initAnalogProtectionAudioMap();
+
+// 获取模拟量保护音频文件名（从DB保护名映射到文件名）
+QString AudioPathMapper::getAnalogAudioFileName(const QString &dbProtectionName)
+{
+    // 查找映射表
+    if (ANALOG_PROTECTION_AUDIO_MAP.contains(dbProtectionName)) {
+        return ANALOG_PROTECTION_AUDIO_MAP[dbProtectionName];
+    }
+
+    // 未找到映射，直接使用DB名称
+    qWarning() << "⚠️ [AudioPathMapper] getAnalogAudioFileName: 未找到映射，使用DB名称:" << dbProtectionName;
+    return dbProtectionName;
+}
+
+// 获取模拟量保护音频路径（使用当前TTS配置）
+QString AudioPathMapper::getAnalogAudioPath(int beltNumber, const QString &dbProtectionName) const
+{
+    // 获取音频文件名
+    QString audioFileName = getAnalogAudioFileName(dbProtectionName);
+
+    // 使用当前TTS配置生成路径
+    return getAudioPath(beltNumber, audioFileName);
+}
