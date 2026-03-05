@@ -21,6 +21,7 @@
 
 // 前向声明
 class DIDataManager;
+class AIDataManager;  // ✅ 2026-03-05 [Phase 7.48.5]
 class CommonControl;
 class DeviceConfigManager;  // ✅ 2026-02-28 [Phase 7.47.49]
 class AlarmPlaybackService; // ✅ 2026-03-04 [Phase 7.47.95]
@@ -72,6 +73,21 @@ public:
     // ✅ 2026-03-04 [Phase 7.47.95]: 新增 - 设置报警播放服务（用于按次数/按时长播放）
     void setAlarmPlaybackService(AlarmPlaybackService *svc) { m_alarmPlaybackService = svc; }
 
+    // ✅ 2026-03-05 [Phase 7.48.5]: 新增 - 设置AI数据管理器（用于模拟量保护监控）
+    void setAIDataManager(AIDataManager *aiManager) { m_aiManager = aiManager; }
+
+    /**
+     * @brief 设置AI模块的皮带编号映射
+     * @param moduleIndex AI模块索引（0或1，对应模拟量模块1和2）
+     * @param beltNumber 皮带编号（1-8）
+     *
+     * 说明：
+     * - AI模块0（模拟量输入1）对应某条皮带
+     * - AI模块1（模拟量输入2）对应另一条皮带
+     * - 默认：AI模块0→1号皮带，AI模块1→2号皮带
+     */
+    Q_INVOKABLE void setAIBeltMapping(int moduleIndex, int beltNumber);
+
     /**
      * @brief 设置皮带编号映射
      * @param moduleIndex 模块索引（0或1）
@@ -112,8 +128,25 @@ private slots:
      */
     void onBitChanged(int moduleIndex, int bitIndex, bool value);
 
+    // ✅ 2026-03-05 [Phase 7.48.5]: 新增 - AI通道变化槽函数
+    /**
+     * @brief AI通道变化槽函数（模拟量保护监控）
+     * @param moduleIndex AI模块索引（0或1）
+     * @param channelIndex 通道索引（0-7）
+     * @param adValue AD转换值（0-65535）
+     *
+     * 说明：
+     * - 从AIDataManager接收channelChanged信号
+     * - 查询该皮带的所有模拟量保护配置
+     * - 将AD值转换为工程量
+     * - 对比上下限阈值
+     * - 超限时触发AlarmPlaybackService
+     */
+    void onAIChannelChanged(int moduleIndex, int channelIndex, double adValue);
+
 private:
     DIDataManager *m_diManager;        ///< DI数据管理器
+    AIDataManager *m_aiManager;        ///< AI数据管理器 ✅ Phase 7.48.5
     CommonControl *m_commonControl;    ///< 公共控制器
     AudioPathMapper *m_audioPathMapper; ///< 音频路径映射器
     DeviceConfigManager *m_deviceConfigMgr; ///< 设备配置管理器（查询use_text_to_speech）✅ Phase 7.47.49
@@ -129,6 +162,17 @@ private:
      * - 默认：{0: 1, 1: 2}
      */
     QMap<int, int> m_beltMapping;
+
+    // ✅ 2026-03-05 [Phase 7.48.5]: AI模块皮带映射表
+    /**
+     * @brief AI模块皮带编号映射表（AI模块索引 → 皮带编号）
+     *
+     * 说明：
+     * - 键：AI模块索引（0或1）
+     * - 值：皮带编号（1-8）
+     * - 默认：{0: 1, 1: 2}
+     */
+    QMap<int, int> m_aiBeltMapping;
 };
 
 #endif // MQTTPROTECTIONMONITOR_H

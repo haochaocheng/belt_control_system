@@ -1,5 +1,6 @@
 #include "MqttProtectionMonitor.h"
 #include "../mqtt/DIDataManager.h"
+#include "../mqtt/AIDataManager.h"  // ✅ 2026-03-05 [Phase 7.48.5]
 #include "CommonControl.h"
 #include "DataPathConfig.h"      // ✅ 2026-02-28 [Phase 7.47.43]: 统一音频路径
 #include "DeviceConfigManager.h" // ✅ 2026-02-28 [Phase 7.47.49]: 查询use_text_to_speech
@@ -14,6 +15,7 @@ MqttProtectionMonitor::MqttProtectionMonitor(DIDataManager *diManager,
                                              QObject *parent)
     : QObject(parent)
     , m_diManager(diManager)
+    , m_aiManager(nullptr)  // ✅ 2026-03-05 [Phase 7.48.5]: 由main.cpp通过setAIDataManager注入
     , m_commonControl(commonControl)
     // ✅ 2026-02-27 11:00 [Phase 7.47.35]: 修复编译错误，AudioPathMapper不是QObject，不接受parent参数
     // ⚠️ 2026-02-28 [Phase 7.47.43]: 先用默认构造，构造体内再设置正确路径（见下方）
@@ -35,8 +37,11 @@ MqttProtectionMonitor::MqttProtectionMonitor(DIDataManager *diManager,
     qDebug() << "📁 [MqttProtectionMonitor] 音频基础目录:" << audioBaseDir;
 
     // 初始化默认皮带映射
-    m_beltMapping[0] = 1;  // 模块0 → 1号皮带
-    m_beltMapping[1] = 2;  // 模块1 → 2号皮带
+    m_beltMapping[0] = 1;  // DI模块0 → 1号皮带
+    m_beltMapping[1] = 2;  // DI模块1 → 2号皮带
+    // ✅ 2026-03-05 [Phase 7.48.5]: 初始化AI模块皮带映射
+    m_aiBeltMapping[0] = 1;  // AI模块0 → 1号皮带
+    m_aiBeltMapping[1] = 2;  // AI模块1 → 2号皮带
 
     // 连接DIDataManager的bitChanged信号
     if (m_diManager) {
@@ -202,5 +207,126 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
         m_commonControl->playAudio(audioPath);
     } else {
         qWarning() << "⚠️ [MqttProtectionMonitor] AlarmPlaybackService和CommonControl均为空，无法播放音频";
+    }
+}
+
+// ✅ 2026-03-05 [Phase 7.48.5]: AI模块皮带映射设置
+void MqttProtectionMonitor::setAIBeltMapping(int moduleIndex, int beltNumber)
+{
+    if (moduleIndex < 0 || moduleIndex > 1) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] 无效的AI模块索引:" << moduleIndex << "（应为0或1）";
+        return;
+    }
+    if (beltNumber < 1 || beltNumber > 8) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] 无效的皮带编号:" << beltNumber << "（应为1-8）";
+        return;
+    }
+    m_aiBeltMapping[moduleIndex] = beltNumber;
+    qDebug() << "✅ [MqttProtectionMonitor] 设置AI模块" << moduleIndex << "→" << beltNumber << "号皮带";
+}
+
+// ✅ 2026-03-05 [Phase 7.48.5]: AI通道变化处理（模拟量保护监控）
+void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex, double adValue)
+{
+    if (!m_isRunning) {
+        return;  // 监控未启动，忽略
+    }
+
+    // 获取皮带编号
+    int beltNumber = m_aiBeltMapping.value(moduleIndex, 1);
+
+    qDebug() << "📊 [MqttProtectionMonitor] AI通道变化 - 模块:" << moduleIndex
+             << "通道:" << channelIndex << "AD值:" << adValue
+             << "→ 皮带" << beltNumber;
+
+    // 查询该皮带的所有模拟量保护配置
+    if (!m_deviceConfigMgr) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] DeviceConfigManager未设置，无法查询模拟量保护";
+        return;
+    }
+
+    QVariantList protections = m_deviceConfigMgr->loadAllAnalogProtections(beltNumber);
+    if (protections.isEmpty()) {
+        // 首次运行时可能没有保护项，不输出警告
+        return;
+    }
+
+    // 遍历所有保护项，检查是否有匹配当前通道的
+    for (const QVariant &p : protections) {
+        QVariantMap prot = p.toMap();
+        int regAddr = prot.value("register_address").toInt();
+
+        // 通道匹配逻辑：register_address 5-26 对应通道 0-21
+        // 简化映射：regAddr - 5 = channelIndex
+        if (regAddr - 5 != channelIndex) {
+            continue;  // 不是当前通道的保护项
+        }
+
+        QString protName = prot.value("protection_name").toString();
+        double upperLimit = prot.value("upper_limit").toDouble();
+        double lowerLimit = prot.value("lower_limit").toDouble();
+        double rangeValue = prot.value("range_value").toDouble();
+
+        // AD值转工程量（简化公式：线性映射）
+        // 工程量 = 下限 + (AD值 / 65535) × 范围值
+        double engineeringValue = lowerLimit + (adValue / 65535.0) * rangeValue;
+
+        qDebug() << "   保护:" << protName << "工程量:" << engineeringValue
+                 << "阈值:[" << lowerLimit << "," << upperLimit << "]";
+
+        // 检查是否超限
+        bool exceeded = false;
+        if (engineeringValue > upperLimit) {
+            qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量保护触发（超上限）:" << protName
+                       << "工程量:" << engineeringValue << ">" << upperLimit;
+            exceeded = true;
+        } else if (engineeringValue < lowerLimit) {
+            qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量保护触发（低于下限）:" << protName
+                       << "工程量:" << engineeringValue << "<" << lowerLimit;
+            exceeded = true;
+        }
+
+        if (!exceeded) {
+            continue;  // 未超限，继续检查下一个保护项
+        }
+
+        // 超限，触发报警
+        // 读取播放配置
+        bool useTTS = (prot.value("use_text_to_speech", 0).toInt() == 1);
+        QString playMode = prot.value("play_mode", "count").toString();
+        int playCount = prot.value("play_count", 3).toInt();
+        double playDuration = prot.value("play_duration", 5.0).toDouble();
+        QString ttsText = prot.value("tts_text", protName + "保护报警").toString();
+
+        // 生成音频路径
+        QString audioPath;
+        if (useTTS) {
+            // TTS合成路径
+            audioPath = m_audioPathMapper->getAnalogAudioPath(beltNumber, protName);
+        } else {
+            // 默认音频路径（使用模拟量映射）
+            audioPath = m_audioPathMapper->getAnalogAudioPath(beltNumber, protName);
+        }
+
+        qDebug() << "🔊 [MqttProtectionMonitor] 模拟量保护触发播放:" << audioPath
+                 << "模式:" << playMode << "次数:" << playCount << "时长:" << playDuration;
+
+        // 检查音频文件是否存在
+        if (!QFile::exists(audioPath)) {
+            qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量音频文件不存在:" << audioPath;
+        }
+
+        // 触发播放
+        if (m_alarmPlaybackService) {
+            m_alarmPlaybackService->playAlarm(protName, ttsText, audioPath,
+                                              useTTS, playMode, playCount, playDuration);
+        } else if (m_commonControl) {
+            qDebug() << "🔊 [MqttProtectionMonitor] 回退到CommonControl单次播放:" << audioPath;
+            m_commonControl->playAudio(audioPath);
+        } else {
+            qWarning() << "⚠️ [MqttProtectionMonitor] 无法播放模拟量保护音频";
+        }
+
+        // 注意：这里不 break，允许一个通道触发多个保护项（如果有的话）
     }
 }

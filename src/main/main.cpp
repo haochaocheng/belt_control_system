@@ -291,6 +291,13 @@ int main(int argc, char *argv[]) {
         mqttProtectionMonitor.setDeviceConfigManager(&deviceConfigMgr);
         // ✅ 2026-03-04 [Phase 7.47.95]: 注入AlarmPlaybackService，用于按次数/按时长播放
         mqttProtectionMonitor.setAlarmPlaybackService(&alarmPlayback);
+        // ✅ 2026-03-05 [Phase 7.48.5]: 注入AIDataManager，用于模拟量保护监控
+        mqttProtectionMonitor.setAIDataManager(&aiDataManager);
+        mqttProtectionMonitor.setAIBeltMapping(0, systemConfig.machineNumber());  // AI模块0 → 当前皮带
+        // 连接AIDataManager的channelChanged信号到MqttProtectionMonitor
+        QObject::connect(&aiDataManager, &AIDataManager::channelChanged,
+                         &mqttProtectionMonitor, &MqttProtectionMonitor::onAIChannelChanged);
+        logMessage("AI channel monitoring connected to MqttProtectionMonitor");
         // ✅ 2026-03-04 [Phase 7.47.97]: 启动报警播放服务（设置m_isRunning=true，否则playAlarm拒绝播放）
         alarmPlayback.start();
         // ✅ 2026-02-28 [Phase 7.47.53]: 用systemConfig.machineNumber()覆盖硬编码的模块0→1号皮带映射
