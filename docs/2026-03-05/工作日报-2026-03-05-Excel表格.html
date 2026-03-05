@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作日报 - 2026-03-05</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        caption {
+            caption-side: top;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            padding: 12px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #4CAF50;
+            color: #fff;
+            font-weight: bold;
+            text-align: center;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .time-zone {
+            font-weight: bold;
+            text-align: center;
+        }
+        .time-zone-morning {
+            background-color: #fff3e0;
+        }
+        .time-zone-noon {
+            background-color: #e8f5e9;
+        }
+        .time-zone-afternoon {
+            background-color: #e1f5fe;
+        }
+        .time-zone-rest {
+            background-color: #f3e5f5;
+        }
+        .status-complete {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .status-pending {
+            color: #ff9800;
+            font-weight: bold;
+        }
+        .review-yes {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <table>
+        <caption>工作日报 - 2026-03-05（星期四）</caption>
+        <thead>
+            <tr>
+                <th>时区分类</th>
+                <th>事项</th>
+                <th>事项定义<br>（四象限）</th>
+                <th>事项状态<br>（行动、等待、将来上日历、完成）</th>
+                <th>用时</th>
+                <th>复盘</th>
+                <th>备注</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="time-zone time-zone-morning" rowspan="3">上午区: 9-12</td>
+                <td>模拟量保护扩展至21项 — 数据库+批量生成+音频映射+触发逻辑</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>150 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>步骤1-3+5完成（09:00-11:30）。四步实现：① DeviceConfigManager.cpp 数据库迁移——ALTER TABLE 添加 data_timeout/connection_timeout/input_type 三列，initDefaultAnalogProtections() 从 7 项扩展至 21 项（设备运行 10 项+环境安全 8 项+安规补充 3 项），删除"电流一/电流二"，改名 5 项（速度→速度超速、张力→张力上限、红外温度一→温度一、红外温度二→温度二、电压→电压过压），新增 14 项（低速打滑、张力下限、煤流、煤仓高度、电压欠压、温度、湿度、烟雾浓度、气压、氧气、甲烷、一氧化碳、硫化氢、二氧化碳、风速、粉尘浓度）。② BatchAudioGenerator.cpp DEFS 扩展——generateAnalogInputTasks() 从 8 项更新至 21 项，改名 6 项音频文件名（张力过大→张力上限、张力过小→张力下限、温度一过高→温度一、温度二过高→温度二、电压过高→电压过压、电压过低→电压欠压），新增 13 项音频定义。③ AudioPathMapper.h/.cpp 模拟量映射——新增 ANALOG_PROTECTION_AUDIO_MAP（21 条 DB 保护名→音频文件名映射），新增 getAnalogAudioPath(beltNumber, protectionName) 方法，处理"烟雾"→"烟雾浓度"的特殊映射。④ MqttProtectionMonitor.h/.cpp 模拟量保护触发——新增 onAIChannelChanged(moduleIndex, channelIndex, data) 槽函数，实现 AD 值转工程量逻辑、上下限比较触发、连接 AlarmPlaybackService，main.cpp 连接 aiDataManager.channelChanged 信号。修改文件：DeviceConfigManager.cpp、BatchAudioGenerator.cpp、AudioPathMapper.h/.cpp、MqttProtectionMonitor.h/.cpp、main.cpp。</td>
+            </tr>
+            <tr>
+                <td>AnalogInputPage 界面重构 — 21 项保护+18 参数+Cyberpunk 风格统一</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>120 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>界面重构完成（11:30-13:30）。六步实现：① ListModel 扩展至 21 项保护（设备运行 10 项+环境安全 8 项+安规补充 3 项）。② 新增 4 个属性：audioSourceMode（音频来源：default/tts）、playModeSelection（播放方式：count/duration）、protectionLevel（保护级别：0-3）、inputType（输入类型：4-20mA 等）。③ GridLayout 重构为 9 行 18 参数——Row 0-3 与开关量一致（保护名称/播放次数、模块类型/播放时长、音频来源/TTS 文字、通道编号/音频文件），Row 4-8 模拟量特有（上限值/保护延时、下限值/数据超时、单位/连接超时、量程/播放方式、输入类型/保护级别）。④ 只读区域添加——AD 值文本框、工程量文本框、MQTT 在线 LED、模块状态 LED（双层结构：34x34 外圈+18x18 内圈高亮）。⑤ 底部按钮简化为 2 个——添加保护项、删除保护项（移除 Item 包裹层，长度完全一致）。⑥ 样式统一为 Cyberpunk 工业风格——音频来源按钮组（深蓝/深绿背景+顶部高亮线+LED 指示点）、播放方式按钮组（深蓝/深橙背景+顶部高亮线+LED 指示点）、状态 LED 双层结构，与 SwitchInputPage 完全一致。函数更新：getParamFieldCount()→18、triggerParamInput()→18 cases、triggerButton()→2 cases、loadProtectionData()/saveProtectionData() 新增字段。修改文件：AnalogInputPage.qml。</td>
+            </tr>
+            <tr>
+                <td>编译错误修复 — C++ 信号槽参数类型+QML 语法错误</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>60 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>编译错误修复（13:30-14:30）。五轮修复：① QML 语法错误第 1 轮——AnalogInputPage.qml:1647 多余的 `*/` 注释结束符，修改底部按钮时删除旧代码但留下多余注释符。② QML 语法错误第 2 轮——AnalogInputPage.qml:1636 注释块内多余闭合大括号 `}`，导致 QML 解析器认为结构不完整（1964:1 Expected token `}`）。③ C++ 编译错误第 1 轮——信号槽参数类型不匹配，AIDataManager 信号 `channelChanged(int, int, const ChannelData&)` vs 槽函数 `onAIChannelChanged(int, int, double)`，修复：槽函数参数改为 `const ChannelData &data`，MqttProtectionMonitor.h/.cpp 同步修改。④ C++ 编译错误第 2 轮——`'ChannelData' does not name a type`，前向声明 `struct ChannelData;` 不足以满足 Qt moc 编译器，修复：改为 `#include "../mqtt/AIDataManager.h"`，移除前向声明。⑤ C++ 编译错误第 3 轮——`'onAIChannelChanged' is private within this context`，槽函数在 `private slots:` 区域无法从 main.cpp 连接，修复：移至 `public slots:` 区域。修改文件：AnalogInputPage.qml、MqttProtectionMonitor.h/.cpp。</td>
+            </tr>
+
+            <tr>
+                <td class="time-zone time-zone-afternoon" rowspan="3">下午区: 14-18</td>
+                <td>批量生成界面模拟量计数修复 — 两个文件都需要更新</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>60 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>批量生成计数修复（14:30-15:30）。问题：用户反馈语音管理界面批量生成显示 64 个文件（模拟量输入+8 皮带），但预期应为 168 个（21 项×8 皮带）。根因：项目有两个批量生成界面文件——BatchSynthesisDialog.qml（Popup 模式）和 BatchSynthesisContent.qml（嵌入模式），用户界面使用 BatchSynthesisContent.qml，其 calculateTotalFiles() 函数第 661 行仍为旧的 `8 * beltCount`（8×8=64），而 BatchSynthesisDialog.qml 已更新为 `16 * beltCount`（16×8=128）。修复：① BatchSynthesisDialog.qml 第 563 行：`16 * beltCount` → `21 * beltCount`。② BatchSynthesisContent.qml 第 661 行：`8 * beltCount` → `21 * beltCount`。现在两个文件都正确显示 168 个文件（21 项×8 皮带）。修改文件：BatchSynthesisDialog.qml、BatchSynthesisContent.qml。</td>
+            </tr>
+            <tr>
+                <td>数据库迁移 003 实现 — 设备上模拟量保护列表仍显示旧 8 项</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>90 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>迁移 003 实现（15:30-17:00）。问题：程序在设备上运行，QDS 显示 21 项保护（QML ListModel），但设备上仍显示旧的 8 项（从数据库加载）。根因：runMigrations() 只有迁移 001/002（重置音频来源），缺少迁移 003（扩展保护项）。initDefaultAnalogProtections() 只在首次创建数据库时运行，设备已有旧数据所以跳过。修复：实现迁移 003——① 删除旧保护项（电流一/电流二）；② 更新旧名称（速度→速度超速、张力→张力上限、红外温度一→温度一、红外温度二→温度二、电压→电压过压）；③ 为每个设备补充缺失的 14 项新保护（低速打滑、张力下限、煤流、煤仓高度、电压欠压、温度、湿度、烟雾浓度、气压、氧气、甲烷、一氧化碳、硫化氢、二氧化碳、风速、粉尘浓度）。迁移机制：使用 schema_migrations 表记录版本，每次程序启动自动检查并执行未完成的迁移，迁移 003 只执行一次。修改文件：DeviceConfigManager.cpp（runMigrations 方法）。</td>
+            </tr>
+            <tr>
+                <td>保护列表架构调整 — 从 21 项改为 18 项（速度/张力/电压合并）</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>60 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>架构调整（17:00-18:00）。用户需求变更：速度超速和低速打滑属于同一个"速度"保护，只是根据上下限播放不同音频；张力和电压同理。保护列表应为单一保护项，不应拆分。调整方案：① 保护列表从 21 项改为 18 项——速度（上限→速度超速.wav，下限→低速打滑.wav）、张力（上限→张力上限.wav，下限→张力下限.wav）、电压（上限→电压过压.wav，下限→电压欠压.wav）、煤流、煤仓高度、温度一、温度二、温度/湿度/烟雾/气压/氧气/甲烷/一氧化碳/硫化氢、二氧化碳/风速/粉尘浓度。② 音频文件仍为 21 个（3 项各有 2 个音频）。③ 批量生成：21 个音频×8 皮带=168 个文件。④ 迁移 003 更新——删除拆分保护项（速度超速/低速打滑/张力上限/张力下限/电压过压/电压欠压），保持单一保护项（速度/张力/电压），补充 11 项新保护（煤流、煤仓高度、温度、湿度、烟雾、气压、氧气、甲烷、一氧化碳、硫化氢、二氧化碳、风速、粉尘浓度）。⑤ initDefaultAnalogProtections() 更新为 18 项保护定义。后续需要：更新 QML 界面为 18 项、更新 AudioPathMapper 根据上下限选择音频、更新 MqttProtectionMonitor 判断上下限。修改文件：DeviceConfigManager.cpp（initDefaultAnalogProtections + runMigrations）。</td>
+            </tr>
+
+            <tr>
+                <td class="time-zone time-zone-rest" rowspan="1">休息区: 18-24</td>
+                <td>当日复盘（成果 / 技术要点 / 经验）</td>
+                <td>重要不紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>15 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>成果：① 模拟量保护从 7 项扩展至 18 项（最终方案）——数据库迁移、批量生成、音频映射、触发逻辑全链路打通；② AnalogInputPage 界面重构——21 项保护 ListModel、18 参数 GridLayout、Cyberpunk 工业风格统一、只读区域、双层 LED 结构；③ 编译错误修复——5 轮修复（QML 语法 2 轮+C++ 信号槽 3 轮）；④ 批量生成界面计数修复——发现两个文件都需要更新（BatchSynthesisDialog + BatchSynthesisContent）；⑤ 数据库迁移 003 实现——自动为现有设备补充缺失保护项；⑥ 保护列表架构调整——从 21 项改为 18 项（速度/张力/电压合并为单一保护项，根据上下限播放不同音频）。技术要点：Qt 信号槽参数类型必须完全匹配，前向声明不足以满足 moc 编译器需要完整类型定义；private slots 无法从外部连接，需要 public slots；QML 注释块内的大括号会影响解析器；项目中可能有多个相似文件需要同步修改；数据库迁移机制使用 schema_migrations 表记录版本，确保每次迁移只执行一次；保护列表设计需要考虑业务逻辑（单一保护项 vs 拆分保护项）。经验：界面显示与数据库数据不一致时，优先检查数据库迁移是否执行；批量生成计数错误时，检查是否有多个界面文件；用户需求变更时，及时调整架构设计，避免后续大量返工；Git 提交应该分阶段进行，每个独立功能单独提交，便于回滚和追踪。当日共 6 次 Git 提交，GitLab 推送成功，GitHub 因网络超时失败。待完成：QML 界面更新为 18 项、AudioPathMapper 根据上下限选择音频、MqttProtectionMonitor 判断上下限、编译部署测试。</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>
