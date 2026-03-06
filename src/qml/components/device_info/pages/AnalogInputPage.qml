@@ -1612,13 +1612,16 @@ Rectangle {
                         // ✅ 2026-03-06 [Phase 7.48.15]: 重构为科技感紧凑显示（旧样式太长像进度条）
                         // 旧样式：RowLayout + 长条形Rectangle（看起来像进度条）
                         // 新样式：两个并排的科技感显示盒子，紧凑布局，青色边框+微光效果
+                        // ❌ 2026-03-06 [Phase 7.48.15 修复2]: 修复宽度计算导致重叠问题
+                        // 错误做法：Layout.preferredWidth: (parent.width - 12) / 2（parent.width 在 RowLayout 中不可靠）
+                        // 正确做法：Layout.fillWidth: true（让 RowLayout 自动平均分配宽度）
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 12
 
                             // AD值显示盒子
                             Rectangle {
-                                Layout.preferredWidth: (parent.width - 12) / 2
+                                Layout.fillWidth: true
                                 Layout.preferredHeight: 55
                                 color: "#0A0E1A"
                                 border.color: "#00D9FF"
@@ -1664,7 +1667,7 @@ Rectangle {
 
                             // 工程量显示盒子
                             Rectangle {
-                                Layout.preferredWidth: (parent.width - 12) / 2
+                                Layout.fillWidth: true
                                 Layout.preferredHeight: 55
                                 color: "#0A0E1A"
                                 border.color: "#00D9FF"
