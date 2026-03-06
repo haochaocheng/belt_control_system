@@ -67,6 +67,13 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-03-05 [Phase 7.48.11]: 监听参数焦点变化，自动滚动到可视区域
+    onFocusParamIndexChanged: {
+        if (focusSubArea === 1) {
+            ensureParamVisible(focusParamIndex)
+        }
+    }
+
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.10]: 添加左键返回类别处理
     Keys.onLeftPressed: function(event) {
         if (focusSubArea === 0) {
@@ -2068,6 +2075,36 @@ Rectangle {
 
     // ========== 导航函数 ==========
     // ✅ 2026-01-30 [FIX 100.300.105]: 添加导航系统函数
+
+    // ✅ 2026-03-05 [Phase 7.48.11]: 自动滚动到可视区域
+    function ensureParamVisible(paramIndex) {
+        // 计算参数所在的行号（每行2个参数）
+        var rowIndex = Math.floor(paramIndex / 2)
+
+        // 每行高度约60px（包括间距），标题栏50px，顶部边距15px
+        var rowHeight = 60
+        var estimatedY = rowIndex * rowHeight
+
+        // ScrollView 可视区域高度
+        var viewportHeight = paramScrollView.height
+
+        // 当前滚动位置
+        var currentY = paramScrollView.ScrollBar.vertical.position * paramScrollView.contentHeight
+
+        // 计算目标滚动位置（让焦点行居中显示）
+        var targetY = estimatedY - viewportHeight / 2 + rowHeight / 2
+
+        // 限制在有效范围内
+        var maxY = paramScrollView.contentHeight - viewportHeight
+        targetY = Math.max(0, Math.min(targetY, maxY))
+
+        // 平滑滚动到目标位置
+        var normalizedPosition = targetY / paramScrollView.contentHeight
+        paramScrollView.ScrollBar.vertical.position = normalizedPosition
+
+        console.log("🔍 [AnalogInputPage] 自动滚动 - 参数索引:", paramIndex,
+                    "行号:", rowIndex, "目标Y:", targetY, "归一化位置:", normalizedPosition)
+    }
 
     // 返回参数区域的字段数量
     function getParamFieldCount() {
