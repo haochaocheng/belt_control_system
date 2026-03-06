@@ -1609,60 +1609,119 @@ Rectangle {
                         spacing: 15
 
                         // 左侧：AD值和工程量显示
-                        ColumnLayout {
+                        // ✅ 2026-03-06 [Phase 7.48.15]: 重构为科技感紧凑显示（旧样式太长像进度条）
+                        // 旧样式：RowLayout + 长条形Rectangle（看起来像进度条）
+                        // 新样式：两个并排的科技感显示盒子，紧凑布局，青色边框+微光效果
+                        RowLayout {
                             Layout.fillWidth: true
-                            spacing: 8
+                            spacing: 12
 
-                            // AD值
-                            RowLayout {
-                                spacing: 10
-                                Text {
-                                    text: "AD值:"
-                                    font.pixelSize: 14
-                                    color: "#9E9E9E"
-                                    Layout.preferredWidth: 60
-                                }
+                            // AD值显示盒子
+                            Rectangle {
+                                Layout.preferredWidth: (parent.width - 12) / 2
+                                Layout.preferredHeight: 55
+                                color: "#0A0E1A"
+                                border.color: "#00D9FF"
+                                border.width: 1
+                                radius: 4
+
+                                // 内部微光效果
                                 Rectangle {
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: 28
-                                    color: "#1a1a1a"
-                                    border.color: "#555555"
+                                    anchors.fill: parent
+                                    anchors.margins: 1
+                                    color: "transparent"
+                                    border.color: "#00D9FF"
                                     border.width: 1
+                                    opacity: 0.15
                                     radius: 3
+                                }
 
+                                Column {
+                                    anchors.centerIn: parent
+                                    spacing: 2
+
+                                    // 标签
+                                    Text {
+                                        text: "AD值"
+                                        font.pixelSize: 11
+                                        font.family: "Microsoft YaHei"
+                                        color: "#64748B"
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
+
+                                    // 数值
                                     Text {
                                         id: adValueText
-                                        anchors.centerIn: parent
                                         text: "0"
-                                        font.pixelSize: 13
-                                        color: "#00d4ff"
+                                        font.pixelSize: 18
+                                        font.family: "Consolas"
+                                        font.bold: true
+                                        color: "#00D9FF"
+                                        anchors.horizontalCenter: parent.horizontalCenter
                                     }
                                 }
                             }
 
-                            // 工程量
-                            RowLayout {
-                                spacing: 10
-                                Text {
-                                    text: "工程量:"
-                                    font.pixelSize: 14
-                                    color: "#9E9E9E"
-                                    Layout.preferredWidth: 60
-                                }
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: 28
-                                    color: "#1a1a1a"
-                                    border.color: "#555555"
-                                    border.width: 1
-                                    radius: 3
+                            // 工程量显示盒子
+                            Rectangle {
+                                Layout.preferredWidth: (parent.width - 12) / 2
+                                Layout.preferredHeight: 55
+                                color: "#0A0E1A"
+                                border.color: "#00D9FF"
+                                border.width: 1
+                                radius: 4
 
+                                // 内部微光效果
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.margins: 1
+                                    color: "transparent"
+                                    border.color: "#00D9FF"
+                                    border.width: 1
+                                    opacity: 0.15
+                                    radius: 3
+                                }
+
+                                Column {
+                                    anchors.centerIn: parent
+                                    spacing: 2
+
+                                    // 标签
                                     Text {
-                                        id: engineeringValueText
-                                        anchors.centerIn: parent
-                                        text: "0.00 m/s"
-                                        font.pixelSize: 13
-                                        color: "#4CAF50"
+                                        text: "工程量"
+                                        font.pixelSize: 11
+                                        font.family: "Microsoft YaHei"
+                                        color: "#64748B"
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
+
+                                    // 数值+单位
+                                    Row {
+                                        spacing: 4
+                                        anchors.horizontalCenter: parent.horizontalCenter
+
+                                        Text {
+                                            id: engineeringValueText
+                                            text: "0.00"
+                                            font.pixelSize: 18
+                                            font.family: "Consolas"
+                                            font.bold: true
+                                            color: "#00D9FF"
+                                        }
+
+                                        Text {
+                                            text: {
+                                                if (root.currentProtectionIndex >= 0 &&
+                                                    root.currentProtectionIndex < analogProtectionModel.count) {
+                                                    return analogProtectionModel.get(root.currentProtectionIndex).unit
+                                                }
+                                                return "m/s"
+                                            }
+                                            font.pixelSize: 11
+                                            font.family: "Microsoft YaHei"
+                                            color: "#64748B"
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
                                     }
                                 }
                             }
@@ -2179,6 +2238,7 @@ Rectangle {
     }
 
     // ✅ 2026-03-06 [Phase 7.48.13]: 主动刷新AD值和工程量（切换保护项时调用）
+    // ✅ 2026-03-06 [Phase 7.48.15]: 更新为科技感显示（单位单独显示，不包含在text中）
     function refreshADValue(item) {
         if (!item || item.registerAddress < 0) {
             adValueText.text = "N/A"
@@ -2187,7 +2247,7 @@ Rectangle {
         }
         if (typeof aiDataManager === 'undefined' || aiDataManager === null) {
             adValueText.text = "0"
-            engineeringValueText.text = "0.00 " + (item.unit || "")
+            engineeringValueText.text = "0.00"  // ✅ 2026-03-06: 单位单独显示，不包含在text中
             return
         }
         // 模拟量模块1→AI模块索引2，模拟量模块2→AI模块索引3
@@ -2199,10 +2259,10 @@ Rectangle {
             var lower = lowerLimitSpin.value || 0
             var range = rangeSpin.value || 100
             var engVal = lower + (adVal / 65535.0) * range
-            engineeringValueText.text = engVal.toFixed(2) + " " + (item.unit || "")
+            engineeringValueText.text = engVal.toFixed(2)  // ✅ 2026-03-06: 单位单独显示，不包含在text中
         } else {
             adValueText.text = "0"
-            engineeringValueText.text = "0.00 " + (item.unit || "")
+            engineeringValueText.text = "0.00"  // ✅ 2026-03-06: 单位单独显示，不包含在text中
         }
     }
 
