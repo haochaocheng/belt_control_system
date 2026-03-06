@@ -828,6 +828,143 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移008已执行过，跳过";
     }
+
+    // ✅ 2026-03-06 [Phase 7.48.14 紧急修复]: 迁移009 - 恢复丢失的速度和张力保护项
+    // 问题：迁移007/008执行后，速度和张力保护项从数据库中消失
+    // 原因：迁移逻辑依赖数据库现有数据，如果保护项不存在就跳过，导致永久丢失
+    // 解决：不依赖现有数据，直接从initDefaultAnalogProtections的定义重新创建所有18项保护
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 009（恢复完整的18项模拟量保护）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '009_restore_all_analog_protections'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移009: 恢复完整的18项模拟量保护";
+
+        // 定义完整的18项保护（与initDefaultAnalogProtections完全一致）
+        struct AnalogProtection {
+            QString name;
+            QString unit;
+            QString moduleType;
+            int registerAddress;
+            double upperLimit;
+            double lowerLimit;
+            double range;
+            double rated;
+        };
+
+        QList<AnalogProtection> defaultProtections = {
+            // 常用项（皮带机头）
+            {"速度",       "m/s",   "模拟量模块1", 0, 10.0,  0.5, 9.5, 2.5},
+            {"张力",       "T",     "模拟量模块1", 1, 100.0, 10.0, 90.0, 50.0},
+            {"温度一",     "℃",    "模拟量模块1", 4, 150.0, 0.0, 150.0, 40.0},
+            {"温度二",     "℃",    "模拟量模块1", 5, 150.0, 0.0, 150.0, 40.0},
+            {"温度",       "℃",    "模拟量模块1", 7, 50.0, 0.0, 50.0, 26.0},
+            {"湿度",       "%RH",   "模拟量模块2", 0, 100.0, 0.0, 100.0, 95.0},
+            {"甲烷",       "%CH₄",  "模拟量模块2", 4, 4.0, 0.0, 4.0, 1.0},
+            {"粉尘浓度",   "mg/m³", "未分配", -1, 1000.0, 0.0, 1000.0, 100.0},
+            // 其余项
+            {"煤流",       "t/h",   "模拟量模块1", 2, 2000.0, 0.0, 2000.0, 500.0},
+            {"煤仓高度",   "m",     "模拟量模块1", 3, 30.0, 0.0, 30.0, 15.0},
+            {"电压",       "V",     "模拟量模块1", 6, 450.0, 320.0, 130.0, 380.0},
+            {"烟雾",       "mg/m³", "模拟量模块2", 1, 1000.0, 0.0, 1000.0, 500.0},
+            {"气压",       "kPa",   "模拟量模块2", 2, 120.0, 80.0, 40.0, 101.0},
+            {"氧气",       "%O₂",   "模拟量模块2", 3, 25.0, 0.0, 25.0, 20.0},
+            {"一氧化碳",   "ppm",   "模拟量模块2", 5, 1000.0, 0.0, 1000.0, 24.0},
+            {"硫化氢",     "ppm",   "模拟量模块2", 6, 100.0, 0.0, 100.0, 6.6},
+            {"二氧化碳",   "%CO₂",  "模拟量模块2", 7, 5.0, 0.0, 5.0, 1.5},
+            {"风速",       "m/s",   "未分配", -1, 15.0, 0.3, 14.7, 4.0}
+        };
+
+        // 获取所有设备
+        QSqlQuery deviceQuery(m_database);
+        deviceQuery.exec("SELECT device_id FROM devices ORDER BY device_id");
+
+        int deviceCount = 0;
+        int totalRestored = 0;
+
+        while (deviceQuery.next()) {
+            int deviceId = deviceQuery.value(0).toInt();
+            deviceCount++;
+
+            // 1. 删除该设备的所有模拟量保护项（清空旧数据）
+            QSqlQuery deleteQuery(m_database);
+            deleteQuery.prepare("DELETE FROM device_analog_protections WHERE device_id = ?");
+            deleteQuery.addBindValue(deviceId);
+            deleteQuery.exec();
+
+            // 2. 按正确顺序插入完整的18项保护（不依赖旧数据）
+            for (const auto &p : defaultProtections) {
+                QSqlQuery insertQuery(m_database);
+
+                // 速度保护需要额外的4个字段
+                if (p.name == "速度") {
+                    insertQuery.prepare(R"(
+                        INSERT INTO device_analog_protections
+                        (device_id, protection_name, module_type, register_address, unit,
+                         upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech,
+                         play_mode, play_count, play_duration,
+                         speed_start_delay, speed_detect_mode, rated_speed, slip_delay,
+                         audio_file, protection_level)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    )");
+                    insertQuery.addBindValue(deviceId);
+                    insertQuery.addBindValue(p.name);
+                    insertQuery.addBindValue(p.moduleType);
+                    insertQuery.addBindValue(p.registerAddress);
+                    insertQuery.addBindValue(p.unit);
+                    insertQuery.addBindValue(p.upperLimit);
+                    insertQuery.addBindValue(p.lowerLimit);
+                    insertQuery.addBindValue(p.range);
+                    insertQuery.addBindValue(p.rated);
+                    insertQuery.addBindValue(p.name + "保护报警");
+                    insertQuery.addBindValue(0);  // use_text_to_speech: 默认音频
+                    insertQuery.addBindValue("count");  // play_mode
+                    insertQuery.addBindValue(3);  // play_count
+                    insertQuery.addBindValue(10.0);  // play_duration
+                    insertQuery.addBindValue(30.0);  // speed_start_delay
+                    insertQuery.addBindValue("limit");  // speed_detect_mode
+                    insertQuery.addBindValue(p.rated);  // rated_speed
+                    insertQuery.addBindValue(10.0);  // slip_delay
+                    insertQuery.addBindValue("");  // audio_file
+                    insertQuery.addBindValue(1);  // protection_level
+                } else {
+                    insertQuery.prepare(R"(
+                        INSERT INTO device_analog_protections
+                        (device_id, protection_name, module_type, register_address, unit,
+                         upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech,
+                         play_mode, play_count, play_duration,
+                         audio_file, protection_level)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    )");
+                    insertQuery.addBindValue(deviceId);
+                    insertQuery.addBindValue(p.name);
+                    insertQuery.addBindValue(p.moduleType);
+                    insertQuery.addBindValue(p.registerAddress);
+                    insertQuery.addBindValue(p.unit);
+                    insertQuery.addBindValue(p.upperLimit);
+                    insertQuery.addBindValue(p.lowerLimit);
+                    insertQuery.addBindValue(p.range);
+                    insertQuery.addBindValue(p.rated);
+                    insertQuery.addBindValue(p.name + "保护报警");
+                    insertQuery.addBindValue(0);  // use_text_to_speech: 默认音频
+                    insertQuery.addBindValue("count");  // play_mode
+                    insertQuery.addBindValue(3);  // play_count
+                    insertQuery.addBindValue(10.0);  // play_duration
+                    insertQuery.addBindValue("");  // audio_file
+                    insertQuery.addBindValue(1);  // protection_level
+                }
+
+                if (insertQuery.exec()) {
+                    totalRestored++;
+                } else {
+                    qWarning() << "  ⚠️ 设备" << deviceId << "恢复保护项" << p.name << "失败:" << insertQuery.lastError().text();
+                }
+            }
+        }
+
+        qDebug() << "  ✅ 迁移009: 为" << deviceCount << "个设备恢复了" << totalRestored << "条保护项（应为" << (deviceCount * 18) << "条）";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('009_restore_all_analog_protections')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移009已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
