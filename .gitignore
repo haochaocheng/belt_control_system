@@ -48,6 +48,7 @@ AUDIO/
 
 # Archive directories
 archive/
+backups/
 
 # Temporary files
 temp_*.txt

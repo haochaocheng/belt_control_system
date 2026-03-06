@@ -18,6 +18,7 @@
 #include <QVector>
 #include <QVariantMap>
 #include <QVariantList>
+#include "ADFilter.h"  // ✅ 2026-03-06 [Phase 7.48.17]: AD值滤波器
 
 /**
  * @brief 模拟量通道数据
@@ -55,6 +56,10 @@ class AIDataManager : public QObject
     Q_PROPERTY(int changeThreshold READ changeThreshold
                WRITE setChangeThreshold NOTIFY changeThresholdChanged)
 
+    // ✅ 2026-03-06 [Phase 7.48.17]: AD值滤波配置
+    Q_PROPERTY(QString filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
+    Q_PROPERTY(bool filterEnabled READ filterEnabled WRITE setFilterEnabled NOTIFY filterEnabledChanged)
+
 public:
     explicit AIDataManager(QObject *parent = nullptr);
 
@@ -64,6 +69,13 @@ public:
 
     int changeThreshold() const { return m_changeThreshold; }
     void setChangeThreshold(int threshold);
+
+    // ✅ 2026-03-06 [Phase 7.48.17]: 滤波器配置访问器
+    QString filterType() const { return m_filterType; }
+    void setFilterType(const QString &type);
+
+    bool filterEnabled() const { return m_filterEnabled; }
+    void setFilterEnabled(bool enabled);
 
     // ========== 公共方法 ==========
     Q_INVOKABLE void parseData(int moduleIndex, const QByteArray &payload);
@@ -78,6 +90,10 @@ signals:
     void channelChanged(int moduleIndex, int channelIndex, const ChannelData &data);
     void changeThresholdChanged();
 
+    // ✅ 2026-03-06 [Phase 7.48.17]: 滤波器配置信号
+    void filterTypeChanged();
+    void filterEnabledChanged();
+
     // 解析错误信号
     void parseError(int moduleIndex, const QString &error);
 
@@ -91,12 +107,25 @@ private:
     // 转换为 QVariantMap
     QVariantMap channelDataToVariant(const ChannelData &data) const;
 
+    // ✅ 2026-03-06 [Phase 7.48.17]: 初始化滤波器
+    void initFilters();
+
+    // ✅ 2026-03-06 [Phase 7.48.17]: 应用滤波
+    quint16 applyFilter(int moduleIndex, int channelIndex, quint16 rawValue);
+
 private:
     // 数据存储：2个模块，每个8通道
     QVector<QVector<ChannelData>> m_aiData;
 
     // 变化检测阈值（AD值变化超过此值才认为变化）
     int m_changeThreshold;
+
+    // ✅ 2026-03-06 [Phase 7.48.17]: 滤波器配置
+    QString m_filterType;           // 滤波器类型：none, median, average, combined, lightweight
+    bool m_filterEnabled;           // 滤波器启用状态
+
+    // ✅ 2026-03-06 [Phase 7.48.17]: 滤波器实例（2个模块×8通道=16个滤波器）
+    QVector<QVector<ADFilterBase*>> m_filters;
 };
 
 #endif // AIDATAMANAGER_H
