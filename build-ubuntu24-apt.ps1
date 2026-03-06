@@ -1045,17 +1045,129 @@ if ($libsChanged) {
 Write-Host ""
 
 # ============================================================
+# Step -0.1: 基础镜像智能检测与恢复（Phase 7.48.16）
+# ============================================================
+# ✅ 2026-03-06 [Phase 7.48.16]: 自动区分缓存丢失和依赖变化
+# 原因：避免因缓存误删导致的 1-2 小时重复编译
+# 方案：通过哈希值对比判断是否需要从备份恢复
+Write-Host ""
+Write-Host "Step -0.1: 检查基础镜像状态..." -ForegroundColor Cyan
+
+# 配置备份路径
+$cacheDir = "E:\docker-image-cache"
+$backupImagePath = "$cacheDir\belt-control-base-ubuntu24.tar.gz"
+$backupHashPath = "$cacheDir\belt-control-base-ubuntu24.hash.json"
+
+# 计算当前文件哈希值
+$dockerfilePath = "$ProjectRoot\Dockerfile.ubuntu24-base"
+$requirementsPath = "$ProjectRoot\docker\rk3588\tts_engines\paddlespeech\requirements.txt"
+
+$currentHash = @{
+    Dockerfile = ""
+    requirements = ""
+}
+
+if (Test-Path $dockerfilePath) {
+    $currentHash.Dockerfile = (Get-FileHash $dockerfilePath -Algorithm SHA256).Hash
+}
+
+if (Test-Path $requirementsPath) {
+    $currentHash.requirements = (Get-FileHash $requirementsPath -Algorithm SHA256).Hash
+}
+
+# 初始化决策变量
+$skipBaseImageBuild = $false
+$needSaveBackup = $false
+$rebuildReason = ""
+
+# 检查备份哈希文件是否存在
+if (Test-Path $backupHashPath) {
+    $backupHash = Get-Content $backupHashPath | ConvertFrom-Json
+
+    # 对比哈希值
+    $dockerfileMatch = $currentHash.Dockerfile -eq $backupHash.files."Dockerfile.ubuntu24-base"
+    $requirementsMatch = $currentHash.requirements -eq $backupHash.files."docker/rk3588/tts_engines/paddlespeech/requirements.txt"
+
+    if ($dockerfileMatch -and $requirementsMatch) {
+        # 依赖未变化
+        Write-Host "  ✅ 依赖未变化" -ForegroundColor Green
+
+        # 检查本地镜像是否存在
+        $localImage = docker images -q "${BaseImageName}:${BaseImageTag}" 2>$null
+
+        if (-not $localImage) {
+            # 本地镜像不存在 → 缓存丢失
+            Write-Host "  ⚠️ 本地缓存丢失，尝试从备份恢复..." -ForegroundColor Yellow
+
+            if (Test-Path $backupImagePath) {
+                Write-Host "  正在加载基础镜像备份..." -ForegroundColor Cyan
+                $restoreStart = Get-Date
+
+                docker load -i $backupImagePath
+
+                if ($LASTEXITCODE -eq 0) {
+                    $restoreDuration = (Get-Date) - $restoreStart
+                    Write-Host "  ✅ 基础镜像恢复成功，跳过重建" -ForegroundColor Green
+                    Write-Host "  [Time] 恢复耗时: $($restoreDuration.Minutes) 分 $($restoreDuration.Seconds) 秒" -ForegroundColor Cyan
+                    Write-Host "  [Saved] 节省编译时间: 约 60-120 分钟" -ForegroundColor Green
+                    $skipBaseImageBuild = $true
+                    $rebuildReason = "cache_restored"
+                } else {
+                    Write-Host "  ❌ 恢复失败，将重新编译" -ForegroundColor Red
+                    $needSaveBackup = $true
+                    $rebuildReason = "restore_failed"
+                }
+            } else {
+                Write-Host "  ❌ 备份文件不存在，将重新编译" -ForegroundColor Red
+                $needSaveBackup = $true
+                $rebuildReason = "backup_missing"
+            }
+        } else {
+            Write-Host "  ✅ 本地镜像存在，跳过重建" -ForegroundColor Green
+            $skipBaseImageBuild = $true
+            $rebuildReason = "cache_exists"
+        }
+    } else {
+        # 依赖已变化
+        Write-Host "  ⚠️ 依赖已变化，需要重新编译" -ForegroundColor Yellow
+        if (-not $dockerfileMatch) {
+            Write-Host "    - Dockerfile.ubuntu24-base 已修改" -ForegroundColor Gray
+        }
+        if (-not $requirementsMatch) {
+            Write-Host "    - requirements.txt 已修改" -ForegroundColor Gray
+        }
+        $needSaveBackup = $true
+        $rebuildReason = "dependency_changed"
+    }
+} else {
+    # 首次编译
+    Write-Host "  ℹ️ 首次编译，将创建备份" -ForegroundColor Cyan
+    $needSaveBackup = $true
+    $rebuildReason = "first_build"
+}
+
+Write-Host "  决策: $rebuildReason" -ForegroundColor Cyan
+Write-Host ""
+
+# ============================================================
 # Step 0: Check and build base image if needed
 # ============================================================
 Write-Host "Step 0: Checking base image..." -ForegroundColor Cyan
 
-$baseImageExists = docker images -q "${BaseImageName}:${BaseImageTag}" 2>$null
-$needBuildBase = $false
-
-if (-not $baseImageExists) {
-    Write-Host "  [!] Base image not found" -ForegroundColor Yellow
-    $needBuildBase = $true
+# ✅ 2026-03-06 [Phase 7.48.16]: 尊重 Step -0.1 的智能决策
+if ($skipBaseImageBuild) {
+    Write-Host "  [OK] Base image check skipped (restored from backup or already exists)" -ForegroundColor Green
+    Write-Host ""
+    # 跳过整个 Step 0，直接进入 Step 1
 } else {
+    # 原有的检查逻辑
+    $baseImageExists = docker images -q "${BaseImageName}:${BaseImageTag}" 2>$null
+    $needBuildBase = $false
+
+    if (-not $baseImageExists) {
+        Write-Host "  [!] Base image not found" -ForegroundColor Yellow
+        $needBuildBase = $true
+    } else {
     # ✅ 2026-02-24 18:50 [Phase 7.46.48]: 修复基础镜像缓存键
     # 原因：只检查 Dockerfile 变化，不检查 requirements.txt 变化
     # 效果：修改 requirements.txt 会触发基础镜像重建
@@ -1128,9 +1240,62 @@ if ($needBuildBase) {
         $currentBaseHash = (Get-FileHash -Path $baseDockerfilePath -Algorithm MD5).Hash
         @{ hash = $currentBaseHash; timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") } | ConvertTo-Json | Set-Content $BaseCacheFile
     }
+
+    # ✅ 2026-03-06 [Phase 7.48.16]: 自动保存基础镜像备份
+    if ($needSaveBackup) {
+        Write-Host ""
+        Write-Host "  正在保存基础镜像备份..." -ForegroundColor Cyan
+
+        # 创建缓存目录
+        if (!(Test-Path $cacheDir)) {
+            New-Item -ItemType Directory -Path $cacheDir | Out-Null
+        }
+
+        # 查找基础镜像 ID
+        $baseImageId = docker images -q "${BaseImageName}:${BaseImageTag}" 2>$null
+
+        if ($baseImageId) {
+            Write-Host "  导出镜像: $baseImageId" -ForegroundColor Gray
+            $backupStart = Get-Date
+
+            docker save $baseImageId | gzip > $backupImagePath
+
+            if ($LASTEXITCODE -eq 0) {
+                $backupDuration = (Get-Date) - $backupStart
+                $backupSizeMB = [math]::Round((Get-Item $backupImagePath).Length / 1MB, 2)
+
+                # 保存哈希值
+                $hashData = @{
+                    version = "1.0"
+                    created_at = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+                    files = @{
+                        "Dockerfile.ubuntu24-base" = $currentHash.Dockerfile
+                        "docker/rk3588/tts_engines/paddlespeech/requirements.txt" = $currentHash.requirements
+                    }
+                    image_info = @{
+                        size_mb = $backupSizeMB
+                        image_id = $baseImageId
+                        docker_tag = "${BaseImageName}:${BaseImageTag}"
+                        build_time_minutes = $baseBuildDuration.TotalMinutes
+                    }
+                }
+                $hashData | ConvertTo-Json -Depth 10 | Out-File $backupHashPath -Encoding UTF8
+
+                Write-Host "  ✅ 基础镜像备份已保存" -ForegroundColor Green
+                Write-Host "    位置: $backupImagePath" -ForegroundColor Gray
+                Write-Host "    大小: $backupSizeMB MB" -ForegroundColor Gray
+                Write-Host "    耗时: $($backupDuration.Minutes) 分 $($backupDuration.Seconds) 秒" -ForegroundColor Gray
+            } else {
+                Write-Host "  ❌ 备份保存失败" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "  ⚠️ 未找到基础镜像，跳过备份" -ForegroundColor Yellow
+        }
+    }
 } else {
     Write-Host "  [OK] Base image found (cached, no download needed)" -ForegroundColor Green
 }
+} # ✅ 2026-03-06 [Phase 7.48.16]: 关闭 Step -0.1 的 else 块
 Write-Host ""
 
 # ============================================================
