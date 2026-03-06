@@ -1696,6 +1696,7 @@ Rectangle {
                                     }
 
                                     // 数值+单位
+                                    // ✅ 2026-03-06 [Phase 7.48.15 修复]: 修复单位文本垂直对齐问题
                                     Row {
                                         spacing: 4
                                         anchors.horizontalCenter: parent.horizontalCenter
@@ -1720,7 +1721,7 @@ Rectangle {
                                             font.pixelSize: 11
                                             font.family: "Microsoft YaHei"
                                             color: "#64748B"
-                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.baseline: engineeringValueText.baseline
                                         }
                                     }
                                 }
