@@ -696,6 +696,138 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移007已执行过，跳过";
     }
+
+    // ✅ 2026-03-06 [Phase 7.48.14 修复]: 迁移008 - 修复迁移007的排序问题
+    // 问题：迁移007的correctOrder列表完整但执行时可能有问题，导致顺序仍然错误
+    // 解决：重新执行一次完整的排序逻辑，确保所有设备的保护项顺序正确
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 008（修复模拟量保护项排序）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '008_fix_analog_protections_order'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移008: 修复模拟量保护项排序";
+
+        // 1. 获取所有设备
+        QSqlQuery deviceQuery(m_database);
+        deviceQuery.exec("SELECT device_id FROM devices ORDER BY device_id");
+
+        int deviceCount = 0;
+        int totalReordered = 0;
+
+        while (deviceQuery.next()) {
+            int deviceId = deviceQuery.value(0).toInt();
+            deviceCount++;
+
+            // 2. 读取该设备的所有模拟量保护项（保存到临时列表）
+            QSqlQuery loadQuery(m_database);
+            loadQuery.prepare("SELECT * FROM device_analog_protections WHERE device_id = ?");
+            loadQuery.addBindValue(deviceId);
+
+            QList<QVariantMap> protections;
+            if (loadQuery.exec()) {
+                while (loadQuery.next()) {
+                    QVariantMap prot;
+                    prot["protection_name"] = loadQuery.value("protection_name");
+                    prot["module_type"] = loadQuery.value("module_type");
+                    prot["register_address"] = loadQuery.value("register_address");
+                    prot["unit"] = loadQuery.value("unit");
+                    prot["upper_limit"] = loadQuery.value("upper_limit");
+                    prot["lower_limit"] = loadQuery.value("lower_limit");
+                    prot["range_value"] = loadQuery.value("range_value");
+                    prot["rated_value"] = loadQuery.value("rated_value");
+                    prot["tts_text"] = loadQuery.value("tts_text");
+                    prot["use_text_to_speech"] = loadQuery.value("use_text_to_speech");
+                    prot["play_mode"] = loadQuery.value("play_mode");
+                    prot["play_count"] = loadQuery.value("play_count");
+                    prot["play_duration"] = loadQuery.value("play_duration");
+                    prot["speed_start_delay"] = loadQuery.value("speed_start_delay");
+                    prot["speed_detect_mode"] = loadQuery.value("speed_detect_mode");
+                    prot["rated_speed"] = loadQuery.value("rated_speed");
+                    prot["slip_delay"] = loadQuery.value("slip_delay");
+                    prot["audio_file"] = loadQuery.value("audio_file");
+                    prot["protection_level"] = loadQuery.value("protection_level");
+                    protections.append(prot);
+                }
+            }
+
+            if (protections.isEmpty()) {
+                continue;  // 该设备没有保护项，跳过
+            }
+
+            // 3. 删除该设备的所有模拟量保护项
+            QSqlQuery deleteQuery(m_database);
+            deleteQuery.prepare("DELETE FROM device_analog_protections WHERE device_id = ?");
+            deleteQuery.addBindValue(deviceId);
+            deleteQuery.exec();
+
+            // 4. 按正确顺序重新插入（与 initDefaultAnalogProtections 完全一致）
+            QStringList correctOrder = {
+                // 常用项（皮带机头）
+                "速度", "张力", "温度一", "温度二", "温度", "湿度", "甲烷", "粉尘浓度",
+                // 其余项
+                "煤流", "煤仓高度", "电压", "烟雾", "气压", "氧气", "一氧化碳", "硫化氢", "二氧化碳", "风速"
+            };
+
+            // 按正确顺序重新插入
+            for (const QString &name : correctOrder) {
+                // 在临时列表中查找该保护项
+                QVariantMap prot;
+                bool found = false;
+                for (const QVariantMap &p : protections) {
+                    if (p["protection_name"].toString() == name) {
+                        prot = p;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    continue;  // 该设备没有这个保护项，跳过
+                }
+
+                // 重新插入（获得新的连续id）
+                QSqlQuery insertQuery(m_database);
+                insertQuery.prepare(R"(
+                    INSERT INTO device_analog_protections
+                    (device_id, protection_name, module_type, register_address, unit,
+                     upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech,
+                     play_mode, play_count, play_duration,
+                     speed_start_delay, speed_detect_mode, rated_speed, slip_delay,
+                     audio_file, protection_level)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                )");
+                insertQuery.addBindValue(deviceId);
+                insertQuery.addBindValue(prot["protection_name"]);
+                insertQuery.addBindValue(prot["module_type"]);
+                insertQuery.addBindValue(prot["register_address"]);
+                insertQuery.addBindValue(prot["unit"]);
+                insertQuery.addBindValue(prot["upper_limit"]);
+                insertQuery.addBindValue(prot["lower_limit"]);
+                insertQuery.addBindValue(prot["range_value"]);
+                insertQuery.addBindValue(prot["rated_value"]);
+                insertQuery.addBindValue(prot["tts_text"]);
+                insertQuery.addBindValue(prot["use_text_to_speech"]);
+                insertQuery.addBindValue(prot["play_mode"]);
+                insertQuery.addBindValue(prot["play_count"]);
+                insertQuery.addBindValue(prot["play_duration"]);
+                insertQuery.addBindValue(prot["speed_start_delay"]);
+                insertQuery.addBindValue(prot["speed_detect_mode"]);
+                insertQuery.addBindValue(prot["rated_speed"]);
+                insertQuery.addBindValue(prot["slip_delay"]);
+                insertQuery.addBindValue(prot["audio_file"]);
+                insertQuery.addBindValue(prot["protection_level"]);
+
+                if (insertQuery.exec()) {
+                    totalReordered++;
+                } else {
+                    qWarning() << "  ⚠️ 设备" << deviceId << "重新插入保护项" << name << "失败:" << insertQuery.lastError().text();
+                }
+            }
+        }
+
+        qDebug() << "  ✅ 迁移008: 为" << deviceCount << "个设备重新排序了" << totalReordered << "条保护项";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('008_fix_analog_protections_order')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移008已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
