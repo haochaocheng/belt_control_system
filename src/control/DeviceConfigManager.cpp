@@ -549,6 +549,23 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移005已执行过，跳过";
     }
+
+    // ✅ 2026-03-06 [Phase 7.48.13]: 迁移006 - 删除旧的拆分保护项
+    // 原因：早期版本可能创建了速度超速/低速打滑/张力上限/张力下限/电压过压/电压欠压
+    //       这些项在 Phase 7.48.9 已合并为单一保护项（速度/张力/电压）
+    //       迁移003在某些设备上执行时还没有删除逻辑，导致旧项残留
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 006（删除旧拆分保护项）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '006_remove_split_protections'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移006: 删除旧拆分保护项";
+        QSqlQuery deleteQuery(m_database);
+        deleteQuery.exec("DELETE FROM device_analog_protections WHERE protection_name IN ('速度超速', '低速打滑', '张力上限', '张力下限', '电压过压', '电压欠压')");
+        int deletedCount = deleteQuery.numRowsAffected();
+        qDebug() << "  ✅ 迁移006: 删除" << deletedCount << "条旧拆分保护项";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('006_remove_split_protections')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移006已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -671,31 +688,31 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
 
     // ✅ 2026-03-05 [Phase 7.48.8]: 扩展模拟量保护从7项到18项
     // ✅ 2026-03-06 [Phase 7.48.12]: 重新定义通道号映射
-    //   模拟量模块1：通道0-7（速度~温度），模拟量模块2：通道0-7（湿度~二氧化碳）
-    //   风速/粉尘浓度：暂未分配（register_address=-1）
-    // 旧值（Phase 7.48.8）：registerAddress 从5开始连续编号（5-22），全部归属"模拟量模块1"
+    // ✅ 2026-03-06 [Phase 7.48.13]: 重新排序 — 皮带机头常用项放顶部
+    //   显示顺序：速度→张力→温度一→温度二→温度(环境)→湿度→甲烷→粉尘浓度→其余
+    //   通道号映射不变：模拟量模块1通道0-7，模拟量模块2通道0-7
+    // 旧顺序（Phase 7.48.12）：按模块+通道号排列（速度→张力→煤流→...→风速→粉尘浓度）
     QList<AnalogProtection> protections = {
-        // 模拟量模块1：通道0-7（设备运行保护7项 + 环境温度1项）
+        // 常用项（皮带机头）
         {"速度",       "m/s",   "模拟量模块1", 0, 10.0,  0.5, 9.5, 2.5},     // 上限→速度超速，下限→低速打滑
         {"张力",       "T",     "模拟量模块1", 1, 100.0, 10.0, 90.0, 50.0},  // 上限→张力上限，下限→张力下限
-        {"煤流",       "t/h",   "模拟量模块1", 2, 2000.0, 0.0, 2000.0, 500.0},
-        {"煤仓高度",   "m",     "模拟量模块1", 3, 30.0, 0.0, 30.0, 15.0},
         {"温度一",     "℃",    "模拟量模块1", 4, 150.0, 0.0, 150.0, 40.0},
         {"温度二",     "℃",    "模拟量模块1", 5, 150.0, 0.0, 150.0, 40.0},
-        {"电压",       "V",     "模拟量模块1", 6, 450.0, 320.0, 130.0, 380.0}, // 上限→电压过压，下限→电压欠压
         {"温度",       "℃",    "模拟量模块1", 7, 50.0, 0.0, 50.0, 26.0},
-        // 模拟量模块2：通道0-7（环境安全监测7项 + 安规补充1项）
         {"湿度",       "%RH",   "模拟量模块2", 0, 100.0, 0.0, 100.0, 95.0},
+        {"甲烷",       "%CH₄",  "模拟量模块2", 4, 4.0, 0.0, 4.0, 1.0},
+        {"粉尘浓度",   "mg/m³", "未分配", -1, 1000.0, 0.0, 1000.0, 100.0},
+        // 其余项
+        {"煤流",       "t/h",   "模拟量模块1", 2, 2000.0, 0.0, 2000.0, 500.0},
+        {"煤仓高度",   "m",     "模拟量模块1", 3, 30.0, 0.0, 30.0, 15.0},
+        {"电压",       "V",     "模拟量模块1", 6, 450.0, 320.0, 130.0, 380.0}, // 上限→电压过压，下限→电压欠压
         {"烟雾",       "mg/m³", "模拟量模块2", 1, 1000.0, 0.0, 1000.0, 500.0},
         {"气压",       "kPa",   "模拟量模块2", 2, 120.0, 80.0, 40.0, 101.0},
         {"氧气",       "%O₂",   "模拟量模块2", 3, 25.0, 0.0, 25.0, 20.0},
-        {"甲烷",       "%CH₄",  "模拟量模块2", 4, 4.0, 0.0, 4.0, 1.0},
         {"一氧化碳",   "ppm",   "模拟量模块2", 5, 1000.0, 0.0, 1000.0, 24.0},
         {"硫化氢",     "ppm",   "模拟量模块2", 6, 100.0, 0.0, 100.0, 6.6},
         {"二氧化碳",   "%CO₂",  "模拟量模块2", 7, 5.0, 0.0, 5.0, 1.5},
-        // 未分配（后续可扩展到模拟量模块3）
-        {"风速",       "m/s",   "未分配", -1, 15.0, 0.3, 14.7, 4.0},
-        {"粉尘浓度",   "mg/m³", "未分配", -1, 1000.0, 0.0, 1000.0, 100.0}
+        {"风速",       "m/s",   "未分配", -1, 15.0, 0.3, 14.7, 4.0}
     };
 
     QSqlQuery query(m_database);
@@ -1062,7 +1079,9 @@ QVariantMap DeviceConfigManager::loadAnalogProtection(int deviceId, const QStrin
 QVariantList DeviceConfigManager::loadAllAnalogProtections(int deviceId)
 {
     QSqlQuery query(m_database);
-    query.prepare("SELECT * FROM device_analog_protections WHERE device_id = ? ORDER BY register_address");
+    // ✅ 2026-03-06 [Phase 7.48.13]: 改为 ORDER BY id 保持插入顺序
+    // 旧值：ORDER BY register_address（导致 register_address=-1 的风速/粉尘浓度排在最前面）
+    query.prepare("SELECT * FROM device_analog_protections WHERE device_id = ? ORDER BY id");
     query.addBindValue(deviceId);
 
     if (!query.exec()) {

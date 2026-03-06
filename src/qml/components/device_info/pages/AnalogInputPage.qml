@@ -43,6 +43,14 @@ Rectangle {
     property int protectionLevel: 1  // 保护级别：0=预警+紧急停车, 1=预警+正常停车, 2=仅预警, 3=不处理
     property string inputType: "4-20mA"  // 输入类型：4-20mA, 0-20mA, 0-5V, 0-10V, 1-5V
 
+    // ✅ 2026-03-06 [Phase 7.48.13]: 音频来源模式切换时，自动刷新音频文件名（与开关量一致）
+    onAudioSourceModeChanged: {
+        if (currentProtectionIndex >= 0 && currentProtectionIndex < analogProtectionModel.count) {
+            var item = analogProtectionModel.get(currentProtectionIndex)
+            audioField.text = getAudioFileName(item.name)
+        }
+    }
+
     // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用属性
     property real speedStartDelay: 0.0      // 电机启动延时（秒）
     property string speedDetectMode: "limit" // 检测模式：limit=上下限, percent=额定百分比
@@ -89,29 +97,30 @@ Rectangle {
         id: analogProtectionModel
         // ✅ 2026-03-05 [Phase 7.48.8]: 扩展模拟量保护从5项到18项（速度/张力/电压为单一保护项）
         // ✅ 2026-03-06 [Phase 7.48.12]: 重新定义通道号映射
-        //   模拟量模块1：通道0-7，模拟量模块2：通道0-7，风速/粉尘浓度暂未分配
-        // 旧值（Phase 7.48.8）：registerAddress 从5开始连续编号（5-22），全部"模拟量模块1"
-        // 模拟量模块1：通道0-7
+        // ✅ 2026-03-06 [Phase 7.48.13]: 重新排序 — 皮带机头常用项放顶部
+        //   显示顺序：速度→张力→温度一→温度二→温度(环境)→湿度→甲烷→粉尘浓度→其余
+        //   通道号映射不变：模拟量模块1通道0-7，模拟量模块2通道0-7
+        // 旧顺序（Phase 7.48.12）：按模块+通道号排列（速度→张力→煤流→...→风速→粉尘浓度）
+        // 常用项（皮带机头）
         ListElement { name: "速度"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 0 }
         ListElement { name: "张力"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 1 }
-        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "模拟量模块1"; registerAddress: 2 }
-        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "模拟量模块1"; registerAddress: 3 }
         ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 4 }
         ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 5 }
-        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 6 }
         ListElement { name: "温度"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 7 }
-        // 模拟量模块2：通道0-7
         ListElement { name: "湿度"; active: false; currentValue: 0.0; unit: "%RH"; moduleType: "模拟量模块2"; registerAddress: 0 }
+        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "模拟量模块2"; registerAddress: 4 }
+        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "未分配"; registerAddress: -1 }
+        // 其余项
+        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "模拟量模块1"; registerAddress: 2 }
+        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "模拟量模块1"; registerAddress: 3 }
+        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 6 }
         ListElement { name: "烟雾"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 1 }
         ListElement { name: "气压"; active: false; currentValue: 0.0; unit: "kPa"; moduleType: "模拟量模块2"; registerAddress: 2 }
         ListElement { name: "氧气"; active: false; currentValue: 0.0; unit: "%O₂"; moduleType: "模拟量模块2"; registerAddress: 3 }
-        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "模拟量模块2"; registerAddress: 4 }
         ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块2"; registerAddress: 5 }
         ListElement { name: "硫化氢"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块2"; registerAddress: 6 }
         ListElement { name: "二氧化碳"; active: false; currentValue: 0.0; unit: "%CO₂"; moduleType: "模拟量模块2"; registerAddress: 7 }
-        // 未分配（后续可扩展）
         ListElement { name: "风速"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "未分配"; registerAddress: -1 }
-        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "未分配"; registerAddress: -1 }
     }
 
     // ========== 主布局：左右分栏 ==========
@@ -471,22 +480,9 @@ Rectangle {
                                     id: moduleTypeCombo
                                     anchors.fill: parent
                                     keyboardManager: root.keyboardManager
-                                    model: ["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
-
-                                    onCurrentTextChanged: {
-                                        // 根据模块类型自动设置寄存器地址
-                                        if (currentText === "输入模块1") {
-                                            registerAddressSpin.value = 2
-                                        } else if (currentText === "输入模块2") {
-                                            registerAddressSpin.value = 3
-                                        } else if (currentText === "输入模块3") {
-                                            registerAddressSpin.value = 4
-                                        } else if (currentText === "输入模块4") {
-                                            registerAddressSpin.value = 5
-                                        } else if (currentText === "输出模块") {
-                                            registerAddressSpin.value = 50
-                                        }
-                                    }
+                                    // ✅ 2026-03-06 [Phase 7.48.13]: 更新为2个模拟量模块选项
+                                    // 旧值（Phase 7.48.6）：["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
+                                    model: ["模拟量模块1", "模拟量模块2"]
                                 }
 
                                 Rectangle {
@@ -829,7 +825,11 @@ Rectangle {
 
                                 DeviceInfo.CustomTextField {
                                     id: audioField
-                                    placeholderText: "音频文件路径（只读）"
+                                    // ✅ 2026-03-06 [Phase 7.48.13]: 更新占位文字和颜色（与开关量一致）
+                                    // 旧值：placeholderText: "音频文件路径（只读）"（黑色字体）
+                                    placeholderText: "未配置音频文件"
+                                    placeholderTextColor: "#6E6E6E"
+                                    color: "#E0E0E0"
                                     anchors.fill: parent
                                     keyboardManager: root.keyboardManager
                                     readOnly: true
@@ -1563,6 +1563,37 @@ Rectangle {
                     }
                 }
 
+                // ✅ 2026-03-06 [Phase 7.48.13]: 监听AI数据变化，更新AD值和工程量显示
+                Connections {
+                    target: typeof aiDataManager !== 'undefined' ? aiDataManager : null
+                    ignoreUnknownSignals: true
+                    function onChannelChanged(modIndex, channelIndex, data) {
+                        // 检查当前选中的保护项是否匹配此通道
+                        if (root.currentProtectionIndex < 0 || root.currentProtectionIndex >= analogProtectionModel.count)
+                            return
+                        var item = analogProtectionModel.get(root.currentProtectionIndex)
+                        // 模块匹配：模拟量模块1→AI模块索引2，模拟量模块2→AI模块索引3
+                        var expectedModIndex = (item.moduleType === "模拟量模块1") ? 2 : 3
+                        if (modIndex !== expectedModIndex) return
+                        // 通道匹配
+                        if (channelIndex !== item.registerAddress) return
+                        if (item.registerAddress < 0) return  // 未分配跳过
+
+                        // 使用 getChannel 获取 QVariantMap 数据
+                        var chData = aiDataManager.getChannel(modIndex, channelIndex)
+                        if (!chData) return
+
+                        var adVal = chData.adValue || 0
+                        adValueText.text = adVal.toString()
+
+                        // 工程量计算：下限 + (AD值 / 65535) × 量程
+                        var lower = lowerLimitSpin.value || 0
+                        var range = rangeSpin.value || 100
+                        var engVal = lower + (adVal / 65535.0) * range
+                        engineeringValueText.text = engVal.toFixed(2) + " " + (item.unit || "")
+                    }
+                }
+
                 // ✅ 2026-03-05 [Phase 7.48.6]: 新增只读区域 - AD值、工程量、状态LED
                 Rectangle {
                     Layout.fillWidth: true
@@ -1638,81 +1669,167 @@ Rectangle {
                         }
 
                         // 右侧：状态LED
-                        ColumnLayout {
-                            Layout.preferredWidth: 150
-                            spacing: 8
+                        // ✅ 2026-03-06 [Phase 7.48.13]: 重构为与开关量一致的LED样式
+                        // 旧样式（Phase 7.48.6）：静态绿色圆形，无动画，无状态切换
+                        // 新样式：外环动画 + 内核 + 高亮点 + 状态颜色切换 + 状态文字
+                        Item {
+                            id: analogModuleStatusItem
+                            Layout.preferredWidth: 260
+                            Layout.fillHeight: true
 
-                            // MQTT服务状态
-                            RowLayout {
-                                spacing: 8
-
-                                // ✅ 2026-03-05 [Phase 7.48.6]: 双层 LED（与开关量一致）
-                                Item {
-                                    width: 34
-                                    height: 34
-
-                                    Rectangle {
-                                        id: mqttStatusLed
-                                        anchors.centerIn: parent
-                                        width: 34
-                                        height: 34
-                                        radius: 17
-                                        color: "#4CAF50"  // 绿色=在线
-                                        border.color: "#2E7D32"
-                                        border.width: 2
-
-                                        // 内部高亮
-                                        Rectangle {
-                                            width: 18
-                                            height: 18
-                                            radius: 9
-                                            anchors.centerIn: parent
-                                            color: "#81C784"
-                                        }
-                                    }
-                                }
-
-                                Text {
-                                    text: "MQTT在线"
-                                    font.pixelSize: 12
-                                    color: "#9E9E9E"
-                                }
+                            property int _healthTick: 0
+                            Connections {
+                                target: typeof mqttAutoManager !== 'undefined' ? mqttAutoManager : null
+                                ignoreUnknownSignals: true
+                                function onHealthStatusChanged() { analogModuleStatusItem._healthTick++ }
                             }
 
-                            // 模块状态
-                            RowLayout {
-                                spacing: 8
+                            // 模拟量模块索引：模拟量模块1→2，模拟量模块2→3（healthStatus数组中0-1是DI，2-3是AI）
+                            readonly property int moduleIndex: {
+                                if (root.currentProtectionIndex >= 0 &&
+                                    root.currentProtectionIndex < analogProtectionModel.count) {
+                                    var item = analogProtectionModel.get(root.currentProtectionIndex)
+                                    return (item.moduleType === "模拟量模块1") ? 2 : 3
+                                }
+                                return 2
+                            }
+                            readonly property bool mqttServiceOnline: {
+                                var tick = _healthTick
+                                if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
+                                    var hs = mqttAutoManager.healthStatus
+                                    if (moduleIndex >= 0 && moduleIndex < hs.length)
+                                        return hs[moduleIndex].connected
+                                }
+                                return false
+                            }
+                            readonly property bool hardwareOnline: {
+                                var tick = _healthTick
+                                if (typeof mqttAutoManager !== 'undefined' && mqttAutoManager !== null) {
+                                    var hs = mqttAutoManager.healthStatus
+                                    if (moduleIndex >= 0 && moduleIndex < hs.length)
+                                        return hs[moduleIndex].status === "正常"
+                                }
+                                return false
+                            }
 
-                                // ✅ 2026-03-05 [Phase 7.48.6]: 双层 LED（与开关量一致）
-                                Item {
-                                    width: 34
-                                    height: 34
+                            Row {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                spacing: 0
 
-                                    Rectangle {
-                                        id: moduleStatusLed
-                                        anchors.centerIn: parent
-                                        width: 34
-                                        height: 34
-                                        radius: 17
-                                        color: "#4CAF50"  // 绿色=在线
-                                        border.color: "#2E7D32"
-                                        border.width: 2
+                                // 左：MQTT服务状态
+                                Column {
+                                    spacing: 3
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 110
 
-                                        // 内部高亮
+                                    Item {
+                                        width: 34; height: 34
+                                        anchors.horizontalCenter: parent.horizontalCenter
                                         Rectangle {
-                                            width: 18
-                                            height: 18
-                                            radius: 9
                                             anchors.centerIn: parent
-                                            color: "#81C784"
+                                            width: 34; height: 34; radius: 17
+                                            color: "transparent"; border.width: 2
+                                            border.color: analogModuleStatusItem.mqttServiceOnline ? "#22C55E" : "#ff4757"
+                                            opacity: 0.35
+                                            SequentialAnimation on opacity {
+                                                running: analogModuleStatusItem.mqttServiceOnline
+                                                loops: Animation.Infinite
+                                                NumberAnimation { to: 0.05; duration: 1400; easing.type: Easing.InOutSine }
+                                                NumberAnimation { to: 0.5;  duration: 1400; easing.type: Easing.InOutSine }
+                                            }
                                         }
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 20; height: 20; radius: 10
+                                            color: analogModuleStatusItem.mqttServiceOnline ? "#22C55E" : "#ff4757"
+                                            Rectangle {
+                                                width: 5; height: 5; radius: 3
+                                                color: analogModuleStatusItem.mqttServiceOnline ? "#86EFAC" : "#fca5a5"
+                                                anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 3
+                                            }
+                                        }
+                                    }
+                                    Text {
+                                        text: analogModuleStatusItem.mqttServiceOnline ? "服务在线" : "服务离线"
+                                        font.pixelSize: 14; font.weight: Font.Medium
+                                        color: analogModuleStatusItem.mqttServiceOnline ? "#22C55E" : "#ff4757"
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
+                                    Text {
+                                        text: "MQTT服务"
+                                        font.pixelSize: 12; color: "#607080"
+                                        anchors.horizontalCenter: parent.horizontalCenter
                                     }
                                 }
 
-                                Text {
-                                    text: "模块在线"
-                                    font.pixelSize: 12
-                                    color: "#9E9E9E"
+                                Rectangle { width: 1; height: 60; color: "#2a3a4a"; anchors.verticalCenter: parent.verticalCenter }
+
+                                // 右：硬件模块状态
+                                Column {
+                                    spacing: 3
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 140
+                                    leftPadding: 10
+
+                                    property color modColor: {
+                                        if (analogModuleStatusItem.hardwareOnline)    return "#00d4ff"
+                                        if (analogModuleStatusItem.mqttServiceOnline) return "#f59e0b"
+                                        return "#475569"
+                                    }
+                                    property color modHighlight: {
+                                        if (analogModuleStatusItem.hardwareOnline)    return "#7dd3fc"
+                                        if (analogModuleStatusItem.mqttServiceOnline) return "#fcd34d"
+                                        return "#64748b"
+                                    }
+
+                                    Item {
+                                        width: 34; height: 34
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 34; height: 34; radius: 17
+                                            color: "transparent"; border.width: 2
+                                            border.color: parent.parent.modColor
+                                            opacity: 0.35
+                                            SequentialAnimation on opacity {
+                                                running: analogModuleStatusItem.hardwareOnline
+                                                loops: Animation.Infinite
+                                                NumberAnimation { to: 0.05; duration: 1200; easing.type: Easing.InOutSine }
+                                                NumberAnimation { to: 0.55; duration: 1200; easing.type: Easing.InOutSine }
+                                            }
+                                        }
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 20; height: 20; radius: 10
+                                            color: parent.parent.modColor
+                                            Rectangle {
+                                                width: 5; height: 5; radius: 3
+                                                color: parent.parent.modHighlight
+                                                anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 3
+                                            }
+                                        }
+                                    }
+                                    Text {
+                                        text: {
+                                            if (analogModuleStatusItem.hardwareOnline)    return "模块在线"
+                                            if (analogModuleStatusItem.mqttServiceOnline) return "模块无响应"
+                                            return "无法检测"
+                                        }
+                                        font.pixelSize: 14; font.weight: Font.Medium
+                                        color: parent.modColor
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
+                                    Text {
+                                        text: {
+                                            if (root.currentProtectionIndex >= 0 &&
+                                                root.currentProtectionIndex < analogProtectionModel.count)
+                                                return analogProtectionModel.get(root.currentProtectionIndex).moduleType
+                                            return "模拟量模块"
+                                        }
+                                        font.pixelSize: 12; color: "#607080"
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
                                 }
                             }
                         }
@@ -1895,7 +2012,9 @@ Rectangle {
             playCountSpin.value = protection.play_count
             durationSpin.value = protection.play_duration * 10  // 转换为整数（0.1秒精度）
             ttsTextField.text = protection.tts_text || (item.name + "保护报警")
-            audioField.text = protection.audio_file || ""
+            // ✅ 2026-03-06 [Phase 7.48.13]: 使用 getAudioFileName 根据音频来源自动生成文件名
+            // 旧代码：audioField.text = protection.audio_file || ""
+            audioField.text = protection.audio_file || getAudioFileName(item.name)
 
             // ✅ 2026-03-05 [Phase 7.48.6]: 加载新增字段
             root.audioSourceMode = protection.audio_source_mode || "tts"
@@ -1948,7 +2067,9 @@ Rectangle {
             playCountSpin.value = 3
             durationSpin.value = 50  // 5.0秒
             ttsTextField.text = item.name + "保护报警"
-            audioField.text = ""
+            // ✅ 2026-03-06 [Phase 7.48.13]: 使用 getAudioFileName 根据音频来源自动生成文件名
+            // 旧代码：audioField.text = ""
+            audioField.text = getAudioFileName(item.name)
 
             // ✅ 2026-03-05 [Phase 7.48.6]: 新增字段默认值
             root.audioSourceMode = "tts"
@@ -1982,6 +2103,9 @@ Rectangle {
 
             console.log("⚠️ [AnalogInputPage] 数据库中没有详细参数，使用默认值:", item.name)
         }
+
+        // ✅ 2026-03-06 [Phase 7.48.13]: 切换保护项时主动刷新AD值和工程量
+        refreshADValue(item)
     }
 
     // 保存保护数据
@@ -2037,6 +2161,48 @@ Rectangle {
             console.log("✅ [AnalogInputPage] 保存到数据库成功:", nameField.text)
         } else {
             console.error("❌ [AnalogInputPage] 保存到数据库失败:", nameField.text)
+        }
+    }
+
+    // ✅ 2026-03-06 [Phase 7.48.13]: 根据音频来源模式返回音频文件名（与开关量SwitchInputPage一致）
+    // audioSourceMode === "default" → 返回默认MP3文件名
+    // audioSourceMode === "tts"     → 返回TTS合成WAV文件名
+    function getAudioFileName(protectionName) {
+        if (root.audioSourceMode === "default") {
+            // 默认音频：使用预置MP3文件
+            return protectionName + ".mp3"
+        } else {
+            // TTS合成：使用TTS生成的.wav文件
+            // 方向性保护（速度/张力/电压）有上下限两个音频，这里显示基础名
+            return protectionName + ".wav"
+        }
+    }
+
+    // ✅ 2026-03-06 [Phase 7.48.13]: 主动刷新AD值和工程量（切换保护项时调用）
+    function refreshADValue(item) {
+        if (!item || item.registerAddress < 0) {
+            adValueText.text = "N/A"
+            engineeringValueText.text = "未分配"
+            return
+        }
+        if (typeof aiDataManager === 'undefined' || aiDataManager === null) {
+            adValueText.text = "0"
+            engineeringValueText.text = "0.00 " + (item.unit || "")
+            return
+        }
+        // 模拟量模块1→AI模块索引2，模拟量模块2→AI模块索引3
+        var modIndex = (item.moduleType === "模拟量模块1") ? 2 : 3
+        var chData = aiDataManager.getChannel(modIndex, item.registerAddress)
+        if (chData) {
+            var adVal = chData.adValue || 0
+            adValueText.text = adVal.toString()
+            var lower = lowerLimitSpin.value || 0
+            var range = rangeSpin.value || 100
+            var engVal = lower + (adVal / 65535.0) * range
+            engineeringValueText.text = engVal.toFixed(2) + " " + (item.unit || "")
+        } else {
+            adValueText.text = "0"
+            engineeringValueText.text = "0.00 " + (item.unit || "")
         }
     }
 
