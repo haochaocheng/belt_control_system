@@ -274,11 +274,25 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
     for (const QVariant &p : protections) {
         QVariantMap prot = p.toMap();
         int regAddr = prot.value("register_address").toInt();
+        QString moduleType = prot.value("module_type").toString();
 
-        // 通道匹配逻辑：register_address 5-26 对应通道 0-21
-        // 简化映射：regAddr - 5 = channelIndex
-        if (regAddr - 5 != channelIndex) {
-            continue;  // 不是当前通道的保护项
+        // ✅ 2026-03-06 [Phase 7.48.12]: 通道匹配逻辑重构
+        // 旧逻辑（Phase 7.48.5）：regAddr - 5 = channelIndex（registerAddress 5-22连续编号）
+        // 新逻辑：匹配 moduleIndex + channelIndex
+        //   moduleIndex 0 = 模拟量模块1（通道0-7），moduleIndex 1 = 模拟量模块2（通道0-7）
+        //   register_address 直接等于 channelIndex（0-7）
+        //   未分配的保护项（register_address=-1）跳过
+        if (regAddr < 0) {
+            continue;  // 未分配的保护项（风速/粉尘浓度），跳过
+        }
+        // 判断模块是否匹配
+        QString expectedModule = (moduleIndex == 0) ? "模拟量模块1" : "模拟量模块2";
+        if (moduleType != expectedModule) {
+            continue;  // 模块不匹配
+        }
+        // 判断通道号是否匹配
+        if (regAddr != channelIndex) {
+            continue;  // 通道号不匹配
         }
 
         QString protName = prot.value("protection_name").toString();

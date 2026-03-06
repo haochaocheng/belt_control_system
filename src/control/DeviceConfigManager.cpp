@@ -500,6 +500,55 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移004已执行过，跳过";
     }
+
+    // ✅ 2026-03-06 [Phase 7.48.12]: 迁移005 - 修正模拟量保护通道号和模块类型
+    // 旧映射：registerAddress 5-22，全部"模拟量模块1"
+    // 新映射：模块1通道0-7（速度~温度），模块2通道0-7（湿度~二氧化碳），风速/粉尘浓度=-1/未分配
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 005（修正通道号和模块类型）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '005_fix_channel_mapping'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移005: 修正通道号和模块类型";
+        QSqlQuery fix(m_database);
+        int totalAffected = 0;
+
+        // 模拟量模块1：通道0-7
+        struct ChannelFix { QString name; QString moduleType; int regAddr; };
+        QList<ChannelFix> fixes = {
+            {"速度",     "模拟量模块1", 0},
+            {"张力",     "模拟量模块1", 1},
+            {"煤流",     "模拟量模块1", 2},
+            {"煤仓高度", "模拟量模块1", 3},
+            {"温度一",   "模拟量模块1", 4},
+            {"温度二",   "模拟量模块1", 5},
+            {"电压",     "模拟量模块1", 6},
+            {"温度",     "模拟量模块1", 7},
+            {"湿度",     "模拟量模块2", 0},
+            {"烟雾",     "模拟量模块2", 1},
+            {"气压",     "模拟量模块2", 2},
+            {"氧气",     "模拟量模块2", 3},
+            {"甲烷",     "模拟量模块2", 4},
+            {"一氧化碳", "模拟量模块2", 5},
+            {"硫化氢",   "模拟量模块2", 6},
+            {"二氧化碳", "模拟量模块2", 7},
+            {"风速",     "未分配",     -1},
+            {"粉尘浓度", "未分配",     -1}
+        };
+
+        for (const auto &f : fixes) {
+            fix.prepare("UPDATE device_analog_protections SET module_type = ?, register_address = ? WHERE protection_name = ?");
+            fix.addBindValue(f.moduleType);
+            fix.addBindValue(f.regAddr);
+            fix.addBindValue(f.name);
+            if (fix.exec()) {
+                totalAffected += fix.numRowsAffected();
+            }
+        }
+
+        qDebug() << "  ✅ 迁移005: 更新" << totalAffected << "条保护项的通道号和模块类型";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('005_fix_channel_mapping')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移005已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -611,6 +660,8 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
     struct AnalogProtection {
         QString name;
         QString unit;
+        // ✅ 2026-03-06 [Phase 7.48.12]: 新增 moduleType 字段，支持模拟量模块1/2分配
+        QString moduleType;
         int registerAddress;
         double upperLimit;
         double lowerLimit;
@@ -619,32 +670,32 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
     };
 
     // ✅ 2026-03-05 [Phase 7.48.8]: 扩展模拟量保护从7项到18项
-    // 删除：电流一/电流二（属于电机运行范围）
-    // 保持：速度、张力、电压（单一保护项，根据上下限播放不同音频）
-    // 改名：红外温度一→温度一、红外温度二→温度二
-    // 新增：煤流、煤仓高度、温度、湿度、烟雾、气压、氧气、甲烷、一氧化碳、硫化氢、二氧化碳、风速、粉尘浓度
+    // ✅ 2026-03-06 [Phase 7.48.12]: 重新定义通道号映射
+    //   模拟量模块1：通道0-7（速度~温度），模拟量模块2：通道0-7（湿度~二氧化碳）
+    //   风速/粉尘浓度：暂未分配（register_address=-1）
+    // 旧值（Phase 7.48.8）：registerAddress 从5开始连续编号（5-22），全部归属"模拟量模块1"
     QList<AnalogProtection> protections = {
-        // 设备运行保护（7项）
-        {"速度",       "m/s",  5, 10.0,  0.5, 9.5, 2.5},     // 上限→速度超速，下限→低速打滑
-        {"张力",       "T",    6, 100.0, 10.0, 90.0, 50.0},  // 上限→张力上限，下限→张力下限
-        {"煤流",       "t/h",  7, 2000.0, 0.0, 2000.0, 500.0},
-        {"煤仓高度",   "m",    8, 30.0, 0.0, 30.0, 15.0},
-        {"温度一",     "℃",   9, 150.0, 0.0, 150.0, 40.0},
-        {"温度二",     "℃",   10, 150.0, 0.0, 150.0, 40.0},
-        {"电压",       "V",    11, 450.0, 320.0, 130.0, 380.0}, // 上限→电压过压，下限→电压欠压
-        // 环境安全监测（8项）
-        {"温度",       "℃",   12, 50.0, 0.0, 50.0, 26.0},
-        {"湿度",       "%RH",  13, 100.0, 0.0, 100.0, 95.0},
-        {"烟雾",       "mg/m³",14, 1000.0, 0.0, 1000.0, 500.0},
-        {"气压",       "kPa",  15, 120.0, 80.0, 40.0, 101.0},
-        {"氧气",       "%O₂",  16, 25.0, 0.0, 25.0, 20.0},
-        {"甲烷",       "%CH₄", 17, 4.0, 0.0, 4.0, 1.0},
-        {"一氧化碳",   "ppm",  18, 1000.0, 0.0, 1000.0, 24.0},
-        {"硫化氢",     "ppm",  19, 100.0, 0.0, 100.0, 6.6},
-        // 安全规程补充（3项）
-        {"二氧化碳",   "%CO₂", 20, 5.0, 0.0, 5.0, 1.5},
-        {"风速",       "m/s",  21, 15.0, 0.3, 14.7, 4.0},
-        {"粉尘浓度",   "mg/m³",22, 1000.0, 0.0, 1000.0, 100.0}
+        // 模拟量模块1：通道0-7（设备运行保护7项 + 环境温度1项）
+        {"速度",       "m/s",   "模拟量模块1", 0, 10.0,  0.5, 9.5, 2.5},     // 上限→速度超速，下限→低速打滑
+        {"张力",       "T",     "模拟量模块1", 1, 100.0, 10.0, 90.0, 50.0},  // 上限→张力上限，下限→张力下限
+        {"煤流",       "t/h",   "模拟量模块1", 2, 2000.0, 0.0, 2000.0, 500.0},
+        {"煤仓高度",   "m",     "模拟量模块1", 3, 30.0, 0.0, 30.0, 15.0},
+        {"温度一",     "℃",    "模拟量模块1", 4, 150.0, 0.0, 150.0, 40.0},
+        {"温度二",     "℃",    "模拟量模块1", 5, 150.0, 0.0, 150.0, 40.0},
+        {"电压",       "V",     "模拟量模块1", 6, 450.0, 320.0, 130.0, 380.0}, // 上限→电压过压，下限→电压欠压
+        {"温度",       "℃",    "模拟量模块1", 7, 50.0, 0.0, 50.0, 26.0},
+        // 模拟量模块2：通道0-7（环境安全监测7项 + 安规补充1项）
+        {"湿度",       "%RH",   "模拟量模块2", 0, 100.0, 0.0, 100.0, 95.0},
+        {"烟雾",       "mg/m³", "模拟量模块2", 1, 1000.0, 0.0, 1000.0, 500.0},
+        {"气压",       "kPa",   "模拟量模块2", 2, 120.0, 80.0, 40.0, 101.0},
+        {"氧气",       "%O₂",   "模拟量模块2", 3, 25.0, 0.0, 25.0, 20.0},
+        {"甲烷",       "%CH₄",  "模拟量模块2", 4, 4.0, 0.0, 4.0, 1.0},
+        {"一氧化碳",   "ppm",   "模拟量模块2", 5, 1000.0, 0.0, 1000.0, 24.0},
+        {"硫化氢",     "ppm",   "模拟量模块2", 6, 100.0, 0.0, 100.0, 6.6},
+        {"二氧化碳",   "%CO₂",  "模拟量模块2", 7, 5.0, 0.0, 5.0, 1.5},
+        // 未分配（后续可扩展到模拟量模块3）
+        {"风速",       "m/s",   "未分配", -1, 15.0, 0.3, 14.7, 4.0},
+        {"粉尘浓度",   "mg/m³", "未分配", -1, 1000.0, 0.0, 1000.0, 100.0}
     };
 
     QSqlQuery query(m_database);
@@ -662,7 +713,8 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
             )");
             query.addBindValue(deviceId);
             query.addBindValue(p.name);
-            query.addBindValue("模拟量模块1");
+            // ✅ 2026-03-06 [Phase 7.48.12]: 使用结构体中的 moduleType（旧值硬编码"模拟量模块1"）
+            query.addBindValue(p.moduleType);
             query.addBindValue(p.registerAddress);
             query.addBindValue(p.unit);
             query.addBindValue(p.upperLimit);
@@ -684,7 +736,8 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
             )");
             query.addBindValue(deviceId);
             query.addBindValue(p.name);
-            query.addBindValue("模拟量模块1");
+            // ✅ 2026-03-06 [Phase 7.48.12]: 使用结构体中的 moduleType（旧值硬编码"模拟量模块1"）
+            query.addBindValue(p.moduleType);
             query.addBindValue(p.registerAddress);
             query.addBindValue(p.unit);
             query.addBindValue(p.upperLimit);

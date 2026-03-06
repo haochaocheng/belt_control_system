@@ -88,27 +88,30 @@ Rectangle {
     ListModel {
         id: analogProtectionModel
         // ✅ 2026-03-05 [Phase 7.48.8]: 扩展模拟量保护从5项到18项（速度/张力/电压为单一保护项）
-        // 设备运行保护（7项）
-        ListElement { name: "速度"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 5 }
-        ListElement { name: "张力"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 6 }
-        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "模拟量模块1"; registerAddress: 7 }
-        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "模拟量模块1"; registerAddress: 8 }
-        ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 9 }
-        ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 10 }
-        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 11 }
-        // 环境安全监测（8项）
-        ListElement { name: "温度"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 12 }
-        ListElement { name: "湿度"; active: false; currentValue: 0.0; unit: "%RH"; moduleType: "模拟量模块1"; registerAddress: 13 }
-        ListElement { name: "烟雾"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块1"; registerAddress: 14 }
-        ListElement { name: "气压"; active: false; currentValue: 0.0; unit: "kPa"; moduleType: "模拟量模块1"; registerAddress: 15 }
-        ListElement { name: "氧气"; active: false; currentValue: 0.0; unit: "%O₂"; moduleType: "模拟量模块1"; registerAddress: 16 }
-        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "模拟量模块1"; registerAddress: 17 }
-        ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块1"; registerAddress: 18 }
-        ListElement { name: "硫化氢"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块1"; registerAddress: 19 }
-        // 安全规程补充（3项）
-        ListElement { name: "二氧化碳"; active: false; currentValue: 0.0; unit: "%CO₂"; moduleType: "模拟量模块1"; registerAddress: 20 }
-        ListElement { name: "风速"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 21 }
-        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块1"; registerAddress: 22 }
+        // ✅ 2026-03-06 [Phase 7.48.12]: 重新定义通道号映射
+        //   模拟量模块1：通道0-7，模拟量模块2：通道0-7，风速/粉尘浓度暂未分配
+        // 旧值（Phase 7.48.8）：registerAddress 从5开始连续编号（5-22），全部"模拟量模块1"
+        // 模拟量模块1：通道0-7
+        ListElement { name: "速度"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 0 }
+        ListElement { name: "张力"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 1 }
+        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "模拟量模块1"; registerAddress: 2 }
+        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "模拟量模块1"; registerAddress: 3 }
+        ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 4 }
+        ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 5 }
+        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 6 }
+        ListElement { name: "温度"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 7 }
+        // 模拟量模块2：通道0-7
+        ListElement { name: "湿度"; active: false; currentValue: 0.0; unit: "%RH"; moduleType: "模拟量模块2"; registerAddress: 0 }
+        ListElement { name: "烟雾"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 1 }
+        ListElement { name: "气压"; active: false; currentValue: 0.0; unit: "kPa"; moduleType: "模拟量模块2"; registerAddress: 2 }
+        ListElement { name: "氧气"; active: false; currentValue: 0.0; unit: "%O₂"; moduleType: "模拟量模块2"; registerAddress: 3 }
+        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "模拟量模块2"; registerAddress: 4 }
+        ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块2"; registerAddress: 5 }
+        ListElement { name: "硫化氢"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块2"; registerAddress: 6 }
+        ListElement { name: "二氧化碳"; active: false; currentValue: 0.0; unit: "%CO₂"; moduleType: "模拟量模块2"; registerAddress: 7 }
+        // 未分配（后续可扩展）
+        ListElement { name: "风速"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "未分配"; registerAddress: -1 }
+        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "未分配"; registerAddress: -1 }
     }
 
     // ========== 主布局：左右分栏 ==========
