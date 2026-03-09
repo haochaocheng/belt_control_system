@@ -198,8 +198,11 @@ bool DeviceConfigManager::createTables()
     // ✅ 2026-03-04 [Phase 7.47.96]: 迁移 - 添加 protection_level 列（与开关量保护表一致）
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN protection_level INTEGER DEFAULT 1");
     // ✅ 2026-03-05 [Phase 7.48.5]: 迁移 - 添加模拟量特有的3个新列
-    query.exec("ALTER TABLE device_analog_protections ADD COLUMN data_timeout REAL DEFAULT 30.0");
-    query.exec("ALTER TABLE device_analog_protections ADD COLUMN connection_timeout REAL DEFAULT 60.0");
+    // ✅ 2026-03-07 [Phase 7.48.19]: 审核后更新默认值 data_timeout 30.0→2.0, connection_timeout 60.0→10.0
+    // 旧：query.exec("ALTER TABLE device_analog_protections ADD COLUMN data_timeout REAL DEFAULT 30.0");
+    // 旧：query.exec("ALTER TABLE device_analog_protections ADD COLUMN connection_timeout REAL DEFAULT 60.0");
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN data_timeout REAL DEFAULT 2.0");
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN connection_timeout REAL DEFAULT 10.0");
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN input_type TEXT DEFAULT '4-20mA'");
     // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用字段（延时启动 + 额定速度百分比检测模式）
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN speed_start_delay REAL DEFAULT 0.0");
@@ -965,6 +968,283 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移009已执行过，跳过";
     }
+
+    // ✅ 2026-03-07 [Phase 7.48.19]: 迁移010 - 审核后更新所有模拟量保护默认值和通道映射
+    // 变更内容：37项参数修改（见 docs/2026-03-07/01-模拟量保护参数默认值清单-待审核.md v2.0 第六节）
+    // 策略：直接删除旧数据，用审核后的新值重新插入（用户要求"直接代替新参数"）
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 010（审核后更新模拟量保护默认值）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '010_reviewed_analog_defaults'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移010: 审核后更新所有模拟量保护默认值和通道映射";
+
+        // 审核后的18项保护定义（与initDefaultAnalogProtections完全一致）
+        struct AnalogProtection {
+            QString name;
+            QString unit;
+            QString moduleType;
+            int registerAddress;
+            double upperLimit;
+            double lowerLimit;
+            double range;
+            double rated;
+        };
+
+        // ✅ 2026-03-07 [Phase 7.48.22]: 通道按截图从上到下顺序分配
+        //   前8项 = 模拟量模块1 CH0-CH7，后8项 = 模拟量模块2 CH0-CH7
+        QList<AnalogProtection> reviewedProtections = {
+            // 模拟量模块1 CH0-CH7（截图第1-8项）
+            {"速度",       "m/s",   "模拟量模块1", 0, 3.0,    0.5,   5.0,    2.5},   // 模块1 CH0
+            {"张力",       "T",     "模拟量模块1", 1, 8.0,    3.0,   20.0,   0.0},   // 模块1 CH1
+            {"温度一",     "℃",    "模拟量模块1", 2, 42.0,   0.0,   100.0,  0.0},   // 模块1 CH2
+            {"温度二",     "℃",    "模拟量模块1", 3, 42.0,   0.0,   100.0,  0.0},   // 模块1 CH3
+            {"电压",       "V",     "模拟量模块1", 4, 700.0,  500.0, 660.0,  0.0},   // 模块1 CH4
+            {"甲烷",       "%CH₄",  "模拟量模块1", 5, 1.0,    0.0,   4.0,    0.0},   // 模块1 CH5
+            {"一氧化碳",   "ppm",   "模拟量模块1", 6, 24.0,   0.0,   1000.0, 0.0},   // 模块1 CH6
+            {"二氧化碳",   "%CO₂",  "模拟量模块1", 7, 1.5,    0.0,   5.0,    0.0},   // 模块1 CH7
+            // 模拟量模块2 CH0-CH7（截图第9-16项）
+            {"硫化氢",     "ppm",   "模拟量模块2", 0, 6.6,    0.0,   100.0,  6.6},   // 模块2 CH0
+            {"氧气",       "%O₂",   "模拟量模块2", 1, 23.5,   0.0,   25.0,   20.0},  // 模块2 CH1
+            {"烟雾",       "mg/m³", "模拟量模块2", 2, 100.0,  0.0,   1000.0, 500.0}, // 模块2 CH2
+            {"粉尘浓度",   "mg/m³", "模拟量模块2", 3, 4.0,    0.0,   1000.0, 100.0}, // 模块2 CH3
+            {"温度",       "℃",    "模拟量模块2", 4, 34.0,   0.0,   50.0,   26.0},  // 模块2 CH4
+            {"湿度",       "%RH",   "模拟量模块2", 5, 95.0,   0.0,   100.0,  95.0},  // 模块2 CH5
+            {"煤流",       "t/h",   "模拟量模块2", 6, 1500.0, 0.0,   2000.0, 500.0}, // 模块2 CH6
+            {"煤仓高度",   "m",     "模拟量模块2", 7, 25.0,   0.0,   30.0,   15.0},  // 模块2 CH7
+            {"气压",       "kPa",   "未分配", -1, 110.0,      80.0,  40.0,   101.0}, // 未分配
+            {"风速",       "m/s",   "未分配", -1, 4.0,        0.3,   14.7,   4.0}    // 未分配
+        };
+
+        // 获取所有设备
+        QSqlQuery deviceQuery(m_database);
+        deviceQuery.exec("SELECT device_id FROM devices ORDER BY device_id");
+
+        int deviceCount = 0;
+        int totalRestored = 0;
+
+        while (deviceQuery.next()) {
+            int deviceId = deviceQuery.value(0).toInt();
+            deviceCount++;
+
+            // 1. 删除该设备的所有模拟量保护项（清空旧数据，直接替代）
+            QSqlQuery deleteQuery(m_database);
+            deleteQuery.prepare("DELETE FROM device_analog_protections WHERE device_id = ?");
+            deleteQuery.addBindValue(deviceId);
+            deleteQuery.exec();
+
+            // 2. 用审核后的新默认值重新插入18项保护
+            for (const auto &p : reviewedProtections) {
+                QSqlQuery insertQuery(m_database);
+
+                // 速度保护需要额外的4个字段
+                if (p.name == "速度") {
+                    insertQuery.prepare(R"(
+                        INSERT INTO device_analog_protections
+                        (device_id, protection_name, module_type, register_address, unit,
+                         upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech,
+                         play_mode, play_count, play_duration,
+                         speed_start_delay, speed_detect_mode, rated_speed, slip_delay,
+                         audio_file, protection_level, data_timeout, connection_timeout, input_type)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    )");
+                    insertQuery.addBindValue(deviceId);
+                    insertQuery.addBindValue(p.name);
+                    insertQuery.addBindValue(p.moduleType);
+                    insertQuery.addBindValue(p.registerAddress);
+                    insertQuery.addBindValue(p.unit);
+                    insertQuery.addBindValue(p.upperLimit);
+                    insertQuery.addBindValue(p.lowerLimit);
+                    insertQuery.addBindValue(p.range);
+                    insertQuery.addBindValue(p.rated);
+                    insertQuery.addBindValue(p.name + "保护报警");
+                    insertQuery.addBindValue(0);       // use_text_to_speech: 默认音频
+                    insertQuery.addBindValue("count");  // play_mode
+                    insertQuery.addBindValue(3);        // play_count
+                    insertQuery.addBindValue(5.0);      // play_duration: 审核值5.0秒
+                    insertQuery.addBindValue(30.0);     // speed_start_delay
+                    insertQuery.addBindValue("limit");  // speed_detect_mode
+                    insertQuery.addBindValue(p.rated);  // rated_speed: 等于rated_value（2.5 m/s）
+                    insertQuery.addBindValue(10.0);     // slip_delay
+                    insertQuery.addBindValue("");       // audio_file
+                    insertQuery.addBindValue(1);        // protection_level
+                    insertQuery.addBindValue(2.0);      // data_timeout: 审核值2.0秒（旧30.0）
+                    insertQuery.addBindValue(10.0);     // connection_timeout: 审核值10.0秒（旧60.0）
+                    insertQuery.addBindValue("4-20mA"); // input_type
+                } else {
+                    insertQuery.prepare(R"(
+                        INSERT INTO device_analog_protections
+                        (device_id, protection_name, module_type, register_address, unit,
+                         upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech,
+                         play_mode, play_count, play_duration,
+                         audio_file, protection_level, data_timeout, connection_timeout, input_type)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    )");
+                    insertQuery.addBindValue(deviceId);
+                    insertQuery.addBindValue(p.name);
+                    insertQuery.addBindValue(p.moduleType);
+                    insertQuery.addBindValue(p.registerAddress);
+                    insertQuery.addBindValue(p.unit);
+                    insertQuery.addBindValue(p.upperLimit);
+                    insertQuery.addBindValue(p.lowerLimit);
+                    insertQuery.addBindValue(p.range);
+                    insertQuery.addBindValue(p.rated);
+                    insertQuery.addBindValue(p.name + "保护报警");
+                    insertQuery.addBindValue(0);       // use_text_to_speech: 默认音频
+                    insertQuery.addBindValue("count");  // play_mode
+                    insertQuery.addBindValue(3);        // play_count
+                    insertQuery.addBindValue(5.0);      // play_duration: 审核值5.0秒
+                    insertQuery.addBindValue("");       // audio_file
+                    insertQuery.addBindValue(1);        // protection_level
+                    insertQuery.addBindValue(2.0);      // data_timeout: 审核值2.0秒（旧30.0）
+                    insertQuery.addBindValue(10.0);     // connection_timeout: 审核值10.0秒（旧60.0）
+                    insertQuery.addBindValue("4-20mA"); // input_type
+                }
+
+                if (insertQuery.exec()) {
+                    totalRestored++;
+                } else {
+                    qWarning() << "  ⚠️ 设备" << deviceId << "更新保护项" << p.name << "失败:" << insertQuery.lastError().text();
+                }
+            }
+        }
+
+        qDebug() << "  ✅ 迁移010: 为" << deviceCount << "个设备更新了" << totalRestored << "条保护项（应为" << (deviceCount * 18) << "条）";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('010_reviewed_analog_defaults')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移010已执行过，跳过";
+    }
+
+    // ✅ 2026-03-07 [Phase 7.48.20]: 迁移011 - 修正13项模拟量保护上限值
+    // 问题：旧上限 = 传感器量程满量程，导致 engineeringValue >= upperLimit 只有在 AD=65535 时才触发
+    // 修正：按煤矿安全规程（2022年修正版，应急管理部令第8号）设置合理报警上限
+    // 适用场景：设备已执行迁移010但上限值仍是满量程的情况
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 011（修正模拟量保护上限值为安全规程标准）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '011_fix_analog_upper_limits'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移011: 修正13项模拟量保护上限值";
+
+        // 13项上限修正表：{保护名称, 新上限值, 旧上限值, 依据}
+        struct UpperLimitFix {
+            QString name;
+            double newUpperLimit;
+            double oldUpperLimit;  // 用于匹配条件（仅更新还没被用户手动修改的值）
+        };
+
+        QList<UpperLimitFix> fixes = {
+            // B. 危害气体监测（依据：煤矿安全规程）
+            {"甲烷",       1.0,    4.0},     // 煤矿安全规程：≥1.0%报警
+            {"一氧化碳",   24.0,   1000.0},  // 煤矿安全规程：≥24ppm报警
+            {"二氧化碳",   1.5,    5.0},     // 煤矿安全规程：>1.5%报警
+            {"硫化氢",     6.6,    100.0},   // 煤矿安全规程：≥6.6ppm报警
+            {"氧气",       23.5,   25.0},    // GB/T 50493-2019：>23.5%富氧报警
+            {"烟雾",       100.0,  1000.0},  // 烟雾传感器典型报警值
+            {"粉尘浓度",   4.0,    1000.0},  // GBZ 2.1-2019：煤尘总尘>4mg/m³
+            // C. 环境监测
+            {"温度",       34.0,   50.0},    // 煤矿安全规程：机电硐室>34℃停工
+            {"湿度",       95.0,   100.0},   // 高湿预警
+            {"煤流",       1500.0, 2000.0},  // 额定500的3倍预警
+            {"煤仓高度",   25.0,   30.0},    // 接近满仓预警
+            {"气压",       110.0,  120.0},   // 正常大气压上限
+            {"风速",       4.0,    15.0}     // 煤矿安全规程：采煤工作面>4m/s
+        };
+
+        int totalUpdated = 0;
+        for (const auto &fix : fixes) {
+            // 只更新上限值仍为旧值（满量程）的记录，保护用户已手动修改的值
+            QSqlQuery updateQuery(m_database);
+            updateQuery.prepare(R"(
+                UPDATE device_analog_protections
+                SET upper_limit = ?
+                WHERE protection_name = ? AND upper_limit = ?
+            )");
+            updateQuery.addBindValue(fix.newUpperLimit);
+            updateQuery.addBindValue(fix.name);
+            updateQuery.addBindValue(fix.oldUpperLimit);
+            if (updateQuery.exec()) {
+                int affected = updateQuery.numRowsAffected();
+                if (affected > 0) {
+                    qDebug() << "  ✅" << fix.name << ": 上限" << fix.oldUpperLimit << "→" << fix.newUpperLimit
+                             << "（更新" << affected << "条）";
+                    totalUpdated += affected;
+                }
+            }
+        }
+
+        qDebug() << "  ✅ 迁移011: 共更新" << totalUpdated << "条上限值";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('011_fix_analog_upper_limits')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移011已执行过，跳过";
+    }
+
+    // ✅ 2026-03-07 [Phase 7.48.22]: 迁移012 - 完整通道重映射（截图顺序分配CH0-CH7）
+    // 旧映射：甲烷/一氧化碳/二氧化碳在模块2，温度/煤流/煤仓高度在模块1
+    // 新映射：前8项=模块1 CH0-7，后8项=模块2 CH0-7
+    // 变更项：甲烷(模块2→模块1)，一氧化碳(模块2→模块1)，二氧化碳(模块2→模块1)
+    //         温度(模块1 CH5→模块2 CH4)，湿度(模块2 CH4→CH5)，煤流(模块1→模块2)，煤仓高度(模块1→模块2)
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 012（完整通道重映射：截图顺序分配CH0-CH7）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '012_fix_channel_conflicts'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移012: 完整通道重映射（7项变更）";
+
+        struct ChannelRemap {
+            QString name;
+            QString oldModule;
+            int oldCh;
+            QString newModule;
+            int newCh;
+        };
+
+        QList<ChannelRemap> remaps = {
+            {"甲烷",       "模拟量模块2", 5, "模拟量模块1", 5},
+            {"一氧化碳",   "模拟量模块2", 6, "模拟量模块1", 6},
+            {"二氧化碳",   "模拟量模块2", 7, "模拟量模块1", 7},
+            {"温度",       "模拟量模块1", 5, "模拟量模块2", 4},
+            {"湿度",       "模拟量模块2", 4, "模拟量模块2", 5},
+            {"煤流",       "模拟量模块1", 6, "模拟量模块2", 6},
+            {"煤仓高度",   "模拟量模块1", 7, "模拟量模块2", 7},
+        };
+
+        int totalRemapped = 0;
+        for (const auto &r : remaps) {
+            QSqlQuery fixQuery(m_database);
+            fixQuery.prepare(R"(
+                UPDATE device_analog_protections
+                SET module_type = ?, register_address = ?
+                WHERE protection_name = ? AND module_type = ? AND register_address = ?
+            )");
+            fixQuery.addBindValue(r.newModule);
+            fixQuery.addBindValue(r.newCh);
+            fixQuery.addBindValue(r.name);
+            fixQuery.addBindValue(r.oldModule);
+            fixQuery.addBindValue(r.oldCh);
+            if (fixQuery.exec()) {
+                int affected = fixQuery.numRowsAffected();
+                totalRemapped += affected;
+                qDebug() << "  ✅" << r.name << ":" << r.oldModule << "CH" + QString::number(r.oldCh)
+                         << "→" << r.newModule << "CH" + QString::number(r.newCh)
+                         << "，更新" << affected << "条";
+            }
+        }
+
+        // 同时修复气压的module_type（从模拟量模块2改为未分配）
+        QSqlQuery fixPressure(m_database);
+        fixPressure.prepare(R"(
+            UPDATE device_analog_protections
+            SET module_type = '未分配', register_address = -1
+            WHERE protection_name = '气压' AND module_type = '模拟量模块2' AND register_address = -1
+        )");
+        if (fixPressure.exec()) {
+            int affected = fixPressure.numRowsAffected();
+            if (affected > 0) {
+                totalRemapped += affected;
+                qDebug() << "  ✅ 气压: 模拟量模块2→未分配，更新" << affected << "条";
+            }
+        }
+
+        qDebug() << "  ✅ 迁移012: 共重映射" << totalRemapped << "条通道记录";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('012_fix_channel_conflicts')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移012已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -1085,33 +1365,33 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
         double rated;
     };
 
-    // ✅ 2026-03-05 [Phase 7.48.8]: 扩展模拟量保护从7项到18项
-    // ✅ 2026-03-06 [Phase 7.48.12]: 重新定义通道号映射
-    // ✅ 2026-03-06 [Phase 7.48.13]: 重新排序 — 皮带机头常用项放顶部
-    //   显示顺序：速度→张力→温度一→温度二→温度(环境)→湿度→甲烷→粉尘浓度→其余
-    //   通道号映射不变：模拟量模块1通道0-7，模拟量模块2通道0-7
-    // 旧顺序（Phase 7.48.12）：按模块+通道号排列（速度→张力→煤流→...→风速→粉尘浓度）
+    // ✅ 2026-03-07 [Phase 7.48.22]: 通道按截图从上到下顺序分配
+    //   前8项 = 模拟量模块1 CH0-CH7，后8项 = 模拟量模块2 CH0-CH7
+    //   截图顺序：速度→张力→温度一→温度二→电压→甲烷→一氧化碳→二氧化碳
+    //             →硫化氢→氧气→烟雾→粉尘浓度→温度→湿度→煤流→煤仓高度
+    // 上限值：Phase 7.48.20 按煤矿安全规程修正
+    // 旧映射（Phase 7.48.21）：甲烷/一氧化碳/二氧化碳在模块2，温度/煤流/煤仓高度在模块1，通道号不连续
     QList<AnalogProtection> protections = {
-        // 常用项（皮带机头）
-        {"速度",       "m/s",   "模拟量模块1", 0, 10.0,  0.5, 9.5, 2.5},     // 上限→速度超速，下限→低速打滑
-        {"张力",       "T",     "模拟量模块1", 1, 100.0, 10.0, 90.0, 50.0},  // 上限→张力上限，下限→张力下限
-        {"温度一",     "℃",    "模拟量模块1", 4, 150.0, 0.0, 150.0, 40.0},
-        {"温度二",     "℃",    "模拟量模块1", 5, 150.0, 0.0, 150.0, 40.0},
-        {"温度",       "℃",    "模拟量模块1", 7, 50.0, 0.0, 50.0, 26.0},
-        {"湿度",       "%RH",   "模拟量模块2", 0, 100.0, 0.0, 100.0, 95.0},
-        {"甲烷",       "%CH₄",  "模拟量模块2", 4, 4.0, 0.0, 4.0, 1.0},
-        {"粉尘浓度",   "mg/m³", "未分配", -1, 1000.0, 0.0, 1000.0, 100.0},
-        // 其余项
-        {"煤流",       "t/h",   "模拟量模块1", 2, 2000.0, 0.0, 2000.0, 500.0},
-        {"煤仓高度",   "m",     "模拟量模块1", 3, 30.0, 0.0, 30.0, 15.0},
-        {"电压",       "V",     "模拟量模块1", 6, 450.0, 320.0, 130.0, 380.0}, // 上限→电压过压，下限→电压欠压
-        {"烟雾",       "mg/m³", "模拟量模块2", 1, 1000.0, 0.0, 1000.0, 500.0},
-        {"气压",       "kPa",   "模拟量模块2", 2, 120.0, 80.0, 40.0, 101.0},
-        {"氧气",       "%O₂",   "模拟量模块2", 3, 25.0, 0.0, 25.0, 20.0},
-        {"一氧化碳",   "ppm",   "模拟量模块2", 5, 1000.0, 0.0, 1000.0, 24.0},
-        {"硫化氢",     "ppm",   "模拟量模块2", 6, 100.0, 0.0, 100.0, 6.6},
-        {"二氧化碳",   "%CO₂",  "模拟量模块2", 7, 5.0, 0.0, 5.0, 1.5},
-        {"风速",       "m/s",   "未分配", -1, 15.0, 0.3, 14.7, 4.0}
+        // 模拟量模块1 CH0-CH7（截图第1-8项）
+        {"速度",       "m/s",   "模拟量模块1", 0, 3.0,    0.5,   5.0,    2.5},   // 模块1 CH0
+        {"张力",       "T",     "模拟量模块1", 1, 8.0,    3.0,   20.0,   0.0},   // 模块1 CH1
+        {"温度一",     "℃",    "模拟量模块1", 2, 42.0,   0.0,   100.0,  0.0},   // 模块1 CH2
+        {"温度二",     "℃",    "模拟量模块1", 3, 42.0,   0.0,   100.0,  0.0},   // 模块1 CH3
+        {"电压",       "V",     "模拟量模块1", 4, 700.0,  500.0, 660.0,  0.0},   // 模块1 CH4
+        {"甲烷",       "%CH₄",  "模拟量模块1", 5, 1.0,    0.0,   4.0,    0.0},   // 模块1 CH5 | 规程≥1.0%
+        {"一氧化碳",   "ppm",   "模拟量模块1", 6, 24.0,   0.0,   1000.0, 0.0},   // 模块1 CH6 | 规程≥24ppm
+        {"二氧化碳",   "%CO₂",  "模拟量模块1", 7, 1.5,    0.0,   5.0,    0.0},   // 模块1 CH7 | 规程>1.5%
+        // 模拟量模块2 CH0-CH7（截图第9-16项）
+        {"硫化氢",     "ppm",   "模拟量模块2", 0, 6.6,    0.0,   100.0,  6.6},   // 模块2 CH0 | 规程≥6.6ppm
+        {"氧气",       "%O₂",   "模拟量模块2", 1, 23.5,   0.0,   25.0,   20.0},  // 模块2 CH1 | >23.5%富氧
+        {"烟雾",       "mg/m³", "模拟量模块2", 2, 100.0,  0.0,   1000.0, 500.0}, // 模块2 CH2
+        {"粉尘浓度",   "mg/m³", "模拟量模块2", 3, 4.0,    0.0,   1000.0, 100.0}, // 模块2 CH3 | 总尘>4mg/m³
+        {"温度",       "℃",    "模拟量模块2", 4, 34.0,   0.0,   50.0,   26.0},  // 模块2 CH4 | 规程>34℃
+        {"湿度",       "%RH",   "模拟量模块2", 5, 95.0,   0.0,   100.0,  95.0},  // 模块2 CH5
+        {"煤流",       "t/h",   "模拟量模块2", 6, 1500.0, 0.0,   2000.0, 500.0}, // 模块2 CH6
+        {"煤仓高度",   "m",     "模拟量模块2", 7, 25.0,   0.0,   30.0,   15.0},  // 模块2 CH7
+        {"气压",       "kPa",   "未分配", -1, 110.0,      80.0,  40.0,   101.0}, // 未分配通道
+        {"风速",       "m/s",   "未分配", -1, 4.0,        0.3,   14.7,   4.0}    // 未分配通道
     };
 
     QSqlQuery query(m_database);
@@ -1437,8 +1717,11 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     // ✅ 2026-03-05 [Phase 7.48.5]: 新增字段
     query.addBindValue(protection.value("play_mode", "count").toString());
     query.addBindValue(protection.value("protection_level", 1).toInt());
-    query.addBindValue(protection.value("data_timeout", 30.0).toDouble());
-    query.addBindValue(protection.value("connection_timeout", 60.0).toDouble());
+    // ✅ 2026-03-07 [Phase 7.48.19]: 审核后更新默认值 data_timeout 30.0→2.0, connection_timeout 60.0→10.0
+    // 旧：query.addBindValue(protection.value("data_timeout", 30.0).toDouble());
+    // 旧：query.addBindValue(protection.value("connection_timeout", 60.0).toDouble());
+    query.addBindValue(protection.value("data_timeout", 2.0).toDouble());
+    query.addBindValue(protection.value("connection_timeout", 10.0).toDouble());
     query.addBindValue(protection.value("input_type", "4-20mA").toString());
     // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用字段
     query.addBindValue(protection.value("speed_start_delay", 0.0).toDouble());

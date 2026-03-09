@@ -16,7 +16,9 @@
 AIDataManager::AIDataManager(QObject *parent)
     : QObject(parent)
     , m_changeThreshold(10)  // 默认阈值：AD值变化>10
-    , m_filterType("combined")  // ✅ 2026-03-06 [Phase 7.48.17]: 默认使用组合滤波器
+    // ✅ 2026-03-06 [Phase 7.48.17.1]: 改用限幅滤波器，响应快，延迟低
+    // 原因：combined滤波器（中值5+平均8）导致3-5秒延迟
+    , m_filterType("limit")     // 限幅滤波：只过滤异常跳变，正常变化立即响应
     , m_filterEnabled(true)     // ✅ 2026-03-06 [Phase 7.48.17]: 默认启用滤波
 {
     // 初始化2个模块，每个8通道
@@ -282,7 +284,10 @@ void AIDataManager::initFilters()
             } else if (m_filterType == "average") {
                 m_filters[i][j] = new MovingAverageFilter(8);  // 8点滑动平均
             } else if (m_filterType == "limit") {
-                m_filters[i][j] = new LimitFilter(100);  // 限幅100
+                // ✅ 2026-03-06 [Phase 7.48.17.1]: 限幅阈值从100改为5000
+                // 原因：AD值范围2620-40320，阈值100太小，正常变化被误判为异常
+                // 5000阈值：允许正常大幅度变化，只过滤真正的异常跳变
+                m_filters[i][j] = new LimitFilter(5000);  // 限幅5000
             } else if (m_filterType == "lag") {
                 m_filters[i][j] = new FirstOrderLagFilter(0.3);  // 滞后系数0.3
             } else if (m_filterType == "combined") {

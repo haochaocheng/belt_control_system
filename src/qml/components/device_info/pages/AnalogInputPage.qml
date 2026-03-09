@@ -98,28 +98,28 @@ Rectangle {
         // ✅ 2026-03-05 [Phase 7.48.8]: 扩展模拟量保护从5项到18项（速度/张力/电压为单一保护项）
         // ✅ 2026-03-06 [Phase 7.48.12]: 重新定义通道号映射
         // ✅ 2026-03-06 [Phase 7.48.13]: 重新排序 — 皮带机头常用项放顶部
-        //   显示顺序：速度→张力→温度一→温度二→温度(环境)→湿度→甲烷→粉尘浓度→其余
-        //   通道号映射不变：模拟量模块1通道0-7，模拟量模块2通道0-7
-        // 旧顺序（Phase 7.48.12）：按模块+通道号排列（速度→张力→煤流→...→风速→粉尘浓度）
-        // 常用项（皮带机头）
+        // ✅ 2026-03-07 [Phase 7.48.22]: 通道按截图从上到下顺序分配
+        //   前8项 = 模拟量模块1 CH0-CH7，后8项 = 模拟量模块2 CH0-CH7
+        //   旧映射（Phase 7.48.21）：甲烷/一氧化碳/二氧化碳在模块2，温度/煤流/煤仓高度在模块1
+        // 模拟量模块1 CH0-CH7
         ListElement { name: "速度"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 0 }
         ListElement { name: "张力"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 1 }
-        ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 4 }
-        ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 5 }
-        ListElement { name: "温度"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 7 }
-        ListElement { name: "湿度"; active: false; currentValue: 0.0; unit: "%RH"; moduleType: "模拟量模块2"; registerAddress: 0 }
-        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "模拟量模块2"; registerAddress: 4 }
-        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "未分配"; registerAddress: -1 }
-        // 其余项
-        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "模拟量模块1"; registerAddress: 2 }
-        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "模拟量模块1"; registerAddress: 3 }
-        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 6 }
-        ListElement { name: "烟雾"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 1 }
-        ListElement { name: "气压"; active: false; currentValue: 0.0; unit: "kPa"; moduleType: "模拟量模块2"; registerAddress: 2 }
-        ListElement { name: "氧气"; active: false; currentValue: 0.0; unit: "%O₂"; moduleType: "模拟量模块2"; registerAddress: 3 }
-        ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块2"; registerAddress: 5 }
-        ListElement { name: "硫化氢"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块2"; registerAddress: 6 }
-        ListElement { name: "二氧化碳"; active: false; currentValue: 0.0; unit: "%CO₂"; moduleType: "模拟量模块2"; registerAddress: 7 }
+        ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 2 }
+        ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 3 }
+        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 4 }
+        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "模拟量模块1"; registerAddress: 5 }
+        ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块1"; registerAddress: 6 }
+        ListElement { name: "二氧化碳"; active: false; currentValue: 0.0; unit: "%CO₂"; moduleType: "模拟量模块1"; registerAddress: 7 }
+        // 模拟量模块2 CH0-CH7
+        ListElement { name: "硫化氢"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块2"; registerAddress: 0 }
+        ListElement { name: "氧气"; active: false; currentValue: 0.0; unit: "%O₂"; moduleType: "模拟量模块2"; registerAddress: 1 }
+        ListElement { name: "烟雾"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 2 }
+        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 3 }
+        ListElement { name: "温度"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块2"; registerAddress: 4 }
+        ListElement { name: "湿度"; active: false; currentValue: 0.0; unit: "%RH"; moduleType: "模拟量模块2"; registerAddress: 5 }
+        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "模拟量模块2"; registerAddress: 6 }
+        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "模拟量模块2"; registerAddress: 7 }
+        ListElement { name: "气压"; active: false; currentValue: 0.0; unit: "kPa"; moduleType: "未分配"; registerAddress: -1 }
         ListElement { name: "风速"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "未分配"; registerAddress: -1 }
     }
 
@@ -2067,7 +2067,8 @@ Rectangle {
             // ✅ 2026-01-27 [FIX 100.300.31]: 加载上限值、下限值、量程、单位
             upperLimitSpin.value = protection.upper_limit || 100
             lowerLimitSpin.value = protection.lower_limit || 0
-            rangeSpin.value = protection.range || 100
+            // ✅ 2026-03-06 [Phase 7.48.18]: 修复参数名错误，range → range_value
+            rangeSpin.value = protection.range_value || 100
             unitCombo.currentIndex = unitCombo.model.indexOf(protection.unit || item.unit)
 
             // 基本参数
@@ -2097,8 +2098,11 @@ Rectangle {
             if (inputTypeIndex < 0) inputTypeIndex = 0
             inputTypeCombo.currentIndex = inputTypeIndex
 
-            dataTimeoutSpin.value = protection.data_timeout || 30
-            connectionTimeoutSpin.value = protection.connection_timeout || 60
+            // ✅ 2026-03-07 [Phase 7.48.19]: 审核后更新默认值 data_timeout 30→2, connection_timeout 60→10
+            // 旧：dataTimeoutSpin.value = protection.data_timeout || 30
+            // 旧：connectionTimeoutSpin.value = protection.connection_timeout || 60
+            dataTimeoutSpin.value = protection.data_timeout || 2
+            connectionTimeoutSpin.value = protection.connection_timeout || 10
 
             // ✅ 2026-03-05 [Phase 7.48.10]: 加载速度保护专用字段
             if (item.name === "速度") {
@@ -2149,8 +2153,11 @@ Rectangle {
             root.inputType = "4-20mA"
             inputTypeCombo.currentIndex = 0
 
-            dataTimeoutSpin.value = 30
-            connectionTimeoutSpin.value = 60
+            // ✅ 2026-03-07 [Phase 7.48.19]: 审核后更新默认值 data_timeout 30→2, connection_timeout 60→10
+            // 旧：dataTimeoutSpin.value = 30
+            // 旧：connectionTimeoutSpin.value = 60
+            dataTimeoutSpin.value = 2
+            connectionTimeoutSpin.value = 10
 
             // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用字段默认值
             if (item.name === "速度") {
@@ -2196,7 +2203,8 @@ Rectangle {
             // ✅ 2026-01-27 [FIX 100.300.31]: 保存上限值、下限值、量程、单位
             "upper_limit": upperLimitSpin.value,
             "lower_limit": lowerLimitSpin.value,
-            "range": rangeSpin.value,
+            // ✅ 2026-03-06 [Phase 7.48.18]: 修复参数名错误，range → range_value
+            "range_value": rangeSpin.value,
             "unit": unitCombo.editable ? unitCombo.editText : unitCombo.displayText,
             "protection_delay": delaySpin.realValue,
             "play_count": playCountSpin.value,

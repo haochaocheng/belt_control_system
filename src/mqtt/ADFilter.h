@@ -136,17 +136,24 @@ private:
  * @brief 限幅滤波器
  *
  * 原理：相邻两次采样值差值超过阈值则认为异常，使用上次值
- * 优点：简单快速
+ * ✅ 2026-03-07 [Phase 7.48.19]: 增加连续确认机制
+ *   - 同一超限值连续出现 N 次（默认3次），判定为真实变化，接受新值
+ *   - 硬件噪声（偶发尖刺）：1次就消失，被过滤
+ *   - MQTTX测试（持续发送同一值）：连续3次后自动接受
+ * 优点：简单快速，兼容测试场景
  * 缺点：无法抑制周期性干扰
- * 适用：慢变化信号
+ * 适用：慢变化信号 + MQTTX手动测试
  */
 class LimitFilter : public ADFilterBase
 {
 public:
-    explicit LimitFilter(quint16 maxDelta = 1000)
+    explicit LimitFilter(quint16 maxDelta = 1000, int confirmCount = 3)
         : m_maxDelta(maxDelta)
+        , m_confirmCount(confirmCount)
         , m_lastValue(0)
         , m_initialized(false)
+        , m_pendingValue(0)
+        , m_pendingCount(0)
     {
     }
 
@@ -162,11 +169,31 @@ public:
         quint16 delta = qAbs(static_cast<int>(newValue) - static_cast<int>(m_lastValue));
 
         if (delta > m_maxDelta) {
-            // 变化过大，认为是干扰，使用上次值
+            // 变化过大，检查是否连续确认
+            // ✅ 2026-03-07 [Phase 7.48.19]: 同一超限值连续出现N次，判定为真实变化
+            quint16 pendingDelta = qAbs(static_cast<int>(newValue) - static_cast<int>(m_pendingValue));
+            if (pendingDelta <= m_maxDelta) {
+                // 与上次待确认值接近，计数+1
+                m_pendingCount++;
+            } else {
+                // 新的超限值，重新计数
+                m_pendingValue = newValue;
+                m_pendingCount = 1;
+            }
+
+            if (m_pendingCount >= m_confirmCount) {
+                // 连续确认通过，接受新值
+                m_lastValue = newValue;
+                m_pendingCount = 0;
+                return newValue;
+            }
+
+            // 尚未确认，使用上次值
             return m_lastValue;
         } else {
-            // 正常变化，更新并返回
+            // 正常变化，更新并返回，重置待确认
             m_lastValue = newValue;
+            m_pendingCount = 0;
             return newValue;
         }
     }
@@ -175,12 +202,17 @@ public:
     {
         m_initialized = false;
         m_lastValue = 0;
+        m_pendingValue = 0;
+        m_pendingCount = 0;
     }
 
 private:
     quint16 m_maxDelta;
+    int m_confirmCount;       // 连续确认次数阈值
     quint16 m_lastValue;
     bool m_initialized;
+    quint16 m_pendingValue;   // 待确认的超限值
+    int m_pendingCount;       // 当前连续出现次数
 };
 
 /**
