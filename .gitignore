@@ -83,3 +83,10 @@ docker/rk3588/temp_build/
 
 # Generated Qt files (large files)
 Pidai1/Generated/
+
+# TTS模型文件（超过100MB，不适合Git存储）
+# 2026-03-09 [Phase 7.48.25]: 添加以清除GitHub推送被拒问题
+tts_models/paddlespeech/models/**/*.pdz
+tts_models/paddlespeech/models/**/*.pdparams
+tts_models/paddlespeech/models/**/*.pdopt
+*.pdz
