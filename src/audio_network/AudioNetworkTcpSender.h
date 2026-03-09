@@ -196,6 +196,13 @@ public:
     void clearOpusCache();
 
     /**
+     * @brief 移除指定文件的 Opus 缓存
+     * @param filePath 音频文件路径
+     * ✅ 2026-03-09 [Phase 7.48.27]: 新增，TTS每次合成到同一文件需要清除旧缓存
+     */
+    void removeFromOpusCache(const QString &filePath);
+
+    /**
      * @brief 获取缓存统计信息
      * @return 缓存文件数量
      */

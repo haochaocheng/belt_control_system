@@ -13,11 +13,11 @@ belt-control-app
   ℹ️ 无旧镜像
 
 [3/4] 清理 Docker 系统...
-  Total reclaimed space: 0B
+  Total reclaimed space: 831.4MB
 
 [4/4] 磁盘状态检查...
   磁盘占用: 21%
-  Docker 占用: 5.4G
+  Docker 占用: 5.2G
 
 ==========================================
 Belt Control System v3.5 - 启动应用
@@ -123,7 +123,8 @@ Creating control modules...
 [DEBUG]    子网掩码: "255.255.255.0"
 [DEBUG]    轮询间隔: 100 ms
 [DEBUG] ✅ DeviceDatabase: 设备数据库已创建
-[DEBUG] ✅ DeviceDatabase: 从配置文件加载了 16 个设备
+[DEBUG] ✅ DeviceDatabase: 初始化了 16 个默认设备
+[DEBUG] ✅ DeviceDatabase: 已保存 16 个设备到配置文件
 [DEBUG] 📊 DeviceRuntimeTracker: 加载统计数据 - 日: "00:00:00" 周: "00:00:00" 月: "00:00:00"
 [DEBUG] ✅ DeviceRuntimeTracker 初始化完成
 [DEBUG] 📂 OperationLogDatabase: 数据库路径: "/app/appdata/operation_logs.db"
@@ -135,7 +136,38 @@ Creating control modules...
 [DEBUG] ✅ AlarmHistoryDatabase: 数据库初始化完成
 [DEBUG] 保护配置数据库初始化成功: "/app/appdata/protection_config.db"
 [DEBUG] ✅ [DeviceConfigManager] 数据库连接成功: "/app/appdata/device_config.db"
-[CRITICAL] "创建device_digital_protections表失败: near \"/\": syntax error Unable to execute statement"
+[DEBUG] ✅ [DeviceConfigManager] 数据库表创建成功（包含电机/制动器/张紧控制表）
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 001（开关量保护）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移001已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 002（模拟量保护）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移002已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 003（模拟量保护扩展至18项）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移003已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 004（速度保护额定速度+延时字段）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移004已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 005（修正通道号和模块类型）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移005已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 006（删除旧拆分保护项）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移006已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 007（重新排序模拟量保护项）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移007已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 008（修复模拟量保护项排序）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移008已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 009（恢复完整的18项模拟量保护）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移009已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 010（审核后更新模拟量保护默认值）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移010已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 011（修正模拟量保护上限值为安全规程标准）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移011已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 012（完整通道重映射：截图顺序分配CH0-CH7）...
+[DEBUG] ⏭️ [DeviceConfigManager] 迁移012已执行过，跳过
+[DEBUG] 🔄 [DeviceConfigManager] 检查迁移 013（洒水使能默认值）...
+[DEBUG] 🔧 [DeviceConfigManager] 执行迁移013: 设置洒水使能默认值
+[DEBUG]   ✅ 模拟量保护洒水使能: 48 条
+[DEBUG]   ✅ 开关量保护洒水使能: 24 条
+[DEBUG]   ✅ 洒水输出配置初始化完成
+[DEBUG] ⏭️ [DeviceConfigManager] 数据已初始化，跳过
+[DEBUG] ✅ [DeviceConfigManager] 数据库初始化完成
 [DEBUG] ✅ [SerialPortController] 串口配置初始化完成 - 6个串口
 [DEBUG] ✅ [SerialPortController] 配置已加载
 [DEBUG] ✅ [SerialPortController] 初始化完成
@@ -233,7 +265,8 @@ MQTTController initialized
 [DEBUG] ✅ [MQTTAutoManager] 初始化定时器
 [DEBUG] ✅ [MQTTAutoManager] 自动管理器初始化完成
 [DEBUG] ✅ [DIDataManager] 初始化开关量数据管理器
-[DEBUG] ✅ [AIDataManager] 初始化模拟量数据管理器
+[DEBUG] ✅ [AIDataManager] 滤波器初始化完成，类型: "limit"
+[DEBUG] ✅ [AIDataManager] 初始化模拟量数据管理器（滤波器: "limit" ）
 [DEBUG] 🚀 [MQTTAutoManager] 启动自动管理器
 [DEBUG] 🔌 [MQTTAutoManager] 连接所有模块（前4个）
 [DEBUG] ✅ [MQTTController] 创建客户端: 0
@@ -273,9 +306,6 @@ MQTT Auto Manager started
 [DEBUG] ✅ AudioNetworkTcpSender 初始化完成
 [DEBUG] ✅ [TTSEngineManager] 创建
 [DEBUG] ✅ CommonControl: 公共控制模块已创建
-[W][31126.683688] pw.conf      | [          conf.c: 1031 try_load_conf()] can't load config client-rt.conf: No such file or directory
-[E][31126.683714] pw.conf      | [          conf.c: 1060 pw_conf_load_conf_for_context()] can't load config client-rt.conf: No such file or directory
-[ALSOFT] (EE) Failed to create PipeWire event context (errno: 2)
 [DEBUG] 🔊 CommonControl: 音频输出已配置（使用 ALSA 默认设备 → ES8388）
 [DEBUG] 🔊 CommonControl: 音频播放器已初始化
 [DEBUG] ✅ UDP 服务发现已启动（端口 8600 ）
@@ -335,11 +365,8 @@ BatchAudioGenerator created
 [DEBUG] 🎙️ SherpaOnnxTTS: 初始化TTS引擎，模型目录: "/app/tts_models/vits-zh-aishell3"
 [DEBUG] ✅ 找到TTS服务: "/app/sherpa_tts_service"
 [DEBUG] 🚀 启动TTS服务进程...
-[DEBUG] ✅ TTS服务进程已启动，PID: 57
+[DEBUG] ✅ TTS服务进程已启动，PID: 58
 [DEBUG] 📤 发送命令: "{\"command\":\"init\",\"model_dir\":\"/app/tts_models/vits-zh-aishell3\"}\n"
-[DEBUG] ✅ [MQTTAutoManager] 模块 3 已连接
-[DEBUG] ✅ [MQTTController] 模块 3 订阅主题: "belt_control/ai/module2/status" QoS: 1
-[DEBUG] ✅ [MQTTAutoManager] 模块 3 订阅主题: "belt_control/ai/module2/status"
 [DEBUG] ✅ [MQTTAutoManager] 模块 0 已连接
 [DEBUG] ✅ [MQTTController] 模块 0 订阅主题: "belt_control/di/module1/status" QoS: 1
 [DEBUG] ✅ [MQTTAutoManager] 模块 0 订阅主题: "belt_control/di/module1/status"
@@ -349,26 +376,15 @@ BatchAudioGenerator created
 [DEBUG] ✅ [MQTTAutoManager] 模块 2 已连接
 [DEBUG] ✅ [MQTTController] 模块 2 订阅主题: "belt_control/ai/module1/status" QoS: 1
 [DEBUG] ✅ [MQTTAutoManager] 模块 2 订阅主题: "belt_control/ai/module1/status"
+[DEBUG] ✅ [MQTTAutoManager] 模块 3 已连接
+[DEBUG] ✅ [MQTTController] 模块 3 订阅主题: "belt_control/ai/module2/status" QoS: 1
+[DEBUG] ✅ [MQTTAutoManager] 模块 3 订阅主题: "belt_control/ai/module2/status"
 [DEBUG] ✅ [MQTTAutoManager] 模块 0 硬件数据到达，状态从 "已连接" → 正常
 [DEBUG] ✅ [MQTTAutoManager] 模块 2 硬件数据到达，状态从 "已连接" → 正常
 [DEBUG] 📥 收到响应: "{\"success\":true,\"message\":\"TTS engine initialized successfully. Sample rate: 8000Hz\"}"
 [DEBUG] ✅ SherpaOnnxTTS初始化成功: "TTS engine initialized successfully. Sample rate: 8000Hz"
 [DEBUG] ✅ Sherpa-ONNX TTS初始化成功
 [DEBUG] 设置语速: 0.9
-[DEBUG] 🗂️  AlarmPlaybackService: 初始化TTS缓存
-[DEBUG]   TTS缓存目录（持久化）: "/app/appdata/tts_cache"
-[DEBUG]   开始预缓存 10 个常用报警文本...
-[DEBUG]   ✓ 已存在: "急停保护报警"
-[DEBUG]   ✓ 已存在: "主机急停保护报警"
-[DEBUG]   ✓ 已存在: "沿线急停"
-[DEBUG]   ✓ 已存在: "打滑保护报警"
-[DEBUG]   ✓ 已存在: "跑偏保护报警"
-[DEBUG]   ✓ 已存在: "堆煤保护报警"
-[DEBUG]   ✓ 已存在: "撕裂保护报警"
-[DEBUG]   ✓ 已存在: "超速保护报警"
-[DEBUG]   ✓ 已存在: "低速保护报警"
-[DEBUG]   ✓ 已存在: "温度保护报警"
-[DEBUG] ✅ TTS缓存初始化完成，已缓存 10 个文本
 All control modules created
 [DEBUG] 📋 [DeviceRoleManager] 初始化
 [DEBUG]    配置文件路径: "/root/.config/belt_control_system/device_role.json"
@@ -394,6 +410,10 @@ DeviceRoleManager MQTT publishing started
 [DEBUG] ✅ [MqttProtectionMonitor] MQTT保护监控器已创建
 [DEBUG] 📁 [MqttProtectionMonitor] 音频基础目录: "/home/linaro/belt-control-data/audio"
 [DEBUG] 🔗 [MqttProtectionMonitor] 已连接DIDataManager的bitChanged信号
+[DEBUG] ✅ [MqttProtectionMonitor] 设置AI模块 0 → 1 号皮带
+[DEBUG] ✅ [MqttProtectionMonitor] 设置AI模块 1 → 1 号皮带
+AI channel monitoring connected to MqttProtectionMonitor
+[DEBUG] 🚀 AlarmPlaybackService: 启动报警播放服务
 [DEBUG] 📝 [MqttProtectionMonitor] 设置皮带映射: 模块 0 → 1 号皮带
 [DEBUG] 🚀 [MqttProtectionMonitor] 启动MQTT保护监控
 [DEBUG] 📋 [MqttProtectionMonitor] 皮带映射:
@@ -402,590 +422,261 @@ DeviceRoleManager MQTT publishing started
 MQTT Protection Monitor started
 MQTT module offline voice alert connected
 Protection trigger -> alarm history DB connection established
+Analog protection trigger/restore -> alarm history DB connection established
 Setting context properties...
 Context properties set
 Adding QML import path...
 QML import path added
 Loading QML from: qrc:/qt/qml/BeltControlQml/main.qml
-arm_release_ver: g24p0-00eac0, rk_so_ver: 8
-[DEBUG] VideoCallManager: Created (video subsystem will be initialized after PJSIP startup)
-[DEBUG] ✅ QtVideoPreview created (Qt Multimedia-based)
-[DEBUG] ✅ QVideoSink created
-[DEBUG] ✅ QMediaCaptureSession created and connected to video sink
-[DEBUG] ✅ QtVideoPreview created (for QML integration)
-[DEBUG] ✅ LocalVideoManager created (PJSIP preview mode)
-[DEBUG] ✅ LocalVideoManager created (for PJSIP preview)
-[DEBUG] ✅ RemoteVideoManager created (Event-driven Push mode + Async v6)
-[DEBUG] ✅ FrameProcessorThread created
-[DEBUG] ✅ [ASYNC] Frame processor thread started
-[DEBUG] ✅ RemoteVideoManager created (for video calls)
-[DEBUG] ✅ [FIX 100.246] Risip instance will be created on-demand when user enters SIP settings
-[DEBUG] 🔧 [CONTACT DB] Initializing contact database...
-[DEBUG] 📁 [CONTACT DB] Database path: "/app/appdata/contacts.db"
-[DEBUG] 🚀 [ASYNC] FrameProcessorThread started
-[DEBUG] ✅ [CONTACT DB] Database opened successfully
-[DEBUG] ✅ [CONTACT DB] Tables and indexes created
-[DEBUG] ✅ [CONTACT DB] Loaded 0 contacts into cache
-[DEBUG] ✅ [CONTACT DB] Initialization complete, loaded 0 contacts
-[DEBUG] 🔧 [CONTACT DB] Initializing contact database...
-[DEBUG] 📁 [CONTACT DB] Database path: "/app/appdata/contacts.db"
-[WARNING] QSqlDatabasePrivate::removeDatabase: connection 'ContactDatabase' is still in use, all queries will cease to work.
-[WARNING] QSqlDatabasePrivate::addDatabase: duplicate connection name 'ContactDatabase', old connection removed.
-[DEBUG] ✅ [CONTACT DB] Database opened successfully
-[DEBUG] ✅ [CONTACT DB] Tables and indexes created
-[DEBUG] ✅ [CONTACT DB] Loaded 0 contacts into cache
-[DEBUG] ✅ [CONTACT DB] Initialization complete, loaded 0 contacts
-[DEBUG] ═══════════════════════════════════════════════════════
-[DEBUG] 🔥🔥🔥 SipPhoneManager VERSION 2026-01-18-01:00
-[DEBUG] 🔥🔥🔥 FIX 100.246 - 懒加载：用户进入 SIP 设置时才创建 Risip
-[DEBUG] ═══════════════════════════════════════════════════════
-[DEBUG] 🔥 [Keyboard Overlay] Enabled changed: false
-[DEBUG] ⚠️ [FIX 100.252] PJSIP not initialized, returning empty video codec list
-[DEBUG] ⚠️ [FIX 100.252] PJSIP not initialized, returning empty codec list
-[DEBUG] 📹 [FIX 100.251] Reading saved video device index: 0
-[WARNING]    ⚠️ [FIX 100.251] Saved index 0 is out of range
-[WARNING]       Valid range: 0 - -1
-[WARNING]       Mapping size: 0
-[WARNING]       Returning default index 0
-[DEBUG] 📢 [FIX 100.250] Reading saved audio input device index: 0
-[WARNING]    ⚠️ [FIX 100.250] Saved index 0 is out of range
-[WARNING]       Valid range: 0 - -1
-[WARNING]       Mapping size: 0
-[WARNING]       Returning default index 0
-[DEBUG] 🔊 [FIX 100.250] Reading saved audio output device index: 0
-[WARNING]    ⚠️ [FIX 100.250] Saved index 0 is out of range
-[WARNING]       Valid range: 0 - -1
-[WARNING]       Mapping size: 0
-[WARNING]       Returning default index 0
-[DEBUG] [DEBUG] accountsModel() called but risipInstance is null
-[DEBUG] [DEBUG] accountsModel() called but risipInstance is null
-[DEBUG] 📋 [Dialog Background MouseArea] Initialized
-[DEBUG] ═══════════════════════════════════════════════════════
-[DEBUG] 🔥🔥🔥 SIP SETTINGS PAGE LOADED - VERSION 2026-01-18-12:00
-[DEBUG] 🔥🔥🔥 FIX 100.246: 前后端分离完成，设备枚举通过 signal 更新
-[DEBUG] ═══════════════════════════════════════════════════════
-[DEBUG] [AddAccountDialog] Dialog created
-[DEBUG] 🖱️ [Dialog Header MouseArea] Initialized
-[DEBUG]    - Size: 0 x 40
-[DEBUG]    - Enabled: true
-[DEBUG] 🔥 [Keyboard Overlay] Created in contentItem
-[DEBUG] 🔥 [Keyboard Close MouseArea] Created
-[DEBUG]    - Size: 0 x 538
-[DEBUG]    - z: 200
-[DEBUG] 📜 [dialogFlickable] Initialized
-[DEBUG]    - Size: 0 x 538
-[DEBUG]    - contentHeight: 380
-[DEBUG]    - interactive: false
-[DEBUG] 📝 [passwordField] Initialized - z: 0
-[DEBUG] 📝 [usernameField] Initialized - z: 0
-[DEBUG] 🖱️ [Dialog Content MouseArea] Initialized - z: 1
-[DEBUG] 🔥 [QML Camera] ComboBox initialized
-[DEBUG]    Initial model count: 0
-[DEBUG]    CurrentIndex: 0
-[DEBUG] 🔥 [QML Mic] ComboBox initialized
-[DEBUG]    Initial model count: 0
-[DEBUG]    CurrentIndex: 0
-[DEBUG] 🔥 [QML Speaker] ComboBox initialized
-[DEBUG]    Initial model count: 0
-[DEBUG]    CurrentIndex: 0
-[DEBUG] [QML] ListView initialized
-[DEBUG] [DEBUG] accountsModel() called but risipInstance is null
-[DEBUG] [QML] Model object: null
-[DEBUG] [QML] Model count: 0
-[DEBUG] [DEBUG] accountsModel() called but risipInstance is null
-[DEBUG] [QML] Model rowCount: null
-[WARNING] No active account - cannot get call history
-[WARNING] Unable to set the pipeline to the paused state.
-[DEBUG] ✅ VideoSinkItem created (ItemHasContents disabled until first frame)
-[DEBUG] ✅ VideoSinkItem created (ItemHasContents disabled until first frame)
-[DEBUG] 🔍 [QML] Video Accept Button visibility check:
-[DEBUG]     callStatus: 就绪 → hasCallStatus: false
-[DEBUG]     isIncomingVideoCall: false
-[DEBUG]     → visible: false
-[DEBUG] Number display text changed to: 请输入号码
-[DEBUG] ✅ ========================================
-[DEBUG] ✅ SipDialPage loaded and ready!
-[DEBUG] ✅ ========================================
-[DEBUG] ✅ Remote VideoSinkItem created
-[DEBUG] ✅ Connected to video sink, waiting for frames...
-[DEBUG] ✅ Remote VideoSinkItem connected to video sink
-[DEBUG] ✅ VideoSinkItem created for local preview
-[DEBUG] ✅ Connected to video sink, waiting for frames...
-[DEBUG] ✅ VideoSinkItem connected to PJSIP local video sink
-[DEBUG] ✅ [RINGTONE] MediaPlayer created with system ringtone
-[DEBUG] ✅ SipDialPage Loader: Ready (before onLoaded)
-[DEBUG] ✅ ✅ ✅ SipDialPage Loader: Successfully loaded!
-[DEBUG] 📇 Loading contacts from database...
-[DEBUG] 📇 [SipPhoneManager] Loaded 0 contacts from database
-[DEBUG] 📇 Loaded 0 contacts from database
-[DEBUG] ⌨️ [InputPanel] Visibility changed: false
-[DEBUG] ⌨️ [InputPanel] Enabled changed: false
-[DEBUG] 🖱️ [Keyboard Debug MouseArea] Visible changed: false
-[DEBUG] ========================================
-[DEBUG] 🔧 [Keyboard Container] Initialized in Overlay
-[DEBUG]    - parent: QQuickOverlay(0x5579336490)
-[DEBUG]    - parent is Overlay: true
-[DEBUG]    - Initial z-index: 1 ⬅️ Will be dynamically adjusted
-[DEBUG] ========================================
-[DEBUG] ========================================
-[DEBUG] 🔧 [Keyboard Wrapper] Initialized
-[DEBUG]    - z-index: 2 (above keyboardOverlay)
-[DEBUG]    - width: 1920
-[DEBUG]    - height: 600
-[DEBUG] ========================================
-[DEBUG] ========================================
-[DEBUG] ⌨️ [InputPanel] Virtual keyboard initialized
-[DEBUG]    - parent: QQuickItem(0x5579eb2fe0)
-[DEBUG]    - z-index: 1
-[DEBUG]    - width: 1920
-[DEBUG]    - height: 600
-[DEBUG]    - enabled: false
-[DEBUG]    - visible: false
-[DEBUG] ========================================
-[DEBUG] 🖱️ [Keyboard Debug MouseArea] Initialized
-[DEBUG]    - Size: 1920 x 600
-[DEBUG]    - Z-index: -1
-[DEBUG]    - Enabled: true
-[DEBUG] =========================================
-[DEBUG] 🔥🔥🔥 VERSION: 2025-12-19-07:00 DYNAMIC-Z 🔥🔥🔥
-[DEBUG] 🛡️ [Main keyboardOverlay] DISABLED - using Dialog overlay instead
-[DEBUG]    - z-index: 3 (parent container z: 1 - DYNAMIC)
-[DEBUG]    - visible: false (SHOULD be false)
-[DEBUG]    - enabled: false (SHOULD be false)
-[DEBUG] =========================================
-[WARNING] qrc:/qt/qml/BeltControlQml/pages/ParameterSettings.qml:55:5: QML Back.ui: Cannot open: qrc:/qt/qml/BeltControlQml/pages/images/back2.svg
-[WARNING] qrc:/qt/qml/BeltControlQml/pages/DeviceMonitorPage.qml:21:5: QML Back.ui: Cannot open: qrc:/qt/qml/BeltControlQml/pages/images/back2.svg
-[WARNING] Qt Quick Layouts: Detected recursive rearrange. Aborting after two iterations.
-[WARNING] Qt Quick Layouts: Detected recursive rearrange. Aborting after two iterations.
-[WARNING] qrc:/qt/qml/BeltControlQml/pages/ControlPanel.qml:68:5: QML Back.ui: Cannot open: qrc:/qt/qml/BeltControlQml/pages/images/back2.svg
-[WARNING] qrc:/qt/qml/BeltControlQml/pages/ControlPanel.qml:42:5: QML Connections: Detected function "onProtectionTriggered" in Connections element. This is probably intended to be a signal handler but no signal of the target matches the name.
-[WARNING] qrc:/qt/qml/BeltControlQml/pages/ControlPanel.qml:42:5: QML Connections: Detected function "onProtectionRestored" in Connections element. This is probably intended to be a signal handler but no signal of the target matches the name.
-[DEBUG] [Screen01] ✅ 组件加载完成
-[DEBUG] [Screen01] 🎯 强制获取焦点...
-[DEBUG] 🔍 [Screen01] ========== 焦点状态变化 ==========
-[DEBUG] 🔍 [Screen01] activeFocus: ✅ 获得焦点
-[DEBUG] 🔍 [Screen01] focus 属性: true
-[DEBUG] 🔍 [Screen01] parent: QQuickLoader(0x557918bcb0)
-[DEBUG] 🔍 [Screen01] parent.objectName:
-[DEBUG] 🔍 [Screen01] =====================================
-[DEBUG] [Screen01Form] ✅ 组件加载完成
-[DEBUG] ✅ Input1 Screen01 加载成功
-[DEBUG]    [布局] 屏幕尺寸: 1920 x 1080
-[DEBUG] 🔍 [Input1Page] 缩放调试:
-[DEBUG]    xScale (宽度缩放): 1.000
-[DEBUG]    yScale (高度缩放): 1.000
-[DEBUG]    预期显示尺寸: 1920 x 1080
-[DEBUG] 🔗 [Input1Page] 设置 Screen01.currentPageIndex 绑定
-[DEBUG]    input1Page.currentPageIndex = 0
-[DEBUG] 📡 [Binding] Screen01.currentPageIndex 更新 = 0
-[DEBUG]    Screen01.currentPageIndex = 0
-[DEBUG] [BUILD MARKER] Phase7.45.31-SwipeViewRootAnchorFix-2026-02-12
-[DEBUG] [FULLSCREEN DEBUG] Screen size: 1920 x 1080
-[DEBUG] [FULLSCREEN DEBUG] Window size: 1920 x 1080
-[DEBUG] [FULLSCREEN DEBUG] Current visibility: 2
-[DEBUG] [FULLSCREEN DEBUG] Platform: linux
-[DEBUG] [FULLSCREEN DEBUG] Device 151 (1920x1080) detected, EGLFS naturally fullscreen
-[DEBUG] 📋 [TTSConfig] 初始化TTS配置管理器
-[DEBUG] 📂 [TTSConfig] 加载TTS配置
-[DEBUG]   - "startup_warning" : model= 0 , speaker= 0 , rate= 1
-[DEBUG]   - "fault_alarm" : model= 0 , speaker= 0 , rate= 1
-[DEBUG]   - "test" : model= 0 , speaker= 0 , rate= 1
-[DEBUG] 📂 已恢复批量合成参数
-[DEBUG] 🚀 TTSConfigSection 组件加载完成
-[DEBUG] 🔄 自动初始化 TTS 引擎，索引: 0
-[DEBUG] 🔄 [CommonControl] 切换 TTS 引擎 - 索引: 0 名称: "PaddleSpeech"
-[DEBUG] 🔄 [TTSEngineManager] 切换引擎: "PaddleSpeech"
-[DEBUG] ✅ [CommonControl] TTS 引擎切换成功: "PaddleSpeech"
-[DEBUG] 🔄 更新模型列表...
-[DEBUG] 模型切换: 0
-[DEBUG] ✅ 模型列表已更新: 4 个模型
-[DEBUG] 🔄 更新引擎状态...
-[DEBUG] 📊 当前引擎: PaddleSpeech
-[DEBUG] ✅ 引擎状态已更新: 已初始化
-[DEBUG] 📂 已恢复TTS参数: 说话人ID=0, 语速=1.0, 音量=80%
-[DEBUG] 🔄 启动异步TTS模型初始化...
-[DEBUG] 🔄 [CommonControl] 异步切换 TTS 模型 - 索引: 0
-[DEBUG] Input1Page 已加载
-[DEBUG] 🔍 [Input1Page] 缩放调试（Component.onCompleted）:
-[DEBUG]    input1Page.width: 1920
-[DEBUG]    input1Page.height: 1080
-[DEBUG]    xScale (宽度缩放): 1.000
-[DEBUG]    yScale (高度缩放): 1.000
-[DEBUG]    预期显示尺寸: 1920 x 1080
-[DEBUG] 🔄 [CommonControl] 切换 TTS 模型 - 索引: 0
-[DEBUG]    模型路径: "/app/tts_models/paddlespeech/fastspeech2_csmsc"
-[DEBUG] 🔧 [TTSEngineManager] 初始化引擎: "PaddleSpeech" 模型: "/app/tts_models/paddlespeech/fastspeech2_csmsc"
-[DEBUG] 🔧 [PaddleSpeech] 初始化 - 模型: "/app/tts_models/paddlespeech/fastspeech2_csmsc"
-[WARNING] QObject: Cannot create children for a parent that is in a different thread.
-(Parent is PaddleSpeechAdapter(0x5578b1b5c0), parent's thread is QThread(0x55784185d0), current thread is QThread(0x55791b25e0)
-[DEBUG] 📂 [PaddleSpeech] PADDLESPEECH_HOME= "/app/tts_models/paddlespeech"
-[DEBUG] 📂 [PaddleSpeech] PPSPEECH_HOME= "/app/tts_models/paddlespeech"
-[DEBUG] 🚀 [PaddleSpeech] 启动服务: "/app/tts_engines/paddlespeech/paddle_tts_service.py"
-[DEBUG] ✅ DeviceOperationLog: 已加载 0 条日志记录
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "张紧" 使用反馈: true 反馈通道: 0 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "抱闸" 使用反馈: true 反馈通道: 1 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "洒水" 使用反馈: true 反馈通道: 2 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "1号电机" 使用反馈: true 反馈通道: 3 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "2号电机" 使用反馈: true 反馈通道: 4 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "破碎机" 使用反馈: true 反馈通道: 5 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "转载机" 使用反馈: true 反馈通道: 6 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "前刮板" 使用反馈: true 反馈通道: 7 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "后刮板" 使用反馈: true 反馈通道: 8 反馈延时: 3 秒
-[DEBUG] ✅ [PaddleSpeech] 服务启动成功
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "1号乳化液泵" 使用反馈: true 反馈通道: 9 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "2号乳化液泵" 使用反馈: true 反馈通道: 10 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "3号乳化液泵" 使用反馈: true 反馈通道: 11 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "4号乳化液泵" 使用反馈: true 反馈通道: 12 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "1号喷雾泵" 使用反馈: true 反馈通道: 13 反馈延时: 3 秒
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "2号喷雾泵" 使用反馈: true 反馈通道: 14 反馈延时: 3 秒
-[DEBUG] 📤 [PaddleSpeech] 发送命令: "initialize"
-[DEBUG] 📋 CommonControl: 设置设备反馈配置 - "3号喷雾泵" 使用反馈: true 反馈通道: 15 反馈延时: 3 秒
-[DEBUG] ✅ ParameterSettings: 已同步 16 个设备的反馈配置
-[DEBUG] ✅ [DeviceMonitorPage] 数字孪生设备监控页面已加载
-[DEBUG] ✅ [BeltConnectionDiagram] 增强版皮带连接关系图已加载
-[DEBUG] ✅ OperationLogPanel: 已加载 0 条日志记录
-[DEBUG] 🔍 [ControlPanel Head] 布局调试 v6:
-[DEBUG]    root 尺寸: 1920 × 1080
-[DEBUG]    容器原始尺寸: 1920 × 80
-[DEBUG]    scaleFactor: 1.000
-[DEBUG]    缩放后尺寸: 1920 × 80
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:32: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:66: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:65: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:64: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:18: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:66: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:65: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:64: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:18: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:32: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:12: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:12: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:11: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/MiniTrendChart.qml:14: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/MiniTrendChart.qml:26: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/MiniTrendChart.qml:23: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/MiniTrendChart.qml:25: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/MiniTrendChart.qml:24: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:11: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:10: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:11: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/ModernButton.qml:10: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/pages/BatchSynthesisContent.qml:347:29: Unable to assign [undefined] to QString
-[WARNING] qrc:/qt/qml/BeltControlQml/pages/BatchSynthesisContent.qml:359:29: Unable to assign [undefined] to QString
+[WARNING] QQmlApplicationEngine failed to load component
+[WARNING] qrc:/qt/qml/BeltControlQml/main.qml:65:5: Type App unavailable
+[WARNING] qrc:/qt/qml/BeltControlQml/App.qml:242:9: Type VoiceManagement unavailable
+[WARNING] qrc:/qt/qml/BeltControlQml/pages/VoiceManagement.qml:434:21: BatchSynthesisContent is not a type
 engine.load() completed
-QML loaded successfully, starting event loop
-[DEBUG] [Screen01] 📊 dataItems 有效数量: 12 / 12
-[DEBUG] [Screen01] 🔄 初始化选中状态...
-[DEBUG] [Screen01] 🔄 updateSelection 开始，selectedIndex: 0 有效组件: 12
-[DEBUG] [Screen01] ✅ 组件 0 已选中
-[DEBUG] [Screen01] 🔄 updateSelection 完成，成功更新 12 个组件
-[DEBUG] [Screen01] 🖱️ 设置鼠标交互...
-[DEBUG] [Screen01] 🖱️ 开始设置鼠标交互...
-[DEBUG] [Screen01] ✅ 组件 0 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 1 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 2 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 3 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 4 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 5 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 6 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 7 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 8 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 9 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 10 鼠标交互已设置
-[DEBUG] [Screen01] ✅ 组件 11 鼠标交互已设置
-[DEBUG] [Screen01] 🖱️ 鼠标交互设置完成
-[DEBUG] 📊 AlarmHistoryDatabase: 查询返回 197 条记录
-[DEBUG] ✅ [AlarmPage] 加载报警记录: 197 条
-[DEBUG] 📊 TTS 初始化进度: 正在加载 PaddleSpeech 模型...
-Object created callback: obj=5578bf6f40
-[WARNING] [PaddleSpeech Error] "[2026-03-03 08:47:29,324] [INFO] 📂 PADDLESPEECH_HOME 环境变量: '/app/tts_models/paddlespeech'\n[2026-03-03 08:47:29,324] [INFO] 📂 PPSPEECH_HOME 环境变量: '/app/tts_models/paddlespeech'\n[2026-03-03 08:47:29,324] [INFO] ✅ 使用环境变量 PADDLESPEECH_HOME=/app/tts_models/paddlespeech\n[2026-03-03 08:47:29,324] [INFO] ✅ 使用环境变量 PPSPEECH_HOME=/app/tts_models/paddlespeech\n[2026-03-03 08:47:29,324] [INFO] 🚀 PaddleSpeech TTS 服务启动\n[2026-03-03 08:47:29,324] [INFO] 📂 工作目录: /app\n[2026-03-03 08:47:29,324] [INFO] 🐍 Python 版本: 3.12.3 (main, Jan 22 2026, 20:57:42) [GCC 13.3.0]\n[2026-03-03 08:47:29,324] [INFO] 📨 收到命令: initialize\n[2026-03-03 08:47:29,324] [INFO] 🔧 初始化 PaddleSpeech - 模型: /app/tts_models/paddlespeech/fastspeech2_csmsc\n[2026-03-03 08:47:29,324] [INFO] 📝 提取模型名称: fastspeech2_csmsc"
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/MiniTrendChart.qml:42: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063805104: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063805696: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063805104: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063805696: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063802960: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063803552: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063802960: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063803552: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063802960: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063803552: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063802960: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063803552: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063802960: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063803552: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063802960: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063803552: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063802960: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063803552: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063802960: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:2063803552: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:32: ReferenceError: Theme is not defined
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_monitor/GlowLed.qml:12: ReferenceError: Theme is not defined
-[WARNING] ⚠️ [DIDataManager] 缺少data字段（后续相同警告已抑制）
-[DEBUG] ❌ [RINGTONE] Error: 1 Resource not found.
-[DEBUG] ❌ [RINGTONE] Error: 1 GStreamer error: state change failed and some element failed to post a proper error message with the reason for the failure.
-[DEBUG] ❌ [RINGTONE] Error: 1 Resource not found.
-[DEBUG] ❌ [RINGTONE] Error: 1 GStreamer error: state change failed and some element failed to post a proper error message with the reason for the failure.
-[WARNING] [PaddleSpeech Error] "/usr/local/lib/python3.12/dist-packages/paddle/utils/cpp_extension/extension_utils.py:718: UserWarning: No ccache found. Please be aware that recompiling all source files may be required. You can download and install ccache from: https://github.com/ccache/ccache/blob/master/doc/INSTALL.md\n  warnings.warn(warning_message)"
-[DEBUG] 🔔 [RINGTONE] Using system ringtone: "C:/Windows/Media/Ring01.wav"
-[DEBUG] 🔔 [RINGTONE] URL format: "file:///C:/Windows/Media/Ring01.wav"
-[DEBUG] 🔔 [RINGTONE] Loaded custom ringtone: file:///C:/Windows/Media/Ring01.wav
-[DEBUG] [MQTTAutoManager] 模块 0 健康检查 | connected: true | lastDataTime: 1772527655 | timeSinceLastData: 0 s | status: "正常" | timeoutCount: 0
-[DEBUG] [MQTTAutoManager] 模块 1 健康检查 | connected: true | lastDataTime: 0 | timeSinceLastData: -1 s | status: "等待数据" | timeoutCount: 0
-[DEBUG] [MQTTAutoManager] 模块 2 健康检查 | connected: true | lastDataTime: 1772527655 | timeSinceLastData: 0 s | status: "正常" | timeoutCount: 0
-[DEBUG] [MQTTAutoManager] 模块 3 健康检查 | connected: true | lastDataTime: 0 | timeSinceLastData: -1 s | status: "等待数据" | timeoutCount: 0
-[WARNING] [PaddleSpeech Error] "\u001B[0;93m2026-03-03 08:47:36.698735413 [W:onnxruntime:Default, device_discovery.cc:211 DiscoverDevicesForPlatform] GPU device discovery failed: device_discovery.cc:91 ReadFileContents Failed to open file: \"/sys/class/drm/card1/device/vendor\"\u001B[m"
-[DEBUG] 🔍 [Screen01] ========== 焦点状态变化 ==========
-[DEBUG] 🔍 [Screen01] activeFocus: ❌ 失去焦点
-[DEBUG] 🔍 [Screen01] focus 属性: true
-[DEBUG] 🔍 [Screen01] parent: QQuickLoader(0x557918bcb0)
-[DEBUG] 🔍 [Screen01] parent.objectName:
-[DEBUG] 🔍 [Screen01] =====================================
-[DEBUG] [SwipeView] 页面切换到索引: 1
-[DEBUG] [SwipeView] 页面切换到索引: 2
-[DEBUG] [MQTTAutoManager] 模块 0 健康检查 | connected: true | lastDataTime: 1772527665 | timeSinceLastData: 0 s | status: "正常" | timeoutCount: 0
-[DEBUG] [MQTTAutoManager] 模块 1 健康检查 | connected: true | lastDataTime: 0 | timeSinceLastData: -1 s | status: "等待数据" | timeoutCount: 0
-[DEBUG] [MQTTAutoManager] 模块 2 健康检查 | connected: true | lastDataTime: 1772527664 | timeSinceLastData: 1 s | status: "正常" | timeoutCount: 0
-[DEBUG] [MQTTAutoManager] 模块 3 健康检查 | connected: true | lastDataTime: 0 | timeSinceLastData: -1 s | status: "等待数据" | timeoutCount: 0
-[DEBUG] [SwipeView] 页面切换到索引: 3
-[DEBUG] [SwipeView] 页面切换到索引: 4
-[DEBUG] [SwipeView] 页面切换到索引: 5
-[DEBUG] [SwipeView] 切换到 Input1Page，恢复 Screen01 焦点
-[DEBUG] [SwipeView] 找到 Screen01，强制获取焦点
-[DEBUG] 🔍 [Screen01] ========== 焦点状态变化 ==========
-[DEBUG] 🔍 [Screen01] activeFocus: ✅ 获得焦点
-[DEBUG] 🔍 [Screen01] focus 属性: true
-[DEBUG] 🔍 [Screen01] parent: QQuickLoader(0x557918bcb0)
-[DEBUG] 🔍 [Screen01] parent.objectName:
-[DEBUG] 🔍 [Screen01] =====================================
-[DEBUG] [Screen01] 🖱️ 鼠标悬停在组件 0
-[DEBUG] [Screen01] 🖱️ 鼠标悬停在组件 1
-[DEBUG] [Screen01] 🖱️ 鼠标悬停在组件 0
-[DEBUG] [Screen01] 🖱️ 单击组件 0
-[DEBUG] [Screen01] 🔄 updateSelection 开始，selectedIndex: 0 有效组件: 12
-[DEBUG] [Screen01] ✅ 组件 0 已选中
-[DEBUG] [Screen01] 🔄 updateSelection 完成，成功更新 12 个组件
-[DEBUG] [Screen01] 🖱️🖱️ 双击组件 0 - 打开设备设置对话框
-[DEBUG] [Screen01] 🔄 updateSelection 开始，selectedIndex: 0 有效组件: 12
-[DEBUG] [Screen01] ✅ 组件 0 已选中
-[DEBUG] [Screen01] 🔄 updateSelection 完成，成功更新 12 个组件
-[DEBUG] 🔍 [Screen01] ========== 打开对话框 ==========
-[DEBUG] 🔍 [Screen01] 当前选中索引: 0
-[DEBUG] 🔍 [Screen01] 打开前 - activeFocus: true
-[DEBUG] 🔍 [Screen01] 打开前 - focus: true
-[DEBUG] ✅ [MQTTAutoControlTab] 初始化完成
-[DEBUG] ✅ [MQTTConfigPanel] MQTTAutoControlTab 加载成功
-[DEBUG] ✅ [MQTTConfigPanel] MQTTMonitorTab 加载成功
-[DEBUG] ✅ [MQTTConfigPanel] MQTTPublishTab 加载成功
-[DEBUG] ✅ [MQTTConfigPanel] MQTTSubscribeTab 加载成功
-[DEBUG] ✅ [MQTTConfigPanel] MQTTConnectionTab 加载成功
-[DEBUG] ✅ [MQTTControlPage] MQTTConfigPanel 加载成功
-[DEBUG] ✅ [MQTTControlPage] MQTTListPanel 加载成功
-[DEBUG] ✅ [MQTTControlPage] Component.onCompleted
-[DEBUG] ✅ [MQTTControlPage] focusItemIndex 变化: 0
-[DEBUG] ✅ [DeviceSettingsDialog] MQTTControlPage 加载成功
-[DEBUG] ✅ [TCPConfigPanel] S7SlaveTab 加载成功
-[DEBUG] ✅ [TCPConfigPanel] S7MasterTab 加载成功
-[DEBUG] ✅ [TCPConfigPanel] ModbusTCPSlaveTab 加载成功
-[DEBUG] ✅ [TCPConfigPanel] ModbusTCPMasterTab 加载成功
-[DEBUG] ✅ [TCPControlPage] TCPConfigPanel 加载成功
-[DEBUG] ✅ [TCPControlPage] TCPListPanel 加载成功
-[DEBUG] ✅ [TCPControlPage] Component.onCompleted
-[DEBUG] ✅ [TCPControlPage] focusItemIndex 变化: 0
-[DEBUG] ✅ [DeviceSettingsDialog] TCPControlPage 加载成功
-[DEBUG] ✅ [CANConfigPanel] CANReceiveTab 加载成功
-[DEBUG] ✅ [CANSendTab] Component.onCompleted
-[DEBUG]    - virtualKeyboard: null
-[DEBUG] ✅ [CANConfigPanel] CANSendTab 加载成功
-[DEBUG] ✅ [CANParamsTab] GridLayout 加载完成
-[DEBUG]    - columns: 2
-[DEBUG]    - width: 0
-[DEBUG]    - paramScrollView.width: 0
-[DEBUG]    - columnSpacing: 16
-[DEBUG]    - rowSpacing: 12
-[DEBUG] 🔍 [CANParamsTab] statusText 初始化
-[DEBUG]    - canController 是否存在: true
-[DEBUG]    - canController.status: DOWN
-[DEBUG]    - canController.isUp: false
-[DEBUG] ✅ [CANConfigPanel] CANParamsTab 加载成功
-[DEBUG] ✅ [CANControlPage] CANConfigPanel 加载成功
-[DEBUG] ✅ [CANControlPage] CANListPanel 加载成功
-[DEBUG] ✅ [CANControlPage] Component.onCompleted 开始
-[DEBUG] ✅ [CANControlPage] CAN 数量: 2
-[DEBUG] ✅ [CANControlPage] focusItemIndex 变化: 0 → 更新 currentCanIndex
-[DEBUG] ✅ [CANControlPage] 初始化焦点 - focusSubArea: 0 focusItemIndex: 0
-[DEBUG] ✅ [CANControlPage] Component.onCompleted 完成
-[DEBUG] ✅ [CANControlPage] NavigationManager 初始化完成
-[DEBUG] ✅ [DeviceSettingsDialog] CANControlPage 加载成功
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_info/pages/SerialPortParamsTab.qml:777:21: QML Row: Cannot specify left, right, horizontalCenter, fill or centerIn anchors for items inside Row. Row will not function.
-[DEBUG] ✅ [SerialPortParamsTab] Component.onCompleted 开始
-[DEBUG] ✅ [SerialPortParamsTab] Component.onCompleted 完成
-[DEBUG] ✅ [SerialPortParamsTab] GridLayout 加载完成
-[DEBUG]    - columns: 2
-[DEBUG]    - width: 0
-[DEBUG]    - paramScrollView.width: 0
-[DEBUG]    - columnSpacing: 16
-[DEBUG]    - rowSpacing: 12
-[DEBUG] ✅ [CustomComboBox] parityCombo 找到 DeviceSettingsDialog
-[DEBUG] ✅ [CustomComboBox] stopBitsCombo 找到 DeviceSettingsDialog
-[DEBUG] ✅ [CustomComboBox] dataBitsCombo 找到 DeviceSettingsDialog
-[DEBUG] ✅ [SerialPortParamsTab] 索引1（波特率）Item 加载完成
-[DEBUG]    - Layout.column: 1
-[DEBUG]    - Layout.row: 0
-[DEBUG]    - width: 0
-[DEBUG]    - height: 60
-[DEBUG] ✅ [CustomComboBox] 找到 DeviceSettingsDialog，设置 parentDialog
-[DEBUG] ✅ [SerialPortParamsTab] 索引0（串口名称）Item 加载完成
-[DEBUG]    - Layout.column: 0
-[DEBUG]    - Layout.row: 0
-[DEBUG]    - width: 0
-[DEBUG]    - height: 40
-[DEBUG] ✅ [SerialPortParamsTab] serialNameText 加载完成 - text:
-[DEBUG] ✅ [SerialPortConfigPanel] SerialPortParamsTab 加载成功
-[DEBUG] ✅ [SerialPortConfigPanel] Component.onCompleted 开始
-[DEBUG] ✅ [SerialPortConfigPanel] currentSerialPort: null
-[DEBUG] ✅ [SerialPortConfigPanel] 使用 Tab 架构
-[DEBUG] ✅ [SerialPortConfigPanel] Component.onCompleted 完成
-[DEBUG] 🔍 [SerialPortControlPage] serialConfigPanel Loader 状态变化: 1
-[DEBUG] ✅ [SerialPortControlPage] serialConfigPanel Loader 加载完成
-[DEBUG] ✅ [SerialPortControlPage] SerialPortConfigPanel 加载成功
-[DEBUG] ✅ [SerialPortConfigPanel] currentSerialPort 变化: [object Object]
-[DEBUG]    - 串口名称: COM1
-[DEBUG]    - 设备路径: /dev/ttyS0
-[DEBUG]    - 串口类型: RS422
-[DEBUG] ✅ [SerialPortParamsTab] 串口切换: COM1
-[DEBUG] ✅ [SerialPortControlPage] SerialPortListPanel 加载成功
-[DEBUG] ✅ [SerialPortControlPage] Component.onCompleted 开始
-[DEBUG] ✅ [SerialPortControlPage] 串口数量: 6
-[DEBUG] 🔍 [SerialPortControlPage] serialListPanel.status: 1
-[DEBUG] 🔍 [SerialPortControlPage] serialListPanel.item: SerialPortListPanel_QMLTYPE_423(0x557d70b080)
-[DEBUG] 🔍 [SerialPortControlPage] serialConfigPanel.status: 1
-[DEBUG] 🔍 [SerialPortControlPage] serialConfigPanel.item: SerialPortConfigPanel_QMLTYPE_418(0x557d70b5e0)
-[DEBUG] ✅ [SerialPortControlPage] focusItemIndex 变化: 0 → 更新 currentSerialIndex
-[DEBUG] ✅ [SerialPortControlPage] 初始化焦点 - focusSubArea: 0 focusItemIndex: 0
-[DEBUG] ✅ [SerialPortControlPage] Component.onCompleted 完成
-[DEBUG] ✅ [SerialPortControlPage] NavigationManager 初始化完成
-[DEBUG] ✅ [DeviceSettingsDialog] SerialPortControlPage 加载成功
-[DEBUG] ✅ [BasicConfigPage] NetworkParametersSection 加载成功
-[DEBUG] ✅ [BasicConfigPage] BasicParametersSection 加载成功
-[DEBUG] ✅ [BasicConfigPage] 组件初始化 - 设备ID: 1
-[DEBUG] ✅ [BasicConfigPage] 开始加载所有配置 - 设备ID: 1
-[DEBUG] ✅ [BasicConfigPage] 开始加载基本参数配置 - 设备ID: 1
-[DEBUG] ⚠️ [BasicConfigPage] 没有找到基本参数配置，使用默认值
-[DEBUG] ✅ [BasicConfigPage] 开始加载网络参数配置 - 设备ID: 1
-[DEBUG] ⚠️ [BasicConfigPage] 没有找到网络参数配置，使用默认值
-[DEBUG] ⚠️ [BasicConfigPage] 没有找到配置，使用默认值
-[DEBUG] ✅ [DeviceSettingsDialog] BasicConfigPage 加载成功
-[DEBUG] ✅ [DeviceSettingsDialog] Qt 虚拟键盘已初始化
-[DEBUG] 🔒 [DeviceSettingsDialog] 设备ID: 1 权限检查: 可编辑
-[DEBUG] 🔍 [Screen01] focus 属性变化: false
-[DEBUG] 🔍 [Screen01] ========== 焦点状态变化 ==========
-[DEBUG] 🔍 [Screen01] activeFocus: ❌ 失去焦点
-[DEBUG] 🔍 [Screen01] focus 属性: false
-[DEBUG] 🔍 [Screen01] parent: QQuickLoader(0x557918bcb0)
-[DEBUG] 🔍 [Screen01] parent.objectName:
-[DEBUG] 🔍 [Screen01] =====================================
-[DEBUG] 🔍 [DeviceSettingsDialog root] activeFocus 变化: true
-[DEBUG] ✅ [DeviceSettingsDialog] 对话框已获取焦点
-[DEBUG] ✅ [DEBUG] StackLayout 宽度: 1369
-[DEBUG] ✅ [DEBUG] StackLayout 高度: 703
-[DEBUG] ✅ [DEBUG] StackLayout 子元素数量: 11
-[DEBUG] ✅ [DEBUG] SwitchInputPage Loader 宽度: 0
-[DEBUG] ✅ [DEBUG] SwitchInputPage Loader 高度: 0
-[DEBUG] 🔍 [Screen01] 对话框创建成功
-[DEBUG] 🔍 [Screen01] dialog.parent === root: true
-[DEBUG] 🔍 [Screen01] dialog.parent: Screen01_QMLTYPE_333(0x557ab3d1a0)
-[DEBUG] 🔍 [Screen01] dialog.parentContainer === root: true
-[DEBUG] 🔍 [Screen01] 对话框已显示
-[DEBUG] 🔍 [Screen01] 打开后 - activeFocus: false
-[DEBUG] 🔍 [Screen01] 打开后 - focus: false
-[DEBUG] 🔍 [Screen01] =====================================
-[DEBUG] ✅ [NavigationManager] 更新 lastParamIndex: 10 （参数数量: 11 ）
-[DEBUG] ✅ [NavigationManager] 更新 lastParamIndex: 8 （参数数量: 9 ）
-[DEBUG] ✅ [NavigationManager] 更新 lastParamIndex: 3 （参数数量: 4 ）
-[DEBUG] ✅ [CANControlPage] 初始参数数量: 4
-[DEBUG] ✅ [NavigationManager] 更新 lastParamIndex: 7 （参数数量: 8 ）
-[DEBUG] ✅ [SerialPortControlPage] 初始参数数量: 8
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_info/pages/SerialPortParamsTab.qml:777:21: QML Row: Cannot specify left, right, horizontalCenter, fill or centerIn anchors for items inside Row. Row will not function.
-[DEBUG] 🔍 [DeviceSettingsDialog root] activeFocus 变化: false
-[DEBUG] ✅ [DeviceSettingsDialog] 切换到类别 1 恢复内容索引: 0
-[DEBUG] ✅ [SwitchInputPage] Component.onCompleted 开始
-[DEBUG] ✅ [SwitchInputPage] Component.onCompleted 完成
-[DEBUG] ✅ [DEBUG] SwitchInputPage 右侧区域宽度: 560
-[DEBUG] ✅ [DEBUG] SwitchInputPage 右侧区域高度: 600
-[DEBUG] ✅ [DEBUG] SwitchInputPage ScrollView 宽度: 530
-[DEBUG] ✅ [DEBUG] SwitchInputPage ScrollView 高度: 331
-[DEBUG] ✅ [DEBUG] GridLayout 加载完成
-[DEBUG]    宽度: 371 高度: 420
-[DEBUG]    parent.width: 270
-[DEBUG]    paramScrollView.width: 530
-[DEBUG]    计算宽度 (70%): 371
-[DEBUG] ✅ [DEBUG] onLoaded 开始
-[DEBUG] ✅ [DEBUG] 设置 virtualKeyboard: QtVirtualKeyboardIntegration_QMLTYPE_345(0x557bc8cfa0)
-[DEBUG] ✅ [DEBUG] onLoaded 完成
-[WARNING] qrc:/qt/qml/BeltControlQml/components/device_info/pages/SwitchInputPage.qml:2161:45: Unable to assign [undefined] to QColor
-[DEBUG] 🔍 [MQTT控制同步] onCurrentCategoryChanged - currentCategory: 1 currentFocusArea: 1
-[DEBUG] ✅ [MQTT控制同步] 切换到其他类别 - 清除 focusItemIndex
-[DEBUG] 🔍 [TCP控制同步] onCurrentCategoryChanged - currentCategory: 1 currentFocusArea: 1
-[DEBUG] ✅ [TCP控制同步] 切换到其他类别 - 清除 focusItemIndex
-[DEBUG] 🔍 [CAN控制同步] onCurrentCategoryChanged - currentCategory: 1 currentFocusArea: 1
-[DEBUG] ✅ [CAN控制同步] 切换到其他类别 - 清除 focusItemIndex
-[DEBUG] 🔍 [串口控制同步] onCurrentCategoryChanged - currentCategory: 1 currentFocusArea: 1
-[DEBUG] ✅ [串口控制同步] 切换到其他类别 - 清除 focusItemIndex
-[DEBUG] ✅ [SwitchInputPage] Qt.callLater 回调执行 - 加载第一个保护项
-[DEBUG] ✅ [SwitchInputPage] 从数据库加载完整参数: 急停
-[DEBUG] ✅ [SwitchInputPage] 初始加载第一个保护项完成
-[DEBUG] ✅ [DEBUG] Qt.callLater 回调执行 - 事件循环正常
-[DEBUG] [MQTTAutoManager] 模块 0 健康检查 | connected: true | lastDataTime: 1772527674 | timeSinceLastData: 1 s | status: "正常" | timeoutCount: 0
-[DEBUG] [MQTTAutoManager] 模块 1 健康检查 | connected: true | lastDataTime: 0 | timeSinceLastData: -1 s | status: "等待数据" | timeoutCount: 0
-[DEBUG] [MQTTAutoManager] 模块 2 健康检查 | connected: true | lastDataTime: 1772527674 | timeSinceLastData: 1 s | status: "正常" | timeoutCount: 0
-[DEBUG] [MQTTAutoManager] 模块 3 健康检查 | connected: true | lastDataTime: 0 | timeSinceLastData: -1 s | status: "等待数据" | timeoutCount: 0
-[DEBUG] ⚠️ [MQTTAutoManager] 模块 0 数据中断，等待恢复 | timeSinceLastData: 3 s
-[DEBUG] ⚠️ [MQTTAutoManager] 模块 2 数据中断，等待恢复 | timeSinceLastData: 3 s
-[WARNING] [PaddleSpeech Error] "[nltk_data] Error loading averaged_perceptron_tagger: <urlopen error\n[nltk_data]     [Errno -3] Temporary failure in name resolution>"
-[WARNING] ⚠️ [MQTTAutoManager] 模块 0 数据超时
-[DEBUG] 🔊 [MQTTAutoManager] 模块 0 触发离线语音: "/home/linaro/belt-control-data/audio/paddlespeech-fastspeech2_csmsc-spk0/Status/开关量模块一离线.wav"
-[DEBUG] 📋 CommonControl: 音频加入队列: "开关量模块一离线.wav" | 队列长度: 1
-[DEBUG] ▶️ CommonControl: 从队列播放: "开关量模块一离线.wav" | 剩余队列: 0
-[DEBUG] 🔊 CommonControl: 播放音频: "开关量模块一离线.wav" | 大小: 174 KB | 格式: "WAV"
-[DEBUG]    [状态] 当前播放状态: Stopped
-[DEBUG]    [新源] 设置新音频源: "开关量模块一离线.wav"
-[DEBUG]    [媒体状态]  "LoadingMedia" | 距上次状态变化: 0 ms
-[DEBUG]    [加载] setSource() 耗时: 7 ms
-[DEBUG]    [输出模式] TCP网络
-[DEBUG]    [TCP发送] 开始发送到 TCP 音频模块...
-[WARNING]    [TCP发送] ⚠️ 未连接到 TCP 服务器，本地播放（QMediaPlayer）
-[DEBUG]    [延迟播放] 设置 m_pendingPlay=true，等待 BufferedMedia
-[DEBUG]    [总计] playAudio() 总耗时: 7 ms
-[DEBUG]    [媒体] 当前源: "file:///home/linaro/belt-control-data/audio/paddlespeech-fastspeech2_csmsc-spk0/Status/开关量模块一离线.wav"
-[DEBUG]    [媒体] 媒体状态: LoadingMedia
-[DEBUG]    [媒体] 音频可用: false
-[DEBUG]    [媒体] 时长: 0 ms
-[WARNING] ⚠️ [MQTTAutoManager] 模块 2 数据超时
-[DEBUG] 🔊 [MQTTAutoManager] 模块 2 触发离线语音: "/home/linaro/belt-control-data/audio/paddlespeech-fastspeech2_csmsc-spk0/Status/模拟量模块一离线.wav"
-[DEBUG] 📋 CommonControl: 音频加入队列: "模拟量模块一离线.wav" | 队列长度: 1
-[DEBUG]    [媒体状态]  "LoadedMedia" | 距上次状态变化: 141 ms
-[WARNING] ⚠️ [MQTTAutoManager] 模块 0 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 2 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 0 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 2 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 0 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 2 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 0 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 2 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 0 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 2 数据超时
-[DEBUG] [MQTTAutoManager] 模块 0 健康检查 | connected: true | lastDataTime: 1772527674 | timeSinceLastData: 11 s | status: "数据超时" | timeoutCount: 8
-[WARNING] ⚠️ [MQTTAutoManager] 模块 0 数据超时
-[DEBUG] [MQTTAutoManager] 模块 1 健康检查 | connected: true | lastDataTime: 0 | timeSinceLastData: -1 s | status: "等待数据" | timeoutCount: 0
-[DEBUG] [MQTTAutoManager] 模块 2 健康检查 | connected: true | lastDataTime: 1772527674 | timeSinceLastData: 11 s | status: "数据超时" | timeoutCount: 8
-[WARNING] ⚠️ [MQTTAutoManager] 模块 2 数据超时
-[DEBUG] [MQTTAutoManager] 模块 3 健康检查 | connected: true | lastDataTime: 0 | timeSinceLastData: -1 s | status: "等待数据" | timeoutCount: 0
-[WARNING] ⚠️ [MQTTAutoManager] 模块 0 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 2 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 0 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 2 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 0 数据超时
-[WARNING] ⚠️ [MQTTAutoManager] 模块 2 数据超时
+ERROR: No root objects loaded!
+Available import paths:
+  qrc:/qt/qml
+  /app
+  qrc:/qt-project.org/imports
+  /app/qml
+[DEBUG] 🛑 [MqttProtectionMonitor] 停止MQTT保护监控
+[DEBUG] ✅ [MqttProtectionMonitor] MQTT保护监控器已销毁
+[DEBUG] ✅ [MQTTController] 模块 0 取消订阅: "station/status/+"
+[DEBUG] ✅ [MQTTController] 模块 0 取消订阅: "device/status/+"
+[DEBUG] 📡 [DeviceRoleManager] 取消订阅所有主题
+[DEBUG] 🛑 [DeviceRoleManager] MQTT 发布已停止
+[DEBUG] 💾 [DeviceRoleManager] 配置已保存: "/root/.config/belt_control_system/device_role.json"
+[DEBUG] 🛑 AlarmPlaybackService: 停止报警播放服务
+[DEBUG] ✅ AlarmPlaybackService: 报警播放服务已销毁
+[DEBUG] 🛑 SherpaOnnxTTS: 停止TTS服务进程
+[DEBUG] ✅ SherpaOnnxTTS: TTS封装已销毁
+[DEBUG] 📡 停止独立发送线程...
+[DEBUG] ✅ 独立发送线程已停止
+[DEBUG] 📡 停止所有服务
+[DEBUG] ✅ AudioNetworkTcpSender 析构完成
+[DEBUG] ✅ WebSocketClient 析构完成
+[DEBUG] [AudioNetworkSender] 销毁音频网络发送器
+[DEBUG] ✅ ProtectionMonitorService: 保护监控服务已销毁
+[DEBUG] ✅ LocalControl: 就地模式控制已销毁
+[DEBUG] ✅ MaintenanceControl: 检修模式控制已销毁
+[DEBUG] ✅ CommonControl: 公共控制模块已销毁
+[DEBUG] [AudioNetworkSender] 销毁音频网络发送器
+[DEBUG] 📡 停止独立发送线程...
+[DEBUG] ✅ 独立发送线程已停止
+[DEBUG] 📡 停止所有服务
+[DEBUG] ✅ AudioNetworkTcpSender 析构完成
+[DEBUG] ✅ WebSocketClient 析构完成
+[DEBUG] 🔴 [TTSEngineManager] 销毁
+[DEBUG] 🔴 [PaddleSpeech] 适配器销毁
+[DEBUG] ✅ NetworkTask: 网络任务已销毁
+[DEBUG] ✅ ModbusTcpClient: Modbus TCP客户端已销毁
+[DEBUG] ✅ [MQTTAutoManager] 销毁自动管理器
+[DEBUG] 🛑 [MQTTAutoManager] 停止自动管理器
+[DEBUG] ✅ [MQTTAutoManager] 停止重连检查定时器
+[DEBUG] ✅ [MQTTAutoManager] 停止开关量采集定时器
+[DEBUG] ✅ [MQTTAutoManager] 停止模拟量采集定时器
+[DEBUG] ✅ [MQTTAutoManager] 停止健康检查定时器
+[DEBUG] ✅ [MQTTAutoManager] 自动管理器已停止
+[DEBUG] ✅ [MQTTController] 销毁 MQTT 控制器
+[DEBUG] ✅ [MQTTController] 断开所有模块
+[DEBUG] ✅ [DIDataManager] 模块 0 数据已重置（模块离线）
+[DEBUG] ✅ [DIDataManager] 模块 1 数据已重置（模块离线）
+corrupted double-linked list
+
+Application exited with code: 133
+
+========================================
+检测到崩溃：内存错误（SIGTRAP - free() invalid pointer） (exit code 133)
+自动分析 Core Dump
+========================================
+✓ 找到 Core Dump: /tmp/belt-control-cores/core.belt_control_sy.1.1773040957
+  文件大小: 236M
+
+正在分析崩溃原因（这需要几秒钟）...
+
+warning: Can't open file /memfd:pulseaudio (deleted) during file-backed mapping note processing
+
+warning: Can't open file /memfd:JSGCHeap:QtQml (deleted) during file-backed mapping note processing
+
+warning: Can't open file /memfd:JSVMStack:QtQml (deleted) during file-backed mapping note processing
+
+warning: Can't open file /usr/lib/aarch64-linux-gnu/libxcb-dri2.so.0 during file-backed mapping note processing
+
+warning: Can't open file /opt/mali/libmali.so.1 during file-backed mapping note processing
+
+warning: Can't open file /memfd:unknown-usage:QtQml (deleted) during file-backed mapping note processing
+[New LWP 1]
+[New LWP 46]
+[New LWP 39]
+[New LWP 36]
+[New LWP 38]
+[New LWP 47]
+[New LWP 52]
+[New LWP 51]
+[New LWP 54]
+[New LWP 56]
+
+warning: Could not load shared library symbols for 2 libraries, e.g. /opt/mali/libmali.so.1.
+Use the "info sharedlibrary" command to see the complete listing.
+Do you need "set solib-search-path" or "set sysroot"?
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libv4l2.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libpulse.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgbm.so.1
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libglib-2.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /app/lib/libzvbi.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /app/lib/libtheoraenc.so.1
+
+warning: could not find '.gnu_debugaltlink' file for /app/lib/libtheoradec.so.1
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libbrotlidec.so.1
+
+warning: could not find '.gnu_debugaltlink' file for /app/lib/libicui18n.so.67
+
+warning: could not find '.gnu_debugaltlink' file for /app/lib/libicuuc.so.67
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libcap.so.2
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/pulseaudio/libpulsecommon-16.1.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libbrotlicommon.so.1
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstphotography-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstpbutils-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstapp-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstallocators-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstvideo-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstbase-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstreamer-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgobject-2.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstaudio-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgsttag-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgmodule-2.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstdecklink.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstpulseaudio.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstuvch264.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstbasecamerabinsrc-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstvideo4linux2.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstossaudio.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstvulkan.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstvulkan-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstcodecs-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libgstcodecparsers-1.0.so.0
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libvulkan_nouveau.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libvulkan_broadcom.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libvulkan_freedreno.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libvulkan_lvp.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libtinfo.so.6
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libvulkan_gfxstream.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libvulkan_panfrost.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libvulkan_intel.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libvulkan_asahi.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libvulkan_radeon.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libvulkan_virtio.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/libVkLayer_MESA_device_select.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstvideoconvertscale.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstcoreelements.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstplayback.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstaudioconvert.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstaudioresample.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstvolume.so
+
+warning: could not find '.gnu_debugaltlink' file for /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstautodetect.so
+
+warning: 107    ./stdlib/abort.c: No such file or directory
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/aarch64-linux-gnu/libthread_db.so.1".
+Core was generated by `/app/belt_control_system'.
+Program terminated with signal SIGTRAP, Trace/breakpoint trap.
+#0  __GI_abort () at ./stdlib/abort.c:107
+[Current thread is 1 (Thread 0x7f9c061040 (LWP 1))]
+
+========================================
+崩溃分析报告
+========================================
+
+[1] 崩溃位置
+#0  __GI_abort () at ./stdlib/abort.c:107
+#1  0x0000007f965fabf4 in __libc_message_impl (fmt=fmt@entry=0x7f966e4c28 "%s\n") at ../sysdeps/posix/libc_fatal.c:134
+#2  0x0000007f9661210c in malloc_printerr (str=str@entry=0x7f966dfc98 "corrupted double-linked list") at ./malloc/malloc.c:5775
+
+[2] 寄存器状态
+
+[3] Frame 2 详情（avcodec_open2）
+Invalid register `rip'
+warning: 5775   ./malloc/malloc.c: No such file or directory
+#2  0x0000007f9661210c in malloc_printerr (str=str@entry=0x7f966dfc98 "corrupted double-linked list") at ./malloc/malloc.c:5775
+No locals.
+
+[4] Frame 3 详情（open_ffmpeg_codec）
+#3  0x0000007f96612a9c in unlink_chunk (p=p@entry=0x55a4868bb0, av=0x7f96730a50 <main_arena>) at ./malloc/malloc.c:1617
+1617    in ./malloc/malloc.c
+fd = 0x5
+bk = <optimized out>
+
+========================================
+分析完成
+========================================
+
+✓ 分析完成并保存到: /tmp/belt-control-cores/core.belt_control_sy.1.1773040957.analysis.txt
+
+========================================
+崩溃原因摘要
+========================================
+[1] 崩溃位置
+#0  __GI_abort () at ./stdlib/abort.c:107
+#1  0x0000007f965fabf4 in __libc_message_impl (fmt=fmt@entry=0x7f966e4c28 "%s\n") at ../sysdeps/posix/libc_fatal.c:134
+#2  0x0000007f9661210c in malloc_printerr (str=str@entry=0x7f966dfc98 "corrupted double-linked list") at ./malloc/malloc.c:5775
+
+完整分析: /tmp/belt-control-cores/core.belt_control_sy.1.1773040957.analysis.txt
+
+========================================
+参考文档
+========================================
+  Core Dump 分析: docs/2026-01-09/72-Core-Dump分析-编码器初始化崩溃根因.md
+  解决方案: docs/2026-01-09/73-Fix100.12-硬件编码器解决DRM_PRIME问题.md
+
+linaro@enc:~$

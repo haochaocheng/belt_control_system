@@ -15,6 +15,7 @@ qt_add_qml_module(qml_module
         pages/Input1Page.qml
         pages/VoiceManagement.qml  # ✅ 2026-02-11 [Phase 7.45.22]: 语音管理页面
         pages/BatchSynthesisDialog.qml  # ✅ 2026-02-25 [Phase 7.47.2]: 批量语音合成对话框
+        pages/BatchSynthesisContent.qml  # ✅ 2026-03-09 [Phase 7.48.27]: 批量合成内容组件（VoiceManagement引用）
         # ✅ 2026-01-31 [FIX 100.300.112.8.8] 删除重复的 Input1 文件列表（Line 16-24）
         # 保留 Line 27-35 的列表，因为它包含正确的 Screen01.qml
         # ✅ 2026-01-27 [FIX 100.300.52] 添加缺失的 Head 组件

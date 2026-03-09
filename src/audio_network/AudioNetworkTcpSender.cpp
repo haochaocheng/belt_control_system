@@ -1173,6 +1173,14 @@ void AudioNetworkTcpSender::clearOpusCache()
     qDebug() << "🗑️ Opus 缓存已清空（释放了" << count << "个文件的缓存）";
 }
 
+// ✅ 2026-03-09 [Phase 7.48.27]: 移除指定文件的 Opus 缓存
+void AudioNetworkTcpSender::removeFromOpusCache(const QString &filePath)
+{
+    if (m_opusCache.remove(filePath) > 0) {
+        qDebug() << "🗑️ [AudioNetworkTcpSender] 已移除 Opus 缓存:" << filePath;
+    }
+}
+
 int AudioNetworkTcpSender::getCachedFilesCount() const
 {
     // ✅ 2026-01-22 19:00 [FIX 100.292] 获取缓存统计信息
