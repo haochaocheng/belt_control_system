@@ -293,7 +293,9 @@ int main(int argc, char *argv[]) {
         mqttProtectionMonitor.setAlarmPlaybackService(&alarmPlayback);
         // ✅ 2026-03-05 [Phase 7.48.5]: 注入AIDataManager，用于模拟量保护监控
         mqttProtectionMonitor.setAIDataManager(&aiDataManager);
-        mqttProtectionMonitor.setAIBeltMapping(0, systemConfig.machineNumber());  // AI模块0 → 当前皮带
+        mqttProtectionMonitor.setAIBeltMapping(0, systemConfig.machineNumber());  // AI模块0(模拟量模块1) → 当前皮带
+        // ✅ 2026-03-07 [Phase 7.48.19]: 补充模拟量模块2的皮带映射（旧代码遗漏，导致模块2保护查询默认皮带1）
+        mqttProtectionMonitor.setAIBeltMapping(1, systemConfig.machineNumber());  // AI模块1(模拟量模块2) → 当前皮带
         // 连接AIDataManager的channelChanged信号到MqttProtectionMonitor
         QObject::connect(&aiDataManager, &AIDataManager::channelChanged,
                          &mqttProtectionMonitor, &MqttProtectionMonitor::onAIChannelChanged);
@@ -327,6 +329,28 @@ int main(int argc, char *argv[]) {
                          << protectionName << "皮带:" << beltNumber;
             });
         logMessage("Protection trigger -> alarm history DB connection established");
+
+        // ✅ 2026-03-09 [Phase 7.48.24]: 连接模拟量保护触发/恢复信号到报警历史数据库
+        // AI保护触发记录（边沿触发，每次超限只记录一次）
+        QObject::connect(&mqttProtectionMonitor, &MqttProtectionMonitor::analogProtectionTriggered,
+            [&alarmHistoryDB](int beltNumber, const QString &protectionName,
+                              double engineeringValue, const QString &limitType) {
+                QString protectionType = QString("%1号皮带").arg(beltNumber);
+                alarmHistoryDB.saveAlarmTriggered(protectionName + "(" + limitType + ")",
+                                                  protectionType, engineeringValue);
+                qDebug() << "📝 [Main] 模拟量保护触发已记录 -" << protectionName
+                         << limitType << "值:" << engineeringValue << "皮带:" << beltNumber;
+            });
+
+        // AI保护恢复记录
+        QObject::connect(&mqttProtectionMonitor, &MqttProtectionMonitor::analogProtectionRestored,
+            [&alarmHistoryDB](int beltNumber, const QString &protectionName,
+                              double engineeringValue) {
+                alarmHistoryDB.saveAlarmRestored(protectionName);
+                qDebug() << "📝 [Main] 模拟量保护恢复已记录 -" << protectionName
+                         << "值:" << engineeringValue << "皮带:" << beltNumber;
+            });
+        logMessage("Analog protection trigger/restore -> alarm history DB connection established");
 #endif
 
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）

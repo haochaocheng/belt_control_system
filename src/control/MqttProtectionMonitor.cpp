@@ -430,6 +430,8 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
                 m_protectionAlarmActive[alarmKey] = false;
                 qDebug() << "✅ [MqttProtectionMonitor] 模拟量保护恢复:" << protName
                          << "皮带" << beltNumber << "工程量:" << engineeringValue;
+                // ✅ 2026-03-09 [Phase 7.48.24]: 发射恢复信号，记录到报警历史数据库
+                emit analogProtectionRestored(beltNumber, protName, engineeringValue);
             }
             continue;  // 未超限，继续检查下一个保护项
         }
@@ -444,6 +446,11 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         m_protectionAlarmActive[alarmKey] = true;
         qDebug() << "🔔 [MqttProtectionMonitor] 模拟量保护首次触发:" << protName
                  << "皮带" << beltNumber;
+
+        // ✅ 2026-03-09 [Phase 7.48.24]: 发射触发信号，记录到报警历史数据库
+        QString limitType = (limitDirection == AudioPathMapper::UpperLimit) ? "超上限" : "低于下限";
+        emit analogProtectionTriggered(beltNumber, protName, engineeringValue, limitType);
+
         bool useTTS = (prot.value("use_text_to_speech", 0).toInt() == 1);
         QString playMode = prot.value("play_mode", "count").toString();
         int playCount = prot.value("play_count", 3).toInt();

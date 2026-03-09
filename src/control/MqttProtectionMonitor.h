@@ -150,6 +150,26 @@ signals:
     void protectionTriggered(int moduleIndex, int bitIndex, int beltNumber,
                             const QString &protectionName, const QString &audioPath);
 
+    // ✅ 2026-03-09 [Phase 7.48.24]: 模拟量保护触发/恢复信号（记录到报警历史数据库）
+    /**
+     * @brief 模拟量保护触发信号
+     * @param beltNumber 皮带编号
+     * @param protectionName 保护名称（如"温度一"、"甲烷"）
+     * @param engineeringValue 触发时的工程量值
+     * @param limitType 超限类型："超上限" 或 "低于下限"
+     */
+    void analogProtectionTriggered(int beltNumber, const QString &protectionName,
+                                   double engineeringValue, const QString &limitType);
+
+    /**
+     * @brief 模拟量保护恢复信号
+     * @param beltNumber 皮带编号
+     * @param protectionName 保护名称
+     * @param engineeringValue 恢复时的工程量值
+     */
+    void analogProtectionRestored(int beltNumber, const QString &protectionName,
+                                  double engineeringValue);
+
 private slots:
     /**
      * @brief DI位变化槽函数
