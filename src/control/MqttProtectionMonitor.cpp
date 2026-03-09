@@ -314,6 +314,11 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         if (regAddr < 0) {
             continue;  // 未分配的保护项（风速等），跳过
         }
+        // ✅ 2026-03-09 [Phase 7.48.27]: 跳过禁用的保护项
+        int enabledFlag = prot.value("enabled", 1).toInt();
+        if (enabledFlag != 1) {
+            continue;  // 保护已禁用，跳过
+        }
         // 判断模块是否匹配
         QString expectedModule = (aiLocalIndex == 0) ? "模拟量模块1" : "模拟量模块2";
         if (moduleType != expectedModule) {

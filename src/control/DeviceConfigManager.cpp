@@ -1748,6 +1748,7 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     // ✅ 2026-03-05 [Phase 7.48.5]: 扩展INSERT语句，添加3个新列
     // ✅ 2026-03-05 [Phase 7.48.10]: 扩展INSERT语句，添加4个速度保护专用列（共25列）
     // ✅ 2026-03-09 [Phase 7.48.26]: 扩展INSERT语句，添加 sprinkler_enabled 列（共26列）
+    // ✅ 2026-03-09 [Phase 7.48.27]: 扩展INSERT语句，添加 enabled 列（共27列）
     query.prepare(R"(
         INSERT OR REPLACE INTO device_analog_protections
         (device_id, protection_name, module_type, register_address, unit,
@@ -1755,9 +1756,9 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
          protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file,
          play_mode, protection_level, data_timeout, connection_timeout, input_type,
          speed_start_delay, speed_detect_mode, rated_speed, slip_delay,
-         sprinkler_enabled,
+         sprinkler_enabled, enabled,
          updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -1793,6 +1794,8 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     query.addBindValue(protection.value("slip_delay", 10.0).toDouble());
     // ✅ 2026-03-09 [Phase 7.48.26]: 洒水使能
     query.addBindValue(protection.value("sprinkler_enabled", 0).toInt());
+    // ✅ 2026-03-09 [Phase 7.48.27]: 保护启用/禁用
+    query.addBindValue(protection.value("enabled", 1).toInt());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {

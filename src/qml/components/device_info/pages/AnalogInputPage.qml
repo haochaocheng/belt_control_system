@@ -57,6 +57,10 @@ Rectangle {
     property real ratedSpeed: 0.0           // 额定速度（m/s）
     property real slipDelay: 10.0           // 低速打滑延时（秒）
 
+    // ✅ 2026-03-09 [Phase 7.48.27]: 原始通道值（用于冲突对话框取消恢复）
+    property string originalModuleType: ""
+    property int originalRegisterAddress: -1
+
     // 判断当前选中的是否为速度保护
     readonly property bool isSpeedProtection: {
         if (currentProtectionIndex >= 0 && currentProtectionIndex < analogProtectionModel.count) {
@@ -102,25 +106,156 @@ Rectangle {
         //   前8项 = 模拟量模块1 CH0-CH7，后8项 = 模拟量模块2 CH0-CH7
         //   旧映射（Phase 7.48.21）：甲烷/一氧化碳/二氧化碳在模块2，温度/煤流/煤仓高度在模块1
         // 模拟量模块1 CH0-CH7
-        ListElement { name: "速度"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 0 }
-        ListElement { name: "张力"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 1 }
-        ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 2 }
-        ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 3 }
-        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 4 }
-        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "模拟量模块1"; registerAddress: 5 }
-        ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块1"; registerAddress: 6 }
-        ListElement { name: "二氧化碳"; active: false; currentValue: 0.0; unit: "%CO₂"; moduleType: "模拟量模块1"; registerAddress: 7 }
+        ListElement { name: "速度"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 0; enabled: true }
+        ListElement { name: "张力"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 1; enabled: true }
+        ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 2; enabled: true }
+        ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 3; enabled: true }
+        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 4; enabled: true }
+        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "模拟量模块1"; registerAddress: 5; enabled: true }
+        ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块1"; registerAddress: 6; enabled: true }
+        ListElement { name: "二氧化碳"; active: false; currentValue: 0.0; unit: "%CO₂"; moduleType: "模拟量模块1"; registerAddress: 7; enabled: true }
         // 模拟量模块2 CH0-CH7
-        ListElement { name: "硫化氢"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块2"; registerAddress: 0 }
-        ListElement { name: "氧气"; active: false; currentValue: 0.0; unit: "%O₂"; moduleType: "模拟量模块2"; registerAddress: 1 }
-        ListElement { name: "烟雾"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 2 }
-        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 3 }
-        ListElement { name: "温度"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块2"; registerAddress: 4 }
-        ListElement { name: "湿度"; active: false; currentValue: 0.0; unit: "%RH"; moduleType: "模拟量模块2"; registerAddress: 5 }
-        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "模拟量模块2"; registerAddress: 6 }
-        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "模拟量模块2"; registerAddress: 7 }
-        ListElement { name: "气压"; active: false; currentValue: 0.0; unit: "kPa"; moduleType: "未分配"; registerAddress: -1 }
-        ListElement { name: "风速"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "未分配"; registerAddress: -1 }
+        ListElement { name: "硫化氢"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块2"; registerAddress: 0; enabled: true }
+        ListElement { name: "氧气"; active: false; currentValue: 0.0; unit: "%O₂"; moduleType: "模拟量模块2"; registerAddress: 1; enabled: true }
+        ListElement { name: "烟雾"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 2; enabled: true }
+        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 3; enabled: true }
+        ListElement { name: "温度"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块2"; registerAddress: 4; enabled: true }
+        ListElement { name: "湿度"; active: false; currentValue: 0.0; unit: "%RH"; moduleType: "模拟量模块2"; registerAddress: 5; enabled: true }
+        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "模拟量模块2"; registerAddress: 6; enabled: true }
+        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "模拟量模块2"; registerAddress: 7; enabled: true }
+        ListElement { name: "气压"; active: false; currentValue: 0.0; unit: "kPa"; moduleType: "未分配"; registerAddress: -1; enabled: true }
+        ListElement { name: "风速"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "未分配"; registerAddress: -1; enabled: true }
+    }
+
+    // ✅ 2026-03-09 [Phase 7.48.27]: 通道冲突对话框
+    Dialog {
+        id: channelConflictDialog
+        modal: true
+        x: (root.width - width) / 2
+        y: (root.height - height) / 2
+        width: 420
+        height: 220
+
+        property string conflictProtectionName: ""
+        property int conflictProtectionIndex: -1
+        property string newModuleType: ""
+        property int newChannel: -1
+
+        background: Rectangle {
+            color: "#1a2332"
+            border.color: "#F44336"
+            border.width: 2
+            radius: 8
+        }
+
+        contentItem: Column {
+            spacing: 16
+            padding: 16
+
+            Text {
+                text: "通道冲突"
+                font.pixelSize: 18
+                font.weight: Font.Bold
+                color: "#F44336"
+            }
+
+            Text {
+                text: channelConflictDialog.newModuleType + " CH" + channelConflictDialog.newChannel +
+                      " 已被「" + channelConflictDialog.conflictProtectionName + "」占用"
+                font.pixelSize: 14
+                color: "#E0E0E0"
+                wrapMode: Text.WordWrap
+                width: parent.width - 32
+            }
+
+            Text {
+                text: "请选择处理方式："
+                font.pixelSize: 13
+                color: "#9E9E9E"
+            }
+
+            Row {
+                spacing: 10
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                // 交换通道按钮
+                Rectangle {
+                    width: 110; height: 36
+                    color: "#0d3b24"
+                    border.color: "#22C55E"
+                    border.width: 1
+                    radius: 4
+
+                    Text {
+                        text: "交换通道"
+                        font.pixelSize: 14
+                        color: "#22C55E"
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            performChannelSwap()
+                            channelConflictDialog.close()
+                        }
+                    }
+                }
+
+                // 覆盖按钮
+                Rectangle {
+                    width: 110; height: 36
+                    color: "#3b1a0d"
+                    border.color: "#F59E0B"
+                    border.width: 1
+                    radius: 4
+
+                    Text {
+                        text: "覆盖"
+                        font.pixelSize: 14
+                        color: "#F59E0B"
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            performChannelOverride()
+                            channelConflictDialog.close()
+                        }
+                    }
+                }
+
+                // 取消按钮
+                Rectangle {
+                    width: 110; height: 36
+                    color: "#1a2332"
+                    border.color: "#607080"
+                    border.width: 1
+                    radius: 4
+
+                    Text {
+                        text: "取消"
+                        font.pixelSize: 14
+                        color: "#9E9E9E"
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            // 恢复原始通道值
+                            moduleTypeCombo.currentIndex = moduleTypeCombo.model.indexOf(root.originalModuleType)
+                            channelSpin.value = root.originalRegisterAddress
+                            channelConflictDialog.close()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // ========== 主布局：左右分栏 ==========
@@ -191,6 +326,8 @@ Rectangle {
                         // ✅ 2026-01-30 [FIX 100.300.105]: 添加焦点指示器边框
                         border.color: isFocused ? "#2196F3" : "transparent"
                         border.width: isFocused ? 3 : 0
+                        // ✅ 2026-03-09 [Phase 7.48.27]: 禁用保护项半透明显示
+                        opacity: model.enabled ? 1.0 : 0.45
 
                         // ✅ 2026-01-30 [FIX 100.300.105]: 焦点状态判断
                         readonly property bool isFocused: (root.focusSubArea === 0 && root.focusItemIndex === index)
@@ -270,6 +407,15 @@ Rectangle {
                                 text: model.active ? "已激活" : "正常"
                                 font.pixelSize: 12
                                 color: "#9E9E9E"
+                            }
+
+                            // ✅ 2026-03-09 [Phase 7.48.27]: 禁用状态标签
+                            Text {
+                                visible: !model.enabled
+                                text: "禁用"
+                                font.pixelSize: 12
+                                font.weight: Font.Bold
+                                color: "#F44336"
                             }
                         }
 
@@ -1614,6 +1760,58 @@ Rectangle {
                                 }
                             }
 
+                            // ✅ 2026-03-09 [Phase 7.48.27]: 新增 Row 11 右列 - 保护启用/禁用
+                            // ========== 第十一行：保护启用（右列）==========
+                            // 参数索引: 23 - 保护启用
+                            Text {
+                                text: "保护启用:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 2
+                                Layout.row: 11
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 3
+                                Layout.row: 11
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: 40
+
+                                Switch {
+                                    id: enabledSwitch
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    checked: true
+                                    onCheckedChanged: {
+                                        // ✅ 禁用时自动设置通道为"未分配"
+                                        if (!checked) {
+                                            moduleTypeCombo.currentIndex = moduleTypeCombo.model.indexOf("未分配")
+                                            channelSpin.value = -1
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    anchors.left: enabledSwitch.right
+                                    anchors.leftMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: enabledSwitch.checked ? "已启用" : "已禁用"
+                                    font.pixelSize: 18
+                                    color: enabledSwitch.checked ? "#4CAF50" : "#F44336"
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 23) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 23) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
                         }  // GridLayout 结束
                     }
                 }
@@ -1961,6 +2159,175 @@ Rectangle {
                     opacity: 0.3
                 }
 
+                // ✅ 2026-03-09 [Phase 7.48.27]: 通道状态概览面板
+                Rectangle {
+                    id: channelOverviewPanel
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: channelOverviewExpanded ? 150 : 36
+                    color: "#0a1929"
+                    radius: 4
+                    border.color: "#1a3a5c"
+                    border.width: 1
+                    clip: true
+
+                    property bool channelOverviewExpanded: false
+
+                    Behavior on Layout.preferredHeight { NumberAnimation { duration: 200 } }
+
+                    // 点击展开/折叠的标题栏
+                    Rectangle {
+                        id: channelOverviewHeader
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        height: 36
+                        color: "transparent"
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 6
+
+                            Text {
+                                text: channelOverviewPanel.channelOverviewExpanded ? "▼" : "▶"
+                                font.pixelSize: 12
+                                color: "#00d4ff"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: "通道状态概览"
+                                font.pixelSize: 13
+                                font.weight: Font.Bold
+                                color: "#00d4ff"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: "(已用 " + getUsedChannelCount() + "/16)"
+                                font.pixelSize: 11
+                                color: "#607080"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: channelOverviewPanel.channelOverviewExpanded = !channelOverviewPanel.channelOverviewExpanded
+                        }
+                    }
+
+                    // 通道网格（2行 x 9列：1标签+8通道）
+                    Column {
+                        anchors.top: channelOverviewHeader.bottom
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.margins: 8
+                        spacing: 4
+                        visible: channelOverviewPanel.channelOverviewExpanded
+
+                        // 模块1行
+                        Row {
+                            spacing: 3
+                            Text {
+                                text: "模块1"
+                                font.pixelSize: 10
+                                color: "#607080"
+                                width: 40
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Repeater {
+                                model: 8
+                                Rectangle {
+                                    width: (channelOverviewPanel.width - 40 - 8 * 3 - 16) / 8
+                                    height: 42
+                                    radius: 3
+                                    color: getChannelColor("模拟量模块1", index)
+                                    border.color: getChannelBorderColor("模拟量模块1", index)
+                                    border.width: 1
+
+                                    Column {
+                                        anchors.centerIn: parent
+                                        spacing: 1
+                                        Text {
+                                            text: "CH" + index
+                                            font.pixelSize: 9
+                                            color: "#607080"
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                        }
+                                        Text {
+                                            text: getChannelProtectionName("模拟量模块1", index)
+                                            font.pixelSize: 10
+                                            color: getChannelTextColor("模拟量模块1", index)
+                                            font.weight: Font.Medium
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                            elide: Text.ElideRight
+                                            width: parent.parent.width - 4
+                                            horizontalAlignment: Text.AlignHCenter
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: jumpToChannelProtection("模拟量模块1", index)
+                                    }
+                                }
+                            }
+                        }
+
+                        // 模块2行
+                        Row {
+                            spacing: 3
+                            Text {
+                                text: "模块2"
+                                font.pixelSize: 10
+                                color: "#607080"
+                                width: 40
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Repeater {
+                                model: 8
+                                Rectangle {
+                                    width: (channelOverviewPanel.width - 40 - 8 * 3 - 16) / 8
+                                    height: 42
+                                    radius: 3
+                                    color: getChannelColor("模拟量模块2", index)
+                                    border.color: getChannelBorderColor("模拟量模块2", index)
+                                    border.width: 1
+
+                                    Column {
+                                        anchors.centerIn: parent
+                                        spacing: 1
+                                        Text {
+                                            text: "CH" + index
+                                            font.pixelSize: 9
+                                            color: "#607080"
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                        }
+                                        Text {
+                                            text: getChannelProtectionName("模拟量模块2", index)
+                                            font.pixelSize: 10
+                                            color: getChannelTextColor("模拟量模块2", index)
+                                            font.weight: Font.Medium
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                            elide: Text.ElideRight
+                                            width: parent.parent.width - 4
+                                            horizontalAlignment: Text.AlignHCenter
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: jumpToChannelProtection("模拟量模块2", index)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // 底部按钮
                 // ✅ 2026-01-30 [FIX 100.300.105]: 添加焦点指示器
                 // ✅ 2026-03-05 [Phase 7.48.6]: 简化为2按钮布局（与开关量一致）
@@ -2174,6 +2541,13 @@ Rectangle {
             // ✅ 2026-03-09 [Phase 7.48.26]: 加载洒水使能
             sprinklerSwitch.checked = (protection.sprinkler_enabled === 1)
 
+            // ✅ 2026-03-09 [Phase 7.48.27]: 加载保护启用/禁用状态
+            enabledSwitch.checked = (protection.enabled === undefined || protection.enabled === 1)
+
+            // ✅ 2026-03-09 [Phase 7.48.27]: 记录原始通道值（用于冲突对话框取消恢复）
+            root.originalModuleType = protection.module_type || item.moduleType
+            root.originalRegisterAddress = protection.register_address !== undefined ? protection.register_address : item.registerAddress
+
             console.log("✅ [AnalogInputPage] 从数据库加载完整参数:", item.name)
         } else {
             // 数据库中没有，使用ListModel中的基本数据
@@ -2233,6 +2607,13 @@ Rectangle {
             var defaultSprinkler = (item.name === "烟雾" || item.name === "温度一" || item.name === "温度二" || item.name === "温度")
             sprinklerSwitch.checked = defaultSprinkler
 
+            // ✅ 2026-03-09 [Phase 7.48.27]: 保护启用默认值
+            enabledSwitch.checked = true
+
+            // ✅ 2026-03-09 [Phase 7.48.27]: 记录原始通道值
+            root.originalModuleType = item.moduleType
+            root.originalRegisterAddress = item.registerAddress
+
             console.log("⚠️ [AnalogInputPage] 数据库中没有详细参数，使用默认值:", item.name)
         }
 
@@ -2253,6 +2634,8 @@ Rectangle {
         analogProtectionModel.setProperty(root.currentProtectionIndex, "registerAddress", channelSpin.value)
         // ✅ 2026-01-27 [FIX 100.300.31]: 更新单位到 ListModel
         analogProtectionModel.setProperty(root.currentProtectionIndex, "unit", unitCombo.editable ? unitCombo.editText : unitCombo.displayText)
+        // ✅ 2026-03-09 [Phase 7.48.27]: 更新启用状态到 ListModel
+        analogProtectionModel.setProperty(root.currentProtectionIndex, "enabled", enabledSwitch.checked)
 
         console.log("✅ 保存保护数据到内存:", nameField.text)
 
@@ -2281,7 +2664,9 @@ Rectangle {
             "data_timeout": dataTimeoutSpin.value,
             "connection_timeout": connectionTimeoutSpin.value,
             // ✅ 2026-03-09 [Phase 7.48.26]: 保存洒水使能
-            "sprinkler_enabled": sprinklerSwitch.checked ? 1 : 0
+            "sprinkler_enabled": sprinklerSwitch.checked ? 1 : 0,
+            // ✅ 2026-03-09 [Phase 7.48.27]: 保存保护启用/禁用
+            "enabled": enabledSwitch.checked ? 1 : 0
         }
 
         // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用字段
@@ -2292,14 +2677,21 @@ Rectangle {
             protection["slip_delay"] = slipDelaySpin.value
         }
 
-        // ✅ 2026-03-09 [Phase 7.48.26]: 重复通道校验（保存前检查）
+        // ✅ 2026-03-09 [Phase 7.48.27]: 重复通道校验 — 弹出冲突对话框（替代旧的console.warn）
+        // 旧代码：console.warn("⚠️ 通道冲突!") — 仅打印日志，用户无感知
+        // 新代码：弹出对话框让用户选择：交换通道/覆盖/取消
         if (moduleTypeCombo.currentText !== "未分配" && channelSpin.value >= 0) {
             for (var i = 0; i < analogProtectionModel.count; i++) {
                 if (i === root.currentProtectionIndex) continue  // 跳过自身
                 var other = analogProtectionModel.get(i)
                 if (other.moduleType === moduleTypeCombo.currentText && other.registerAddress === channelSpin.value) {
-                    console.warn("⚠️ [AnalogInputPage] 通道冲突! " + nameField.text + " 与 " + other.name +
-                                 " 使用相同通道: " + moduleTypeCombo.currentText + " CH" + channelSpin.value)
+                    // 发现冲突 — 弹出对话框，中断保存流程
+                    channelConflictDialog.conflictProtectionName = other.name
+                    channelConflictDialog.conflictProtectionIndex = i
+                    channelConflictDialog.newModuleType = moduleTypeCombo.currentText
+                    channelConflictDialog.newChannel = channelSpin.value
+                    channelConflictDialog.open()
+                    return  // 中断保存，等待用户选择
                 }
             }
         }
@@ -2322,6 +2714,199 @@ Rectangle {
             // TTS合成：使用TTS生成的.wav文件
             // 方向性保护（速度/张力/电压）有上下限两个音频，这里显示基础名
             return protectionName + ".wav"
+        }
+    }
+
+    // ✅ 2026-03-09 [Phase 7.48.27]: 通道概览面板辅助函数
+
+    // 获取指定通道上的保护名称
+    function getChannelProtectionName(moduleType, channelIndex) {
+        for (var i = 0; i < analogProtectionModel.count; i++) {
+            var item = analogProtectionModel.get(i)
+            if (item.moduleType === moduleType && item.registerAddress === channelIndex) {
+                return item.name
+            }
+        }
+        return "空闲"
+    }
+
+    // 获取通道背景颜色
+    function getChannelColor(moduleType, channelIndex) {
+        for (var i = 0; i < analogProtectionModel.count; i++) {
+            var item = analogProtectionModel.get(i)
+            if (item.moduleType === moduleType && item.registerAddress === channelIndex) {
+                if (!item.enabled) return "#1a1a2e"  // 深色=禁用
+                return "#0d2818"   // 绿色调=已占用
+            }
+        }
+        return "#141920"  // 默认深色=空闲
+    }
+
+    // 获取通道边框颜色
+    function getChannelBorderColor(moduleType, channelIndex) {
+        for (var i = 0; i < analogProtectionModel.count; i++) {
+            var item = analogProtectionModel.get(i)
+            if (item.moduleType === moduleType && item.registerAddress === channelIndex) {
+                if (!item.enabled) return "#475569"  // 灰色=禁用
+                if (i === root.currentProtectionIndex) return "#00d4ff"  // 青色=当前选中
+                return "#22C55E"   // 绿色=已占用
+            }
+        }
+        return "#334155"  // 中性=空闲
+    }
+
+    // 获取通道文字颜色
+    function getChannelTextColor(moduleType, channelIndex) {
+        for (var i = 0; i < analogProtectionModel.count; i++) {
+            var item = analogProtectionModel.get(i)
+            if (item.moduleType === moduleType && item.registerAddress === channelIndex) {
+                if (!item.enabled) return "#F44336"  // 红色=禁用
+                if (i === root.currentProtectionIndex) return "#00d4ff"  // 青色=当前选中
+                return "#E0E0E0"   // 白色=正常
+            }
+        }
+        return "#607080"  // 灰色=空闲
+    }
+
+    // 获取已使用通道数
+    function getUsedChannelCount() {
+        var count = 0
+        for (var i = 0; i < analogProtectionModel.count; i++) {
+            var item = analogProtectionModel.get(i)
+            if (item.moduleType !== "未分配" && item.registerAddress >= 0 && item.enabled) {
+                count++
+            }
+        }
+        return count
+    }
+
+    // 点击通道跳转到对应保护项
+    function jumpToChannelProtection(moduleType, channelIndex) {
+        for (var i = 0; i < analogProtectionModel.count; i++) {
+            var item = analogProtectionModel.get(i)
+            if (item.moduleType === moduleType && item.registerAddress === channelIndex) {
+                root.currentProtectionIndex = i
+                root.focusItemIndex = i
+                root.focusSubArea = 0
+                loadProtectionData(i)
+                return
+            }
+        }
+        console.log("ℹ️ [AnalogInputPage] 通道 " + moduleType + " CH" + channelIndex + " 空闲，无保护项")
+    }
+
+    // ✅ 2026-03-09 [Phase 7.48.27]: 通道交换 — 两个保护项交换通道
+    function performChannelSwap() {
+        var currentIdx = root.currentProtectionIndex
+        var otherIdx = channelConflictDialog.conflictProtectionIndex
+        if (currentIdx < 0 || otherIdx < 0) return
+
+        var currentItem = analogProtectionModel.get(currentIdx)
+        var otherItem = analogProtectionModel.get(otherIdx)
+
+        // 当前保护的原始通道 → 给对方
+        var origModule = root.originalModuleType
+        var origChannel = root.originalRegisterAddress
+
+        // 新通道（用户选择的）→ 给当前保护
+        var newModule = channelConflictDialog.newModuleType
+        var newChannel = channelConflictDialog.newChannel
+
+        // 1. 从DB加载对方完整数据，修改通道，保存
+        var otherFullData = deviceConfigMgr.loadAnalogProtection(root.deviceId, otherItem.name)
+        if (otherFullData && otherFullData.protection_name) {
+            otherFullData["module_type"] = origModule
+            otherFullData["register_address"] = origChannel
+            otherFullData["channel_number"] = origChannel
+            deviceConfigMgr.saveAnalogProtection(root.deviceId, otherFullData)
+        }
+
+        // 2. 更新对方的ListModel
+        analogProtectionModel.setProperty(otherIdx, "moduleType", origModule)
+        analogProtectionModel.setProperty(otherIdx, "registerAddress", origChannel)
+
+        // 3. 更新当前保护的ListModel
+        analogProtectionModel.setProperty(currentIdx, "moduleType", newModule)
+        analogProtectionModel.setProperty(currentIdx, "registerAddress", newChannel)
+
+        // 4. 保存当前保护（调用正常保存流程，此时冲突已解决）
+        doSaveProtectionToDb()
+
+        console.log("✅ [AnalogInputPage] 通道交换完成: " + currentItem.name + " ↔ " + otherItem.name)
+    }
+
+    // ✅ 2026-03-09 [Phase 7.48.27]: 通道覆盖 — 将对方设为未分配，当前保护占用其通道
+    function performChannelOverride() {
+        var otherIdx = channelConflictDialog.conflictProtectionIndex
+        if (otherIdx < 0) return
+
+        var otherItem = analogProtectionModel.get(otherIdx)
+
+        // 1. 从DB加载对方完整数据，设为未分配，保存
+        var otherFullData = deviceConfigMgr.loadAnalogProtection(root.deviceId, otherItem.name)
+        if (otherFullData && otherFullData.protection_name) {
+            otherFullData["module_type"] = "未分配"
+            otherFullData["register_address"] = -1
+            otherFullData["channel_number"] = -1
+            deviceConfigMgr.saveAnalogProtection(root.deviceId, otherFullData)
+        }
+
+        // 2. 更新对方的ListModel
+        analogProtectionModel.setProperty(otherIdx, "moduleType", "未分配")
+        analogProtectionModel.setProperty(otherIdx, "registerAddress", -1)
+
+        // 3. 保存当前保护
+        doSaveProtectionToDb()
+
+        console.log("✅ [AnalogInputPage] 通道覆盖完成: " + otherItem.name + " 已设为未分配")
+    }
+
+    // ✅ 2026-03-09 [Phase 7.48.27]: 内部保存函数（跳过冲突检查，直接保存到DB）
+    function doSaveProtectionToDb() {
+        if (root.currentProtectionIndex < 0 || root.currentProtectionIndex >= analogProtectionModel.count) return
+
+        // 更新ListModel
+        analogProtectionModel.setProperty(root.currentProtectionIndex, "name", nameField.text)
+        analogProtectionModel.setProperty(root.currentProtectionIndex, "moduleType", moduleTypeCombo.currentText)
+        analogProtectionModel.setProperty(root.currentProtectionIndex, "registerAddress", channelSpin.value)
+        analogProtectionModel.setProperty(root.currentProtectionIndex, "unit", unitCombo.editable ? unitCombo.editText : unitCombo.displayText)
+        analogProtectionModel.setProperty(root.currentProtectionIndex, "enabled", enabledSwitch.checked)
+
+        var protection = {
+            "protection_name": nameField.text,
+            "module_type": moduleTypeCombo.currentText,
+            "register_address": channelSpin.value,
+            "channel_number": channelSpin.value,
+            "upper_limit": upperLimitSpin.value,
+            "lower_limit": lowerLimitSpin.value,
+            "range_value": rangeSpin.value,
+            "unit": unitCombo.editable ? unitCombo.editText : unitCombo.displayText,
+            "protection_delay": delaySpin.realValue,
+            "play_count": playCountSpin.value,
+            "play_duration": durationSpin.realValue,
+            "tts_text": ttsTextField.text,
+            "audio_file": audioField.text,
+            "audio_source_mode": root.audioSourceMode,
+            "play_mode": root.playModeSelection,
+            "protection_level": root.protectionLevel,
+            "input_type": root.inputType,
+            "data_timeout": dataTimeoutSpin.value,
+            "connection_timeout": connectionTimeoutSpin.value,
+            "sprinkler_enabled": sprinklerSwitch.checked ? 1 : 0,
+            "enabled": enabledSwitch.checked ? 1 : 0
+        }
+
+        if (root.isSpeedProtection) {
+            protection["speed_start_delay"] = speedStartDelaySpin.value
+            protection["speed_detect_mode"] = root.speedDetectMode
+            protection["rated_speed"] = ratedSpeedSpin.realValue
+            protection["slip_delay"] = slipDelaySpin.value
+        }
+
+        if (deviceConfigMgr.saveAnalogProtection(root.deviceId, protection)) {
+            console.log("✅ [AnalogInputPage] 保存到数据库成功:", nameField.text)
+        } else {
+            console.error("❌ [AnalogInputPage] 保存到数据库失败:", nameField.text)
         }
     }
 
