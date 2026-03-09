@@ -226,9 +226,10 @@ private:
     QMap<QString, bool> m_protectionAlarmActive;
 
     // ✅ 2026-03-09 [Phase 7.48.26]: 洒水控制相关成员
+    // ✅ 2026-03-09 [Phase 7.48.28]: 改为多洒水支持（8个独立洒水装置）
     MQTTController *m_mqttController;     ///< MQTT控制器（用于发布洒水命令）
-    QMap<QString, bool> m_sprinklerTriggerSources;  ///< 洒水触发源（key=皮带:保护名称, value=是否触发中）
-    bool m_sprinklerActive;               ///< 洒水是否已激活
+    QMap<int, QMap<QString, bool>> m_sprinklerTriggerSources;  ///< 洒水触发源（外层key=sprinkler_index 1-8, 内层key=皮带:保护名称）
+    QMap<int, bool> m_sprinklerActive;    ///< 各洒水是否已激活（key=sprinkler_index 1-8）
 
     /**
      * @brief 检查洒水激活状态
@@ -239,10 +240,11 @@ private:
     void checkSprinklerActivation(int beltNumber, const QString &protectionName, bool exceeded);
 
     /**
-     * @brief 发布洒水控制命令
+     * @brief 发布洒水控制命令（多洒水版本）
+     * @param sprinklerIndex 洒水索引（1-8）
      * @param activate true=启动洒水, false=停止洒水
      */
-    void publishSprinklerCommand(bool activate);
+    void publishSprinklerCommand(int sprinklerIndex, bool activate);
 };
 
 #endif // MQTTPROTECTIONMONITOR_H

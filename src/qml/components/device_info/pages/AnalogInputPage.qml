@@ -61,6 +61,22 @@ Rectangle {
     property string originalModuleType: ""
     property int originalRegisterAddress: -1
 
+    // ✅ 2026-03-09: 实时通道冲突检测（更换通道时立即提示，不等到保存）
+    property string channelConflictWarning: ""
+
+    function checkChannelConflictRealtime() {
+        channelConflictWarning = ""
+        if (moduleTypeCombo.currentText === "未分配" || channelSpin.value < 0) return
+        for (var i = 0; i < analogProtectionModel.count; i++) {
+            if (i === root.currentProtectionIndex) continue
+            var other = analogProtectionModel.get(i)
+            if (other.moduleType === moduleTypeCombo.currentText && other.registerAddress === channelSpin.value) {
+                channelConflictWarning = "⚠ 该通道已被「" + other.name + "」占用"
+                return
+            }
+        }
+    }
+
     // 判断当前选中的是否为速度保护
     readonly property bool isSpeedProtection: {
         if (currentProtectionIndex >= 0 && currentProtectionIndex < analogProtectionModel.count) {
@@ -375,47 +391,43 @@ Rectangle {
                             height: parent.height
                             color: "#2196F3"
                             anchors.left: parent.left
+                            z: 1
                         }
 
-                        // ✅ 2026-01-26 [FIX 100.300.25.5]: 模拟量名称居中显示
-                        // ✅ 2026-01-30 [FIX 100.300.105]: 根据焦点状态调整文字样式
-                        Text {
-                            text: model.name
-                            // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整字体，使二级标题比一级标题小
-                            font.pixelSize: 14  // 从 16 改为 14（与一级标题相同）
-                            font.weight: isFocused ? Font.Bold : Font.Normal
-                            color: isFocused ? "#E0E0E0" : "#9E9E9E"
-                            anchors.centerIn: parent
-                        }
+                        // ✅ 2026-03-09 [Phase 7.48.28]: 使用 RowLayout 替代 anchors 定位
+                        // 原因：anchors.centerIn + anchors.right 在设备上渲染不一致导致重叠
+                        // 修改：RowLayout 强制按顺序排列名称和状态，不会重叠
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 6
+                            spacing: 4
 
-                        // ✅ 2026-01-26 [FIX 100.300.25.5]: 状态指示放在最右侧
-                        Row {
-                            spacing: 8
-                            anchors.right: parent.right
-                            anchors.rightMargin: 20
-                            anchors.verticalCenter: parent.verticalCenter
+                            // 模拟量名称
+                            Text {
+                                text: model.name
+                                font.pixelSize: 14
+                                font.weight: isFocused ? Font.Bold : Font.Normal
+                                color: isFocused ? "#E0E0E0" : "#9E9E9E"
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideRight
+                            }
 
+                            // 状态指示方块
                             Rectangle {
-                                width: 8
-                                height: 8
-                                radius: 2
-                                color: model.active ? "#F44336" : "#4CAF50"  // 红色激活，绿色正常
-                                anchors.verticalCenter: parent.verticalCenter
+                                width: 8; height: 8; radius: 2
+                                color: !model.enabled ? "#607080" : (model.active ? "#F44336" : "#4CAF50")
+                                Layout.alignment: Qt.AlignVCenter
                             }
 
+                            // 状态文字
                             Text {
-                                text: model.active ? "已激活" : "正常"
-                                font.pixelSize: 12
-                                color: "#9E9E9E"
-                            }
-
-                            // ✅ 2026-03-09 [Phase 7.48.27]: 禁用状态标签
-                            Text {
-                                visible: !model.enabled
-                                text: "禁用"
-                                font.pixelSize: 12
-                                font.weight: Font.Bold
-                                color: "#F44336"
+                                text: !model.enabled ? "保护禁用" : (model.active ? "已激活" : "正常")
+                                font.pixelSize: 11
+                                font.weight: !model.enabled ? Font.Bold : Font.Normal
+                                color: !model.enabled ? "#F44336" : "#9E9E9E"
+                                Layout.alignment: Qt.AlignVCenter
                             }
                         }
 
@@ -635,6 +647,8 @@ Rectangle {
                                         if (currentText === "未分配") {
                                             channelSpin.value = -1
                                         }
+                                        // ✅ 2026-03-09: 切换模块类型时也检测冲突
+                                        root.checkChannelConflictRealtime()
                                     }
                                 }
 
@@ -936,7 +950,7 @@ Rectangle {
                                 Layout.row: 3
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: 300
-                                implicitHeight: channelSpin.implicitHeight
+                                implicitHeight: channelSpin.implicitHeight + (channelConflictText.visible ? channelConflictText.height + 2 : 0)
 
                                 DeviceInfo.CustomSpinBox {
                                     id: channelSpin
@@ -944,10 +958,29 @@ Rectangle {
                                     from: -1
                                     to: 7
                                     editable: true
-                                    anchors.fill: parent
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
                                     keyboardManager: root.keyboardManager
                                     // ✅ 2026-03-09 [Phase 7.48.26]: 当模块类型为"未分配"时禁用
                                     enabled: moduleTypeCombo.currentText !== "未分配"
+                                    // ✅ 2026-03-09: 更换通道时立即检测冲突
+                                    onValueChanged: root.checkChannelConflictRealtime()
+                                }
+
+                                // ✅ 2026-03-09: 通道冲突实时警告（更换通道编号时立即显示）
+                                Text {
+                                    id: channelConflictText
+                                    anchors.top: channelSpin.bottom
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.topMargin: 2
+                                    visible: root.channelConflictWarning !== ""
+                                    text: root.channelConflictWarning
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                    color: "#F59E0B"
+                                    wrapMode: Text.WordWrap
                                 }
 
                                 Rectangle {
@@ -1812,6 +1845,48 @@ Rectangle {
                                 }
                             }
 
+                            // ✅ 2026-03-09: 新增 Row 12 左列 - 洒水选择（仅当洒水使能时显示）
+                            // ========== 第十二行：洒水选择（左列）==========
+                            // 参数索引: 24 - 洒水选择
+                            Text {
+                                text: "洒水选择:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 12
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                                visible: sprinklerSwitch.checked
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 12
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: sprinklerIndexCombo.implicitHeight
+                                visible: sprinklerSwitch.checked
+
+                                DeviceInfo.CustomComboBox {
+                                    id: sprinklerIndexCombo
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    keyboardManager: root.keyboardManager
+                                    model: ["无", "洒水1", "洒水2", "洒水3", "洒水4", "洒水5", "洒水6", "洒水7", "洒水8"]
+                                    currentIndex: 0  // 0=无, 1-8=洒水1-8
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 24) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 24) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
                         }  // GridLayout 结束
                     }
                 }
@@ -2475,6 +2550,9 @@ Rectangle {
             return
         }
 
+        // ✅ 2026-03-09: 切换保护项时清除通道冲突警告
+        root.channelConflictWarning = ""
+
         var item = analogProtectionModel.get(index)
 
         // ✅ 2026-01-25 [数据库集成] 从数据库加载完整的保护参数
@@ -2540,6 +2618,9 @@ Rectangle {
 
             // ✅ 2026-03-09 [Phase 7.48.26]: 加载洒水使能
             sprinklerSwitch.checked = (protection.sprinkler_enabled === 1)
+
+            // ✅ 2026-03-09: 加载洒水索引（0=无, 1-8=洒水1-8）
+            sprinklerIndexCombo.currentIndex = protection.sprinkler_index || 0
 
             // ✅ 2026-03-09 [Phase 7.48.27]: 加载保护启用/禁用状态
             enabledSwitch.checked = (protection.enabled === undefined || protection.enabled === 1)
@@ -2665,6 +2746,8 @@ Rectangle {
             "connection_timeout": connectionTimeoutSpin.value,
             // ✅ 2026-03-09 [Phase 7.48.26]: 保存洒水使能
             "sprinkler_enabled": sprinklerSwitch.checked ? 1 : 0,
+            // ✅ 2026-03-09: 保存洒水索引（0=无, 1-8=洒水1-8）
+            "sprinkler_index": sprinklerIndexCombo.currentIndex,
             // ✅ 2026-03-09 [Phase 7.48.27]: 保存保护启用/禁用
             "enabled": enabledSwitch.checked ? 1 : 0
         }
@@ -2893,6 +2976,7 @@ Rectangle {
             "data_timeout": dataTimeoutSpin.value,
             "connection_timeout": connectionTimeoutSpin.value,
             "sprinkler_enabled": sprinklerSwitch.checked ? 1 : 0,
+            "sprinkler_index": sprinklerIndexCombo.currentIndex,
             "enabled": enabledSwitch.checked ? 1 : 0
         }
 
@@ -2960,7 +3044,10 @@ Rectangle {
                     currentValue: p.current_value || 0.0,
                     unit: p.unit || "m/s",
                     moduleType: p.module_type,
-                    registerAddress: p.register_address
+                    registerAddress: p.register_address,
+                    // ✅ 2026-03-09 [Phase 7.48.28]: 加载 enabled 属性，修复列表全部显示"保护禁用"
+                    // 原因：之前 append 时未包含 enabled，model.enabled 为 undefined（falsy）
+                    enabled: (p.enabled === undefined || p.enabled === 1) ? true : false
                 })
             }
 

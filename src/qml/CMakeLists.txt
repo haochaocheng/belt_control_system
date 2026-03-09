@@ -102,6 +102,10 @@ qt_add_qml_module(qml_module
         components/device_info/pages/TensionControlPage.qml
         components/device_info/pages/TensionControlListPanel.qml
         components/device_info/pages/TensionControlConfigPanel.qml
+        # ✅ 2026-03-09: 洒水控制页面组件
+        components/device_info/pages/SprinklerControlPage.qml
+        components/device_info/pages/SprinklerListPanel.qml
+        components/device_info/pages/SprinklerConfigPanel.qml
         # ✅ 2026-02-07 [Phase 7.39.21]: CAN 控制页面组件
         components/device_info/pages/CANControlPage.qml
         components/device_info/pages/CANListPanel.qml

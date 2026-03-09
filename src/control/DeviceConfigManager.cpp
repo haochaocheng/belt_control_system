@@ -226,6 +226,15 @@ bool DeviceConfigManager::createTables()
         )
     )");
 
+    // ✅ 2026-03-09: 扩展洒水输出配置表，支持8个独立洒水装置
+    query.exec("ALTER TABLE sprinkler_output_config ADD COLUMN sprinkler_index INTEGER DEFAULT 1");
+    query.exec("ALTER TABLE sprinkler_output_config ADD COLUMN sprinkler_name TEXT DEFAULT '洒水1'");
+    query.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_sprinkler_config_index ON sprinkler_output_config(sprinkler_index)");
+
+    // ✅ 2026-03-09: 添加洒水索引列到保护表（0=无洒水, 1-8=洒水1-8）
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN sprinkler_index INTEGER DEFAULT 0");
+    query.exec("ALTER TABLE device_digital_protections ADD COLUMN sprinkler_index INTEGER DEFAULT 0");
+
     // ✅ 2026-02-02 [参数持久化]: 添加电机配置表
     // 5. 电机配置表
     QString createMotorConfigTable = R"(
@@ -1293,6 +1302,44 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移013已执行过，跳过";
     }
+
+    // ✅ 2026-03-09: 迁移014 - 扩展洒水控制为8个独立洒水装置
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 014（8个独立洒水）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '014_eight_sprinklers'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移014: 初始化8个独立洒水配置";
+        QSqlQuery fix(m_database);
+
+        // 更新现有行为洒水1（如果sprinkler_index未设置）
+        fix.exec("UPDATE sprinkler_output_config SET sprinkler_index = 1, sprinkler_name = '洒水1' WHERE sprinkler_index IS NULL OR sprinkler_index = 0");
+        qDebug() << "  ✅ 现有洒水配置更新为洒水1";
+
+        // 插入洒水2-8（不存在才插入）
+        for (int i = 2; i <= 8; i++) {
+            fix.prepare(R"(
+                INSERT INTO sprinkler_output_config (sprinkler_index, sprinkler_name, module_type, channel, mqtt_topic, enabled)
+                SELECT ?, ?, '继电器模块', ?, 'belt_control/relay/module1/control', 1
+                WHERE NOT EXISTS (SELECT 1 FROM sprinkler_output_config WHERE sprinkler_index = ?)
+            )");
+            fix.addBindValue(i);
+            fix.addBindValue(QString("洒水%1").arg(i));
+            fix.addBindValue(i - 1);  // channel: 洒水N使用通道N-1
+            fix.addBindValue(i);
+            fix.exec();
+        }
+        qDebug() << "  ✅ 洒水2-8初始化完成";
+
+        // 向后兼容：已启用洒水但未设置洒水索引的保护项，默认连接洒水1
+        fix.exec("UPDATE device_analog_protections SET sprinkler_index = 1 WHERE sprinkler_enabled = 1 AND (sprinkler_index IS NULL OR sprinkler_index = 0)");
+        int aiFixed = fix.numRowsAffected();
+        fix.exec("UPDATE device_digital_protections SET sprinkler_index = 1 WHERE sprinkler_enabled = 1 AND (sprinkler_index IS NULL OR sprinkler_index = 0)");
+        int diFixed = fix.numRowsAffected();
+        qDebug() << "  ✅ 向后兼容: 模拟量" << aiFixed << "条, 开关量" << diFixed << "条 → 默认洒水1";
+
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('014_eight_sprinklers')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移014已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -1640,12 +1687,13 @@ bool DeviceConfigManager::saveDigitalProtection(int deviceId, const QVariantMap 
 
     QSqlQuery query(m_database);
     // ✅ 2026-03-09 [Phase 7.48.26]: 扩展INSERT语句，添加 sprinkler_enabled 列
+    // ✅ 2026-03-09: 扩展INSERT语句，添加 sprinkler_index 列
     query.prepare(R"(
         INSERT OR REPLACE INTO device_digital_protections
         (device_id, protection_name, module_type, register_address, channel_number,
          protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file,
-         play_mode, protection_level, sprinkler_enabled, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         play_mode, protection_level, sprinkler_enabled, sprinkler_index, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -1667,6 +1715,8 @@ bool DeviceConfigManager::saveDigitalProtection(int deviceId, const QVariantMap 
     query.addBindValue(protection.value("protection_level", 1).toInt());
     // ✅ 2026-03-09 [Phase 7.48.26]: 洒水使能
     query.addBindValue(protection.value("sprinkler_enabled", 0).toInt());
+    // ✅ 2026-03-09: 洒水索引（0=无洒水, 1-8=洒水1-8）
+    query.addBindValue(protection.value("sprinkler_index", 0).toInt());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
@@ -1749,6 +1799,7 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     // ✅ 2026-03-05 [Phase 7.48.10]: 扩展INSERT语句，添加4个速度保护专用列（共25列）
     // ✅ 2026-03-09 [Phase 7.48.26]: 扩展INSERT语句，添加 sprinkler_enabled 列（共26列）
     // ✅ 2026-03-09 [Phase 7.48.27]: 扩展INSERT语句，添加 enabled 列（共27列）
+    // ✅ 2026-03-09: 扩展INSERT语句，添加 sprinkler_index 列（共28列）
     query.prepare(R"(
         INSERT OR REPLACE INTO device_analog_protections
         (device_id, protection_name, module_type, register_address, unit,
@@ -1756,9 +1807,9 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
          protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file,
          play_mode, protection_level, data_timeout, connection_timeout, input_type,
          speed_start_delay, speed_detect_mode, rated_speed, slip_delay,
-         sprinkler_enabled, enabled,
+         sprinkler_enabled, enabled, sprinkler_index,
          updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -1796,6 +1847,8 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     query.addBindValue(protection.value("sprinkler_enabled", 0).toInt());
     // ✅ 2026-03-09 [Phase 7.48.27]: 保护启用/禁用
     query.addBindValue(protection.value("enabled", 1).toInt());
+    // ✅ 2026-03-09: 洒水索引（0=无洒水, 1-8=洒水1-8）
+    query.addBindValue(protection.value("sprinkler_index", 0).toInt());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
@@ -1906,6 +1959,91 @@ bool DeviceConfigManager::saveSprinklerOutputConfig(const QVariantMap &config)
 
     qDebug() << "✅ [DeviceConfigManager] 洒水输出配置已保存";
     return true;
+}
+
+// ✅ 2026-03-09: 8个独立洒水装置配置管理
+
+QVariantMap DeviceConfigManager::loadSprinklerConfig(int sprinklerIndex)
+{
+    QSqlQuery query(m_database);
+    query.prepare("SELECT * FROM sprinkler_output_config WHERE sprinkler_index = ?");
+    query.addBindValue(sprinklerIndex);
+
+    if (!query.exec() || !query.next()) {
+        // 返回默认配置
+        QVariantMap defaultConfig;
+        defaultConfig["sprinkler_index"] = sprinklerIndex;
+        defaultConfig["sprinkler_name"] = QString("洒水%1").arg(sprinklerIndex);
+        defaultConfig["module_type"] = QString("继电器模块");
+        defaultConfig["channel"] = sprinklerIndex - 1;
+        defaultConfig["mqtt_topic"] = QString("belt_control/relay/module1/control");
+        defaultConfig["enabled"] = 1;
+        qDebug() << "⚠️ [DeviceConfigManager] 洒水" << sprinklerIndex << "配置不存在，返回默认值";
+        return defaultConfig;
+    }
+
+    return queryToMap(query);
+}
+
+bool DeviceConfigManager::saveSprinklerConfig(int sprinklerIndex, const QVariantMap &config)
+{
+    QSqlQuery query(m_database);
+    // 先尝试更新
+    query.prepare(R"(
+        UPDATE sprinkler_output_config
+        SET sprinkler_name = ?, module_type = ?, channel = ?, mqtt_topic = ?, enabled = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE sprinkler_index = ?
+    )");
+    query.addBindValue(config.value("sprinkler_name", QString("洒水%1").arg(sprinklerIndex)).toString());
+    query.addBindValue(config.value("module_type", "继电器模块").toString());
+    query.addBindValue(config.value("channel", sprinklerIndex - 1).toInt());
+    query.addBindValue(config.value("mqtt_topic", "belt_control/relay/module1/control").toString());
+    query.addBindValue(config.value("enabled", 1).toInt());
+    query.addBindValue(sprinklerIndex);
+
+    if (!query.exec()) {
+        QString error = QString("保存洒水%1配置失败: %2").arg(sprinklerIndex).arg(query.lastError().text());
+        qCritical() << error;
+        emit databaseError(error);
+        return false;
+    }
+
+    if (query.numRowsAffected() == 0) {
+        // 不存在，插入新记录
+        query.prepare(R"(
+            INSERT INTO sprinkler_output_config (sprinkler_index, sprinkler_name, module_type, channel, mqtt_topic, enabled)
+            VALUES (?, ?, ?, ?, ?, ?)
+        )");
+        query.addBindValue(sprinklerIndex);
+        query.addBindValue(config.value("sprinkler_name", QString("洒水%1").arg(sprinklerIndex)).toString());
+        query.addBindValue(config.value("module_type", "继电器模块").toString());
+        query.addBindValue(config.value("channel", sprinklerIndex - 1).toInt());
+        query.addBindValue(config.value("mqtt_topic", "belt_control/relay/module1/control").toString());
+        query.addBindValue(config.value("enabled", 1).toInt());
+
+        if (!query.exec()) {
+            QString error = QString("插入洒水%1配置失败: %2").arg(sprinklerIndex).arg(query.lastError().text());
+            qCritical() << error;
+            emit databaseError(error);
+            return false;
+        }
+    }
+
+    qDebug() << "✅ [DeviceConfigManager] 洒水" << sprinklerIndex << "配置已保存";
+    return true;
+}
+
+QVariantList DeviceConfigManager::loadAllSprinklerConfigs()
+{
+    QSqlQuery query(m_database);
+    query.prepare("SELECT * FROM sprinkler_output_config ORDER BY sprinkler_index");
+
+    if (!query.exec()) {
+        qWarning() << "加载所有洒水配置失败:" << query.lastError().text();
+        return QVariantList();
+    }
+
+    return queryToList(query);
 }
 
 // ========== 实时状态更新 ==========

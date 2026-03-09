@@ -247,7 +247,7 @@ Item {
         console.log("✅ [handleUpKey] 被调用 - currentCategory:", currentCategory, "currentFocusArea:", currentFocusArea)
 
         // 串口控制页面特殊处理
-        if (currentCategory === 6 && currentFocusArea === 2) {
+        if (currentCategory === 7 && currentFocusArea === 2) {
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined" && currentPage.focusSubArea === 1) {
                 var serialPage = serialPortControlPageLoader.item
@@ -271,7 +271,7 @@ Item {
         console.log("✅ [handleDownKey] 被调用 - currentCategory:", currentCategory, "currentFocusArea:", currentFocusArea)
 
         // 串口控制页面特殊处理
-        if (currentCategory === 6 && currentFocusArea === 2) {
+        if (currentCategory === 7 && currentFocusArea === 2) {
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined" && currentPage.focusSubArea === 1) {
                 var serialPage = serialPortControlPageLoader.item
@@ -295,7 +295,7 @@ Item {
         console.log("✅ [handleLeftKey] 被调用 - currentCategory:", currentCategory, "currentFocusArea:", currentFocusArea)
 
         // 串口控制页面特殊处理
-        if (currentCategory === 6 && currentFocusArea === 2) {
+        if (currentCategory === 7 && currentFocusArea === 2) {
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined" && currentPage.focusSubArea === 1) {
                 var serialPage = serialPortControlPageLoader.item
@@ -319,7 +319,7 @@ Item {
         console.log("✅ [handleRightKey] 被调用 - currentCategory:", currentCategory, "currentFocusArea:", currentFocusArea)
 
         // 串口控制页面特殊处理
-        if (currentCategory === 6 && currentFocusArea === 2) {
+        if (currentCategory === 7 && currentFocusArea === 2) {
             var currentPage = getCurrentPage(currentCategory)
             if (currentPage && typeof currentPage.focusSubArea !== "undefined" && currentPage.focusSubArea === 1) {
                 var serialPage = serialPortControlPageLoader.item
@@ -380,11 +380,20 @@ Item {
             }
         }
 
+        if (currentCategory === 6 && currentFocusArea === 2) {
+            var sprinklerPage = sprinklerControlPageLoader.item
+            if (sprinklerPage && typeof sprinklerPage.handleKeyPress === "function") {
+                sprinklerPage.handleKeyPress("Up")
+                event.accepted = true
+                return
+            }
+        }
+
         // 上键：在当前区域内向上导航
         console.log("✅ [导航] 上键 - 当前区域:", currentFocusArea, "当前类别:", currentCategory)
 
         // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.2]: 添加串口控制详细日志
-        if (currentCategory === 6) {
+        if (currentCategory === 7) {
             console.log("🔍 [串口控制调试] 上键 - currentFocusArea:", currentFocusArea)
             console.log("🔍 [串口控制调试] currentContentItemIndex:", currentContentItemIndex)
             var serialPage = serialPortControlPageLoader.item
@@ -414,7 +423,7 @@ Item {
                 if (currentPage.focusSubArea === 0) {
                     // 列表区域：检查是否是使用NavigationManager的页面
                     // ✅ 2026-02-08 [Phase 7.43.10]: MQTT控制页面列表区域使用NavigationManager
-                    if (currentCategory === 9) {
+                    if (currentCategory === 10) {
                         var mqttPage = mqttControlPageLoader.item
                         if (mqttPage && mqttPage.navigationManager) {
                             console.log("✅ [MQTT控制导航] 列表区域上键 - 调用 NavigationManager.handleDirectionKey")
@@ -422,7 +431,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 8) {
+                    } else if (currentCategory === 9) {
                         var tcpPage = tcpControlPageLoader.item
                         if (tcpPage && tcpPage.navigationManager) {
                             console.log("✅ [TCP控制导航] 列表区域上键 - 调用 NavigationManager.handleDirectionKey")
@@ -430,7 +439,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 7) {
+                    } else if (currentCategory === 8) {
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
                             console.log("✅ [CAN控制导航] 列表区域上键 - 调用 NavigationManager.handleDirectionKey")
@@ -438,7 +447,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 6) {
+                    } else if (currentCategory === 7) {
                         var serialPage = serialPortControlPageLoader.item
                         if (serialPage && serialPage.navigationManager) {
                             console.log("✅ [串口控制导航] 列表区域上键 - 调用 NavigationManager.handleDirectionKey")
@@ -464,7 +473,7 @@ Item {
                     // ✅ 2026-02-07 [Phase 7.39.11 Fix v5]: CAN控制也使用 NavigationManager
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.28]: 添加详细调试信息
                     console.log("🔍 [串口控制导航] 上键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
-                    if (currentCategory === 6) {
+                    if (currentCategory === 7) {
                         // 串口控制页面：使用 NavigationManager
                         var serialPage = serialPortControlPageLoader.item
                         console.log("🔍 [串口控制导航] serialPage:", serialPage ? "存在" : "null")
@@ -479,7 +488,7 @@ Item {
                         } else {
                             console.log("⚠️ [串口控制导航] 上键 - NavigationManager 不可用")
                         }
-                    } else if (currentCategory === 7) {
+                    } else if (currentCategory === 8) {
                         // ✅ 2026-02-07 [Phase 7.39.11 Fix v5]: CAN控制页面使用 NavigationManager
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
@@ -488,7 +497,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 8) {
+                    } else if (currentCategory === 9) {
                         // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制页面使用 NavigationManager
                         var tcpPage = tcpControlPageLoader.item
                         if (tcpPage && tcpPage.navigationManager) {
@@ -497,7 +506,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 9) {
+                    } else if (currentCategory === 10) {
                         // ✅ 2026-02-08 [Phase 7.43]: MQTT控制页面使用 NavigationManager
                         var mqttPage = mqttControlPageLoader.item
                         if (mqttPage && mqttPage.navigationManager) {
@@ -561,7 +570,7 @@ Item {
                     // 原因：串口控制和CAN控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
                     // 解决：在focusSubArea=2时，检查是否为串口控制或CAN控制页面，调用NavigationManager处理上键
-                    if (currentCategory === 6) {
+                    if (currentCategory === 7) {
                         var serialPage = serialPortControlPageLoader.item
                         if (serialPage && serialPage.navigationManager) {
                             // 检查当前Tab是否有自定义导航
@@ -583,7 +592,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 7) {
+                    } else if (currentCategory === 8) {
                         // ✅ 2026-02-07 [Phase 7.39.23.2]: CAN控制参数区域先检查自定义导航
                         var canPage = canControlPageLoader.item
                         if (canPage) {
@@ -608,7 +617,7 @@ Item {
                                 return
                             }
                         }
-                    } else if (currentCategory === 8) {
+                    } else if (currentCategory === 9) {
                         // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制参数区域使用NavigationManager
                         var tcpPage = tcpControlPageLoader.item
                         if (tcpPage) {
@@ -633,7 +642,7 @@ Item {
                                 return
                             }
                         }
-                    } else if (currentCategory === 9) {
+                    } else if (currentCategory === 10) {
                         // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域使用NavigationManager
                         var mqttPage = mqttControlPageLoader.item
                         if (mqttPage) {
@@ -675,7 +684,7 @@ Item {
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
                     // 解决：在focusSubArea=3时，检查是否为串口控制或CAN控制页面，调用NavigationManager
                     console.log("🔍 [串口控制导航] 上键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
-                    if (currentCategory === 6) {
+                    if (currentCategory === 7) {
                         // 串口控制页面：使用 NavigationManager
                         var serialPage = serialPortControlPageLoader.item
                         console.log("🔍 [串口控制导航] serialPage:", serialPage ? "存在" : "null")
@@ -690,7 +699,7 @@ Item {
                         } else {
                             console.log("⚠️ [串口控制导航] 上键 - NavigationManager 不可用")
                         }
-                    } else if (currentCategory === 7) {
+                    } else if (currentCategory === 8) {
                         // ✅ 2026-02-07 [Phase 7.39.11 Fix v7]: CAN控制按钮区域使用NavigationManager
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
@@ -699,7 +708,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 8) {
+                    } else if (currentCategory === 9) {
                         // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制按钮区域使用NavigationManager
                         var tcpPage = tcpControlPageLoader.item
                         if (tcpPage && tcpPage.navigationManager) {
@@ -708,7 +717,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 9) {
+                    } else if (currentCategory === 10) {
                         // ✅ 2026-02-08 [Phase 7.43]: MQTT控制按钮区域使用NavigationManager
                         var mqttPage = mqttControlPageLoader.item
                         if (mqttPage && mqttPage.navigationManager) {
@@ -784,11 +793,20 @@ Item {
             }
         }
 
+        if (currentCategory === 6 && currentFocusArea === 2) {
+            var sprinklerPage = sprinklerControlPageLoader.item
+            if (sprinklerPage && typeof sprinklerPage.handleKeyPress === "function") {
+                sprinklerPage.handleKeyPress("Down")
+                event.accepted = true
+                return
+            }
+        }
+
         // 下键：在当前区域内向下导航
         console.log("✅ [导航] 下键 - 当前区域:", currentFocusArea, "当前类别:", currentCategory)
 
         // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.2]: 添加串口控制详细日志
-        if (currentCategory === 6) {
+        if (currentCategory === 7) {
             console.log("🔍 [串口控制调试] 下键 - currentFocusArea:", currentFocusArea)
             console.log("🔍 [串口控制调试] currentContentItemIndex:", currentContentItemIndex)
             var serialPage = serialPortControlPageLoader.item
@@ -825,7 +843,7 @@ Item {
                 if (currentPage.focusSubArea === 0) {
                     // 列表区域：检查是否是使用NavigationManager的页面
                     // ✅ 2026-02-08 [Phase 7.43.10]: MQTT控制页面列表区域使用NavigationManager
-                    if (currentCategory === 9) {
+                    if (currentCategory === 10) {
                         var mqttPage = mqttControlPageLoader.item
                         if (mqttPage && mqttPage.navigationManager) {
                             console.log("✅ [MQTT控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
@@ -833,7 +851,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 8) {
+                    } else if (currentCategory === 9) {
                         var tcpPage = tcpControlPageLoader.item
                         if (tcpPage && tcpPage.navigationManager) {
                             console.log("✅ [TCP控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
@@ -841,7 +859,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 7) {
+                    } else if (currentCategory === 8) {
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
                             console.log("✅ [CAN控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
@@ -849,7 +867,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 6) {
+                    } else if (currentCategory === 7) {
                         var serialPage = serialPortControlPageLoader.item
                         if (serialPage && serialPage.navigationManager) {
                             console.log("✅ [串口控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
@@ -868,7 +886,7 @@ Item {
                     // ✅ 2026-02-07 [Phase 7.39.11 Fix v5]: CAN控制也使用 NavigationManager
                     // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.28]: 添加详细调试信息
                     console.log("🔍 [串口控制导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
-                    if (currentCategory === 6) {
+                    if (currentCategory === 7) {
                         // 串口控制页面：使用 NavigationManager
                         var serialPage = serialPortControlPageLoader.item
                         console.log("🔍 [串口控制导航] serialPage:", serialPage ? "存在" : "null")
@@ -883,7 +901,7 @@ Item {
                         } else {
                             console.log("⚠️ [串口控制导航] 下键 - NavigationManager 不可用")
                         }
-                    } else if (currentCategory === 7) {
+                    } else if (currentCategory === 8) {
                         // ✅ 2026-02-07 [Phase 7.39.11 Fix v5]: CAN控制页面使用 NavigationManager
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
@@ -892,7 +910,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 8) {
+                    } else if (currentCategory === 9) {
                         // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制页面使用 NavigationManager
                         var tcpPage = tcpControlPageLoader.item
                         if (tcpPage && tcpPage.navigationManager) {
@@ -901,7 +919,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 9) {
+                    } else if (currentCategory === 10) {
                         // ✅ 2026-02-08 [Phase 7.43]: MQTT控制页面使用 NavigationManager
                         var mqttPage = mqttControlPageLoader.item
                         if (mqttPage && mqttPage.navigationManager) {
@@ -935,7 +953,7 @@ Item {
                     // ✅ 2026-03-03 [Phase 7.47.76]: 其他页面（开关量/模拟量）的按钮区已改为 focusSubArea=3，此块仅处理串口/CAN/TCP/MQTT
                     // 解决：在focusSubArea=2时，检查是否为串口控制或CAN控制页面，调用NavigationManager
                     console.log("🔍 [串口控制导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
-                    if (currentCategory === 6) {
+                    if (currentCategory === 7) {
                         // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.9.6]: 直接调用SerialPortControlPage.getCurrentTab()
                         var serialPage = serialPortControlPageLoader.item
                         if (serialPage && serialPage.navigationManager) {
@@ -958,7 +976,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 7) {
+                    } else if (currentCategory === 8) {
                         // ✅ 2026-02-07 [Phase 7.39.23.2]: CAN控制参数区域先检查自定义导航
                         var canPage = canControlPageLoader.item
                         if (canPage) {
@@ -983,7 +1001,7 @@ Item {
                                 return
                             }
                         }
-                    } else if (currentCategory === 8) {
+                    } else if (currentCategory === 9) {
                         // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制参数区域使用NavigationManager
                         var tcpPage = tcpControlPageLoader.item
                         if (tcpPage) {
@@ -1008,7 +1026,7 @@ Item {
                                 return
                             }
                         }
-                    } else if (currentCategory === 9) {
+                    } else if (currentCategory === 10) {
                         // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域使用NavigationManager
                         var mqttPage = mqttControlPageLoader.item
                         if (mqttPage) {
@@ -1055,7 +1073,7 @@ Item {
                     //       开关量/模拟量输入页面已统一改为 focusSubArea=3 为按钮区
                     // 解决：在focusSubArea=3时，检查是否为串口控制或CAN控制页面，调用NavigationManager；否则执行按钮行内导航
                     console.log("🔍 [按钮区导航] 下键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
-                    if (currentCategory === 6) {
+                    if (currentCategory === 7) {
                         // 串口控制页面：使用 NavigationManager
                         var serialPage = serialPortControlPageLoader.item
                         console.log("🔍 [串口控制导航] serialPage:", serialPage ? "存在" : "null")
@@ -1070,7 +1088,7 @@ Item {
                         } else {
                             console.log("⚠️ [串口控制导航] 下键 - NavigationManager 不可用")
                         }
-                    } else if (currentCategory === 7) {
+                    } else if (currentCategory === 8) {
                         // ✅ 2026-02-07 [Phase 7.39.11 Fix v7]: CAN控制按钮区域使用NavigationManager
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
@@ -1079,7 +1097,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 8) {
+                    } else if (currentCategory === 9) {
                         // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制按钮区域使用NavigationManager
                         var tcpPage = tcpControlPageLoader.item
                         if (tcpPage && tcpPage.navigationManager) {
@@ -1206,6 +1224,23 @@ Item {
                     }
                 }
 
+                // ✅ 2026-03-09: 洒水控制页面（3区域模式）
+                var isSprinklerControlPage = (currentCategory === 6)
+                if (isSprinklerControlPage) {
+                    var sprinklerPage = sprinklerControlPageLoader.item
+                    if (sprinklerPage && sprinklerPage.focusSubArea !== 0) {
+                        if (typeof sprinklerPage.handleKeyPress === "function") {
+                            sprinklerPage.handleKeyPress("Left")
+                            event.accepted = true
+                            return
+                        }
+                    } else {
+                        currentFocusArea = 1
+                        root.forceActiveFocus()
+                        return
+                    }
+                }
+
                 // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.4]: 移除旧的串口控制页面特殊处理
                 // 原因：串口控制页面已改为4区域模式（列表、Tab、参数、按钮），使用NavigationManager管理导航
                 // 旧代码会在Tab区域（focusSubArea=1）按左键时直接跳到列表区域，导致无法逐个向左切换Tab
@@ -1221,10 +1256,10 @@ Item {
                 // 电机控制页面的区域定义：0=列表 1=参数 2=按钮
                 // 下面的代码是为电机控制页面设计的，检查 focusSubArea === 1 认为是参数区域
                 // 但对串口控制、CAN控制、TCP控制和MQTT控制页面来说，focusSubArea === 1 是Tab区域，不应该执行参数区域的逻辑
-                var isSerialPortControlPage = (currentCategory === 6)  // 串口控制类别
-                var isCANControlPage = (currentCategory === 7)  // CAN控制类别
-                var isTCPControlPage = (currentCategory === 8)  // TCP控制类别
-                var isMQTTControlPage = (currentCategory === 9)  // MQTT控制类别
+                var isSerialPortControlPage = (currentCategory === 7)  // 串口控制类别
+                var isCANControlPage = (currentCategory === 8)  // CAN控制类别
+                var isTCPControlPage = (currentCategory === 9)  // TCP控制类别
+                var isMQTTControlPage = (currentCategory === 10)  // MQTT控制类别
 
                 if (currentPage.focusSubArea === 1 && !isSerialPortControlPage && !isCANControlPage && !isTCPControlPage && !isMQTTControlPage) {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
@@ -1262,7 +1297,7 @@ Item {
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
                     // 解决：在focusSubArea=2时，检查是否为串口控制或CAN控制页面，调用NavigationManager
                     console.log("🔍 [串口控制导航] 左键 - currentCategory:", currentCategory, "focusSubArea:", currentPage.focusSubArea)
-                    if (currentCategory === 6) {
+                    if (currentCategory === 7) {
                         var serialPage = serialPortControlPageLoader.item
                         if (serialPage && serialPage.navigationManager) {
                             // 检查当前Tab是否有自定义导航
@@ -1284,7 +1319,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 7) {
+                    } else if (currentCategory === 8) {
                         // ✅ 2026-02-07 [Phase 7.39.11 Fix v6]: CAN控制参数区域使用NavigationManager
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
@@ -1293,7 +1328,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 8) {
+                    } else if (currentCategory === 9) {
                         // ✅ 2026-02-08 [Phase 7.42.16]: TCP控制参数区域使用NavigationManager
                         var tcpPage = tcpControlPageLoader.item
                         if (tcpPage && tcpPage.navigationManager) {
@@ -1302,7 +1337,7 @@ Item {
                             event.accepted = true
                             return
                         }
-                    } else if (currentCategory === 9) {
+                    } else if (currentCategory === 10) {
                         // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域使用NavigationManager
                         var mqttPage = mqttControlPageLoader.item
                         if (mqttPage && mqttPage.navigationManager) {
@@ -1334,7 +1369,7 @@ Item {
             }
 
             // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.6]: 串口控制页面使用NavigationManager处理左键
-            if (currentCategory === 6 && currentFocusArea === 2) {
+            if (currentCategory === 7 && currentFocusArea === 2) {
                 var serialPage = serialPortControlPageLoader.item
                 if (serialPage && serialPage.navigationManager) {
                     console.log("✅ [导航] 串口控制页面左键 - 调用NavigationManager")
@@ -1345,7 +1380,7 @@ Item {
             }
 
             // ✅ 2026-02-07 [Phase 7.39.11 Fix v3]: CAN控制页面使用NavigationManager处理左键
-            if (currentCategory === 7 && currentFocusArea === 2) {
+            if (currentCategory === 8 && currentFocusArea === 2) {
                 var canPage = canControlPageLoader.item
                 if (canPage && canPage.navigationManager) {
                     console.log("✅ [导航] CAN控制页面左键 - 调用NavigationManager")
@@ -1356,7 +1391,7 @@ Item {
             }
 
             // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制页面使用NavigationManager处理左键
-            if (currentCategory === 8 && currentFocusArea === 2) {
+            if (currentCategory === 9 && currentFocusArea === 2) {
                 var tcpPage = tcpControlPageLoader.item
                 if (tcpPage && tcpPage.navigationManager) {
                     console.log("✅ [导航] TCP控制页面左键 - 调用NavigationManager")
@@ -1367,7 +1402,7 @@ Item {
             }
 
             // ✅ 2026-02-08 [Phase 7.43.9]: MQTT控制页面使用NavigationManager处理左键
-            if (currentCategory === 9 && currentFocusArea === 2) {
+            if (currentCategory === 10 && currentFocusArea === 2) {
                 var mqttPage = mqttControlPageLoader.item
                 if (mqttPage && mqttPage.navigationManager) {
                     console.log("✅ [导航] MQTT控制页面左键 - 调用NavigationManager")
@@ -1422,6 +1457,16 @@ Item {
             }
         }
 
+        // ✅ 2026-03-09: 洒水控制页面
+        if (currentCategory === 6 && currentFocusArea === 2) {
+            var sprinklerPage = sprinklerControlPageLoader.item
+            if (sprinklerPage && typeof sprinklerPage.handleKeyPress === "function") {
+                sprinklerPage.handleKeyPress("Right")
+                event.accepted = true
+                return
+            }
+        }
+
         // 右键：切换到右侧区域
         console.log("✅ [导航] 右键 - 当前区域:", currentFocusArea)
 
@@ -1468,7 +1513,7 @@ Item {
                 }
 
                 // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.12]: 串口控制页面使用 NavigationManager
-                var isSerialPortControlPage = (currentCategory === 6)  // 串口控制类别
+                var isSerialPortControlPage = (currentCategory === 7)  // 串口控制类别
                 console.log("🔍 [串口控制导航] isSerialPortControlPage:", isSerialPortControlPage)
 
                 if (isSerialPortControlPage) {
@@ -1497,7 +1542,7 @@ Item {
                 }
 
                 // ✅ 2026-02-07 [Phase 7.39.11 Fix]: CAN控制页面使用 NavigationManager
-                var isCANControlPage = (currentCategory === 7)  // CAN控制类别
+                var isCANControlPage = (currentCategory === 8)  // CAN控制类别
                 console.log("🔍 [CAN控制导航] isCANControlPage:", isCANControlPage)
 
                 if (isCANControlPage) {
@@ -1525,7 +1570,7 @@ Item {
                 }
 
                 // ✅ 2026-02-08 [Phase 7.42.14]: TCP控制页面使用 NavigationManager
-                var isTCPControlPage = (currentCategory === 8)  // TCP控制类别
+                var isTCPControlPage = (currentCategory === 9)  // TCP控制类别
                 console.log("🔍 [TCP控制导航] isTCPControlPage:", isTCPControlPage)
 
                 if (isTCPControlPage) {
@@ -1553,7 +1598,7 @@ Item {
                 }
 
                 // ✅ 2026-02-08 [Phase 7.43]: MQTT控制页面使用 NavigationManager
-                var isMQTTControlPage = (currentCategory === 9)  // MQTT控制类别
+                var isMQTTControlPage = (currentCategory === 10)  // MQTT控制类别
                 console.log("🔍 [MQTT控制导航] isMQTTControlPage:", isMQTTControlPage)
 
                 if (isMQTTControlPage) {
@@ -1627,16 +1672,16 @@ Item {
                     // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域也使用NavigationManager
                     // 原因：串口控制、CAN控制、TCP控制和MQTT控制页面的focusSubArea定义不同（0=列表 1=Tab 2=参数 3=按钮）
                     // 其他页面的focusSubArea定义（0=列表 1=参数 2=按钮）
-                    if (currentCategory === 6 || currentCategory === 7 || currentCategory === 8 || currentCategory === 9) {
+                    if (currentCategory === 7 || currentCategory === 8 || currentCategory === 9 || currentCategory === 10) {
                         // 串口控制、CAN控制、TCP控制或MQTT控制：focusSubArea=2是参数区域，使用NavigationManager
                         var page = null
-                        if (currentCategory === 6) {
+                        if (currentCategory === 7) {
                             page = serialPortControlPageLoader.item
-                        } else if (currentCategory === 7) {
-                            page = canControlPageLoader.item
                         } else if (currentCategory === 8) {
-                            page = tcpControlPageLoader.item
+                            page = canControlPageLoader.item
                         } else if (currentCategory === 9) {
+                            page = tcpControlPageLoader.item
+                        } else if (currentCategory === 10) {
                             page = mqttControlPageLoader.item
                         }
                         if (page && page.navigationManager) {
@@ -1704,7 +1749,7 @@ Item {
                     var handled = false
 
                     // 串口控制页面特殊处理
-                    if (currentCategory === 6) {
+                    if (currentCategory === 7) {
                         console.log("✅ [导航] 回车键 - 串口控制页面特殊处理开始")
                         var serialPage = serialPortControlPageLoader.item
                         console.log("✅ [导航] serialPage:", serialPage ? "存在" : "不存在")
@@ -1735,7 +1780,7 @@ Item {
                             console.log("⚠️ [导航] serialConfigPanel 不存在")
                         }
                     // ✅ 2026-02-07 [Phase 7.39.23.4]: CAN 控制页面回车键处理
-                    } else if (currentCategory === 7) {
+                    } else if (currentCategory === 8) {
                         console.log("✅ [导航] 回车键 - CAN 控制页面特殊处理开始")
                         var canPage = canControlPageLoader.item
                         console.log("✅ [导航] canPage:", canPage ? "存在" : "不存在")
@@ -1766,7 +1811,7 @@ Item {
                             console.log("⚠️ [导航] canConfigPanel 不存在")
                         }
                     // ✅ 2026-02-08 [Phase 7.42.15]: TCP 控制页面回车键处理
-                    } else if (currentCategory === 8) {
+                    } else if (currentCategory === 9) {
                         console.log("✅ [导航] 回车键 - TCP 控制页面特殊处理开始")
                         var tcpPage = tcpControlPageLoader.item
                         console.log("✅ [导航] tcpPage:", tcpPage ? "存在" : "不存在")
@@ -1797,7 +1842,7 @@ Item {
                             console.log("⚠️ [导航] tcpConfigPanel 不存在")
                         }
                     // ✅ 2026-02-08 [Phase 7.43]: MQTT 控制页面回车键处理
-                    } else if (currentCategory === 9) {
+                    } else if (currentCategory === 10) {
                         console.log("✅ [导航] 回车键 - MQTT 控制页面特殊处理开始")
                         var mqttPage = mqttControlPageLoader.item
                         console.log("✅ [导航] mqttPage:", mqttPage ? "存在" : "不存在")
@@ -2090,7 +2135,12 @@ Item {
                         case 5:  // 张紧控制
                             // TODO: 调用张紧控制的保存函数
                             break
-                        case 6:  // 串口控制
+                        case 6:  // 洒水控制
+                            if (sprinklerControlPageLoader.item && typeof sprinklerControlPageLoader.item.saveAllConfig === "function") {
+                                sprinklerControlPageLoader.item.saveAllConfig()
+                            }
+                            break
+                        case 7:  // 串口控制
                             // TODO: 调用串口控制的保存函数
                             break
                         default:
@@ -2234,7 +2284,7 @@ Item {
                 spacing: 10
 
                 Repeater {
-                    model: ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "串口控制", "CAN控制", "TCP控制", "MQTT控制", "逻辑控制"]
+                    model: ["基本配置", "开关量输入", "模拟量输入", "电机控制", "制动器控制", "张紧控制", "洒水控制", "串口控制", "CAN控制", "TCP控制", "MQTT控制", "逻辑控制"]
 
                     Button {
                         width: parent.width - 20
@@ -2935,7 +2985,79 @@ Item {
                     }
                 }
 
-                // ✅ 2026-02-04 [FIX 100.300.113]: 6: 串口控制
+                // ✅ 2026-03-09: 6: 洒水控制
+                Loader {
+                    id: sprinklerControlPageLoader
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    active: root.currentCategory === 6
+                    source: "pages/SprinklerControlPage.qml"
+
+                    onLoaded: {
+                        if (item) {
+                            console.log("✅ [DeviceSettingsDialog] SprinklerControlPage 加载成功")
+                            item.deviceId = root.deviceId
+                            item.deviceName = root.deviceName
+                            if (root.currentFocusArea === 2 && root.currentCategory === 6) {
+                                item.focusSubArea = 0
+                                item.focusItemIndex = root.currentContentItemIndex
+                            }
+                        }
+                    }
+                }
+
+                // 洒水控制焦点同步（Dialog → Page）
+                Connections {
+                    target: root
+                    enabled: sprinklerControlPageLoader.item !== null
+
+                    function onCurrentFocusAreaChanged() {
+                        if (sprinklerControlPageLoader.item && root.currentCategory === 6) {
+                            if (root.currentFocusArea === 2) {
+                                sprinklerControlPageLoader.item.focusSubArea = 0
+                                sprinklerControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                sprinklerControlPageLoader.item.focusItemIndex = -1
+                            }
+                        }
+                    }
+
+                    function onCurrentCategoryChanged() {
+                        if (sprinklerControlPageLoader.item) {
+                            if (root.currentCategory === 6 && root.currentFocusArea === 2) {
+                                sprinklerControlPageLoader.item.focusSubArea = 0
+                                sprinklerControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            } else {
+                                sprinklerControlPageLoader.item.focusItemIndex = -1
+                            }
+                        }
+                    }
+
+                    function onCurrentContentItemIndexChanged() {
+                        if (sprinklerControlPageLoader.item &&
+                            root.currentFocusArea === 2 &&
+                            root.currentCategory === 6) {
+                            sprinklerControlPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                        }
+                    }
+                }
+
+                // 洒水控制反向焦点同步（Page → Dialog）
+                Connections {
+                    target: sprinklerControlPageLoader.item
+                    enabled: sprinklerControlPageLoader.item !== null
+
+                    function onFocusItemIndexChanged() {
+                        if (root.currentCategory === 6 &&
+                            root.currentFocusArea === 2 &&
+                            sprinklerControlPageLoader.item.focusSubArea === 0 &&
+                            sprinklerControlPageLoader.item.focusItemIndex >= 0) {
+                            root.currentContentItemIndex = sprinklerControlPageLoader.item.focusItemIndex
+                        }
+                    }
+                }
+
+                // ✅ 2026-02-04 [FIX 100.300.113]: 7: 串口控制
                 Loader {
                     id: serialPortControlPageLoader
                     source: "pages/SerialPortControlPage.qml"
@@ -2964,7 +3086,7 @@ Item {
 
                         function onCurrentFocusAreaChanged() {
                             console.log("🔍 [串口控制同步] onCurrentFocusAreaChanged - currentFocusArea:", root.currentFocusArea, "currentCategory:", root.currentCategory)
-                            if (serialPortControlPageLoader.item && root.currentCategory === 6) {
+                            if (serialPortControlPageLoader.item && root.currentCategory === 7) {
                                 if (root.currentFocusArea === 2) {
                                     // 焦点进入内容区域，默认在列表区域
                                     console.log("✅ [串口控制同步] 焦点进入内容区域 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
@@ -2981,7 +3103,7 @@ Item {
                         function onCurrentCategoryChanged() {
                             console.log("🔍 [串口控制同步] onCurrentCategoryChanged - currentCategory:", root.currentCategory, "currentFocusArea:", root.currentFocusArea)
                             if (serialPortControlPageLoader.item) {
-                                if (root.currentFocusArea === 2 && root.currentCategory === 6) {
+                                if (root.currentFocusArea === 2 && root.currentCategory === 7) {
                                     // 切换到串口控制类别，设置焦点
                                     console.log("✅ [串口控制同步] 切换到串口控制 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
                                     serialPortControlPageLoader.item.focusSubArea = 0
@@ -2998,7 +3120,7 @@ Item {
                             console.log("🔍 [串口控制同步] onCurrentContentItemIndexChanged - currentContentItemIndex:", root.currentContentItemIndex)
                             if (serialPortControlPageLoader.item &&
                                 root.currentFocusArea === 2 &&
-                                root.currentCategory === 6 &&
+                                root.currentCategory === 7 &&
                                 serialPortControlPageLoader.item.focusSubArea === 0) {
                                 // 只在焦点在列表区域时同步
                                 console.log("✅ [串口控制同步] 同步 focusItemIndex:", root.currentContentItemIndex)
@@ -3016,7 +3138,7 @@ Item {
 
                         function onFocusItemIndexChanged() {
                             if (serialPortControlPageLoader.item &&
-                                root.currentCategory === 6 &&
+                                root.currentCategory === 7 &&
                                 root.currentFocusArea === 2 &&
                                 serialPortControlPageLoader.item.focusSubArea === 0 &&
                                 serialPortControlPageLoader.item.focusItemIndex >= 0) {
@@ -3063,7 +3185,7 @@ Item {
 
                         function onCurrentFocusAreaChanged() {
                             console.log("🔍 [CAN控制同步] onCurrentFocusAreaChanged - currentFocusArea:", root.currentFocusArea, "currentCategory:", root.currentCategory)
-                            if (canControlPageLoader.item && root.currentCategory === 7) {
+                            if (canControlPageLoader.item && root.currentCategory === 8) {
                                 if (root.currentFocusArea === 2) {
                                     // 焦点进入内容区域，默认在列表区域
                                     console.log("✅ [CAN控制同步] 焦点进入内容区域 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
@@ -3080,7 +3202,7 @@ Item {
                         function onCurrentCategoryChanged() {
                             console.log("🔍 [CAN控制同步] onCurrentCategoryChanged - currentCategory:", root.currentCategory, "currentFocusArea:", root.currentFocusArea)
                             if (canControlPageLoader.item) {
-                                if (root.currentFocusArea === 2 && root.currentCategory === 7) {
+                                if (root.currentFocusArea === 2 && root.currentCategory === 8) {
                                     // 切换到CAN控制类别，设置焦点
                                     console.log("✅ [CAN控制同步] 切换到CAN控制 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
                                     canControlPageLoader.item.focusSubArea = 0
@@ -3097,7 +3219,7 @@ Item {
                             console.log("🔍 [CAN控制同步] onCurrentContentItemIndexChanged - currentContentItemIndex:", root.currentContentItemIndex)
                             if (canControlPageLoader.item &&
                                 root.currentFocusArea === 2 &&
-                                root.currentCategory === 7 &&
+                                root.currentCategory === 8 &&
                                 canControlPageLoader.item.focusSubArea === 0) {
                                 // 只在焦点在列表区域时同步
                                 console.log("✅ [CAN控制同步] 同步 focusItemIndex:", root.currentContentItemIndex)
@@ -3115,7 +3237,7 @@ Item {
 
                         function onFocusItemIndexChanged() {
                             if (canControlPageLoader.item &&
-                                root.currentCategory === 7 &&
+                                root.currentCategory === 8 &&
                                 root.currentFocusArea === 2 &&
                                 canControlPageLoader.item.focusSubArea === 0 &&
                                 canControlPageLoader.item.focusItemIndex >= 0) {
@@ -3162,7 +3284,7 @@ Item {
 
                         function onCurrentFocusAreaChanged() {
                             console.log("🔍 [TCP控制同步] onCurrentFocusAreaChanged - currentFocusArea:", root.currentFocusArea, "currentCategory:", root.currentCategory)
-                            if (tcpControlPageLoader.item && root.currentCategory === 8) {
+                            if (tcpControlPageLoader.item && root.currentCategory === 9) {
                                 if (root.currentFocusArea === 2) {
                                     // 焦点进入内容区域，默认在列表区域
                                     console.log("✅ [TCP控制同步] 焦点进入内容区域 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
@@ -3179,7 +3301,7 @@ Item {
                         function onCurrentCategoryChanged() {
                             console.log("🔍 [TCP控制同步] onCurrentCategoryChanged - currentCategory:", root.currentCategory, "currentFocusArea:", root.currentFocusArea)
                             if (tcpControlPageLoader.item) {
-                                if (root.currentFocusArea === 2 && root.currentCategory === 8) {
+                                if (root.currentFocusArea === 2 && root.currentCategory === 9) {
                                     // 切换到TCP控制类别，设置焦点
                                     console.log("✅ [TCP控制同步] 切换到TCP控制 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
                                     tcpControlPageLoader.item.focusSubArea = 0
@@ -3196,7 +3318,7 @@ Item {
                             console.log("🔍 [TCP控制同步] onCurrentContentItemIndexChanged - currentContentItemIndex:", root.currentContentItemIndex)
                             if (tcpControlPageLoader.item &&
                                 root.currentFocusArea === 2 &&
-                                root.currentCategory === 8 &&
+                                root.currentCategory === 9 &&
                                 tcpControlPageLoader.item.focusSubArea === 0) {
                                 // 只在焦点在列表区域时同步
                                 console.log("✅ [TCP控制同步] 同步 focusItemIndex:", root.currentContentItemIndex)
@@ -3214,7 +3336,7 @@ Item {
 
                         function onFocusItemIndexChanged() {
                             if (tcpControlPageLoader.item &&
-                                root.currentCategory === 8 &&
+                                root.currentCategory === 9 &&
                                 root.currentFocusArea === 2 &&
                                 tcpControlPageLoader.item.focusSubArea === 0 &&
                                 tcpControlPageLoader.item.focusItemIndex >= 0) {
@@ -3261,7 +3383,7 @@ Item {
 
                         function onCurrentFocusAreaChanged() {
                             console.log("🔍 [MQTT控制同步] onCurrentFocusAreaChanged - currentFocusArea:", root.currentFocusArea, "currentCategory:", root.currentCategory)
-                            if (mqttControlPageLoader.item && root.currentCategory === 9) {
+                            if (mqttControlPageLoader.item && root.currentCategory === 10) {
                                 if (root.currentFocusArea === 2) {
                                     // 焦点进入内容区域，默认在列表区域
                                     console.log("✅ [MQTT控制同步] 焦点进入内容区域 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
@@ -3278,7 +3400,7 @@ Item {
                         function onCurrentCategoryChanged() {
                             console.log("🔍 [MQTT控制同步] onCurrentCategoryChanged - currentCategory:", root.currentCategory, "currentFocusArea:", root.currentFocusArea)
                             if (mqttControlPageLoader.item) {
-                                if (root.currentFocusArea === 2 && root.currentCategory === 9) {
+                                if (root.currentFocusArea === 2 && root.currentCategory === 10) {
                                     // 切换到MQTT控制类别，设置焦点
                                     console.log("✅ [MQTT控制同步] 切换到MQTT控制 - 设置 focusSubArea=0, focusItemIndex=", root.currentContentItemIndex)
                                     mqttControlPageLoader.item.focusSubArea = 0
@@ -3295,7 +3417,7 @@ Item {
                             console.log("🔍 [MQTT控制同步] onCurrentContentItemIndexChanged - currentContentItemIndex:", root.currentContentItemIndex)
                             if (mqttControlPageLoader.item &&
                                 root.currentFocusArea === 2 &&
-                                root.currentCategory === 9 &&
+                                root.currentCategory === 10 &&
                                 mqttControlPageLoader.item.focusSubArea === 0) {
                                 // 只在焦点在列表区域时同步
                                 console.log("✅ [MQTT控制同步] 同步 focusItemIndex:", root.currentContentItemIndex)
@@ -3313,7 +3435,7 @@ Item {
 
                         function onFocusItemIndexChanged() {
                             if (mqttControlPageLoader.item &&
-                                root.currentCategory === 9 &&
+                                root.currentCategory === 10 &&
                                 root.currentFocusArea === 2 &&
                                 mqttControlPageLoader.item.focusSubArea === 0 &&
                                 mqttControlPageLoader.item.focusItemIndex >= 0) {
@@ -3421,15 +3543,17 @@ Item {
             return ["制动测试", "释放测试", "参数校验"]
         case 5: // 张紧控制
             return ["张紧测试", "释放测试", "参数校验"]
-        case 6: // 串口控制
+        case 6: // 洒水控制
+            return []  // 洒水控制按钮在 SprinklerControlPage 内部实现
+        case 7: // 串口控制
             return []  // ✅ 2026-02-04 [FIX 100.300.113]: 串口控制暂无底部按钮
-        case 7: // CAN控制
+        case 8: // CAN控制
             return []  // ✅ 2026-02-07 [Phase 7.39.10]: CAN控制按钮已在 CANControlPage 内部实现
-        case 8: // TCP控制
+        case 9: // TCP控制
             return []  // ✅ 2026-02-08 [Phase 7.42]: TCP控制按钮已在 TCPControlPage 内部实现
-        case 9: // MQTT控制
+        case 10: // MQTT控制
             return []  // ✅ 2026-02-09 [Phase 7.44.23]: MQTT控制按钮已在 MQTTAutoControlTab 内部实现
-        case 10: // 逻辑控制
+        case 11: // 逻辑控制
             return ["添加逻辑", "删除逻辑", "测试逻辑"]
         default:
             return []
@@ -3451,13 +3575,17 @@ Item {
             return 9  // 9个输入组件
         case 5:  // 张紧控制
             return 14  // 14个输入组件
-        case 6:  // 串口控制
+        case 6:  // 洒水控制
+            return 8  // 8个洒水装置
+        case 7:  // 串口控制
             return 6  // ✅ 2026-02-04 [FIX 100.300.113 Phase 5.3]: 6个串口（COM1-COM6）
-        case 7:  // CAN控制
+        case 8:  // CAN控制
             return 2  // ✅ 2026-02-07 [Phase 7.39.10]: 2个CAN接口（CAN0、CAN1）
-        case 8:  // TCP控制
+        case 9:  // TCP控制
             return 8  // ✅ 2026-02-08 [Phase 7.42]: 8个TCP端口（端口1-端口8）
-        case 9:  // 逻辑控制
+        case 10:  // MQTT控制
+            return 0  // 待实现
+        case 11:  // 逻辑控制
             return 0  // 待实现
         default:
             return 0
@@ -3550,14 +3678,16 @@ Item {
         case 5:
             return tensionControlPageLoader.item
         case 6:
-            return serialPortControlPageLoader.item  // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.5]: 返回串口控制页面
+            return sprinklerControlPageLoader.item
         case 7:
-            return canControlPageLoader.item  // ✅ 2026-02-07 [Phase 7.39.11 Fix]: 返回CAN控制页面
+            return serialPortControlPageLoader.item  // ✅ 2026-02-04 [FIX 100.300.113 Phase 6.5]: 返回串口控制页面
         case 8:
-            return tcpControlPageLoader.item  // ✅ 2026-02-08 [Phase 7.42]: 返回TCP控制页面
+            return canControlPageLoader.item  // ✅ 2026-02-07 [Phase 7.39.11 Fix]: 返回CAN控制页面
         case 9:
-            return mqttControlPageLoader.item  // ✅ 2026-02-08 [Phase 7.43.7]: 返回MQTT控制页面
+            return tcpControlPageLoader.item  // ✅ 2026-02-08 [Phase 7.42]: 返回TCP控制页面
         case 10:
+            return mqttControlPageLoader.item  // ✅ 2026-02-08 [Phase 7.43.7]: 返回MQTT控制页面
+        case 11:
             return null  // 逻辑控制待实现
         default:
             return null

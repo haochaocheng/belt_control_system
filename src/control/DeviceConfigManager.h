@@ -187,6 +187,29 @@ public:
      */
     Q_INVOKABLE bool saveSprinklerOutputConfig(const QVariantMap &config);
 
+    // ✅ 2026-03-09: 洒水控制系统（8个独立洒水装置）
+
+    /**
+     * @brief 加载指定洒水配置（1-8）
+     * @param sprinklerIndex 洒水索引（1-8）
+     * @return 洒水配置（QVariantMap）
+     */
+    Q_INVOKABLE QVariantMap loadSprinklerConfig(int sprinklerIndex);
+
+    /**
+     * @brief 保存指定洒水配置（1-8）
+     * @param sprinklerIndex 洒水索引（1-8）
+     * @param config 配置参数（QVariantMap）
+     * @return 成功返回true，失败返回false
+     */
+    Q_INVOKABLE bool saveSprinklerConfig(int sprinklerIndex, const QVariantMap &config);
+
+    /**
+     * @brief 加载所有8个洒水配置
+     * @return 洒水配置列表（QVariantList）
+     */
+    Q_INVOKABLE QVariantList loadAllSprinklerConfigs();
+
     // ========== 实时状态更新 ==========
 
     /**
