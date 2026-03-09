@@ -171,6 +171,22 @@ public:
      */
     Q_INVOKABLE bool deleteAnalogProtection(int deviceId, const QString &protectionName);
 
+    // ========== 洒水输出配置 ==========
+    // ✅ 2026-03-09 [Phase 7.48.26]: 洒水输出配置管理
+
+    /**
+     * @brief 加载洒水输出配置
+     * @return 洒水输出配置（QVariantMap）
+     */
+    Q_INVOKABLE QVariantMap loadSprinklerOutputConfig();
+
+    /**
+     * @brief 保存洒水输出配置
+     * @param config 配置参数（QVariantMap）
+     * @return 成功返回true，失败返回false
+     */
+    Q_INVOKABLE bool saveSprinklerOutputConfig(const QVariantMap &config);
+
     // ========== 实时状态更新 ==========
 
     /**

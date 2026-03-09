@@ -293,6 +293,8 @@ int main(int argc, char *argv[]) {
         mqttProtectionMonitor.setAlarmPlaybackService(&alarmPlayback);
         // ✅ 2026-03-05 [Phase 7.48.5]: 注入AIDataManager，用于模拟量保护监控
         mqttProtectionMonitor.setAIDataManager(&aiDataManager);
+        // ✅ 2026-03-09 [Phase 7.48.26]: 注入MQTTController，用于洒水控制MQTT发布
+        mqttProtectionMonitor.setMQTTController(&mqttController);
         mqttProtectionMonitor.setAIBeltMapping(0, systemConfig.machineNumber());  // AI模块0(模拟量模块1) → 当前皮带
         // ✅ 2026-03-07 [Phase 7.48.19]: 补充模拟量模块2的皮带映射（旧代码遗漏，导致模块2保护查询默认皮带1）
         mqttProtectionMonitor.setAIBeltMapping(1, systemConfig.machineNumber());  // AI模块1(模拟量模块2) → 当前皮带

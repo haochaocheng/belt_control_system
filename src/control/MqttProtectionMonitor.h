@@ -26,6 +26,7 @@ class DIDataManager;
 class CommonControl;
 class DeviceConfigManager;  // ✅ 2026-02-28 [Phase 7.47.49]
 class AlarmPlaybackService; // ✅ 2026-03-04 [Phase 7.47.95]
+class MQTTController;       // ✅ 2026-03-09 [Phase 7.48.26]: 洒水控制用MQTT发布
 
 /**
  * @brief MQTT开关量保护监控器
@@ -76,6 +77,9 @@ public:
 
     // ✅ 2026-03-05 [Phase 7.48.5]: 新增 - 设置AI数据管理器（用于模拟量保护监控）
     void setAIDataManager(AIDataManager *aiManager) { m_aiManager = aiManager; }
+
+    // ✅ 2026-03-09 [Phase 7.48.26]: 新增 - 设置MQTT控制器（用于洒水控制MQTT发布）
+    void setMQTTController(MQTTController *ctrl) { m_mqttController = ctrl; }
 
     /**
      * @brief 设置AI模块的皮带编号映射
@@ -220,6 +224,25 @@ private:
     // Value = true表示当前处于超限状态（已触发报警），false表示正常
     // 只在 false→true 转换时触发报警播放，避免持续超限时反复触发
     QMap<QString, bool> m_protectionAlarmActive;
+
+    // ✅ 2026-03-09 [Phase 7.48.26]: 洒水控制相关成员
+    MQTTController *m_mqttController;     ///< MQTT控制器（用于发布洒水命令）
+    QMap<QString, bool> m_sprinklerTriggerSources;  ///< 洒水触发源（key=皮带:保护名称, value=是否触发中）
+    bool m_sprinklerActive;               ///< 洒水是否已激活
+
+    /**
+     * @brief 检查洒水激活状态
+     * @param beltNumber 皮带编号
+     * @param protectionName 保护名称
+     * @param exceeded 是否超限（true=触发, false=恢复）
+     */
+    void checkSprinklerActivation(int beltNumber, const QString &protectionName, bool exceeded);
+
+    /**
+     * @brief 发布洒水控制命令
+     * @param activate true=启动洒水, false=停止洒水
+     */
+    void publishSprinklerCommand(bool activate);
 };
 
 #endif // MQTTPROTECTIONMONITOR_H

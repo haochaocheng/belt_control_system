@@ -1,12 +1,16 @@
 #include "MqttProtectionMonitor.h"
 #include "../mqtt/DIDataManager.h"
 #include "../mqtt/AIDataManager.h"  // ✅ 2026-03-05 [Phase 7.48.5]
+#include "../mqtt/MQTTController.h" // ✅ 2026-03-09 [Phase 7.48.26]: 洒水控制
 #include "CommonControl.h"
 #include "DataPathConfig.h"      // ✅ 2026-02-28 [Phase 7.47.43]: 统一音频路径
 #include "DeviceConfigManager.h" // ✅ 2026-02-28 [Phase 7.47.49]: 查询use_text_to_speech
 #include "AlarmPlaybackService.h" // ✅ 2026-03-04 [Phase 7.47.95]: 按次数/按时长播放
 #include <QDebug>
 #include <QFile>
+#include <QJsonDocument>  // ✅ 2026-03-09 [Phase 7.48.26]: JSON命令格式
+#include <QJsonObject>    // ✅ 2026-03-09 [Phase 7.48.26]
+#include <QDateTime>
 
 // ✅ 2026-02-27 10:30 [Phase 7.47.35]: 实现MQTT开关量保护监控器
 
@@ -26,6 +30,8 @@ MqttProtectionMonitor::MqttProtectionMonitor(DIDataManager *diManager,
     , m_deviceConfigMgr(nullptr)  // ✅ 2026-02-28 [Phase 7.47.49]: 由main.cpp通过setDeviceConfigManager注入
     , m_alarmPlaybackService(nullptr) // ✅ 2026-03-04 [Phase 7.47.95]: 由main.cpp通过setAlarmPlaybackService注入
     , m_isRunning(false)
+    , m_mqttController(nullptr)  // ✅ 2026-03-09 [Phase 7.48.26]: 由main.cpp通过setMQTTController注入
+    , m_sprinklerActive(false)   // ✅ 2026-03-09 [Phase 7.48.26]: 洒水默认未激活
 {
     // ✅ 2026-02-28 [Phase 7.47.43]: 使用DataPathConfig统一音频目录
     // 与BatchAudioGenerator的outputBaseDir保持一致（都从BELT_CONTROL_USER读取）
@@ -148,8 +154,12 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
     }
 
     // ✅ 只处理位从0→1的变化（保护触发）
+    // ✅ 2026-03-09 [Phase 7.48.26]: 位从1→0时检查洒水恢复
     if (!value) {
-        // 位从1→0，保护恢复，暂不处理
+        // 位从1→0，保护恢复
+        int beltNumber = getBeltMapping(moduleIndex);
+        QString protectionName = m_audioPathMapper->getShortProtectionName(bitIndex);
+        checkSprinklerActivation(beltNumber, protectionName, false);
         return;
     }
 
@@ -229,6 +239,12 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
         m_commonControl->playAudio(audioPath);
     } else {
         qWarning() << "⚠️ [MqttProtectionMonitor] AlarmPlaybackService和CommonControl均为空，无法播放音频";
+    }
+
+    // ✅ 2026-03-09 [Phase 7.48.26]: DI保护触发时检查洒水
+    {
+        QString shortName = m_audioPathMapper->getShortProtectionName(bitIndex);
+        checkSprinklerActivation(beltNumber, shortName, true);
     }
 }
 
@@ -432,6 +448,8 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
                          << "皮带" << beltNumber << "工程量:" << engineeringValue;
                 // ✅ 2026-03-09 [Phase 7.48.24]: 发射恢复信号，记录到报警历史数据库
                 emit analogProtectionRestored(beltNumber, protName, engineeringValue);
+                // ✅ 2026-03-09 [Phase 7.48.26]: 检查洒水恢复
+                checkSprinklerActivation(beltNumber, protName, false);
             }
             continue;  // 未超限，继续检查下一个保护项
         }
@@ -450,6 +468,9 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         // ✅ 2026-03-09 [Phase 7.48.24]: 发射触发信号，记录到报警历史数据库
         QString limitType = (limitDirection == AudioPathMapper::UpperLimit) ? "超上限" : "低于下限";
         emit analogProtectionTriggered(beltNumber, protName, engineeringValue, limitType);
+
+        // ✅ 2026-03-09 [Phase 7.48.26]: 检查洒水触发
+        checkSprinklerActivation(beltNumber, protName, true);
 
         bool useTTS = (prot.value("use_text_to_speech", 0).toInt() == 1);
         QString playMode = prot.value("play_mode", "count").toString();
@@ -488,5 +509,109 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         }
 
         // 注意：这里不 break，允许一个通道触发多个保护项（如果有的话）
+    }
+}
+
+// ✅ 2026-03-09 [Phase 7.48.26]: 洒水控制逻辑
+void MqttProtectionMonitor::checkSprinklerActivation(int beltNumber, const QString &protectionName, bool exceeded)
+{
+    if (!m_deviceConfigMgr) {
+        return;
+    }
+
+    // 查询该保护项的 sprinkler_enabled 字段
+    // 先查模拟量保护
+    QVariantMap aiProt = m_deviceConfigMgr->loadAnalogProtection(beltNumber, protectionName);
+    int sprinklerEnabled = 0;
+    if (!aiProt.isEmpty()) {
+        sprinklerEnabled = aiProt.value("sprinkler_enabled", 0).toInt();
+    } else {
+        // 再查开关量保护
+        QVariantMap diProt = m_deviceConfigMgr->loadDigitalProtection(beltNumber, protectionName);
+        if (!diProt.isEmpty()) {
+            sprinklerEnabled = diProt.value("sprinkler_enabled", 0).toInt();
+        }
+    }
+
+    if (sprinklerEnabled != 1) {
+        return;  // 该保护未启用洒水，跳过
+    }
+
+    QString triggerKey = QString("%1:%2").arg(beltNumber).arg(protectionName);
+
+    if (exceeded) {
+        // 保护触发 → 添加到洒水触发源
+        if (!m_sprinklerTriggerSources.value(triggerKey, false)) {
+            m_sprinklerTriggerSources[triggerKey] = true;
+            qDebug() << "🚿 [MqttProtectionMonitor] 洒水触发源添加:" << triggerKey
+                     << "当前触发源数:" << m_sprinklerTriggerSources.count();
+
+            // 如果洒水未激活，立即启动
+            if (!m_sprinklerActive) {
+                publishSprinklerCommand(true);
+            }
+        }
+    } else {
+        // 保护恢复 → 从洒水触发源移除
+        if (m_sprinklerTriggerSources.value(triggerKey, false)) {
+            m_sprinklerTriggerSources.remove(triggerKey);
+            qDebug() << "🚿 [MqttProtectionMonitor] 洒水触发源移除:" << triggerKey
+                     << "剩余触发源数:" << m_sprinklerTriggerSources.count();
+
+            // 检查是否所有触发源都已恢复
+            bool anyActive = false;
+            for (auto it = m_sprinklerTriggerSources.begin(); it != m_sprinklerTriggerSources.end(); ++it) {
+                if (it.value()) {
+                    anyActive = true;
+                    break;
+                }
+            }
+
+            if (!anyActive && m_sprinklerActive) {
+                // 所有触发源已恢复，停止洒水
+                publishSprinklerCommand(false);
+            }
+        }
+    }
+}
+
+void MqttProtectionMonitor::publishSprinklerCommand(bool activate)
+{
+    if (!m_mqttController) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] MQTTController未设置，无法发布洒水命令";
+        return;
+    }
+
+    if (!m_deviceConfigMgr) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] DeviceConfigManager未设置，无法读取洒水配置";
+        return;
+    }
+
+    // 读取洒水输出配置
+    QVariantMap config = m_deviceConfigMgr->loadSprinklerOutputConfig();
+    if (config.value("enabled", 1).toInt() != 1) {
+        qDebug() << "⏭️ [MqttProtectionMonitor] 洒水输出已禁用，跳过";
+        return;
+    }
+
+    QString topic = config.value("mqtt_topic", "belt_control/relay/module1/control").toString();
+    int channel = config.value("channel", 7).toInt();
+
+    // 构建JSON命令
+    QJsonObject cmd;
+    cmd["cmd"] = "write";
+    cmd["channel"] = channel;
+    cmd["value"] = activate ? 1 : 0;
+    cmd["timestamp"] = QDateTime::currentSecsSinceEpoch();
+
+    QString message = QJsonDocument(cmd).toJson(QJsonDocument::Compact);
+
+    if (m_mqttController->publish(topic, message, 1, false)) {
+        m_sprinklerActive = activate;
+        qDebug() << (activate ? "🚿 [MqttProtectionMonitor] 洒水启动命令已发布"
+                              : "🚿 [MqttProtectionMonitor] 洒水停止命令已发布")
+                 << "topic:" << topic << "channel:" << channel;
+    } else {
+        qWarning() << "⚠️ [MqttProtectionMonitor] 洒水命令发布失败 topic:" << topic;
     }
 }

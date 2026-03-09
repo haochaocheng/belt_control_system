@@ -482,7 +482,14 @@ Rectangle {
                                     keyboardManager: root.keyboardManager
                                     // ✅ 2026-03-06 [Phase 7.48.13]: 更新为2个模拟量模块选项
                                     // 旧值（Phase 7.48.6）：["输入模块1", "输入模块2", "输入模块3", "输入模块4", "输出模块", "主模块"]
-                                    model: ["模拟量模块1", "模拟量模块2"]
+                                    // ✅ 2026-03-09 [Phase 7.48.26]: 添加"未分配"选项，支持通道自定义
+                                    model: ["模拟量模块1", "模拟量模块2", "未分配"]
+                                    // ✅ 2026-03-09 [Phase 7.48.26]: 选择"未分配"时，通道号自动设为-1
+                                    onCurrentTextChanged: {
+                                        if (currentText === "未分配") {
+                                            channelSpin.value = -1
+                                        }
+                                    }
                                 }
 
                                 Rectangle {
@@ -787,11 +794,14 @@ Rectangle {
 
                                 DeviceInfo.CustomSpinBox {
                                     id: channelSpin
-                                    from: 0
+                                    // ✅ 2026-03-09 [Phase 7.48.26]: from改为-1，支持"未分配"通道
+                                    from: -1
                                     to: 7
                                     editable: true
                                     anchors.fill: parent
                                     keyboardManager: root.keyboardManager
+                                    // ✅ 2026-03-09 [Phase 7.48.26]: 当模块类型为"未分配"时禁用
+                                    enabled: moduleTypeCombo.currentText !== "未分配"
                                 }
 
                                 Rectangle {
@@ -1559,6 +1569,51 @@ Rectangle {
                                 }
                             }
 
+                            // ✅ 2026-03-09 [Phase 7.48.26]: 新增 Row 11 - 洒水使能
+                            // ========== 第十一行：洒水使能（左列）==========
+                            // 参数索引: 22 - 洒水使能
+                            Text {
+                                text: "洒水使能:"
+                                font.pixelSize: 21
+                                color: "#9E9E9E"
+                                Layout.column: 0
+                                Layout.row: 11
+                                Layout.preferredWidth: 160
+                                horizontalAlignment: Text.AlignRight
+                            }
+
+                            Item {
+                                Layout.column: 1
+                                Layout.row: 11
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 300
+                                implicitHeight: 40
+
+                                Switch {
+                                    id: sprinklerSwitch
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    checked: false
+                                }
+
+                                Text {
+                                    anchors.left: sprinklerSwitch.right
+                                    anchors.leftMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: sprinklerSwitch.checked ? "已启用" : "已禁用"
+                                    font.pixelSize: 18
+                                    color: sprinklerSwitch.checked ? "#4CAF50" : "#757575"
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 1 && root.focusParamIndex === 22) ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 1 && root.focusParamIndex === 22) ? 3 : 0
+                                    radius: 4
+                                    z: 10
+                                }
+                            }
+
                         }  // GridLayout 结束
                     }
                 }
@@ -2116,6 +2171,9 @@ Rectangle {
                 slipDelaySpin.value = root.slipDelay
             }
 
+            // ✅ 2026-03-09 [Phase 7.48.26]: 加载洒水使能
+            sprinklerSwitch.checked = (protection.sprinkler_enabled === 1)
+
             console.log("✅ [AnalogInputPage] 从数据库加载完整参数:", item.name)
         } else {
             // 数据库中没有，使用ListModel中的基本数据
@@ -2171,6 +2229,10 @@ Rectangle {
                 slipDelaySpin.value = 10
             }
 
+            // ✅ 2026-03-09 [Phase 7.48.26]: 洒水使能默认值（烟雾/温度一/温度二/温度=启用，其余=禁用）
+            var defaultSprinkler = (item.name === "烟雾" || item.name === "温度一" || item.name === "温度二" || item.name === "温度")
+            sprinklerSwitch.checked = defaultSprinkler
+
             console.log("⚠️ [AnalogInputPage] 数据库中没有详细参数，使用默认值:", item.name)
         }
 
@@ -2217,7 +2279,9 @@ Rectangle {
             "protection_level": root.protectionLevel,
             "input_type": root.inputType,
             "data_timeout": dataTimeoutSpin.value,
-            "connection_timeout": connectionTimeoutSpin.value
+            "connection_timeout": connectionTimeoutSpin.value,
+            // ✅ 2026-03-09 [Phase 7.48.26]: 保存洒水使能
+            "sprinkler_enabled": sprinklerSwitch.checked ? 1 : 0
         }
 
         // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护专用字段
@@ -2226,6 +2290,18 @@ Rectangle {
             protection["speed_detect_mode"] = root.speedDetectMode
             protection["rated_speed"] = ratedSpeedSpin.realValue
             protection["slip_delay"] = slipDelaySpin.value
+        }
+
+        // ✅ 2026-03-09 [Phase 7.48.26]: 重复通道校验（保存前检查）
+        if (moduleTypeCombo.currentText !== "未分配" && channelSpin.value >= 0) {
+            for (var i = 0; i < analogProtectionModel.count; i++) {
+                if (i === root.currentProtectionIndex) continue  // 跳过自身
+                var other = analogProtectionModel.get(i)
+                if (other.moduleType === moduleTypeCombo.currentText && other.registerAddress === channelSpin.value) {
+                    console.warn("⚠️ [AnalogInputPage] 通道冲突! " + nameField.text + " 与 " + other.name +
+                                 " 使用相同通道: " + moduleTypeCombo.currentText + " CH" + channelSpin.value)
+                }
+            }
         }
 
         if (deviceConfigMgr.saveAnalogProtection(root.deviceId, protection)) {

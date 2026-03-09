@@ -210,6 +210,22 @@ bool DeviceConfigManager::createTables()
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN rated_speed REAL DEFAULT 0.0");
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN slip_delay REAL DEFAULT 10.0");
 
+    // ✅ 2026-03-09 [Phase 7.48.26]: 添加洒水使能列
+    query.exec("ALTER TABLE device_analog_protections ADD COLUMN sprinkler_enabled BOOLEAN DEFAULT 0");
+    query.exec("ALTER TABLE device_digital_protections ADD COLUMN sprinkler_enabled BOOLEAN DEFAULT 0");
+
+    // ✅ 2026-03-09 [Phase 7.48.26]: 洒水输出配置表
+    query.exec(R"(
+        CREATE TABLE IF NOT EXISTS sprinkler_output_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            module_type TEXT DEFAULT '继电器模块',
+            channel INTEGER DEFAULT 7,
+            mqtt_topic TEXT DEFAULT 'belt_control/relay/module1/control',
+            enabled BOOLEAN DEFAULT 1,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    )");
+
     // ✅ 2026-02-02 [参数持久化]: 添加电机配置表
     // 5. 电机配置表
     QString createMotorConfigTable = R"(
@@ -1245,6 +1261,38 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移012已执行过，跳过";
     }
+
+    // ✅ 2026-03-09 [Phase 7.48.26]: 迁移013 - 设置洒水使能默认值 + 初始化洒水输出配置
+    // 模拟量保护：烟雾、温度一、温度二、温度 默认启用洒水
+    // 开关量保护：烟雾、温度 默认启用洒水
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 013（洒水使能默认值）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '013_sprinkler_defaults'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移013: 设置洒水使能默认值";
+        QSqlQuery fix(m_database);
+
+        // 模拟量保护：烟雾、温度一、温度二、温度 启用洒水
+        fix.exec("UPDATE device_analog_protections SET sprinkler_enabled = 1 WHERE protection_name IN ('烟雾', '温度一', '温度二', '温度')");
+        int aiAffected = fix.numRowsAffected();
+        qDebug() << "  ✅ 模拟量保护洒水使能:" << aiAffected << "条";
+
+        // 开关量保护：烟雾、温度 启用洒水
+        fix.exec("UPDATE device_digital_protections SET sprinkler_enabled = 1 WHERE protection_name IN ('烟雾', '温度')");
+        int diAffected = fix.numRowsAffected();
+        qDebug() << "  ✅ 开关量保护洒水使能:" << diAffected << "条";
+
+        // 初始化洒水输出配置（不存在才插入）
+        fix.exec(R"(
+            INSERT INTO sprinkler_output_config (module_type, channel, mqtt_topic, enabled)
+            SELECT '继电器模块', 7, 'belt_control/relay/module1/control', 1
+            WHERE NOT EXISTS (SELECT 1 FROM sprinkler_output_config)
+        )");
+        qDebug() << "  ✅ 洒水输出配置初始化完成";
+
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('013_sprinkler_defaults')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移013已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -1315,6 +1363,7 @@ bool DeviceConfigManager::initDefaultData()
 bool DeviceConfigManager::initDefaultDigitalProtections(int deviceId)
 {
     // 8个默认开关量保护
+    // ✅ 2026-03-09 [Phase 7.48.26]: 烟雾、温度 默认启用洒水
     QStringList protectionNames = {
         "急停", "跑偏", "撕裂", "烟雾", "温度", "护网", "堆煤", "主机急停"
     };
@@ -1325,10 +1374,12 @@ bool DeviceConfigManager::initDefaultDigitalProtections(int deviceId)
         // ✅ 2026-02-28 [Phase 7.47.53]: 修复 - 添加 use_text_to_speech = 0（默认为默认音频）
         // 旧代码：不指定 use_text_to_speech，导致使用表的DEFAULT值（旧版本DEFAULT为1，导致新建保护默认为TTS）
         // 新代码：显式设置为0，确保新建的所有保护默认使用默认音频
+        // ✅ 2026-03-09 [Phase 7.48.26]: 添加 sprinkler_enabled（烟雾、温度=1, 其余=0）
+        int sprinklerEnabled = (name == "烟雾" || name == "温度") ? 1 : 0;
         query.prepare(R"(
             INSERT INTO device_digital_protections
-            (device_id, protection_name, module_type, register_address, channel_number, tts_text, use_text_to_speech)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (device_id, protection_name, module_type, register_address, channel_number, tts_text, use_text_to_speech, sprinkler_enabled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         )");
         query.addBindValue(deviceId);
         query.addBindValue(name);
@@ -1337,6 +1388,7 @@ bool DeviceConfigManager::initDefaultDigitalProtections(int deviceId)
         query.addBindValue(i);  // 通道编号 0-7
         query.addBindValue(name + "保护报警");
         query.addBindValue(0);  // ✅ 默认为0（使用默认音频）
+        query.addBindValue(sprinklerEnabled);  // ✅ 2026-03-09 [Phase 7.48.26]: 洒水使能
 
         if (!query.exec()) {
             QString error = QString("初始化设备%1的开关量保护'%2'失败: %3")
@@ -1363,6 +1415,8 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
         double lowerLimit;
         double range;
         double rated;
+        // ✅ 2026-03-09 [Phase 7.48.26]: 洒水使能（0=禁用, 1=启用）
+        int sprinklerEnabled;
     };
 
     // ✅ 2026-03-07 [Phase 7.48.22]: 通道按截图从上到下顺序分配
@@ -1371,27 +1425,28 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
     //             →硫化氢→氧气→烟雾→粉尘浓度→温度→湿度→煤流→煤仓高度
     // 上限值：Phase 7.48.20 按煤矿安全规程修正
     // 旧映射（Phase 7.48.21）：甲烷/一氧化碳/二氧化碳在模块2，温度/煤流/煤仓高度在模块1，通道号不连续
+    // ✅ 2026-03-09 [Phase 7.48.26]: 新增 sprinklerEnabled 字段（烟雾/温度一/温度二/温度=1, 其余=0）
     QList<AnalogProtection> protections = {
         // 模拟量模块1 CH0-CH7（截图第1-8项）
-        {"速度",       "m/s",   "模拟量模块1", 0, 3.0,    0.5,   5.0,    2.5},   // 模块1 CH0
-        {"张力",       "T",     "模拟量模块1", 1, 8.0,    3.0,   20.0,   0.0},   // 模块1 CH1
-        {"温度一",     "℃",    "模拟量模块1", 2, 42.0,   0.0,   100.0,  0.0},   // 模块1 CH2
-        {"温度二",     "℃",    "模拟量模块1", 3, 42.0,   0.0,   100.0,  0.0},   // 模块1 CH3
-        {"电压",       "V",     "模拟量模块1", 4, 700.0,  500.0, 660.0,  0.0},   // 模块1 CH4
-        {"甲烷",       "%CH₄",  "模拟量模块1", 5, 1.0,    0.0,   4.0,    0.0},   // 模块1 CH5 | 规程≥1.0%
-        {"一氧化碳",   "ppm",   "模拟量模块1", 6, 24.0,   0.0,   1000.0, 0.0},   // 模块1 CH6 | 规程≥24ppm
-        {"二氧化碳",   "%CO₂",  "模拟量模块1", 7, 1.5,    0.0,   5.0,    0.0},   // 模块1 CH7 | 规程>1.5%
+        {"速度",       "m/s",   "模拟量模块1", 0, 3.0,    0.5,   5.0,    2.5,   0},  // 模块1 CH0
+        {"张力",       "T",     "模拟量模块1", 1, 8.0,    3.0,   20.0,   0.0,   0},  // 模块1 CH1
+        {"温度一",     "℃",    "模拟量模块1", 2, 42.0,   0.0,   100.0,  0.0,   1},  // 模块1 CH2 | 洒水使能
+        {"温度二",     "℃",    "模拟量模块1", 3, 42.0,   0.0,   100.0,  0.0,   1},  // 模块1 CH3 | 洒水使能
+        {"电压",       "V",     "模拟量模块1", 4, 700.0,  500.0, 660.0,  0.0,   0},  // 模块1 CH4
+        {"甲烷",       "%CH₄",  "模拟量模块1", 5, 1.0,    0.0,   4.0,    0.0,   0},  // 模块1 CH5 | 规程≥1.0%
+        {"一氧化碳",   "ppm",   "模拟量模块1", 6, 24.0,   0.0,   1000.0, 0.0,   0},  // 模块1 CH6 | 规程≥24ppm
+        {"二氧化碳",   "%CO₂",  "模拟量模块1", 7, 1.5,    0.0,   5.0,    0.0,   0},  // 模块1 CH7 | 规程>1.5%
         // 模拟量模块2 CH0-CH7（截图第9-16项）
-        {"硫化氢",     "ppm",   "模拟量模块2", 0, 6.6,    0.0,   100.0,  6.6},   // 模块2 CH0 | 规程≥6.6ppm
-        {"氧气",       "%O₂",   "模拟量模块2", 1, 23.5,   0.0,   25.0,   20.0},  // 模块2 CH1 | >23.5%富氧
-        {"烟雾",       "mg/m³", "模拟量模块2", 2, 100.0,  0.0,   1000.0, 500.0}, // 模块2 CH2
-        {"粉尘浓度",   "mg/m³", "模拟量模块2", 3, 4.0,    0.0,   1000.0, 100.0}, // 模块2 CH3 | 总尘>4mg/m³
-        {"温度",       "℃",    "模拟量模块2", 4, 34.0,   0.0,   50.0,   26.0},  // 模块2 CH4 | 规程>34℃
-        {"湿度",       "%RH",   "模拟量模块2", 5, 95.0,   0.0,   100.0,  95.0},  // 模块2 CH5
-        {"煤流",       "t/h",   "模拟量模块2", 6, 1500.0, 0.0,   2000.0, 500.0}, // 模块2 CH6
-        {"煤仓高度",   "m",     "模拟量模块2", 7, 25.0,   0.0,   30.0,   15.0},  // 模块2 CH7
-        {"气压",       "kPa",   "未分配", -1, 110.0,      80.0,  40.0,   101.0}, // 未分配通道
-        {"风速",       "m/s",   "未分配", -1, 4.0,        0.3,   14.7,   4.0}    // 未分配通道
+        {"硫化氢",     "ppm",   "模拟量模块2", 0, 6.6,    0.0,   100.0,  6.6,   0},  // 模块2 CH0 | 规程≥6.6ppm
+        {"氧气",       "%O₂",   "模拟量模块2", 1, 23.5,   0.0,   25.0,   20.0,  0},  // 模块2 CH1 | >23.5%富氧
+        {"烟雾",       "mg/m³", "模拟量模块2", 2, 100.0,  0.0,   1000.0, 500.0, 1},  // 模块2 CH2 | 洒水使能
+        {"粉尘浓度",   "mg/m³", "模拟量模块2", 3, 4.0,    0.0,   1000.0, 100.0, 0},  // 模块2 CH3 | 总尘>4mg/m³
+        {"温度",       "℃",    "模拟量模块2", 4, 34.0,   0.0,   50.0,   26.0,  1},  // 模块2 CH4 | 规程>34℃ | 洒水使能
+        {"湿度",       "%RH",   "模拟量模块2", 5, 95.0,   0.0,   100.0,  95.0,  0},  // 模块2 CH5
+        {"煤流",       "t/h",   "模拟量模块2", 6, 1500.0, 0.0,   2000.0, 500.0, 0},  // 模块2 CH6
+        {"煤仓高度",   "m",     "模拟量模块2", 7, 25.0,   0.0,   30.0,   15.0,  0},  // 模块2 CH7
+        {"气压",       "kPa",   "未分配", -1, 110.0,      80.0,  40.0,   101.0, 0},  // 未分配通道
+        {"风速",       "m/s",   "未分配", -1, 4.0,        0.3,   14.7,   4.0,   0}   // 未分配通道
     };
 
     QSqlQuery query(m_database);
@@ -1404,8 +1459,8 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
                 INSERT INTO device_analog_protections
                 (device_id, protection_name, module_type, register_address, unit,
                  upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech,
-                 speed_start_delay, speed_detect_mode, rated_speed, slip_delay)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 speed_start_delay, speed_detect_mode, rated_speed, slip_delay, sprinkler_enabled)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             )");
             query.addBindValue(deviceId);
             query.addBindValue(p.name);
@@ -1423,12 +1478,14 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
             query.addBindValue("limit"); // speed_detect_mode: 默认上下限模式
             query.addBindValue(p.rated); // rated_speed: 默认等于rated_value（2.5 m/s）
             query.addBindValue(10.0);   // slip_delay: 低速打滑延时10秒
+            query.addBindValue(p.sprinklerEnabled);  // ✅ 2026-03-09 [Phase 7.48.26]: 洒水使能
         } else {
             query.prepare(R"(
                 INSERT INTO device_analog_protections
                 (device_id, protection_name, module_type, register_address, unit,
-                 upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 upper_limit, lower_limit, range_value, rated_value, tts_text, use_text_to_speech,
+                 sprinkler_enabled)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             )");
             query.addBindValue(deviceId);
             query.addBindValue(p.name);
@@ -1442,6 +1499,7 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
             query.addBindValue(p.rated);
             query.addBindValue(p.name + "保护报警");
             query.addBindValue(0);  // ✅ 默认为0（使用默认音频）
+            query.addBindValue(p.sprinklerEnabled);  // ✅ 2026-03-09 [Phase 7.48.26]: 洒水使能
         }
 
         if (!query.exec()) {
@@ -1581,12 +1639,13 @@ bool DeviceConfigManager::saveDigitalProtection(int deviceId, const QVariantMap 
     }
 
     QSqlQuery query(m_database);
+    // ✅ 2026-03-09 [Phase 7.48.26]: 扩展INSERT语句，添加 sprinkler_enabled 列
     query.prepare(R"(
         INSERT OR REPLACE INTO device_digital_protections
         (device_id, protection_name, module_type, register_address, channel_number,
          protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file,
-         play_mode, protection_level, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         play_mode, protection_level, sprinkler_enabled, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -1606,6 +1665,8 @@ bool DeviceConfigManager::saveDigitalProtection(int deviceId, const QVariantMap 
     query.addBindValue(protection.value("play_mode", "count").toString());
     // ✅ 2026-03-04 [Phase 7.47.96]: 新增保护级别字段（0=紧急停车预警 1=正常停车预警 2=仅预警 3=不处理）
     query.addBindValue(protection.value("protection_level", 1).toInt());
+    // ✅ 2026-03-09 [Phase 7.48.26]: 洒水使能
+    query.addBindValue(protection.value("sprinkler_enabled", 0).toInt());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
@@ -1686,6 +1747,7 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     QSqlQuery query(m_database);
     // ✅ 2026-03-05 [Phase 7.48.5]: 扩展INSERT语句，添加3个新列
     // ✅ 2026-03-05 [Phase 7.48.10]: 扩展INSERT语句，添加4个速度保护专用列（共25列）
+    // ✅ 2026-03-09 [Phase 7.48.26]: 扩展INSERT语句，添加 sprinkler_enabled 列（共26列）
     query.prepare(R"(
         INSERT OR REPLACE INTO device_analog_protections
         (device_id, protection_name, module_type, register_address, unit,
@@ -1693,8 +1755,9 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
          protection_delay, play_count, play_duration, use_text_to_speech, tts_text, audio_file,
          play_mode, protection_level, data_timeout, connection_timeout, input_type,
          speed_start_delay, speed_detect_mode, rated_speed, slip_delay,
+         sprinkler_enabled,
          updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -1728,6 +1791,8 @@ bool DeviceConfigManager::saveAnalogProtection(int deviceId, const QVariantMap &
     query.addBindValue(protection.value("speed_detect_mode", "limit").toString());
     query.addBindValue(protection.value("rated_speed", 0.0).toDouble());
     query.addBindValue(protection.value("slip_delay", 10.0).toDouble());
+    // ✅ 2026-03-09 [Phase 7.48.26]: 洒水使能
+    query.addBindValue(protection.value("sprinkler_enabled", 0).toInt());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
@@ -1790,6 +1855,53 @@ bool DeviceConfigManager::deleteAnalogProtection(int deviceId, const QString &pr
     }
 
     emit deviceConfigChanged(deviceId);
+    return true;
+}
+
+// ========== 洒水输出配置 ==========
+// ✅ 2026-03-09 [Phase 7.48.26]: 洒水输出配置管理
+
+QVariantMap DeviceConfigManager::loadSprinklerOutputConfig()
+{
+    QSqlQuery query(m_database);
+    query.prepare("SELECT * FROM sprinkler_output_config LIMIT 1");
+
+    if (!query.exec() || !query.next()) {
+        // 返回默认配置
+        QVariantMap defaultConfig;
+        defaultConfig["module_type"] = "继电器模块";
+        defaultConfig["channel"] = 7;
+        defaultConfig["mqtt_topic"] = "belt_control/relay/module1/control";
+        defaultConfig["enabled"] = 1;
+        qDebug() << "⚠️ [DeviceConfigManager] 洒水输出配置不存在，返回默认值";
+        return defaultConfig;
+    }
+
+    return queryToMap(query);
+}
+
+bool DeviceConfigManager::saveSprinklerOutputConfig(const QVariantMap &config)
+{
+    QSqlQuery query(m_database);
+    // 先尝试更新，如果不存在则插入
+    query.prepare(R"(
+        INSERT OR REPLACE INTO sprinkler_output_config
+        (id, module_type, channel, mqtt_topic, enabled, updated_at)
+        VALUES (1, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    )");
+    query.addBindValue(config.value("module_type", "继电器模块").toString());
+    query.addBindValue(config.value("channel", 7).toInt());
+    query.addBindValue(config.value("mqtt_topic", "belt_control/relay/module1/control").toString());
+    query.addBindValue(config.value("enabled", 1).toInt());
+
+    if (!query.exec()) {
+        QString error = "保存洒水输出配置失败: " + query.lastError().text();
+        qCritical() << error;
+        emit databaseError(error);
+        return false;
+    }
+
+    qDebug() << "✅ [DeviceConfigManager] 洒水输出配置已保存";
     return true;
 }
 
