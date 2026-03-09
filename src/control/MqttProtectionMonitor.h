@@ -194,6 +194,12 @@ private:
     QMap<int, bool> m_motorRunning;               ///< 电机运行状态（key=beltNumber）
     QMap<int, QElapsedTimer> m_slipTimers;        ///< 低速打滑计时器（key=beltNumber）
     QMap<int, bool> m_slipTimerActive;            ///< 低速打滑计时器是否激活（key=beltNumber）
+
+    // ✅ 2026-03-09 [Phase 7.48.23]: 模拟量保护报警状态追踪（边沿触发）
+    // Key = "皮带编号:保护名称" (如 "1:温度一")
+    // Value = true表示当前处于超限状态（已触发报警），false表示正常
+    // 只在 false→true 转换时触发报警播放，避免持续超限时反复触发
+    QMap<QString, bool> m_protectionAlarmActive;
 };
 
 #endif // MQTTPROTECTIONMONITOR_H

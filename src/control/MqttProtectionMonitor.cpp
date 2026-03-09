@@ -96,6 +96,9 @@ void MqttProtectionMonitor::stop()
 
     qDebug() << "🛑 [MqttProtectionMonitor] 停止MQTT保护监控";
     m_isRunning = false;
+
+    // ✅ 2026-03-09 [Phase 7.48.23]: 清理报警状态，下次启动时重新检测
+    m_protectionAlarmActive.clear();
 }
 
 void MqttProtectionMonitor::setBeltMapping(int moduleIndex, int beltNumber)
@@ -251,12 +254,24 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         return;  // 监控未启动，忽略
     }
 
-    // 获取皮带编号
-    int beltNumber = m_aiBeltMapping.value(moduleIndex, 1);
+    // ✅ 2026-03-07 [Phase 7.48.19]: 修复moduleIndex偏移量不一致问题
+    // AIDataManager::channelChanged信号使用 dataIndex+2 (2=模拟量模块1, 3=模拟量模块2)
+    // 本地AI索引应为 0=模拟量模块1, 1=模拟量模块2
+    // 旧代码直接使用 moduleIndex（值为2或3），导致模块匹配全部失败
+    int aiLocalIndex = moduleIndex - 2;
+    if (aiLocalIndex < 0 || aiLocalIndex > 1) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] 无效的AI模块索引:" << moduleIndex << "→ 本地:" << aiLocalIndex;
+        return;
+    }
 
-    qDebug() << "📊 [MqttProtectionMonitor] AI通道变化 - 模块:" << moduleIndex
-             << "通道:" << channelIndex << "AD值:" << data.adValue
-             << "→ 皮带" << beltNumber;
+    // 获取皮带编号（使用本地索引查询映射）
+    // 旧代码：m_aiBeltMapping.value(moduleIndex, 1)，moduleIndex=2查不到映射
+    int beltNumber = m_aiBeltMapping.value(aiLocalIndex, 1);
+
+    // ✅ 2026-03-06 [Phase 7.48.14]: 临时屏蔽AI通道变化日志（日志量过大）
+    // qDebug() << "📊 [MqttProtectionMonitor] AI通道变化 - 模块:" << moduleIndex
+    //          << "通道:" << channelIndex << "AD值:" << data.adValue
+    //          << "→ 皮带" << beltNumber;
 
     // 查询该皮带的所有模拟量保护配置
     if (!m_deviceConfigMgr) {
@@ -277,16 +292,14 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         QString moduleType = prot.value("module_type").toString();
 
         // ✅ 2026-03-06 [Phase 7.48.12]: 通道匹配逻辑重构
-        // 旧逻辑（Phase 7.48.5）：regAddr - 5 = channelIndex（registerAddress 5-22连续编号）
-        // 新逻辑：匹配 moduleIndex + channelIndex
-        //   moduleIndex 0 = 模拟量模块1（通道0-7），moduleIndex 1 = 模拟量模块2（通道0-7）
-        //   register_address 直接等于 channelIndex（0-7）
-        //   未分配的保护项（register_address=-1）跳过
+        // ✅ 2026-03-07 [Phase 7.48.19]: 修复模块匹配 — 使用 aiLocalIndex 而非 moduleIndex
+        // 旧代码：(moduleIndex == 0) ? "模拟量模块1" : "模拟量模块2"  ← moduleIndex=2时永远返回"模拟量模块2"
+        // 新代码：aiLocalIndex 0=模拟量模块1, 1=模拟量模块2
         if (regAddr < 0) {
-            continue;  // 未分配的保护项（风速/粉尘浓度），跳过
+            continue;  // 未分配的保护项（风速等），跳过
         }
         // 判断模块是否匹配
-        QString expectedModule = (moduleIndex == 0) ? "模拟量模块1" : "模拟量模块2";
+        QString expectedModule = (aiLocalIndex == 0) ? "模拟量模块1" : "模拟量模块2";
         if (moduleType != expectedModule) {
             continue;  // 模块不匹配
         }
@@ -305,8 +318,9 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         // ✅ 2026-03-05 [Phase 7.48.5]: 从 ChannelData 获取 AD 值
         double engineeringValue = lowerLimit + (data.adValue / 65535.0) * rangeValue;
 
-        qDebug() << "   保护:" << protName << "工程量:" << engineeringValue
-                 << "阈值:[" << lowerLimit << "," << upperLimit << "]";
+        // ✅ 2026-03-06 [Phase 7.48.14]: 临时屏蔽保护检测日志（日志量过大）
+        // qDebug() << "   保护:" << protName << "工程量:" << engineeringValue
+        //          << "阈值:[" << lowerLimit << "," << upperLimit << "]";
 
         // 检查是否超限
         // ✅ 2026-03-05 [Phase 7.48.9]: 记录超限方向，用于方向性音频选择（速度/张力/电压）
@@ -385,25 +399,51 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
 
         // 通用上下限检测（非速度保护，或速度保护的limit模式）
         if (!speedHandled) {
-            if (engineeringValue > upperLimit) {
+            // ✅ 2026-03-07 [Phase 7.48.19]: 修复上下限比较运算符
+            // 旧代码：engineeringValue > upperLimit（严格大于）
+            // 问题：当 upper_limit = lower_limit + range_value 时（13项保护），
+            //       工程量最大值 = 上限值，严格大于永远不成立，报警永远无法触发
+            // 修复：改为 >= （大于等于），同时下限改为 <=（仅 lowerLimit > 0 时检测）
+            if (engineeringValue >= upperLimit) {
                 qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量保护触发（超上限）:" << protName
-                           << "工程量:" << engineeringValue << ">" << upperLimit;
+                           << "工程量:" << engineeringValue << ">=" << upperLimit;
                 exceeded = true;
                 limitDirection = AudioPathMapper::UpperLimit;
-            } else if (engineeringValue < lowerLimit) {
+            } else if (lowerLimit > 0 && engineeringValue <= lowerLimit) {
+                // 下限检测：仅 lowerLimit > 0 时检测（lowerLimit=0 表示无下限报警）
                 qWarning() << "⚠️ [MqttProtectionMonitor] 模拟量保护触发（低于下限）:" << protName
-                           << "工程量:" << engineeringValue << "<" << lowerLimit;
+                           << "工程量:" << engineeringValue << "<=" << lowerLimit;
                 exceeded = true;
                 limitDirection = AudioPathMapper::LowerLimit;
             }
         }
 
+        // ✅ 2026-03-09 [Phase 7.48.23]: 边沿触发 — 只在状态转换时触发报警
+        // 解决问题：持续超限时反复调用playAlarm()，多保护互相替代导致音频无限循环
+        // 原理：只在"正常→超限"的边沿触发一次报警，"超限→正常"时清除状态
+        QString alarmKey = QString("%1:%2").arg(beltNumber).arg(protName);
+
         if (!exceeded) {
+            // 值在正常范围内
+            if (m_protectionAlarmActive.value(alarmKey, false)) {
+                // 状态转换：超限 → 正常（报警恢复）
+                m_protectionAlarmActive[alarmKey] = false;
+                qDebug() << "✅ [MqttProtectionMonitor] 模拟量保护恢复:" << protName
+                         << "皮带" << beltNumber << "工程量:" << engineeringValue;
+            }
             continue;  // 未超限，继续检查下一个保护项
         }
 
-        // 超限，触发报警
-        // 读取播放配置
+        // 值超限 — 检查是否是新触发（边沿检测）
+        if (m_protectionAlarmActive.value(alarmKey, false)) {
+            // 持续超限，已触发过报警，不重复播放
+            continue;
+        }
+
+        // 首次超限（正常→超限转换），标记状态并触发报警
+        m_protectionAlarmActive[alarmKey] = true;
+        qDebug() << "🔔 [MqttProtectionMonitor] 模拟量保护首次触发:" << protName
+                 << "皮带" << beltNumber;
         bool useTTS = (prot.value("use_text_to_speech", 0).toInt() == 1);
         QString playMode = prot.value("play_mode", "count").toString();
         int playCount = prot.value("play_count", 3).toInt();
