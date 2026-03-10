@@ -3538,7 +3538,7 @@ Item {
         case 2: // 模拟量输入
             return []  // ✅ 按钮已在 AnalogInputPage 内部实现
         case 3: // 电机控制
-            return ["启动测试", "停止测试", "参数校验"]
+            return []  // ✅ 2026-03-10 [Phase 7.48.29]: 删除底部按钮（启动测试/停止测试/参数校验），按钮已在 MotorControlPage 内部实现
         case 4: // 制动器控制
             return ["制动测试", "释放测试", "参数校验"]
         case 5: // 张紧控制

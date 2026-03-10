@@ -684,53 +684,9 @@ Rectangle {
             }
         }  // GridLayout end
 
-            // ========== 底部按钮 ==========
-            RowLayout {
-                id: buttonRow
-                Layout.columnSpan: 4
-                Layout.fillWidth: true
-                Layout.topMargin: 20
-                spacing: 15
-
-                Button {
-                    id: saveBtn
-                    text: "保存"
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 40
-                    background: Rectangle {
-                        color: parent.pressed ? "#219a52" : (parent.hovered ? "#2ecc71" : "#27ae60")
-                        radius: 4
-                    }
-                    contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 16; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    onClicked: root.saveConfig()
-                }
-
-                Button {
-                    id: deleteBtn
-                    text: "删除"
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 40
-                    background: Rectangle {
-                        color: parent.pressed ? "#c0392b" : (parent.hovered ? "#e74c3c" : "#e74c3c")
-                        radius: 4
-                    }
-                    contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 16; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    onClicked: root.resetToDefaults()
-                }
-
-                Button {
-                    id: resetBtn
-                    text: "重置"
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 40
-                    background: Rectangle {
-                        color: parent.pressed ? "#6c7a7b" : (parent.hovered ? "#95a5a6" : "#7f8c8d")
-                        radius: 4
-                    }
-                    contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 16; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    onClicked: root.loadConfig()
-                }
-            }
+            // ✅ 2026-03-10 [Phase 7.48.29]: 删除内置底部按钮（保存/删除/重置）
+            // 原因：按钮已在 MotorControlPage 底部统一实现，此处重复
+            // 旧代码：RowLayout { Button "保存" / "删除" / "重置" }
     }  // ScrollView end
 
     // ========== 导航函数 ==========
