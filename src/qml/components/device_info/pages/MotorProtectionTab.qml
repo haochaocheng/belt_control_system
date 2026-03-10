@@ -33,6 +33,13 @@ Rectangle {
     // ========== 音频来源模式 ==========
     property string audioSourceMode: "default"  // "default" or "tts"
 
+    // ✅ 2026-03-10 [Phase 7.48.32]: 切换音频来源时自动更新音频文件名
+    onAudioSourceModeChanged: {
+        if (audioFileField) {
+            audioFileField.text = getAudioFileName(root.protectionName)
+        }
+    }
+
     ScrollView {
         id: paramScrollView
         anchors.fill: parent
@@ -161,6 +168,8 @@ Rectangle {
             }
 
             // ========== Row 2: 音频来源 | TTS文字 ==========
+            // ✅ 2026-03-10 [Phase 7.48.32]: 音频来源按钮组升级为Cyberpunk工业风（匹配AnalogInputPage）
+            // 旧代码：简单的 Row { Button "默认" / Button "TTS" } 蓝色高亮
             Text {
                 text: "音频来源:"
                 font.pixelSize: 21; color: "#9E9E9E"
@@ -171,35 +180,128 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 2
                 Layout.fillWidth: true; Layout.maximumWidth: 300
-                implicitHeight: audioSourceRow.implicitHeight
-                Row {
-                    id: audioSourceRow
-                    spacing: 5
+                implicitHeight: 48
+
+                RowLayout {
+                    id: audioSourceButtonGroup
+                    anchors.fill: parent
+                    spacing: 8
+
+                    // [默认] 按钮 - 深蓝背景 + 青色边框 + LED点
                     Button {
-                        id: audioDefaultBtn
+                        id: defaultAudioButton
                         text: "默认"
-                        width: 80; height: 36
-                        highlighted: root.audioSourceMode === "default"
-                        onClicked: root.audioSourceMode = "default"
+                        checkable: true
+                        checked: root.audioSourceMode === "default"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+
                         background: Rectangle {
-                            color: root.audioSourceMode === "default" ? "#2196F3" : "#3A3A3A"
-                            radius: 4
+                            color: defaultAudioButton.checked ? "#0a1929" :
+                                   (defaultAudioButton.hovered ? "#1e2d42" : "#141920")
+                            radius: 6
+                            border.color: defaultAudioButton.checked ? "#00d4ff" :
+                                          (defaultAudioButton.hovered ? "#2196F3" : "#334155")
+                            border.width: defaultAudioButton.checked ? 2 : 1
+
+                            Rectangle {
+                                visible: defaultAudioButton.checked
+                                anchors.top: parent.top
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.leftMargin: 1; anchors.rightMargin: 1; anchors.topMargin: 1
+                                height: 2; radius: 1; color: "#00d4ff"
+                            }
                         }
-                        contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 8
+                                Rectangle {
+                                    width: 8; height: 8; radius: 4
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: defaultAudioButton.checked ? "#00d4ff" : "#475569"
+                                    Rectangle {
+                                        width: 4; height: 4; radius: 2
+                                        anchors.centerIn: parent
+                                        color: defaultAudioButton.checked ? "#7dd3fc" : "#64748B"
+                                    }
+                                }
+                                Text {
+                                    text: defaultAudioButton.text
+                                    font.pixelSize: 13
+                                    font.bold: defaultAudioButton.checked
+                                    color: defaultAudioButton.checked ? "#E0E0E0" : "#9E9E9E"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+
+                        onClicked: {
+                            root.audioSourceMode = "default"
+                            ttsAudioButton.checked = false
+                        }
                     }
+
+                    // [TTS] 按钮 - 深绿背景 + 绿色边框 + LED点
                     Button {
-                        id: audioTtsBtn
+                        id: ttsAudioButton
                         text: "TTS"
-                        width: 80; height: 36
-                        highlighted: root.audioSourceMode === "tts"
-                        onClicked: root.audioSourceMode = "tts"
+                        checkable: true
+                        checked: root.audioSourceMode === "tts"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+
                         background: Rectangle {
-                            color: root.audioSourceMode === "tts" ? "#2196F3" : "#3A3A3A"
-                            radius: 4
+                            color: ttsAudioButton.checked ? "#0d2218" :
+                                   (ttsAudioButton.hovered ? "#1e2d42" : "#141920")
+                            radius: 6
+                            border.color: ttsAudioButton.checked ? "#22C55E" :
+                                          (ttsAudioButton.hovered ? "#2196F3" : "#334155")
+                            border.width: ttsAudioButton.checked ? 2 : 1
+
+                            Rectangle {
+                                visible: ttsAudioButton.checked
+                                anchors.top: parent.top
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.leftMargin: 1; anchors.rightMargin: 1; anchors.topMargin: 1
+                                height: 2; radius: 1; color: "#22C55E"
+                            }
                         }
-                        contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 8
+                                Rectangle {
+                                    width: 8; height: 8; radius: 4
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: ttsAudioButton.checked ? "#22C55E" : "#475569"
+                                    Rectangle {
+                                        width: 4; height: 4; radius: 2
+                                        anchors.centerIn: parent
+                                        color: ttsAudioButton.checked ? "#86EFAC" : "#64748B"
+                                    }
+                                }
+                                Text {
+                                    text: ttsAudioButton.text
+                                    font.pixelSize: 13
+                                    font.bold: ttsAudioButton.checked
+                                    color: ttsAudioButton.checked ? "#E0E0E0" : "#9E9E9E"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+
+                        onClicked: {
+                            root.audioSourceMode = "tts"
+                            defaultAudioButton.checked = false
+                        }
                     }
                 }
+
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) { root.requestFocusParamIndex(4); mouse.accepted = false }
@@ -211,6 +313,8 @@ Rectangle {
                     radius: 4; z: 1000; enabled: false
                 }
             }
+            // ✅ 2026-03-10 [Phase 7.48.32]: TTS文字输入框样式修复（匹配AnalogInputPage）
+            // 旧代码：placeholderText: "输入TTS文字"（无颜色设置，黑色文字）
             Text {
                 text: "TTS文字:"
                 font.pixelSize: 21; color: "#9E9E9E"
@@ -225,7 +329,7 @@ Rectangle {
                 DeviceInfo.CustomTextField {
                     id: ttsTextField
                     anchors.fill: parent
-                    placeholderText: "输入TTS文字"
+                    placeholderText: "输入报警文字内容..."
                 }
                 MouseArea {
                     anchors.fill: parent
@@ -278,10 +382,15 @@ Rectangle {
                 Layout.column: 3; Layout.row: 3
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: audioFileField.implicitHeight
+                // ✅ 2026-03-10 [Phase 7.48.32]: 音频文件输入框样式修复（匹配AnalogInputPage）
+                // 旧代码：无 placeholderText/placeholderTextColor/color 设置
                 DeviceInfo.CustomTextField {
                     id: audioFileField
                     anchors.fill: parent
                     readOnly: true
+                    placeholderText: "未配置音频文件"
+                    placeholderTextColor: "#6E6E6E"
+                    color: "#E0E0E0"
                 }
                 MouseArea {
                     anchors.fill: parent
@@ -704,7 +813,17 @@ Rectangle {
             moduleTypeCombo.currentIndex = (moduleTypeCombo.currentIndex + 1) % moduleTypeCombo.model.length; break
         case 3: inputField = playDurationSpin; break
         case 4:  // 音频来源（切换）
-            root.audioSourceMode = (root.audioSourceMode === "default") ? "tts" : "default"; break
+            // ✅ 2026-03-10 [Phase 7.48.32]: 同步按钮选中状态
+            if (root.audioSourceMode === "default") {
+                root.audioSourceMode = "tts"
+                defaultAudioButton.checked = false
+                ttsAudioButton.checked = true
+            } else {
+                root.audioSourceMode = "default"
+                defaultAudioButton.checked = true
+                ttsAudioButton.checked = false
+            }
+            break
         case 5: inputField = ttsTextField; break
         case 6: inputField = channelSpin; break
         case 7: break  // 音频文件（只读）
@@ -734,6 +853,16 @@ Rectangle {
             } else {
                 inputField.forceActiveFocus()
             }
+        }
+    }
+
+    // ========== 音频文件名生成（匹配AnalogInputPage） ==========
+    // ✅ 2026-03-10 [Phase 7.48.32]: 新增 - 根据保护名称和音频来源模式生成音频文件名
+    function getAudioFileName(protectionName) {
+        if (root.audioSourceMode === "default") {
+            return protectionName + ".mp3"
+        } else {
+            return protectionName + ".wav"
         }
     }
 
@@ -804,8 +933,13 @@ Rectangle {
 
         // 音频来源
         root.audioSourceMode = (config.use_text_to_speech === 1 || config.voice_alarm_type === "tts") ? "tts" : "default"
-        ttsTextField.text = config.tts_text || ""
-        audioFileField.text = config.audio_file || ""
+        // ✅ 2026-03-10 [Phase 7.48.32]: 同步按钮选中状态
+        defaultAudioButton.checked = (root.audioSourceMode === "default")
+        ttsAudioButton.checked = (root.audioSourceMode === "tts")
+        ttsTextField.text = config.tts_text || (root.protectionName + "保护报警")
+        // ✅ 2026-03-10 [Phase 7.48.32]: 音频文件自动填充（匹配AnalogInputPage的getAudioFileName逻辑）
+        // 旧代码：audioFileField.text = config.audio_file || ""
+        audioFileField.text = config.audio_file || getAudioFileName(root.protectionName)
 
         // 播放方式
         playModeRow.selectedMode = config.play_mode || "count"
@@ -864,9 +998,13 @@ Rectangle {
         enabledSwitch.checked = true
         playCountSpin.value = 3
         playDurationSpin.value = 50
-        root.audioSourceMode = "default"
-        ttsTextField.text = ""
-        audioFileField.text = ""
+        // ✅ 2026-03-10 [Phase 7.48.32]: 重置时自动填充音频字段（匹配AnalogInputPage）
+        // 旧代码：root.audioSourceMode = "default"; ttsTextField.text = ""; audioFileField.text = ""
+        root.audioSourceMode = "tts"
+        defaultAudioButton.checked = false
+        ttsAudioButton.checked = true
+        ttsTextField.text = root.protectionName + "保护报警"
+        audioFileField.text = getAudioFileName(root.protectionName)
         playModeRow.selectedMode = "count"
         dataTimeoutSpin.value = 2
         connectionTimeoutSpin.value = 10
