@@ -16,6 +16,7 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property int motorIndex: 0  // 当前电机索引 (0-7)
+    property int deviceId: 1    // ✅ 2026-03-10 [Phase 7.48.33]: 设备ID（用于电机控制命令）
     // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 恢复键盘管理器属性（与 AnalogInputPage 保持一致）
     property var keyboardManager: null
 
@@ -444,13 +445,357 @@ Rectangle {
                     }
                 }
             }
+
+            // ========== 第四行：状态指示区域（只读）==========
+            // ✅ 2026-03-10 [Phase 7.48.33]: 新增运行LED和反馈LED指示灯
+
+            // 分隔线
+            Rectangle {
+                Layout.column: 0; Layout.row: 3
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                Layout.topMargin: 8; Layout.bottomMargin: 8
+                color: "#334155"
+            }
+
+            Text {
+                text: "状态指示"
+                font.pixelSize: 19; font.bold: true; color: "#7dd3fc"
+                Layout.column: 0; Layout.row: 4
+                Layout.columnSpan: 4
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            // 运行LED
+            Text {
+                text: "运行状态:"
+                font.pixelSize: 21; color: "#9E9E9E"
+                Layout.column: 0; Layout.row: 5
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+            Item {
+                Layout.column: 1; Layout.row: 5
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: 40
+
+                // ✅ 2026-03-10 [Phase 7.48.33]: 使用属性+Connections实现实时刷新
+                property bool motorIsOn: false
+
+                Connections {
+                    target: typeof diDataManager !== "undefined" ? diDataManager : null
+                    function onModule1DataChanged() {
+                        if (moduleAddressSpin.value === 1) {
+                            parent.motorIsOn = diDataManager.getBit(0, outputChannelSpin.value)
+                        }
+                    }
+                    function onModule2DataChanged() {
+                        if (moduleAddressSpin.value === 2) {
+                            parent.motorIsOn = diDataManager.getBit(1, outputChannelSpin.value)
+                        }
+                    }
+                }
+
+                Row {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 12
+
+                    // LED 指示灯
+                    Rectangle {
+                        id: motorRunLed
+                        width: 24; height: 24; radius: 12
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        property bool isOn: parent.parent.motorIsOn
+
+                        color: isOn ? "#22C55E" : "#1a1a2e"
+                        border.color: isOn ? "#86EFAC" : "#475569"
+                        border.width: 2
+
+                        // 内部高亮点
+                        Rectangle {
+                            width: 10; height: 10; radius: 5
+                            anchors.centerIn: parent
+                            color: motorRunLed.isOn ? "#bbf7d0" : "#334155"
+                            opacity: motorRunLed.isOn ? 0.8 : 0.3
+                        }
+
+                        // 发光效果
+                        Rectangle {
+                            visible: motorRunLed.isOn
+                            width: 32; height: 32; radius: 16
+                            anchors.centerIn: parent
+                            color: "#22C55E"; opacity: 0.2
+                            z: -1
+                        }
+                    }
+
+                    Text {
+                        text: motorRunLed.isOn ? "运行中" : "已停止"
+                        font.pixelSize: 18
+                        color: motorRunLed.isOn ? "#22C55E" : "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 5) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
+
+            // 反馈LED
+            Text {
+                text: "反馈状态:"
+                font.pixelSize: 21; color: "#9E9E9E"
+                Layout.column: 2; Layout.row: 5
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+            Item {
+                Layout.column: 3; Layout.row: 5
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: 40
+
+                // ✅ 2026-03-10 [Phase 7.48.33]: 使用属性+Connections实现实时刷新
+                property bool feedbackIsOn: false
+
+                Connections {
+                    target: typeof diDataManager !== "undefined" ? diDataManager : null
+                    function onModule1DataChanged() {
+                        if (moduleAddressSpin.value === 1) {
+                            parent.feedbackIsOn = diDataManager.getBit(0, feedbackChannelSpin.value)
+                        }
+                    }
+                    function onModule2DataChanged() {
+                        if (moduleAddressSpin.value === 2) {
+                            parent.feedbackIsOn = diDataManager.getBit(1, feedbackChannelSpin.value)
+                        }
+                    }
+                }
+
+                Row {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 12
+
+                    // 反馈 LED 指示灯
+                    Rectangle {
+                        id: motorFeedbackLed
+                        width: 24; height: 24; radius: 12
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        property bool isOn: parent.parent.feedbackIsOn
+
+                        color: isOn ? "#00d4ff" : "#1a1a2e"
+                        border.color: isOn ? "#7dd3fc" : "#475569"
+                        border.width: 2
+
+                        // 内部高亮点
+                        Rectangle {
+                            width: 10; height: 10; radius: 5
+                            anchors.centerIn: parent
+                            color: motorFeedbackLed.isOn ? "#bae6fd" : "#334155"
+                            opacity: motorFeedbackLed.isOn ? 0.8 : 0.3
+                        }
+
+                        // 发光效果
+                        Rectangle {
+                            visible: motorFeedbackLed.isOn
+                            width: 32; height: 32; radius: 16
+                            anchors.centerIn: parent
+                            color: "#00d4ff"; opacity: 0.2
+                            z: -1
+                        }
+                    }
+
+                    Text {
+                        text: motorFeedbackLed.isOn ? "已反馈" : "无反馈"
+                        font.pixelSize: 18
+                        color: motorFeedbackLed.isOn ? "#00d4ff" : "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 6) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
+
+            // ========== 第五行：测试操作区域 ==========
+            // ✅ 2026-03-10 [Phase 7.48.33]: 新增启动/停止测试按钮
+
+            // 分隔线
+            Rectangle {
+                Layout.column: 0; Layout.row: 6
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                Layout.topMargin: 8; Layout.bottomMargin: 8
+                color: "#334155"
+            }
+
+            Text {
+                text: "测试操作"
+                font.pixelSize: 19; font.bold: true; color: "#fbbf24"
+                Layout.column: 0; Layout.row: 7
+                Layout.columnSpan: 4
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            // 启动按钮标签
+            Text {
+                text: "电机控制:"
+                font.pixelSize: 21; color: "#9E9E9E"
+                Layout.column: 0; Layout.row: 8
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+            Item {
+                Layout.column: 1; Layout.row: 8
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                Layout.columnSpan: 3
+                implicitHeight: 56
+
+                Row {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 20
+
+                    // 启动按钮
+                    Button {
+                        id: motorStartBtn
+                        text: "启 动"
+                        width: 120; height: 48
+
+                        background: Rectangle {
+                            color: motorStartBtn.pressed ? "#166534" :
+                                   (motorStartBtn.hovered ? "#15803d" : "#0d2218")
+                            radius: 8
+                            border.color: motorStartBtn.pressed ? "#86EFAC" :
+                                          (motorStartBtn.hovered ? "#22C55E" : "#334155")
+                            border.width: 2
+
+                            // 顶部高亮线
+                            Rectangle {
+                                anchors.top: parent.top
+                                anchors.left: parent.left; anchors.right: parent.right
+                                anchors.leftMargin: 2; anchors.rightMargin: 2; anchors.topMargin: 2
+                                height: 2; radius: 1; color: "#22C55E"; opacity: 0.6
+                            }
+                        }
+
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 8
+                                // LED 点
+                                Rectangle {
+                                    width: 8; height: 8; radius: 4
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: motorRunLed.isOn ? "#22C55E" : "#475569"
+                                    Rectangle {
+                                        width: 4; height: 4; radius: 2
+                                        anchors.centerIn: parent
+                                        color: motorRunLed.isOn ? "#86EFAC" : "#64748B"
+                                    }
+                                }
+                                Text {
+                                    text: motorStartBtn.text
+                                    font.pixelSize: 16; font.bold: true
+                                    color: "#22C55E"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+
+                        onClicked: {
+                            console.log("🔌 [BasicConfigTab] 启动电机", (root.motorIndex + 1))
+                            if (typeof mqttProtectionMonitor !== "undefined") {
+                                mqttProtectionMonitor.publishMotorCommand(root.deviceId, root.motorIndex, true)
+                            }
+                        }
+                    }
+
+                    // 停止按钮
+                    Button {
+                        id: motorStopBtn
+                        text: "停 止"
+                        width: 120; height: 48
+
+                        background: Rectangle {
+                            color: motorStopBtn.pressed ? "#7f1d1d" :
+                                   (motorStopBtn.hovered ? "#991b1b" : "#1a0a0a")
+                            radius: 8
+                            border.color: motorStopBtn.pressed ? "#fca5a5" :
+                                          (motorStopBtn.hovered ? "#ef4444" : "#334155")
+                            border.width: 2
+
+                            // 顶部高亮线
+                            Rectangle {
+                                anchors.top: parent.top
+                                anchors.left: parent.left; anchors.right: parent.right
+                                anchors.leftMargin: 2; anchors.rightMargin: 2; anchors.topMargin: 2
+                                height: 2; radius: 1; color: "#ef4444"; opacity: 0.6
+                            }
+                        }
+
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 8
+                                // LED 点
+                                Rectangle {
+                                    width: 8; height: 8; radius: 4
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: "#ef4444"
+                                    Rectangle {
+                                        width: 4; height: 4; radius: 2
+                                        anchors.centerIn: parent
+                                        color: "#fca5a5"
+                                    }
+                                }
+                                Text {
+                                    text: motorStopBtn.text
+                                    font.pixelSize: 16; font.bold: true
+                                    color: "#ef4444"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+
+                        onClicked: {
+                            console.log("🔌 [BasicConfigTab] 停止电机", (root.motorIndex + 1))
+                            if (typeof mqttProtectionMonitor !== "undefined") {
+                                mqttProtectionMonitor.publishMotorCommand(root.deviceId, root.motorIndex, false)
+                            }
+                        }
+                    }
+                }
+
+                // 焦点指示器
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 7) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
         }  // GridLayout 结束
     }  // ScrollView 结束
 
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
     // 获取参数字段数量
+    // ✅ 2026-03-10 [Phase 7.48.33]: 从5扩展到8（新增运行LED、反馈LED、测试按钮）
+    // 旧值：return 5
     function getParamFieldCount() {
-        return 5  // 5个参数字段：运行状态、模块类型、模块地址、输出通道、反馈通道
+        return 8  // 0运行状态、1模块类型、2模块地址、3输出通道、4反馈通道、5运行LED、6反馈LED、7测试按钮
     }
 
     // 触发参数输入
@@ -480,6 +825,27 @@ Rectangle {
         case 4:  // 反馈通道
             console.log("✅ [BasicConfigTab] 反馈通道")
             inputField = feedbackChannelSpin
+            break
+        // ✅ 2026-03-10 [Phase 7.48.33]: 新增状态指示和测试操作
+        case 5:  // 运行LED（只读）
+            console.log("✅ [BasicConfigTab] 运行LED（只读）")
+            break
+        case 6:  // 反馈LED（只读）
+            console.log("✅ [BasicConfigTab] 反馈LED（只读）")
+            break
+        case 7:  // 测试按钮（启动/停止切换）
+            console.log("✅ [BasicConfigTab] 测试按钮 - 切换电机状态")
+            if (motorRunLed.isOn) {
+                // 当前运行中 → 停止
+                if (typeof mqttProtectionMonitor !== "undefined") {
+                    mqttProtectionMonitor.publishMotorCommand(root.deviceId, root.motorIndex, false)
+                }
+            } else {
+                // 当前已停止 → 启动
+                if (typeof mqttProtectionMonitor !== "undefined") {
+                    mqttProtectionMonitor.publishMotorCommand(root.deviceId, root.motorIndex, true)
+                }
+            }
             break
         }
 

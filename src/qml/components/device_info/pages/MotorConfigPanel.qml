@@ -276,6 +276,7 @@ Rectangle {
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
+                        item.deviceId = 1  // ✅ 2026-03-10 [Phase 7.48.33]: 传递设备ID
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                         item.requestFocusParamIndex.connect(function(paramIndex) {
