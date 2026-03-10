@@ -272,6 +272,19 @@ bool DeviceConfigManager::createTables()
     query.exec("CREATE INDEX IF NOT EXISTS idx_motor_config_device ON device_motor_config(device_id)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_motor_config_motor ON device_motor_config(device_id, motor_index)");
 
+    // ✅ 2026-03-10 [Phase 7.48.29]: 电机保护参数扩展 - 新增11列（与模拟量保护对齐）
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN module_type TEXT DEFAULT '模拟量模块1'");
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN register_address INTEGER DEFAULT -1");
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN range_value REAL DEFAULT 100.0");
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN input_type TEXT DEFAULT '4-20mA电流型'");
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN data_timeout REAL DEFAULT 2.0");
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN connection_timeout REAL DEFAULT 10.0");
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN play_mode TEXT DEFAULT 'count'");
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN protection_level INTEGER DEFAULT 1");
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN sprinkler_enabled BOOLEAN DEFAULT 0");
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN filter_delay REAL DEFAULT 5.0");
+    query.exec("ALTER TABLE device_motor_config ADD COLUMN use_text_to_speech BOOLEAN DEFAULT 0");
+
     // ✅ 2026-02-02 [参数持久化]: 添加制动器配置表
     // 6. 制动器配置表
     QString createBrakeConfigTable = R"(
@@ -2155,12 +2168,18 @@ QVariantList DeviceConfigManager::queryToList(QSqlQuery &query)
 bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabIndex, const QVariantMap &config)
 {
     QSqlQuery query(m_database);
+    // ✅ 2026-03-10 [Phase 7.48.29]: 扩展为27列（原16列 + 新增11列）
+    // 旧：16列 INSERT OR REPLACE
     query.prepare(R"(
         INSERT OR REPLACE INTO device_motor_config
         (device_id, motor_index, tab_index, tab_name, protection_name, protection_delay,
          upper_limit, lower_limit, unit, voice_alarm_enabled, voice_alarm_type,
-         tts_text, audio_file, play_count, play_duration, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         tts_text, audio_file, play_count, play_duration,
+         module_type, register_address, range_value, input_type,
+         data_timeout, connection_timeout, play_mode, protection_level,
+         sprinkler_enabled, filter_delay, use_text_to_speech,
+         updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -2178,6 +2197,18 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
     query.addBindValue(config.value("audio_file", "").toString());
     query.addBindValue(config.value("play_count", 1).toInt());
     query.addBindValue(config.value("play_duration", 5).toInt());
+    // ✅ 2026-03-10 [Phase 7.48.29]: 新增11列绑定值
+    query.addBindValue(config.value("module_type", "模拟量模块1").toString());
+    query.addBindValue(config.value("register_address", -1).toInt());
+    query.addBindValue(config.value("range_value", 100.0).toDouble());
+    query.addBindValue(config.value("input_type", "4-20mA电流型").toString());
+    query.addBindValue(config.value("data_timeout", 2.0).toDouble());
+    query.addBindValue(config.value("connection_timeout", 10.0).toDouble());
+    query.addBindValue(config.value("play_mode", "count").toString());
+    query.addBindValue(config.value("protection_level", 1).toInt());
+    query.addBindValue(config.value("sprinkler_enabled", false).toBool() ? 1 : 0);
+    query.addBindValue(config.value("filter_delay", 5.0).toDouble());
+    query.addBindValue(config.value("use_text_to_speech", false).toBool() ? 1 : 0);
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
@@ -2226,31 +2257,81 @@ QVariantList DeviceConfigManager::loadAllMotorConfigs(int deviceId, int motorInd
 
 bool DeviceConfigManager::initDefaultMotorConfigs(int deviceId)
 {
-    // 8个电机，每个电机10个Tab
-    QStringList tabNames = {
-        "基本配置", "电流保护", "前轴承温度", "后轴承温度", "A相绕组",
-        "B相绕组", "C相绕组", "电机温度", "X轴振动", "Y轴振动"
+    // ✅ 2026-03-10 [Phase 7.48.29]: 扩展为14个Tab（原10个 + 新增4个保护类型）
+    // 旧：8个电机，每个电机10个Tab
+    // 新：8个电机，每个电机14个Tab
+    struct MotorTabDefault {
+        QString tabName;
+        QString unit;
+        double upperLimit;
+        double lowerLimit;
+        double rangeValue;
+        QString inputType;
+        int protectionDelay;
+        double filterDelay;
+        int protectionLevel;  // 0=无, 1=预警, 2=预警+正常停车, 3=预警+紧急停车
+        bool sprinklerEnabled;
+    };
+
+    QList<MotorTabDefault> tabDefaults = {
+        // Tab 0: 基本配置（无保护参数）
+        {"基本配置",    "A",    0,   0,   100,  "4-20mA电流型",  0,   0,   0, false},
+        // Tab 1: 电流保护
+        {"电流保护",    "A",    80,  0,   100,  "4-20mA电流型",  30,  5.0,  3, false},
+        // Tab 2: 前轴承温度
+        {"前轴承温度",  "℃",   60,  0,   150,  "PT100热电阻",   50,  10.0, 3, true},
+        // Tab 3: 后轴承温度
+        {"后轴承温度",  "℃",   60,  0,   150,  "PT100热电阻",   50,  10.0, 3, true},
+        // Tab 4: A相绕组
+        {"A相绕组",     "℃",   130, 0,   200,  "PT100热电阻",   50,  10.0, 3, false},
+        // Tab 5: B相绕组
+        {"B相绕组",     "℃",   130, 0,   200,  "PT100热电阻",   50,  10.0, 3, false},
+        // Tab 6: C相绕组
+        {"C相绕组",     "℃",   130, 0,   200,  "PT100热电阻",   50,  10.0, 3, false},
+        // Tab 7: 电机温度
+        {"电机温度",    "℃",   80,  0,   150,  "PT100热电阻",   50,  10.0, 2, true},
+        // Tab 8: X轴振动
+        {"X轴振动",     "mm/s", 7,   0,   20,   "4-20mA电流型",  100, 20.0, 2, false},
+        // Tab 9: Y轴振动
+        {"Y轴振动",     "mm/s", 7,   0,   20,   "4-20mA电流型",  100, 20.0, 2, false},
+        // Tab 10: 堵转保护（新增）
+        {"堵转保护",    "A",    500, 0,   1000, "4-20mA电流型",  80,  5.0,  3, false},
+        // Tab 11: 起动超时（新增）
+        {"起动超时",    "A",    300, 0,   500,  "4-20mA电流型",  300, 10.0, 3, false},
+        // Tab 12: 功率保护（新增）
+        {"功率保护",    "kW",   150, 10,  500,  "4-20mA电流型",  100, 20.0, 2, false},
+        // Tab 13: 三相不平衡（新增）
+        {"三相不平衡",  "%",    30,  0,   100,  "4-20mA电流型",  100, 20.0, 2, false},
     };
 
     QSqlQuery query(m_database);
     for (int motorIndex = 0; motorIndex < 8; motorIndex++) {
-        for (int tabIndex = 0; tabIndex < tabNames.size(); tabIndex++) {
-            QString tabName = tabNames[tabIndex];
-            QString protectionName = QString("电机%1-%2").arg(motorIndex + 1).arg(tabName);
+        for (int tabIndex = 0; tabIndex < tabDefaults.size(); tabIndex++) {
+            const auto &def = tabDefaults[tabIndex];
+            QString protectionName = QString("电机%1-%2").arg(motorIndex + 1).arg(def.tabName);
 
             query.prepare(R"(
                 INSERT INTO device_motor_config
-                (device_id, motor_index, tab_index, tab_name, protection_name, upper_limit, lower_limit, unit, tts_text)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (device_id, motor_index, tab_index, tab_name, protection_name,
+                 upper_limit, lower_limit, unit, range_value, input_type,
+                 protection_delay, filter_delay, protection_level,
+                 sprinkler_enabled, tts_text)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             )");
             query.addBindValue(deviceId);
             query.addBindValue(motorIndex);
             query.addBindValue(tabIndex);
-            query.addBindValue(tabName);
+            query.addBindValue(def.tabName);
             query.addBindValue(protectionName);
-            query.addBindValue(100.0);  // 默认上限
-            query.addBindValue(0.0);    // 默认下限
-            query.addBindValue("A");    // 默认单位
+            query.addBindValue(def.upperLimit);
+            query.addBindValue(def.lowerLimit);
+            query.addBindValue(def.unit);
+            query.addBindValue(def.rangeValue);
+            query.addBindValue(def.inputType);
+            query.addBindValue(def.protectionDelay);
+            query.addBindValue(def.filterDelay);
+            query.addBindValue(def.protectionLevel);
+            query.addBindValue(def.sprinklerEnabled ? 1 : 0);
             query.addBindValue(protectionName + "报警");
 
             if (!query.exec()) {

@@ -156,7 +156,9 @@ Rectangle {
                 width: childrenRect.width
 
                 Repeater {
-                    model: ["基本配置", "电流保护", "前轴承温度", "后轴承温度", "A相绕组", "B相绕组", "C相绕组", "电机温度", "X轴振动", "Y轴振动"]
+                    // ✅ 2026-03-10 [Phase 7.48.29]: 从10个Tab扩展到14个Tab（新增4种保护类型）
+                    // 旧：["基本配置", "电流保护", "前轴承温度", "后轴承温度", "A相绕组", "B相绕组", "C相绕组", "电机温度", "X轴振动", "Y轴振动"]
+                    model: ["基本配置", "电流保护", "前轴承温度", "后轴承温度", "A相绕组", "B相绕组", "C相绕组", "电机温度", "X轴振动", "Y轴振动", "堵转保护", "起动超时", "功率保护", "三相不平衡"]
 
                     Rectangle {
                         id: rectangle
@@ -266,245 +268,321 @@ Rectangle {
             anchors.fill: parent
             currentIndex: root.currentTabIndex
 
-            // 0: 基本配置
+            // 0: 基本配置（保持不变）
             Loader {
                 id: basicConfigLoader
                 active: root.currentTabIndex === 0
                 source: "BasicConfigTab.qml"
-
                 onLoaded: {
                     if (item) {
                         item.motorIndex = root.motorIndex
-                        // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器已废弃
-                        // item.keyboardManager = root.keyboardManager
-                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 连接信号，转发到父组件
                         item.requestFocusParamIndex.connect(function(paramIndex) {
-                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
                             root.requestFocusParamIndex(paramIndex)
                         })
                     }
                 }
             }
 
+            // ✅ 2026-03-10 [Phase 7.48.29]: Tab 1-13 全部使用统一的 MotorProtectionTab.qml
+            // 旧：9个独立Loader（CurrentProtectionTab, FrontBearingTempTab 等）
+            // 新：13个统一Loader，通过属性传入不同默认值
+
             // 1: 电流保护
             Loader {
-                id: currentProtectionLoader
+                id: tab1Loader
                 active: root.currentTabIndex === 1
-                source: "CurrentProtectionTab.qml"
-
+                source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.motorIndex = root.motorIndex
-                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.tabIndex = 1; item.protectionName = "电流保护"
+                        item.defaultUnit = "A"; item.defaultUpperLimit = 80; item.defaultLowerLimit = 0
+                        item.defaultRange = 100; item.defaultInputType = "4-20mA电流型"
+                        item.defaultProtectionDelay = 30; item.defaultFilterDelay = 5.0
+                        item.defaultProtectionLevel = 3; item.defaultSprinklerEnabled = false
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 连接信号
-                        item.requestFocusParamIndex.connect(function(paramIndex) {
-                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
-                            root.requestFocusParamIndex(paramIndex)
-                        })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
                     }
                 }
             }
 
             // 2: 前轴承温度
             Loader {
-                id: frontBearingTempLoader
+                id: tab2Loader
                 active: root.currentTabIndex === 2
-                source: "FrontBearingTempTab.qml"
+                source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.motorIndex = root.motorIndex
-                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.tabIndex = 2; item.protectionName = "前轴承温度"
+                        item.defaultUnit = "℃"; item.defaultUpperLimit = 60; item.defaultLowerLimit = 0
+                        item.defaultRange = 150; item.defaultInputType = "PT100热电阻"
+                        item.defaultProtectionDelay = 50; item.defaultFilterDelay = 10.0
+                        item.defaultProtectionLevel = 3; item.defaultSprinklerEnabled = true
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 连接信号
-                        item.requestFocusParamIndex.connect(function(paramIndex) {
-                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
-                            root.requestFocusParamIndex(paramIndex)
-                        })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
                     }
                 }
             }
 
             // 3: 后轴承温度
             Loader {
-                id: rearBearingTempLoader
+                id: tab3Loader
                 active: root.currentTabIndex === 3
-                source: "RearBearingTempTab.qml"
+                source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.motorIndex = root.motorIndex
-                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.tabIndex = 3; item.protectionName = "后轴承温度"
+                        item.defaultUnit = "℃"; item.defaultUpperLimit = 60; item.defaultLowerLimit = 0
+                        item.defaultRange = 150; item.defaultInputType = "PT100热电阻"
+                        item.defaultProtectionDelay = 50; item.defaultFilterDelay = 10.0
+                        item.defaultProtectionLevel = 3; item.defaultSprinklerEnabled = true
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 连接信号
-                        item.requestFocusParamIndex.connect(function(paramIndex) {
-                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
-                            root.requestFocusParamIndex(paramIndex)
-                        })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
                     }
                 }
             }
 
             // 4: A相绕组
             Loader {
-                id: phaseAWindingLoader
+                id: tab4Loader
                 active: root.currentTabIndex === 4
-                source: "PhaseAWindingTab.qml"
+                source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.motorIndex = root.motorIndex
-                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.tabIndex = 4; item.protectionName = "A相绕组"
+                        item.defaultUnit = "℃"; item.defaultUpperLimit = 130; item.defaultLowerLimit = 0
+                        item.defaultRange = 200; item.defaultInputType = "PT100热电阻"
+                        item.defaultProtectionDelay = 50; item.defaultFilterDelay = 10.0
+                        item.defaultProtectionLevel = 3; item.defaultSprinklerEnabled = false
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 连接信号
-                        item.requestFocusParamIndex.connect(function(paramIndex) {
-                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
-                            root.requestFocusParamIndex(paramIndex)
-                        })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
                     }
                 }
             }
 
             // 5: B相绕组
             Loader {
-                id: phaseBWindingLoader
+                id: tab5Loader
                 active: root.currentTabIndex === 5
-                source: "PhaseBWindingTab.qml"
+                source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.motorIndex = root.motorIndex
-                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.tabIndex = 5; item.protectionName = "B相绕组"
+                        item.defaultUnit = "℃"; item.defaultUpperLimit = 130; item.defaultLowerLimit = 0
+                        item.defaultRange = 200; item.defaultInputType = "PT100热电阻"
+                        item.defaultProtectionDelay = 50; item.defaultFilterDelay = 10.0
+                        item.defaultProtectionLevel = 3; item.defaultSprinklerEnabled = false
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 连接信号
-                        item.requestFocusParamIndex.connect(function(paramIndex) {
-                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
-                            root.requestFocusParamIndex(paramIndex)
-                        })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
                     }
                 }
             }
 
             // 6: C相绕组
             Loader {
-                id: phaseCWindingLoader
+                id: tab6Loader
                 active: root.currentTabIndex === 6
-                source: "PhaseCWindingTab.qml"
+                source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.motorIndex = root.motorIndex
-                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.tabIndex = 6; item.protectionName = "C相绕组"
+                        item.defaultUnit = "℃"; item.defaultUpperLimit = 130; item.defaultLowerLimit = 0
+                        item.defaultRange = 200; item.defaultInputType = "PT100热电阻"
+                        item.defaultProtectionDelay = 50; item.defaultFilterDelay = 10.0
+                        item.defaultProtectionLevel = 3; item.defaultSprinklerEnabled = false
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 连接信号
-                        item.requestFocusParamIndex.connect(function(paramIndex) {
-                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
-                            root.requestFocusParamIndex(paramIndex)
-                        })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
                     }
                 }
             }
 
             // 7: 电机温度
             Loader {
-                id: motorTempLoader
+                id: tab7Loader
                 active: root.currentTabIndex === 7
-                source: "MotorTempTab.qml"
+                source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.motorIndex = root.motorIndex
-                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.tabIndex = 7; item.protectionName = "电机温度"
+                        item.defaultUnit = "℃"; item.defaultUpperLimit = 80; item.defaultLowerLimit = 0
+                        item.defaultRange = 150; item.defaultInputType = "PT100热电阻"
+                        item.defaultProtectionDelay = 50; item.defaultFilterDelay = 10.0
+                        item.defaultProtectionLevel = 2; item.defaultSprinklerEnabled = true
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 连接信号
-                        item.requestFocusParamIndex.connect(function(paramIndex) {
-                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
-                            root.requestFocusParamIndex(paramIndex)
-                        })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
                     }
                 }
             }
 
             // 8: X轴振动
             Loader {
-                id: xAxisVibrationLoader
+                id: tab8Loader
                 active: root.currentTabIndex === 8
-                source: "XAxisVibrationTab.qml"
+                source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.motorIndex = root.motorIndex
-                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.tabIndex = 8; item.protectionName = "X轴振动"
+                        item.defaultUnit = "mm/s"; item.defaultUpperLimit = 7; item.defaultLowerLimit = 0
+                        item.defaultRange = 20; item.defaultInputType = "4-20mA电流型"
+                        item.defaultProtectionDelay = 100; item.defaultFilterDelay = 20.0
+                        item.defaultProtectionLevel = 2; item.defaultSprinklerEnabled = false
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 连接信号
-                        item.requestFocusParamIndex.connect(function(paramIndex) {
-                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
-                            root.requestFocusParamIndex(paramIndex)
-                        })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
                     }
                 }
             }
 
             // 9: Y轴振动
             Loader {
-                id: yAxisVibrationLoader
+                id: tab9Loader
                 active: root.currentTabIndex === 9
-                source: "YAxisVibrationTab.qml"
+                source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.motorIndex = root.motorIndex
-                        // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
+                        item.tabIndex = 9; item.protectionName = "Y轴振动"
+                        item.defaultUnit = "mm/s"; item.defaultUpperLimit = 7; item.defaultLowerLimit = 0
+                        item.defaultRange = 20; item.defaultInputType = "4-20mA电流型"
+                        item.defaultProtectionDelay = 100; item.defaultFilterDelay = 20.0
+                        item.defaultProtectionLevel = 2; item.defaultSprinklerEnabled = false
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
+                    }
+                }
+            }
 
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 连接信号
-                        item.requestFocusParamIndex.connect(function(paramIndex) {
-                            console.log("✅ [MotorConfigPanel] 转发信号: requestFocusParamIndex(" + paramIndex + ")")
-                            root.requestFocusParamIndex(paramIndex)
-                        })
+            // 10: 堵转保护
+            Loader {
+                id: tab10Loader
+                active: root.currentTabIndex === 10
+                source: "MotorProtectionTab.qml"
+                onLoaded: {
+                    if (item) {
+                        item.tabIndex = 10; item.protectionName = "堵转保护"
+                        item.defaultUnit = "A"; item.defaultUpperLimit = 500; item.defaultLowerLimit = 0
+                        item.defaultRange = 1000; item.defaultInputType = "4-20mA电流型"
+                        item.defaultProtectionDelay = 80; item.defaultFilterDelay = 5.0
+                        item.defaultProtectionLevel = 3; item.defaultSprinklerEnabled = false
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
+                    }
+                }
+            }
+
+            // 11: 起动超时
+            Loader {
+                id: tab11Loader
+                active: root.currentTabIndex === 11
+                source: "MotorProtectionTab.qml"
+                onLoaded: {
+                    if (item) {
+                        item.tabIndex = 11; item.protectionName = "起动超时"
+                        item.defaultUnit = "A"; item.defaultUpperLimit = 300; item.defaultLowerLimit = 0
+                        item.defaultRange = 500; item.defaultInputType = "4-20mA电流型"
+                        item.defaultProtectionDelay = 300; item.defaultFilterDelay = 10.0
+                        item.defaultProtectionLevel = 3; item.defaultSprinklerEnabled = false
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
+                    }
+                }
+            }
+
+            // 12: 功率保护
+            Loader {
+                id: tab12Loader
+                active: root.currentTabIndex === 12
+                source: "MotorProtectionTab.qml"
+                onLoaded: {
+                    if (item) {
+                        item.tabIndex = 12; item.protectionName = "功率保护"
+                        item.defaultUnit = "kW"; item.defaultUpperLimit = 150; item.defaultLowerLimit = 10
+                        item.defaultRange = 500; item.defaultInputType = "4-20mA电流型"
+                        item.defaultProtectionDelay = 100; item.defaultFilterDelay = 20.0
+                        item.defaultProtectionLevel = 2; item.defaultSprinklerEnabled = false
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
+                    }
+                }
+            }
+
+            // 13: 三相不平衡
+            Loader {
+                id: tab13Loader
+                active: root.currentTabIndex === 13
+                source: "MotorProtectionTab.qml"
+                onLoaded: {
+                    if (item) {
+                        item.tabIndex = 13; item.protectionName = "三相不平衡"
+                        item.defaultUnit = "%"; item.defaultUpperLimit = 30; item.defaultLowerLimit = 0
+                        item.defaultRange = 100; item.defaultInputType = "4-20mA电流型"
+                        item.defaultProtectionDelay = 100; item.defaultFilterDelay = 20.0
+                        item.defaultProtectionLevel = 2; item.defaultSprinklerEnabled = false
+                        item.motorIndex = root.motorIndex; item.deviceId = 1
+                        item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                        item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                        item.requestFocusParamIndex.connect(function(pi) { root.requestFocusParamIndex(pi) })
                     }
                 }
             }
         }
     }
 
-    // ✅ 2026-01-30 [FIX 100.300.106]: 获取当前 Tab 的引用
+    // ✅ 2026-03-10 [Phase 7.48.29]: 更新 getCurrentTab，支持 Tab 0-13
+    // 旧：switch case 0-9
     function getCurrentTab() {
         switch(root.currentTabIndex) {
         case 0:
             return basicConfigLoader.item
         case 1:
-            return currentProtectionLoader.item
+            return tab1Loader.item
         case 2:
-            return frontBearingTempLoader.item
+            return tab2Loader.item
         case 3:
-            return rearBearingTempLoader.item
+            return tab3Loader.item
         case 4:
-            return phaseAWindingLoader.item
+            return tab4Loader.item
         case 5:
-            return phaseBWindingLoader.item
+            return tab5Loader.item
         case 6:
-            return phaseCWindingLoader.item
+            return tab6Loader.item
         case 7:
-            return motorTempLoader.item
+            return tab7Loader.item
         case 8:
-            return xAxisVibrationLoader.item
+            return tab8Loader.item
         case 9:
-            return yAxisVibrationLoader.item
+            return tab9Loader.item
+        case 10:
+            return tab10Loader.item
+        case 11:
+            return tab11Loader.item
+        case 12:
+            return tab12Loader.item
+        case 13:
+            return tab13Loader.item
         default:
             return null
         }

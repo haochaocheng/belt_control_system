@@ -96,6 +96,8 @@ qt_add_qml_module(qml_module
         components/device_info/pages/MotorControlPage.qml
         components/device_info/pages/MyMotorListPanel.qml  # ✅ 2026-02-02 [FIX 100.300.112.8.21]: 修正文件名（原为MotorListPanel.qml）
         components/device_info/pages/MotorConfigPanel.qml
+        # ✅ 2026-03-10 [Phase 7.48.29]: 统一电机保护Tab组件
+        components/device_info/pages/MotorProtectionTab.qml
         components/device_info/pages/BrakeControlPage.qml
         components/device_info/pages/BrakeListPanel.qml
         components/device_info/pages/BrakeConfigPanel.qml
