@@ -751,9 +751,10 @@ Rectangle {
                         }
 
                         onClicked: {
-                            // ✅ 2026-03-10 [Phase 7.48.34]: 直接发布MQTT命令到DO模块5控制电机
+                            // ✅ 2026-03-10 [Phase 7.48.35]: 直接发布MQTT命令到DO模块1控制电机
+                            // 设备5（Luckfox-Lyra-RK3506-5）= DO模块1，MQTT主题为 module1
                             var ch = outputChannelSpin.value
-                            var topic = "belt_control/do/module5/cmd"
+                            var topic = "belt_control/do/module1/cmd"
                             var cmd = JSON.stringify({"action": "set", "channel": ch, "value": 1})
                             console.log("🔌 [BasicConfigTab] 启动电机", (root.motorIndex + 1), "通道:", ch)
                             if (typeof mqttController !== "undefined") {
@@ -810,9 +811,10 @@ Rectangle {
                         }
 
                         onClicked: {
-                            // ✅ 2026-03-10 [Phase 7.48.34]: 直接发布MQTT命令到DO模块5控制电机
+                            // ✅ 2026-03-10 [Phase 7.48.35]: 直接发布MQTT命令到DO模块1控制电机
+                            // 设备5（Luckfox-Lyra-RK3506-5）= DO模块1，MQTT主题为 module1
                             var ch = outputChannelSpin.value
-                            var topic = "belt_control/do/module5/cmd"
+                            var topic = "belt_control/do/module1/cmd"
                             var cmd = JSON.stringify({"action": "set", "channel": ch, "value": 0})
                             console.log("🔌 [BasicConfigTab] 停止电机", (root.motorIndex + 1), "通道:", ch)
                             if (typeof mqttController !== "undefined") {
@@ -884,7 +886,7 @@ Rectangle {
         case 8:  // 测试按钮（启动/停止切换）
             console.log("✅ [BasicConfigTab] 测试按钮 - 切换电机状态")
             var ch8 = outputChannelSpin.value
-            var topic8 = "belt_control/do/module5/cmd"
+            var topic8 = "belt_control/do/module1/cmd"
             if (motorRunLed.isOn) {
                 var cmd8off = JSON.stringify({"action": "set", "channel": ch8, "value": 0})
                 if (typeof mqttController !== "undefined") {
