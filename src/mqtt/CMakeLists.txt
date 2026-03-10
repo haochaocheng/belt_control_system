@@ -17,6 +17,7 @@ set(MQTT_SOURCES
     MQTTAutoManager.cpp      # ✅ 2026-02-09 [Phase 7.44]: MQTT自动管理器
     DIDataManager.cpp        # ✅ 2026-02-09 [Phase 7.44]: 开关量数据管理器
     AIDataManager.cpp        # ✅ 2026-02-09 [Phase 7.44]: 模拟量数据管理器
+    DODataManager.cpp        # ✅ 2026-03-10 [Phase 7.48.36]: DO模块数据管理器
 )
 
 # 头文件
@@ -25,6 +26,7 @@ set(MQTT_HEADERS
     MQTTAutoManager.h        # ✅ 2026-02-09 [Phase 7.44]: MQTT自动管理器
     DIDataManager.h          # ✅ 2026-02-09 [Phase 7.44]: 开关量数据管理器
     AIDataManager.h          # ✅ 2026-02-09 [Phase 7.44]: 模拟量数据管理器
+    DODataManager.h          # ✅ 2026-03-10 [Phase 7.48.36]: DO模块数据管理器
 )
 
 # 创建静态库

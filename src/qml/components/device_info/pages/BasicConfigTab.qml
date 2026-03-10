@@ -37,6 +37,34 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.106.4]: 改为两列布局，参考 AnalogInputPage
     readonly property string layoutMode: "two-column"  // "single-column" 或 "two-column"
 
+    // ✅ 2026-03-10 [Phase 7.48.36]: 反馈超时检测
+    // 电机启动后，如果在反馈延时时间内没有收到反馈，播放"运行失败"报警
+    property bool waitingForFeedback: false  // 是否正在等待反馈
+
+    Timer {
+        id: feedbackTimeoutTimer
+        interval: feedbackDelaySpin.value * 1000  // 反馈延时（秒→毫秒）
+        repeat: false
+        onTriggered: {
+            if (root.waitingForFeedback && useFeedbackSwitch.checked) {
+                // 超时未收到反馈 → 报警
+                console.log("⚠️ [BasicConfigTab] 电机", (root.motorIndex + 1), "反馈超时！延时:", feedbackDelaySpin.value, "秒")
+                root.waitingForFeedback = false
+                // 通过 commonControl 播放报警
+                if (typeof commonControl !== "undefined") {
+                    commonControl.playAlarmByName("电机" + (root.motorIndex + 1) + "运行失败")
+                }
+            }
+        }
+    }
+
+    // 监听反馈LED变化：收到反馈时取消超时计时
+    onWaitingForFeedbackChanged: {
+        if (!waitingForFeedback) {
+            feedbackTimeoutTimer.stop()
+        }
+    }
+
     // ========== 滚动区域 ==========
     ScrollView {
         id: paramScrollView  // ✅ 2026-01-30 [FIX 100.300.107]: 添加 ID，用于 GridLayout 宽度计算
@@ -410,9 +438,13 @@ Rectangle {
                     }
                 }
 
+                // ✅ 2026-03-10 [Phase 7.48.36]: 修复Switch无法点击问题
+                // 旧：MouseArea onClicked mouse.accepted=false（太晚，事件已被消费）
+                // 新：propagateComposedEvents + onPressed 放行，让Switch可以接收点击
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         root.requestFocusParamIndex(4)
                         mouse.accepted = false
                     }
@@ -475,12 +507,64 @@ Rectangle {
                 }
             }
 
-            // ========== 第四行：状态指示区域（只读）==========
+            // ========== 第四行：反馈延时（左侧，索引6）==========
+            // ✅ 2026-03-10 [Phase 7.48.36]: 新增运行反馈延时参数
+            Text {
+                text: "反馈延时:"
+                font.pixelSize: 21; color: "#9E9E9E"
+                Layout.column: 0; Layout.row: 3
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+                opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
+            }
+            Item {
+                Layout.column: 1; Layout.row: 3
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: feedbackDelaySpin.implicitHeight
+                opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
+                enabled: useFeedbackSwitch.checked
+
+                DeviceInfo.CustomSpinBox {
+                    id: feedbackDelaySpin
+                    anchors.fill: parent
+                    from: 1
+                    to: 60
+                    value: 3  // 默认3秒
+                    editable: true
+                    keyboardManager: root.keyboardManager
+                    // suffix 不支持，用标签说明单位
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        root.requestFocusParamIndex(6)
+                        mouse.accepted = false
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 6) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
+            Text {
+                text: "秒"
+                font.pixelSize: 18; color: "#7dd3fc"
+                Layout.column: 2; Layout.row: 3
+                Layout.preferredWidth: 40
+                opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
+            }
+
+            // ========== 第五行：状态指示区域（只读）==========
             // ✅ 2026-03-10 [Phase 7.48.33]: 新增运行LED和反馈LED指示灯
+            // ✅ 2026-03-10 [Phase 7.48.36]: 行号+1（插入反馈延时行）
 
             // 分隔线
             Rectangle {
-                Layout.column: 0; Layout.row: 3
+                Layout.column: 0; Layout.row: 4
                 Layout.columnSpan: 4
                 Layout.fillWidth: true
                 Layout.preferredHeight: 1
@@ -491,7 +575,7 @@ Rectangle {
             Text {
                 text: "状态指示"
                 font.pixelSize: 19; font.bold: true; color: "#7dd3fc"
-                Layout.column: 0; Layout.row: 4
+                Layout.column: 0; Layout.row: 5
                 Layout.columnSpan: 4
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -500,31 +584,27 @@ Rectangle {
             Text {
                 text: "运行状态:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 0; Layout.row: 5
+                Layout.column: 0; Layout.row: 6
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
                 id: motorRunItem
-                Layout.column: 1; Layout.row: 5
+                Layout.column: 1; Layout.row: 6
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 40
 
                 // ✅ 2026-03-10 [Phase 7.48.33]: 使用属性+Connections实现实时刷新
                 // ✅ 2026-03-10 [Phase 7.48.35]: 修复 parent 引用错误，改用 id 引用
+                // ✅ 2026-03-10 [Phase 7.48.36]: 改用 doDataManager（前后端分离）
+                // 旧：监听 diDataManager.module1DataChanged/module2DataChanged
+                // 新：监听 doDataManager.doStatesChanged，读取 do_states[outputChannel]
                 property bool motorIsOn: false
 
                 Connections {
-                    target: typeof diDataManager !== "undefined" ? diDataManager : null
-                    function onModule1DataChanged() {
-                        if (moduleAddressSpin.value === 1) {
-                            motorRunItem.motorIsOn = diDataManager.getBit(0, outputChannelSpin.value)
-                        }
-                    }
-                    function onModule2DataChanged() {
-                        if (moduleAddressSpin.value === 2) {
-                            motorRunItem.motorIsOn = diDataManager.getBit(1, outputChannelSpin.value)
-                        }
+                    target: typeof doDataManager !== "undefined" ? doDataManager : null
+                    function onDoStatesChanged() {
+                        motorRunItem.motorIsOn = doDataManager.getDoState(outputChannelSpin.value)
                     }
                 }
 
@@ -573,8 +653,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 6) ? 3 : 0
+                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 7) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -583,32 +663,33 @@ Rectangle {
             Text {
                 text: "反馈状态:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 2; Layout.row: 5
+                Layout.column: 2; Layout.row: 6
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
             }
             Item {
                 id: feedbackLedItem
-                Layout.column: 3; Layout.row: 5
+                Layout.column: 3; Layout.row: 6
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 40
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
 
                 // ✅ 2026-03-10 [Phase 7.48.33]: 使用属性+Connections实现实时刷新
                 // ✅ 2026-03-10 [Phase 7.48.35]: 修复 parent 引用错误，改用 id 引用
+                // ✅ 2026-03-10 [Phase 7.48.36]: 改用 doDataManager（前后端分离）
+                // 旧：监听 diDataManager.module1DataChanged/module2DataChanged
+                // 新：监听 doDataManager.diFeedbackChanged，读取 di_feedback[feedbackChannel]
                 property bool feedbackIsOn: false
 
                 Connections {
-                    target: typeof diDataManager !== "undefined" ? diDataManager : null
-                    function onModule1DataChanged() {
-                        if (moduleAddressSpin.value === 1) {
-                            feedbackLedItem.feedbackIsOn = diDataManager.getBit(0, feedbackChannelSpin.value)
-                        }
-                    }
-                    function onModule2DataChanged() {
-                        if (moduleAddressSpin.value === 2) {
-                            feedbackLedItem.feedbackIsOn = diDataManager.getBit(1, feedbackChannelSpin.value)
+                    target: typeof doDataManager !== "undefined" ? doDataManager : null
+                    function onDiFeedbackChanged() {
+                        feedbackLedItem.feedbackIsOn = doDataManager.getFeedback(feedbackChannelSpin.value)
+                        // ✅ 2026-03-10 [Phase 7.48.36]: 收到反馈时取消超时计时
+                        if (feedbackLedItem.feedbackIsOn && root.waitingForFeedback) {
+                            root.waitingForFeedback = false
+                            console.log("✅ [BasicConfigTab] 电机", (root.motorIndex + 1), "反馈已收到，取消超时计时")
                         }
                     }
                 }
@@ -658,18 +739,19 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 7) ? 3 : 0
+                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 8) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
 
-            // ========== 第五行：测试操作区域 ==========
+            // ========== 第六行：测试操作区域 ==========
             // ✅ 2026-03-10 [Phase 7.48.33]: 新增启动/停止测试按钮
+            // ✅ 2026-03-10 [Phase 7.48.36]: 行号+1（插入反馈延时行）
 
             // 分隔线
             Rectangle {
-                Layout.column: 0; Layout.row: 6
+                Layout.column: 0; Layout.row: 7
                 Layout.columnSpan: 4
                 Layout.fillWidth: true
                 Layout.preferredHeight: 1
@@ -680,7 +762,7 @@ Rectangle {
             Text {
                 text: "测试操作"
                 font.pixelSize: 19; font.bold: true; color: "#fbbf24"
-                Layout.column: 0; Layout.row: 7
+                Layout.column: 0; Layout.row: 8
                 Layout.columnSpan: 4
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -689,12 +771,12 @@ Rectangle {
             Text {
                 text: "电机控制:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 0; Layout.row: 8
+                Layout.column: 0; Layout.row: 9
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.column: 1; Layout.row: 8
+                Layout.column: 1; Layout.row: 9
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 Layout.columnSpan: 3
                 implicitHeight: 56
@@ -759,6 +841,11 @@ Rectangle {
                             console.log("🔌 [BasicConfigTab] 启动电机", (root.motorIndex + 1), "通道:", ch)
                             if (typeof mqttController !== "undefined") {
                                 mqttController.publish(topic, cmd, 1, false)
+                            }
+                            // ✅ 2026-03-10 [Phase 7.48.36]: 启动反馈超时检测
+                            if (useFeedbackSwitch.checked) {
+                                root.waitingForFeedback = true
+                                feedbackTimeoutTimer.restart()
                             }
                         }
                     }
@@ -827,8 +914,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 8) ? 3 : 0
+                    border.color: (root.focusParamIndex === 9) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 9) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -838,9 +925,10 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
     // 获取参数字段数量
     // ✅ 2026-03-10 [Phase 7.48.34]: 从8扩展到9（新增"是否使用反馈"开关，反馈通道右移）
-    // 旧值：return 8
+    // ✅ 2026-03-10 [Phase 7.48.36]: 从9扩展到10（新增"反馈延时"参数）
+    // 旧值：return 9
     function getParamFieldCount() {
-        return 9  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6运行LED、7反馈LED、8测试按钮
+        return 10  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6反馈延时、7运行LED、8反馈LED、9测试按钮
     }
 
     // 触发参数输入
@@ -876,14 +964,19 @@ Rectangle {
             console.log("✅ [BasicConfigTab] 反馈通道")
             inputField = feedbackChannelSpin
             break
-        // ✅ 2026-03-10 [Phase 7.48.34]: 新增状态指示和测试操作
-        case 6:  // 运行LED（只读）
+        case 6:  // 反馈延时
+            // ✅ 2026-03-10 [Phase 7.48.36]: 新增
+            console.log("✅ [BasicConfigTab] 反馈延时")
+            inputField = feedbackDelaySpin
+            break
+        // ✅ 2026-03-10 [Phase 7.48.36]: 索引+1（插入反馈延时）
+        case 7:  // 运行LED（只读）
             console.log("✅ [BasicConfigTab] 运行LED（只读）")
             break
-        case 7:  // 反馈LED（只读）
+        case 8:  // 反馈LED（只读）
             console.log("✅ [BasicConfigTab] 反馈LED（只读）")
             break
-        case 8:  // 测试按钮（启动/停止切换）
+        case 9:  // 测试按钮（启动/停止切换）
             console.log("✅ [BasicConfigTab] 测试按钮 - 切换电机状态")
             var ch8 = outputChannelSpin.value
             var topic8 = "belt_control/do/module1/cmd"
@@ -929,6 +1022,7 @@ Rectangle {
         config["output_channel"] = outputChannelSpin.value
         config["use_feedback"] = useFeedbackSwitch.checked ? 1 : 0  // ✅ 2026-03-10 [Phase 7.48.34]
         config["feedback_channel"] = feedbackChannelSpin.value
+        config["feedback_delay"] = feedbackDelaySpin.value  // ✅ 2026-03-10 [Phase 7.48.36]
 
         console.log("✅ [BasicConfigTab] 收集配置:", JSON.stringify(config))
         return config
@@ -953,6 +1047,10 @@ Rectangle {
         }
         if (config["feedback_channel"] !== undefined) {
             feedbackChannelSpin.value = config["feedback_channel"]
+        }
+        // ✅ 2026-03-10 [Phase 7.48.36]: 加载反馈延时
+        if (config["feedback_delay"] !== undefined) {
+            feedbackDelaySpin.value = config["feedback_delay"]
         }
         // 注意：运行状态和模块类型暂时不处理，因为它们是自定义控件
     }

@@ -275,7 +275,9 @@ Rectangle {
                 source: "BasicConfigTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.motorIndex = root.motorIndex
+                        // ✅ 2026-03-10 [Phase 7.48.36]: 改为Qt.binding，确保切换电机时motorIndex同步更新
+                        // 旧：item.motorIndex = root.motorIndex（赋值，不跟踪变化）
+                        item.motorIndex = Qt.binding(function() { return root.motorIndex })
                         item.deviceId = 1  // ✅ 2026-03-10 [Phase 7.48.33]: 传递设备ID
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })

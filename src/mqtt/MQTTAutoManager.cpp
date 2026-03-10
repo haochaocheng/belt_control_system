@@ -271,10 +271,12 @@ void MQTTAutoManager::stop()
 
 void MQTTAutoManager::connectAllModules()
 {
-    qDebug() << "🔌 [MQTTAutoManager] 连接所有模块（前4个）";
+    // 旧：连接前4个模块：开关量×2 + 模拟量×2
+    // ✅ 2026-03-10 [Phase 7.48.36]: 连接前5个模块（DI×2 + AI×2 + DO×1）
+    // 原因：模块4用于DO模块状态订阅，获取继电器输出反馈和急停状态
+    qDebug() << "🔌 [MQTTAutoManager] 连接所有模块（前5个：DI×2 + AI×2 + DO×1）";
 
-    // 连接前4个模块：开关量×2 + 模拟量×2
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 5; ++i) {
         connectModule(i);
     }
 }
@@ -588,8 +590,9 @@ void MQTTAutoManager::checkBrokerConnections()
 void MQTTAutoManager::onReconnectTimerTimeout()
 {
     // ✅ 2026-02-12 [Phase 7.45.33]: 只在连接状态变化时输出调试信息
-    // 检查前4个模块的连接状态，断线自动重连
-    for (int i = 0; i < 4; ++i) {
+    // 旧：检查前4个模块的连接状态，断线自动重连
+    // ✅ 2026-03-10 [Phase 7.48.36]: 检查前5个模块（含DO模块）
+    for (int i = 0; i < 5; ++i) {
         bool isConnected = m_mqttController->isModuleConnected(i);
 
         // 只在状态变化时输出
@@ -623,8 +626,9 @@ void MQTTAutoManager::onAIPollingTimerTimeout()
 
 void MQTTAutoManager::onHealthCheckTimerTimeout()
 {
-    // 检查前4个模块的健康状态（硬件数据超时）
-    for (int i = 0; i < 4; ++i) {
+    // 旧：检查前4个模块的健康状态（硬件数据超时）
+    // ✅ 2026-03-10 [Phase 7.48.36]: 检查前5个模块（含DO模块）
+    for (int i = 0; i < 5; ++i) {
         checkModuleHealth(i);
     }
     // ✅ 2026-03-02 [Phase 7.47.68]: 检查全部8个模块的 broker 连接超时
@@ -661,6 +665,9 @@ void MQTTAutoManager::onModuleConnected(int moduleIndex, bool connected)
                 // ✅ 2026-02-09 [Phase 7.44.20]: 修复模拟量模块主题计算错误
                 // 原因：模块2应该是ai/module1，模块3应该是ai/module2
                 statusTopic = QString("belt_control/ai/module%1/status").arg(moduleIndex - 1);
+            } else if (moduleIndex == 4) {
+                // ✅ 2026-03-10 [Phase 7.48.36]: DO模块（继电器输出+反馈+急停）
+                statusTopic = QString("belt_control/do/module1/status");
             } else {
                 // 其他模块（暂未实施）
                 emit healthStatusChanged();
@@ -718,6 +725,9 @@ void MQTTAutoManager::onModuleMessageReceived(int moduleIndex, const QString &to
     } else if (moduleIndex < 4) {
         // 模拟量模块
         expectedHardwareTopic = QString("belt_control/ai/module%1/status").arg(moduleIndex - 1);
+    } else if (moduleIndex == 4) {
+        // ✅ 2026-03-10 [Phase 7.48.36]: DO模块
+        expectedHardwareTopic = QString("belt_control/do/module1/status");
     }
 
     bool isHardwareTopic = (!expectedHardwareTopic.isEmpty() && topic == expectedHardwareTopic);

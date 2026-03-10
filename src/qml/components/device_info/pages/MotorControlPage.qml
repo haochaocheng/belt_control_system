@@ -753,6 +753,20 @@ Rectangle {
 
         if (!config || Object.keys(config).length === 0) {
             console.log("⚠️ [MotorControlPage] 未找到配置，使用默认值")
+            // ✅ 2026-03-10 [Phase 7.48.36]: 未找到配置时，用motorIndex生成默认配置并应用
+            // 原因：applyConfig会打破QML绑定，切换电机后需要重新设置默认值
+            var currentTab0 = motorConfigPanel.item ? motorConfigPanel.item.getCurrentTab() : null
+            if (currentTab0 && typeof currentTab0.applyConfig === "function") {
+                var defaultConfig = {
+                    "motor_module_address": 1,
+                    "output_channel": root.currentMotorIndex,
+                    "use_feedback": 1,
+                    "feedback_channel": root.currentMotorIndex,
+                    "feedback_delay": 3
+                }
+                currentTab0.applyConfig(defaultConfig)
+                console.log("✅ [MotorControlPage] 已应用默认配置 - 电机:", root.currentMotorIndex)
+            }
             return false
         }
 
