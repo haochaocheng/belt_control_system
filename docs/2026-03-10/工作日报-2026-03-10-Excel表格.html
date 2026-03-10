@@ -89,98 +89,90 @@
         <tbody>
             <tr>
                 <td class="time-zone time-zone-morning" rowspan="3">上午: 8-12</td>
-                <td>Phase 7.48.29 电机保护参数统一升级（14个Tab + 统一MotorProtectionTab）</td>
+                <td>电机保护参数统一升级（14个Tab + 统一保护组件）</td>
                 <td>重要且紧急</td>
                 <td class="status-complete">✅ 完成</td>
                 <td>120 分钟</td>
                 <td class="review-yes">✅</td>
-                <td>10:47 提交。核心变更：① 创建统一的MotorProtectionTab.qml替代9个独立保护Tab；② Tab从10个扩展到14个（新增堵转保护、起动超时、功率保护、三相不平衡）；③ 数据库迁移015新增11列；④ MotorConfigPanel改为统一Loader加载。修改文件：MotorProtectionTab.qml（新建）、MotorConfigPanel.qml、MotorControlPage.qml、DeviceConfigManager.cpp、CMakeLists.txt。</td>
+                <td>创建统一的MotorProtectionTab.qml替代9个独立保护Tab文件。Tab从10个扩展到14个，新增堵转保护、起动超时、功率保护、三相不平衡4种保护类型。数据库新增11列，每个Tab包含24个可配置参数，匹配模拟量保护页面风格。</td>
             </tr>
             <tr>
-                <td>Phase 7.48.29 删除电机控制页多余按钮</td>
+                <td>精简电机控制页底部按钮</td>
                 <td>重要不紧急</td>
                 <td class="status-complete">✅ 完成</td>
                 <td>50 分钟</td>
                 <td class="review-yes">✅</td>
-                <td>11:38/11:44 两次提交。MotorProtectionTab内置保存/删除/重置按钮后，底部按钮区从5个精简为3个（保存/返回/启动测试）。</td>
+                <td>统一保护组件内置了保存/删除/重置按钮后，底部按钮区从5个精简为3个（保存/返回/启动测试），减少界面冗余。</td>
             </tr>
             <tr>
-                <td>Phase 7.48.30 电机保护语音从9种扩展到14种</td>
+                <td>电机保护语音从9种扩展到14种</td>
                 <td>重要不紧急</td>
                 <td class="status-complete">✅ 完成</td>
                 <td>30 分钟</td>
                 <td class="review-yes">✅</td>
-                <td>13:32 提交。批量合成和语音播放支持14种电机保护类型，同步更新AudioPathMapper和BatchAudioGenerator。</td>
+                <td>批量合成和语音播放支持14种电机保护类型，同步更新音频路径映射和批量生成器。</td>
             </tr>
 
             <tr>
                 <td class="time-zone time-zone-noon" rowspan="2">中午: 12-14</td>
-                <td>Phase 7.48.31 电机控制输出通道MQTT配置</td>
+                <td>电机控制输出通道MQTT配置</td>
                 <td>重要且紧急</td>
                 <td class="status-complete">✅ 完成</td>
                 <td>40 分钟</td>
                 <td class="review-yes">✅</td>
-                <td>15:08 提交。BasicConfigTab新增输出通道SpinBox，数据库新增output_channel列（迁移015），saveMotorConfig/loadMotorConfig扩展支持。</td>
+                <td>基本配置Tab新增输出通道参数（SpinBox，0-7），数据库新增output_channel列，保存/加载功能同步扩展。每个电机可独立配置对应的DO模块继电器通道。</td>
             </tr>
             <tr>
-                <td>Phase 7.48.32 电机保护音频配置界面修复</td>
+                <td>电机保护音频配置界面修复</td>
                 <td>重要且紧急</td>
                 <td class="status-complete">✅ 完成</td>
                 <td>30 分钟</td>
                 <td class="review-yes">✅</td>
-                <td>15:41 提交。三项修复：① 音频来源按钮组升级为Cyberpunk工业风（匹配AnalogInputPage）；② TTS文字输入框样式修复（placeholderTextColor+color）；③ 音频文件输入框自动填充（根据保护名称+音频来源模式生成文件名）。</td>
+                <td>三项修复：① 音频来源按钮组升级为Cyberpunk工业风格（匹配模拟量保护页面）；② TTS文字输入框颜色修复；③ 音频文件名根据保护名称和来源模式自动填充。</td>
             </tr>
 
             <tr>
-                <td class="time-zone time-zone-afternoon" rowspan="5">下午: 14-18</td>
-                <td>Phase 7.48.33 电机基本配置增加状态指示LED和测试操作按钮</td>
+                <td class="time-zone time-zone-afternoon" rowspan="4">下午: 14-18</td>
+                <td>电机基本配置增加状态指示和测试功能</td>
+                <td>重要且紧急</td>
+                <td class="status-complete">✅ 完成</td>
+                <td>30 分钟</td>
+                <td class="review-yes">✅</td>
+                <td>基本配置Tab新增：① 运行状态LED（绿色）和反馈状态LED（青色）实时显示；② 启动/停止测试按钮，通过MQTT发送DO模块继电器控制命令；③ "使用反馈"开关和反馈通道配置。</td>
+            </tr>
+            <tr>
+                <td>修正DO模块MQTT主题和LED引用错误</td>
                 <td>重要且紧急</td>
                 <td class="status-complete">✅ 完成</td>
                 <td>15 分钟</td>
                 <td class="review-yes">✅</td>
-                <td>15:54 提交。BasicConfigTab新增运行状态LED（绿色）、反馈状态LED（青色）、启动/停止测试按钮（通过MQTT发送DO模块命令）。</td>
+                <td>两个Bug修复：① MQTT主题从module5修正为module1（设备5对应DO模块1）；② LED状态属性的parent引用错误改用id引用，避免QML绑定失效。</td>
             </tr>
             <tr>
-                <td>Phase 7.48.34 基本配置增加反馈开关+DO模块直接MQTT控制</td>
-                <td>重要且紧急</td>
-                <td class="status-complete">✅ 完成</td>
-                <td>10 分钟</td>
-                <td class="review-yes">✅</td>
-                <td>16:02 提交。新增"使用反馈"Switch控件和反馈通道SpinBox，启动/停止按钮通过belt_control/do/module1/cmd主题控制。</td>
-            </tr>
-            <tr>
-                <td>Phase 7.48.35 修正DO模块MQTT主题和LED引用错误</td>
-                <td>重要且紧急</td>
-                <td class="status-complete">✅ 完成</td>
-                <td>15 分钟</td>
-                <td class="review-yes">✅</td>
-                <td>16:14/16:19 两次提交。① MQTT主题从module5修正为module1（设备5=DO模块1）；② LED状态属性parent引用错误改用id引用。</td>
-            </tr>
-            <tr>
-                <td>Phase 7.48.36 修复电机基本配置6个问题（硬件实测）</td>
+                <td>硬件实测修复电机基本配置6个问题</td>
                 <td>重要且紧急</td>
                 <td class="status-complete">✅ 完成</td>
                 <td>40 分钟</td>
                 <td class="review-yes">✅</td>
-                <td>16:57 提交。硬件实测发现6个问题并全部修复：① 新建DODataManager类（解析DO模块do_states/di_feedback/estop）；② MQTTAutoManager连接模块4，订阅belt_control/do/module1/status；③ main.cpp注册doDataManager到QML（前后端分离）；④ 运行LED/反馈LED改用doDataManager；⑤ Switch修复（propagateComposedEvents+onPressed）；⑥ 新增反馈延时参数+超时报警；⑦ 电机参数按motorIndex区分（Qt.binding）。新建文件：DODataManager.h/.cpp。修改文件：MQTTAutoManager.cpp、main.cpp、CMakeLists.txt、BasicConfigTab.qml、MotorConfigPanel.qml、MotorControlPage.qml。</td>
+                <td>在151设备上实测发现并修复6个问题：① 运行LED不更新——原因是DO模块状态未被订阅，新建DODataManager类处理DO模块数据，MQTTAutoManager扩展连接第5个模块；② "使用反馈"开关无法点击——MouseArea事件传播机制问题，改用propagateComposedEvents+onPressed；③ 反馈超时无报警——新增Timer超时检测+commonControl播放报警；④ 缺少反馈延时参数——新增feedbackDelaySpin（1-60秒）；⑤ 切换电机参数不变——MotorConfigPanel的motorIndex改用Qt.binding动态绑定；⑥ 数据库空时默认参数相同——按motorIndex分配不同的输出通道和反馈通道。</td>
             </tr>
             <tr>
-                <td>编写修复文档+工作日报+Git推送</td>
+                <td>编写修复文档和工作日报</td>
                 <td>重要不紧急</td>
                 <td class="status-complete">✅ 完成</td>
                 <td>10 分钟</td>
                 <td class="review-yes">✅</td>
-                <td>17:03 提交。创建06-Phase7.48.36修复文档和工作日报，推送到GitHub和GitLab。</td>
+                <td>创建修复文档和工作日报，推送到GitHub和GitLab双重备份。</td>
             </tr>
 
             <tr>
                 <td class="time-zone time-zone-rest">休息区: 18-24</td>
-                <td>当日复盘（成果 / 技术要点 / 经验）</td>
+                <td>当日复盘</td>
                 <td>重要不紧急</td>
                 <td class="status-complete">✅ 完成</td>
                 <td>-</td>
                 <td>-</td>
-                <td>今日完成10次Git提交（Phase 7.48.29~7.48.36），核心成果：电机保护参数统一升级（14个Tab）、MotorProtectionTab统一组件、DODataManager前后端分离、硬件实测6个问题修复。技术要点：QML MouseArea事件传播机制（propagateComposedEvents）、Qt.binding动态绑定、MQTT模块扩展（DI×2+AI×2+DO×1）。</td>
+                <td>今日核心成果：电机保护参数统一升级（14个Tab统一组件）、DO模块前后端分离（DODataManager）、硬件实测6个问题全部修复。技术要点：QML MouseArea事件传播机制、Qt.binding动态绑定、MQTT模块架构扩展（DI×2 + AI×2 + DO×1）。</td>
             </tr>
         </tbody>
     </table>
