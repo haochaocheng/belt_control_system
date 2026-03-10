@@ -356,26 +356,97 @@ Rectangle {
                 }
             }
 
-            // ========== 第三行：反馈通道（左侧，索引4）==========
+            // ========== 第三行：是否使用反馈（左侧，索引4）、反馈通道（右侧，索引5）==========
+            // ✅ 2026-03-10 [Phase 7.48.34]: 反馈通道右移，左侧新增"是否使用反馈"开关
 
-            // 反馈通道标签
+            // 是否使用反馈标签
             Text {
-                text: "反馈通道:"
+                text: "使用反馈:"
                 font.pixelSize: 21
                 color: "#9E9E9E"
                 Layout.column: 0
                 Layout.row: 2
-                Layout.preferredWidth: 160  // ✅ 2026-01-30 [FIX 100.300.107.3]: 从 120 增加到 160
+                Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 反馈通道输入
+            // 是否使用反馈开关
             Item {
                 Layout.column: 1
                 Layout.row: 2
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: feedbackChannelSpin.implicitHeight  // ✅ 引用 SpinBox 的 implicitHeight
+                implicitHeight: useFeedbackSwitch.implicitHeight
+
+                Switch {
+                    id: useFeedbackSwitch
+                    anchors.verticalCenter: parent.verticalCenter
+                    checked: true  // 默认启用反馈
+
+                    indicator: Rectangle {
+                        implicitWidth: 52; implicitHeight: 26
+                        x: useFeedbackSwitch.leftPadding
+                        y: parent.height / 2 - height / 2
+                        radius: 13
+                        color: useFeedbackSwitch.checked ? "#0d2218" : "#1a1a2e"
+                        border.color: useFeedbackSwitch.checked ? "#22C55E" : "#475569"
+                        border.width: 2
+
+                        Rectangle {
+                            x: useFeedbackSwitch.checked ? parent.width - width - 2 : 2
+                            y: 2
+                            width: 22; height: 22; radius: 11
+                            color: useFeedbackSwitch.checked ? "#22C55E" : "#64748B"
+                            Behavior on x { NumberAnimation { duration: 150 } }
+                        }
+                    }
+
+                    contentItem: Text {
+                        text: useFeedbackSwitch.checked ? "启用" : "禁用"
+                        font.pixelSize: 16
+                        color: useFeedbackSwitch.checked ? "#22C55E" : "#9E9E9E"
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: useFeedbackSwitch.indicator.width + useFeedbackSwitch.spacing
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        root.requestFocusParamIndex(4)
+                        mouse.accepted = false
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 4) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
+
+            // 反馈通道标签（右侧）
+            Text {
+                text: "反馈通道:"
+                font.pixelSize: 21
+                color: "#9E9E9E"
+                Layout.column: 2
+                Layout.row: 2
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+                opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
+            }
+
+            // 反馈通道输入（右侧）
+            Item {
+                Layout.column: 3
+                Layout.row: 2
+                Layout.fillWidth: true
+                Layout.maximumWidth: 300
+                implicitHeight: feedbackChannelSpin.implicitHeight
+                opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
+                enabled: useFeedbackSwitch.checked
 
                 DeviceInfo.CustomSpinBox {
                     id: feedbackChannelSpin
@@ -384,65 +455,23 @@ Rectangle {
                     to: 7
                     value: root.motorIndex
                     editable: true
-                    keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
+                    keyboardManager: root.keyboardManager
                 }
 
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 添加详细调试日志
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5.1]: 修复 mouse 参数声明
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 发射信号而不是直接赋值，避免打破 Qt.binding
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
-                        console.log("✅ [BasicConfigTab] 鼠标点击反馈通道，发射信号: requestFocusParamIndex(4)")
-
-                        // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 发射信号，而不是直接赋值
-                        // 避免打破 Qt.binding
-                        root.requestFocusParamIndex(4)
-
-                        mouse.accepted = false  // 让事件继续传递给 SpinBox
+                        root.requestFocusParamIndex(5)
+                        mouse.accepted = false
                     }
                 }
 
-                // 焦点指示器
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.2]: 大幅增加 z 值，确保在所有元素之上
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 移除测试背景色，添加渲染状态日志
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.5.2]: 移除无效的 onBorderColorChanged，改用 Connections
                 Rectangle {
                     id: feedbackChannelFocusIndicator
-                    anchors.fill: parent
-                    color: "transparent"
-                    border.color: (root.focusParamIndex === 4) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 4) ? 3 : 0
-                    radius: 4
-                    z: 1000
-                    enabled: false
-
-                    Component.onCompleted: {
-                        console.log("🔵 [反馈通道焦点指示器] 组件加载完成")
-                        console.log("  - 初始 border.color:", border.color)
-                        console.log("  - 初始 root.focusParamIndex:", root.focusParamIndex)
-                        console.log("  - 初始 width:", width, "height:", height)
-                        console.log("  - 初始 x:", x, "y:", y)
-                        console.log("  - 初始 z:", z)
-                    }
-
-                    // ✅ 使用 Connections 监听 focusParamIndex 变化
-                    Connections {
-                        target: root
-                        function onFocusParamIndexChanged() {
-                            if (root.focusParamIndex === 4) {
-                                console.log("🔵 [反馈通道焦点指示器] 获得焦点")
-                                console.log("  - border.color:", feedbackChannelFocusIndicator.border.color)
-                                console.log("  - border.width:", feedbackChannelFocusIndicator.border.width)
-                                console.log("  - visible:", feedbackChannelFocusIndicator.visible)
-                                console.log("  - opacity:", feedbackChannelFocusIndicator.opacity)
-                                console.log("  - z:", feedbackChannelFocusIndicator.z)
-                                console.log("  - width:", feedbackChannelFocusIndicator.width, "height:", feedbackChannelFocusIndicator.height)
-                                console.log("  - x:", feedbackChannelFocusIndicator.x, "y:", feedbackChannelFocusIndicator.y)
-                            }
-                        }
-                    }
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 5) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
                 }
             }
 
@@ -542,8 +571,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 5) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 5) ? 3 : 0
+                    border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 6) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -555,11 +584,13 @@ Rectangle {
                 Layout.column: 2; Layout.row: 5
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
+                opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
             }
             Item {
                 Layout.column: 3; Layout.row: 5
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 40
+                opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
 
                 // ✅ 2026-03-10 [Phase 7.48.33]: 使用属性+Connections实现实时刷新
                 property bool feedbackIsOn: false
@@ -623,8 +654,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 6) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 6) ? 3 : 0
+                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 7) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -716,9 +747,13 @@ Rectangle {
                         }
 
                         onClicked: {
-                            console.log("🔌 [BasicConfigTab] 启动电机", (root.motorIndex + 1))
-                            if (typeof mqttProtectionMonitor !== "undefined") {
-                                mqttProtectionMonitor.publishMotorCommand(root.deviceId, root.motorIndex, true)
+                            // ✅ 2026-03-10 [Phase 7.48.34]: 直接发布MQTT命令到DO模块5控制电机
+                            var ch = outputChannelSpin.value
+                            var topic = "belt_control/do/module5/cmd"
+                            var cmd = JSON.stringify({"action": "set", "channel": ch, "value": 1})
+                            console.log("🔌 [BasicConfigTab] 启动电机", (root.motorIndex + 1), "通道:", ch)
+                            if (typeof mqttController !== "undefined") {
+                                mqttController.publish(topic, cmd, 1, false)
                             }
                         }
                     }
@@ -771,9 +806,13 @@ Rectangle {
                         }
 
                         onClicked: {
-                            console.log("🔌 [BasicConfigTab] 停止电机", (root.motorIndex + 1))
-                            if (typeof mqttProtectionMonitor !== "undefined") {
-                                mqttProtectionMonitor.publishMotorCommand(root.deviceId, root.motorIndex, false)
+                            // ✅ 2026-03-10 [Phase 7.48.34]: 直接发布MQTT命令到DO模块5控制电机
+                            var ch = outputChannelSpin.value
+                            var topic = "belt_control/do/module5/cmd"
+                            var cmd = JSON.stringify({"action": "set", "channel": ch, "value": 0})
+                            console.log("🔌 [BasicConfigTab] 停止电机", (root.motorIndex + 1), "通道:", ch)
+                            if (typeof mqttController !== "undefined") {
+                                mqttController.publish(topic, cmd, 1, false)
                             }
                         }
                     }
@@ -782,8 +821,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 7) ? 3 : 0
+                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 8) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -792,10 +831,10 @@ Rectangle {
 
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
     // 获取参数字段数量
-    // ✅ 2026-03-10 [Phase 7.48.33]: 从5扩展到8（新增运行LED、反馈LED、测试按钮）
-    // 旧值：return 5
+    // ✅ 2026-03-10 [Phase 7.48.34]: 从8扩展到9（新增"是否使用反馈"开关，反馈通道右移）
+    // 旧值：return 8
     function getParamFieldCount() {
-        return 8  // 0运行状态、1模块类型、2模块地址、3输出通道、4反馈通道、5运行LED、6反馈LED、7测试按钮
+        return 9  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6运行LED、7反馈LED、8测试按钮
     }
 
     // 触发参数输入
@@ -822,28 +861,35 @@ Rectangle {
             console.log("✅ [BasicConfigTab] 输出通道")
             inputField = outputChannelSpin
             break
-        case 4:  // 反馈通道
+        case 4:  // 是否使用反馈（Switch切换）
+            // ✅ 2026-03-10 [Phase 7.48.34]: 新增
+            console.log("✅ [BasicConfigTab] 切换是否使用反馈")
+            useFeedbackSwitch.checked = !useFeedbackSwitch.checked
+            break
+        case 5:  // 反馈通道
             console.log("✅ [BasicConfigTab] 反馈通道")
             inputField = feedbackChannelSpin
             break
-        // ✅ 2026-03-10 [Phase 7.48.33]: 新增状态指示和测试操作
-        case 5:  // 运行LED（只读）
+        // ✅ 2026-03-10 [Phase 7.48.34]: 新增状态指示和测试操作
+        case 6:  // 运行LED（只读）
             console.log("✅ [BasicConfigTab] 运行LED（只读）")
             break
-        case 6:  // 反馈LED（只读）
+        case 7:  // 反馈LED（只读）
             console.log("✅ [BasicConfigTab] 反馈LED（只读）")
             break
-        case 7:  // 测试按钮（启动/停止切换）
+        case 8:  // 测试按钮（启动/停止切换）
             console.log("✅ [BasicConfigTab] 测试按钮 - 切换电机状态")
+            var ch8 = outputChannelSpin.value
+            var topic8 = "belt_control/do/module5/cmd"
             if (motorRunLed.isOn) {
-                // 当前运行中 → 停止
-                if (typeof mqttProtectionMonitor !== "undefined") {
-                    mqttProtectionMonitor.publishMotorCommand(root.deviceId, root.motorIndex, false)
+                var cmd8off = JSON.stringify({"action": "set", "channel": ch8, "value": 0})
+                if (typeof mqttController !== "undefined") {
+                    mqttController.publish(topic8, cmd8off, 1, false)
                 }
             } else {
-                // 当前已停止 → 启动
-                if (typeof mqttProtectionMonitor !== "undefined") {
-                    mqttProtectionMonitor.publishMotorCommand(root.deviceId, root.motorIndex, true)
+                var cmd8on = JSON.stringify({"action": "set", "channel": ch8, "value": 1})
+                if (typeof mqttController !== "undefined") {
+                    mqttController.publish(topic8, cmd8on, 1, false)
                 }
             }
             break
@@ -875,6 +921,7 @@ Rectangle {
         // 旧：config["module_address"] = moduleAddressSpin.value || 1
         config["motor_module_address"] = moduleAddressSpin.value || 1
         config["output_channel"] = outputChannelSpin.value
+        config["use_feedback"] = useFeedbackSwitch.checked ? 1 : 0  // ✅ 2026-03-10 [Phase 7.48.34]
         config["feedback_channel"] = feedbackChannelSpin.value
 
         console.log("✅ [BasicConfigTab] 收集配置:", JSON.stringify(config))
@@ -893,6 +940,10 @@ Rectangle {
         }
         if (config["output_channel"] !== undefined) {
             outputChannelSpin.value = config["output_channel"]
+        }
+        // ✅ 2026-03-10 [Phase 7.48.34]: 加载是否使用反馈
+        if (config["use_feedback"] !== undefined) {
+            useFeedbackSwitch.checked = (config["use_feedback"] === 1)
         }
         if (config["feedback_channel"] !== undefined) {
             feedbackChannelSpin.value = config["feedback_channel"]
