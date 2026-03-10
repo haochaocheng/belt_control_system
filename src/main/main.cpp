@@ -430,6 +430,8 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("networkTask", &networkTask);
         engine.rootContext()->setContextProperty("protectionMonitor", &protectionMonitor);
         engine.rootContext()->setContextProperty("alarmPlayback", &alarmPlayback);
+        // ✅ 2026-03-10 [Phase 7.48.31]: 注册MQTT保护监控器到QML（用于电机控制命令发布）
+        engine.rootContext()->setContextProperty("mqttProtectionMonitor", &mqttProtectionMonitor);
         logMessage("Context properties set");
 
         // 添加QML导入路径

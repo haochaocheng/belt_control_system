@@ -1353,6 +1353,31 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移014已执行过，跳过";
     }
+
+    // ✅ 2026-03-10 [Phase 7.48.31]: 迁移015 - 电机基本配置新增4列（输出通道/反馈通道/模块地址/运行状态）
+    // 原因：BasicConfigTab.qml 已有UI控件，但数据库缺少对应列，配置无法持久化
+    // 用途：与 DO 模块（Luckfox Lyra RK3506 设备5）的 MQTT 继电器输出关联
+    qDebug() << "🔄 [DeviceConfigManager] 检查迁移 015（电机基本配置输出通道）...";
+    query.prepare("SELECT COUNT(*) FROM schema_migrations WHERE version = '015_motor_output_channel'");
+    if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+        qDebug() << "🔧 [DeviceConfigManager] 执行迁移015: 电机基本配置新增4列";
+        QSqlQuery fix(m_database);
+
+        // 新增4列（ALTER TABLE ADD COLUMN 不会影响现有数据）
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN running_state TEXT DEFAULT '投入'");
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN motor_module_address INTEGER DEFAULT 1");
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN output_channel INTEGER DEFAULT -1");
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN feedback_channel INTEGER DEFAULT -1");
+
+        // 为已有的 Tab 0（基本配置）记录设置默认值：output_channel = motor_index, feedback_channel = motor_index
+        fix.exec("UPDATE device_motor_config SET output_channel = motor_index, feedback_channel = motor_index WHERE tab_index = 0 AND output_channel = -1");
+        int updated = fix.numRowsAffected();
+        qDebug() << "  ✅ 迁移015: 新增4列，更新" << updated << "条基本配置的默认输出/反馈通道";
+
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('015_motor_output_channel')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移015已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2168,8 +2193,8 @@ QVariantList DeviceConfigManager::queryToList(QSqlQuery &query)
 bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabIndex, const QVariantMap &config)
 {
     QSqlQuery query(m_database);
-    // ✅ 2026-03-10 [Phase 7.48.29]: 扩展为27列（原16列 + 新增11列）
-    // 旧：16列 INSERT OR REPLACE
+    // ✅ 2026-03-10 [Phase 7.48.31]: 扩展为31列（原27列 + 新增4列：running_state, motor_module_address, output_channel, feedback_channel）
+    // 旧：27列 INSERT OR REPLACE（Phase 7.48.29）
     query.prepare(R"(
         INSERT OR REPLACE INTO device_motor_config
         (device_id, motor_index, tab_index, tab_name, protection_name, protection_delay,
@@ -2178,8 +2203,9 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
          module_type, register_address, range_value, input_type,
          data_timeout, connection_timeout, play_mode, protection_level,
          sprinkler_enabled, filter_delay, use_text_to_speech,
+         running_state, motor_module_address, output_channel, feedback_channel,
          updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -2209,6 +2235,11 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
     query.addBindValue(config.value("sprinkler_enabled", false).toBool() ? 1 : 0);
     query.addBindValue(config.value("filter_delay", 5.0).toDouble());
     query.addBindValue(config.value("use_text_to_speech", false).toBool() ? 1 : 0);
+    // ✅ 2026-03-10 [Phase 7.48.31]: 新增4列绑定值（电机基本配置）
+    query.addBindValue(config.value("running_state", "投入").toString());
+    query.addBindValue(config.value("motor_module_address", 1).toInt());
+    query.addBindValue(config.value("output_channel", -1).toInt());
+    query.addBindValue(config.value("feedback_channel", -1).toInt());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
@@ -2253,6 +2284,25 @@ QVariantList DeviceConfigManager::loadAllMotorConfigs(int deviceId, int motorInd
     }
 
     return queryToList(query);
+}
+
+// ✅ 2026-03-10 [Phase 7.48.31]: 删除电机配置（恢复默认值用）
+bool DeviceConfigManager::deleteMotorConfig(int deviceId, int motorIndex, int tabIndex)
+{
+    QSqlQuery query(m_database);
+    query.prepare("DELETE FROM device_motor_config WHERE device_id = ? AND motor_index = ? AND tab_index = ?");
+    query.addBindValue(deviceId);
+    query.addBindValue(motorIndex);
+    query.addBindValue(tabIndex);
+
+    if (!query.exec()) {
+        qWarning() << "删除设备" << deviceId << "电机" << motorIndex << "Tab" << tabIndex << "配置失败:" << query.lastError().text();
+        return false;
+    }
+
+    qDebug() << "✅ [DeviceConfigManager] 删除电机配置:" << deviceId << motorIndex << tabIndex;
+    emit deviceConfigChanged(deviceId);
+    return true;
 }
 
 bool DeviceConfigManager::initDefaultMotorConfigs(int deviceId)
@@ -2310,13 +2360,15 @@ bool DeviceConfigManager::initDefaultMotorConfigs(int deviceId)
             const auto &def = tabDefaults[tabIndex];
             QString protectionName = QString("电机%1-%2").arg(motorIndex + 1).arg(def.tabName);
 
+            // ✅ 2026-03-10 [Phase 7.48.31]: 扩展 INSERT 语句，包含基本配置字段
             query.prepare(R"(
                 INSERT INTO device_motor_config
                 (device_id, motor_index, tab_index, tab_name, protection_name,
                  upper_limit, lower_limit, unit, range_value, input_type,
                  protection_delay, filter_delay, protection_level,
-                 sprinkler_enabled, tts_text)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 sprinkler_enabled, tts_text,
+                 running_state, motor_module_address, output_channel, feedback_channel)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             )");
             query.addBindValue(deviceId);
             query.addBindValue(motorIndex);
@@ -2333,6 +2385,11 @@ bool DeviceConfigManager::initDefaultMotorConfigs(int deviceId)
             query.addBindValue(def.protectionLevel);
             query.addBindValue(def.sprinklerEnabled ? 1 : 0);
             query.addBindValue(protectionName + "报警");
+            // ✅ Phase 7.48.31: Tab 0（基本配置）设置默认输出/反馈通道 = motorIndex
+            query.addBindValue("投入");                                    // running_state
+            query.addBindValue(1);                                         // motor_module_address
+            query.addBindValue(tabIndex == 0 ? motorIndex : -1);           // output_channel
+            query.addBindValue(tabIndex == 0 ? motorIndex : -1);           // feedback_channel
 
             if (!query.exec()) {
                 QString error = QString("初始化设备%1电机%2 Tab%3配置失败: %4")

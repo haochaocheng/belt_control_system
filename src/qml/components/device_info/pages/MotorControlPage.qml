@@ -566,7 +566,8 @@ Rectangle {
 
                         onClicked: {
                             console.log("✅ [MotorControlPage] 删除")
-                            // TODO: 实现删除功能
+                            // ✅ 2026-03-10 [Phase 7.48.31]: 实现删除功能（恢复默认值）
+                            root.resetMotorConfigToDefaults()
                         }
                     }
 
@@ -609,7 +610,8 @@ Rectangle {
 
                         onClicked: {
                             console.log("✅ [MotorControlPage] 重置")
-                            // TODO: 实现重置功能
+                            // ✅ 2026-03-10 [Phase 7.48.31]: 实现重置功能（重新加载数据库值）
+                            root.loadMotorConfig()
                         }
                     }
                 }
@@ -771,5 +773,26 @@ Rectangle {
         }
 
         return true
+    }
+
+    // ✅ 2026-03-10 [Phase 7.48.31]: 恢复默认值（删除按钮功能）
+    // 删除当前 Tab 的数据库记录，然后重新加载（会使用默认值）
+    function resetMotorConfigToDefaults() {
+        console.log("✅ [MotorControlPage] 恢复默认值 - 设备:", root.deviceId, "电机:", root.currentMotorIndex, "Tab:", root.focusTabIndex)
+
+        // 删除数据库中的当前配置
+        var success = deviceConfigMgr.deleteMotorConfig(
+            root.deviceId,
+            root.currentMotorIndex,
+            root.focusTabIndex
+        )
+
+        if (success) {
+            console.log("✅ [MotorControlPage] 已删除配置，重新加载默认值")
+            // 重新加载（数据库无记录时会使用默认值）
+            root.loadMotorConfig()
+        } else {
+            console.log("⚠️ [MotorControlPage] 删除配置失败")
+        }
     }
 }

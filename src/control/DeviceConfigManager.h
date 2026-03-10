@@ -260,6 +260,9 @@ public:
      */
     Q_INVOKABLE QVariantList loadAllMotorConfigs(int deviceId, int motorIndex);
 
+    // ✅ 2026-03-10 [Phase 7.48.31]: 删除电机配置（恢复默认值用）
+    Q_INVOKABLE bool deleteMotorConfig(int deviceId, int motorIndex, int tabIndex);
+
     // ========== 制动器配置 ==========
     // ✅ 2026-02-02 [参数持久化]: 添加制动器配置管理方法
 

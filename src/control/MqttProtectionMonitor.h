@@ -78,6 +78,15 @@ public:
     // ✅ 2026-03-05 [Phase 7.48.5]: 新增 - 设置AI数据管理器（用于模拟量保护监控）
     void setAIDataManager(AIDataManager *aiManager) { m_aiManager = aiManager; }
 
+    // ✅ 2026-03-10 [Phase 7.48.31]: 电机控制 MQTT 命令发布（Q_INVOKABLE 供 QML 调用）
+    /**
+     * @brief 发布电机控制命令到 DO 模块
+     * @param deviceId 设备ID
+     * @param motorIndex 电机索引（0-7）
+     * @param activate true=启动电机, false=停止电机
+     */
+    Q_INVOKABLE void publishMotorCommand(int deviceId, int motorIndex, bool activate);
+
     // ✅ 2026-03-09 [Phase 7.48.26]: 新增 - 设置MQTT控制器（用于洒水控制MQTT发布）
     void setMQTTController(MQTTController *ctrl) { m_mqttController = ctrl; }
 
@@ -245,6 +254,8 @@ private:
      * @param activate true=启动洒水, false=停止洒水
      */
     void publishSprinklerCommand(int sprinklerIndex, bool activate);
+
+    // ✅ 2026-03-10 [Phase 7.48.31]: publishMotorCommand 已移至 public 区域（Q_INVOKABLE）
 };
 
 #endif // MQTTPROTECTIONMONITOR_H

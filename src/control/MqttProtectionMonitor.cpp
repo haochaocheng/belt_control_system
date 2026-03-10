@@ -652,3 +652,61 @@ void MqttProtectionMonitor::publishSprinklerCommand(int sprinklerIndex, bool act
                    << "命令发布失败 topic:" << topic;
     }
 }
+
+// ✅ 2026-03-10 [Phase 7.48.31]: 电机控制 MQTT 命令发布
+// 参考 DO 模块文档：docs/2026-03-10/02-Luckfox-Lyra-RK3506-IO模块部署记录.md
+// DO 模块（设备5, Luckfox Lyra RK3506-5）：8路继电器输出 + 8路反馈输入 + 1路急停
+void MqttProtectionMonitor::publishMotorCommand(int deviceId, int motorIndex, bool activate)
+{
+    if (!m_mqttController) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] MQTTController未设置，无法发布电机控制命令";
+        return;
+    }
+
+    if (!m_deviceConfigMgr) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] DeviceConfigManager未设置，无法读取电机配置";
+        return;
+    }
+
+    // 读取电机基本配置（Tab 0）
+    QVariantMap config = m_deviceConfigMgr->loadMotorConfig(deviceId, motorIndex, 0);
+    if (config.isEmpty()) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] 电机" << (motorIndex + 1) << "基本配置为空";
+        return;
+    }
+
+    // 检查运行状态是否为"投入"
+    QString runningState = config.value("running_state", "投入").toString();
+    if (runningState != "投入") {
+        qDebug() << "⏭️ [MqttProtectionMonitor] 电机" << (motorIndex + 1) << "运行状态为" << runningState << "，跳过";
+        return;
+    }
+
+    int outputChannel = config.value("output_channel", -1).toInt();
+    if (outputChannel < 0 || outputChannel > 7) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] 电机" << (motorIndex + 1) << "输出通道无效:" << outputChannel;
+        return;
+    }
+
+    int moduleAddress = config.value("motor_module_address", 1).toInt();
+    // DO 模块 MQTT 主题：belt_control/do/module{N}/cmd
+    QString topic = QString("belt_control/do/module%1/cmd").arg(moduleAddress);
+
+    // 构建 JSON 命令（匹配 DO 模块 mqtt_do_publisher.py 的命令格式）
+    QJsonObject cmd;
+    cmd["action"] = "set";
+    cmd["channel"] = outputChannel;
+    cmd["value"] = activate ? 1 : 0;
+
+    QString message = QJsonDocument(cmd).toJson(QJsonDocument::Compact);
+
+    if (m_mqttController->publish(topic, message, 1, false)) {
+        qDebug() << (activate ? "🔌 [MqttProtectionMonitor] 电机启动命令已发布"
+                              : "🔌 [MqttProtectionMonitor] 电机停止命令已发布")
+                 << "电机:" << (motorIndex + 1)
+                 << "topic:" << topic << "channel:" << outputChannel;
+    } else {
+        qWarning() << "⚠️ [MqttProtectionMonitor] 电机" << (motorIndex + 1)
+                   << "控制命令发布失败 topic:" << topic;
+    }
+}

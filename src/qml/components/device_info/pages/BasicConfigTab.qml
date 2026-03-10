@@ -498,28 +498,32 @@ Rectangle {
     }
 
     // ✅ 2026-02-02 [参数持久化]: 收集配置参数
+    // ✅ 2026-03-10 [Phase 7.48.31]: 修正键名与数据库列名匹配（motor_module_address）
     function collectConfig() {
         var config = {}
 
         // 收集所有参数字段
         // 注意：运行状态使用自定义 RadioButton，需要检查内部 Rectangle 的 visible 属性
         config["running_state"] = "投入"  // 默认值，实际应该从 RadioButton 状态读取
-        config["module_type"] = "继电器模块"  // 固定值
-        config["module_address"] = moduleAddressSpin.value || 1
-        config["output_channel"] = outputChannelSpin.value || 0
-        config["feedback_channel"] = feedbackChannelSpin.value || 0
+        // 旧：config["module_type"] = "继电器模块"  // 固定值（不存入数据库）
+        // 旧：config["module_address"] = moduleAddressSpin.value || 1
+        config["motor_module_address"] = moduleAddressSpin.value || 1
+        config["output_channel"] = outputChannelSpin.value
+        config["feedback_channel"] = feedbackChannelSpin.value
 
         console.log("✅ [BasicConfigTab] 收集配置:", JSON.stringify(config))
         return config
     }
 
     // ✅ 2026-02-02 [参数持久化]: 应用配置参数
+    // ✅ 2026-03-10 [Phase 7.48.31]: 修正键名与数据库列名匹配（motor_module_address）
     function applyConfig(config) {
         console.log("✅ [BasicConfigTab] 应用配置:", JSON.stringify(config))
 
         // 应用所有参数字段
-        if (config["module_address"] !== undefined) {
-            moduleAddressSpin.value = config["module_address"]
+        // 旧：config["module_address"]
+        if (config["motor_module_address"] !== undefined) {
+            moduleAddressSpin.value = config["motor_module_address"]
         }
         if (config["output_channel"] !== undefined) {
             outputChannelSpin.value = config["output_channel"]
