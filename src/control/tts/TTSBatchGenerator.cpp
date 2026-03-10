@@ -518,8 +518,15 @@ void TTSBatchGenerator::buildAnalogInputList()
 void TTSBatchGenerator::buildMotorList()
 {
     // 电机保护语音清单
+    // ✅ 2026-03-10 [Phase 7.48.30]: 从6种扩展到14种，与BatchAudioGenerator和MotorConfigPanel保持一致
+    // 旧：{"启动", "停止", "故障", "过载", "过热", "缺相"}
     QStringList protections = {
-        "启动", "停止", "故障", "过载", "过热", "缺相"
+        "电流过载保护", "温度过高保护",
+        "前轴承温度过高保护", "后轴承温度过高保护",
+        "X轴振动过大保护", "Y轴振动过大保护",
+        "A相绕组温度过高保护", "B相绕组温度过高保护", "C相绕组温度过高保护",
+        "堵转保护", "起动超时保护", "功率异常保护", "三相不平衡保护",
+        "运行失败"
     };
 
     int fileIndex = 1;

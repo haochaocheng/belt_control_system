@@ -561,7 +561,9 @@ Popup {
 
         if (chkSwitchInput.checked) total += 33 * beltCount
         if (chkAnalogInput.checked) total += 21 * beltCount  // 原16项，现21项（2026-03-05更新）
-        if (chkMotor.checked) total += 12 * beltCount * motorCount
+        // ✅ 2026-03-10 [Phase 7.48.30]: 从12个扩展到14个（+堵转/起动超时/功率/三相不平衡/运行失败）
+        // 旧：if (chkMotor.checked) total += 12 * beltCount * motorCount
+        if (chkMotor.checked) total += 14 * beltCount * motorCount
         if (chkBrake.checked) total += 8 * beltCount * brakeCount
         if (chkTension.checked) total += 10 * beltCount * tensionCount
         if (chkLinePosition.checked) total += lineCount * beltCount

@@ -452,6 +452,9 @@ void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
         QString textTemplate;   // %1=皮带号, %2=电机号
         QString fileNameTpl;    // %1=电机号
     };
+    // ✅ 2026-03-10 [Phase 7.48.30]: 从9种扩展到14种电机保护语音
+    // 新增：堵转保护、起动超时、功率保护、三相不平衡、电机运行失败
+    // 旧：9项（电流过载~C相绕组温度过高）
     static const QList<ProtDef> DEFS = {
         {"%1号皮带%2号电机电流过载保护",     "%1号电机电流过载"},
         {"%1号皮带%2号电机温度过高保护",     "%1号电机温度过高"},
@@ -462,6 +465,11 @@ void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
         {"%1号皮带%2号电机A相绕组温度过高保护", "%1号电机A相绕组温度过高"},
         {"%1号皮带%2号电机B相绕组温度过高保护", "%1号电机B相绕组温度过高"},
         {"%1号皮带%2号电机C相绕组温度过高保护", "%1号电机C相绕组温度过高"},
+        {"%1号皮带%2号电机堵转保护",         "%1号电机堵转"},
+        {"%1号皮带%2号电机起动超时保护",     "%1号电机起动超时"},
+        {"%1号皮带%2号电机功率异常保护",     "%1号电机功率异常"},
+        {"%1号皮带%2号电机三相不平衡保护",   "%1号电机三相不平衡"},
+        {"%1号皮带%2号电机运行失败",         "%1号电机运行失败"},
     };
 
     for (int beltNum : m_beltNumbers) {

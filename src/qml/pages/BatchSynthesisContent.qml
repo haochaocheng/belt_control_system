@@ -660,7 +660,9 @@ Rectangle {
         // 按设计方案的文件数量
         if (chkSwitchInput.checked) total += 8 * beltCount           // 开关量：8个/皮带
         if (chkAnalogInput.checked) total += 21 * beltCount          // 模拟量：21个/皮带（原8项，2026-03-05更新）
-        if (chkMotor.checked) total += 9 * beltCount * motorCount    // 电机：9个/皮带/电机（与MotorControlPage Tab对应）
+        // ✅ 2026-03-10 [Phase 7.48.30]: 从9个扩展到14个（+堵转/起动超时/功率/三相不平衡/运行失败）
+        // 旧：if (chkMotor.checked) total += 9 * beltCount * motorCount
+        if (chkMotor.checked) total += 14 * beltCount * motorCount   // 电机：14个/皮带/电机
         if (chkBrake.checked) total += 3 * beltCount * brakeCount    // 制动器：3个/皮带/制动器
         if (chkTension.checked) total += 3 * beltCount * tensionCount // 张紧：3个/皮带/张紧
         if (chkLinePosition.checked) total += 3 * lineCount * beltCount // 沿线：3个/皮带/点位
