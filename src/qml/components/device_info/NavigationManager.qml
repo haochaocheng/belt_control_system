@@ -17,7 +17,7 @@ QtObject {
     property int motorListIndex: 0                 // 区域A：电机列表索引（0-7）
     property int tabIndex: 0                       // 区域B：Tab索引（动态范围，取决于页面）
     property int paramIndex: 0                     // 区域C：参数索引（动态范围，取决于当前Tab）
-    property int buttonIndex: 0                    // 区域D：按钮索引（0-4，共5个按钮）
+    property int buttonIndex: 0                    // 区域D：按钮索引（0-2，共3个按钮：保存/删除/重置）
 
     // ✅ 2026-02-07 [Phase 7.39.11]: 添加 lastMotorIndex 属性
     // 不同页面有不同的列表项数量：
@@ -287,64 +287,39 @@ QtObject {
     }
 
     // ========== 区域D：底部按钮导航 ==========
-    // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11]: 更新按钮数量为 5 个（0-4）
-    // 按钮布局：
-    // 第一行：[0] 添加输入  [1] 删除输入
-    // 第二行：[2] 保存      [3] 删除      [4] 重置
+    // ✅ 2026-03-10 [Phase 7.48.29]: 从5个按钮改为3个按钮（单行）
+    // 旧：按钮布局：
+    //   第一行：[0] 添加输入  [1] 删除输入
+    //   第二行：[2] 保存      [3] 删除      [4] 重置
+    // 新：按钮布局（单行）：
+    //   [0] 保存  [1] 删除  [2] 重置
 
     function moveInButtonArea(direction) {
         var newIndex = buttonIndex
 
         switch(direction) {
         case "Left":
-            // 左键：在同一行向左移动
-            if (buttonIndex === 1) {
-                newIndex = 0  // 删除输入 → 添加输入
-            } else if (buttonIndex === 3) {
-                newIndex = 2  // 删除 → 保存
-            } else if (buttonIndex === 4) {
-                newIndex = 3  // 重置 → 删除
+            // 左键：向左移动
+            if (buttonIndex > 0) {
+                newIndex = buttonIndex - 1
             }
-            // 在第一列，保持不变
             break
 
         case "Right":
-            // 右键：在同一行向右移动
-            if (buttonIndex === 0) {
-                newIndex = 1  // 添加输入 → 删除输入
-            } else if (buttonIndex === 2) {
-                newIndex = 3  // 保存 → 删除
-            } else if (buttonIndex === 3) {
-                newIndex = 4  // 删除 → 重置
+            // 右键：向右移动
+            if (buttonIndex < 2) {
+                newIndex = buttonIndex + 1
             }
-            // 在最后一列，保持不变
             break
 
         case "Up":
-            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3.3]: 使用 lastParamIndex 返回参数区
-            // 向上：从第二行到第一行，或返回参数区
-            if (buttonIndex === 2) {
-                newIndex = 0  // 保存 → 添加输入
-            } else if (buttonIndex === 3) {
-                newIndex = 1  // 删除 → 删除输入
-            } else if (buttonIndex === 4) {
-                newIndex = 1  // 重置 → 删除输入
-            } else {
-                // 在第一行，向上返回参数区最后一个参数
-                switchToArea(areaParams)
-                paramIndex = lastParamIndex  // ✅ 使用 lastParamIndex 而不是硬编码的8
-                return
-            }
-            break
+            // 向上：返回参数区最后一个参数
+            switchToArea(areaParams)
+            paramIndex = lastParamIndex
+            return
 
         case "Down":
-            // 向下：从第一行到第二行，或保持不变
-            if (buttonIndex === 0) {
-                newIndex = 2  // 添加输入 → 保存
-            } else if (buttonIndex === 1) {
-                newIndex = 3  // 删除输入 → 删除
-            }
-            // 在第二行，保持不变
+            // 向下：单行按钮，保持不变
             break
         }
 

@@ -31,7 +31,9 @@ Rectangle {
     property int focusSubArea: 0  // 0:电机列表区域 1:Tab区域 2:参数区域 3:按钮区域
     property int focusTabIndex: 0  // Tab区域焦点索引
     property int focusParamIndex: 0  // 参数区域焦点索引
-    property int focusButtonIndex: 0  // 按钮区域焦点索引 (0-4)
+    // ✅ 2026-03-10 [Phase 7.48.29]: 按钮从5个减为3个
+    // 旧：property int focusButtonIndex: 0  // 按钮区域焦点索引 (0-4)
+    property int focusButtonIndex: 0  // 按钮区域焦点索引 (0-2): 0=保存, 1=删除, 2=重置
 
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听 focusParamIndex 变化
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.6]: 双向同步 - focusParamIndex 变化时也要更新 NavigationManager
@@ -452,7 +454,9 @@ Rectangle {
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11]: 添加底部按钮区域
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 90  // 两行按钮，每行35高度 + 间距
+            // ✅ 2026-03-10 [Phase 7.48.29]: 从两行按钮改为单行（删除"添加电机保护"和"删除电机保护"）
+            // 旧：Layout.preferredHeight: 90  // 两行按钮，每行35高度 + 间距
+            Layout.preferredHeight: 55  // 单行按钮：35高度 + 上下间距
             color: "#1a1f2e"
 
             // 装饰边框
@@ -469,99 +473,12 @@ Rectangle {
                 anchors.margins: 10
                 spacing: 10
 
-                // 第一行：添加输入、删除输入
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
+                // ✅ 2026-03-10 [Phase 7.48.29]: 删除第一行按钮（添加电机保护 + 删除电机保护）
+                // 旧：第一行 [0] 添加电机保护 [1] 删除电机保护
+                //     第二行 [2] 保存 [3] 删除 [4] 重置
+                // 新：单行 [0] 保存 [1] 删除 [2] 重置
 
-                    Button {
-                        id: addInputButton
-                        // ✅ 2026-03-03 [Phase 7.47.77]: 修改标签
-                        // 旧："添加输入"（从 SwitchInputPage 复制，未针对电机控制场景修改）
-                        text: "添加电机保护"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
-                            // 焦点时背景色更亮
-                            color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 0) {
-                                    return "#2ecc71"  // 焦点时：亮绿色
-                                } else if (parent.pressed) {
-                                    return "#27ae60"
-                                } else if (parent.hovered) {
-                                    return "#2ecc71"
-                                } else {
-                                    return "#27ae60"
-                                }
-                            }
-                            radius: 4
-                            // 增加边框宽度：2px → 5px
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [MotorControlPage] 添加输入")
-                            // TODO: 实现添加输入功能
-                        }
-                    }
-
-                    Button {
-                        id: deleteInputButton
-                        // ✅ 2026-03-03 [Phase 7.47.77]: 修改标签
-                        // 旧："删除输入"（从 SwitchInputPage 复制，未针对电机控制场景修改）
-                        text: "删除电机保护"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
-                            // 焦点时背景色更亮
-                            color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 1) {
-                                    return "#e74c3c"  // 焦点时：亮橙色
-                                } else if (parent.pressed) {
-                                    return "#c0392b"
-                                } else if (parent.hovered) {
-                                    return "#e74c3c"
-                                } else {
-                                    return "#d35400"
-                                }
-                            }
-                            radius: 4
-                            // 增加边框宽度：2px → 5px
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 1 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [MotorControlPage] 删除输入")
-                            // TODO: 实现删除输入功能
-                        }
-                    }
-                }
-
-                // 第二行：保存、删除、重置
+                // 保存、删除、重置
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
@@ -576,7 +493,8 @@ Rectangle {
                             // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
                             // 焦点时背景色更亮
                             color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 2) {
+                                // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 2，改为 0
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 0) {
                                     return "#2ecc71"  // 焦点时：亮绿色
                                 } else if (parent.pressed) {
                                     return "#27ae60"
@@ -588,7 +506,8 @@ Rectangle {
                             }
                             radius: 4
                             // 增加边框宽度：2px → 5px
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? 5 : 0
+                            // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 2，改为 0
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? 5 : 0
                             border.color: "#2196F3"
                         }
 
@@ -618,7 +537,8 @@ Rectangle {
                             // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
                             // 焦点时背景色更亮
                             color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 3) {
+                                // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 3，改为 1
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 1) {
                                     return "#e74c3c"  // 焦点时：亮橙色
                                 } else if (parent.pressed) {
                                     return "#c0392b"
@@ -630,7 +550,8 @@ Rectangle {
                             }
                             radius: 4
                             // 增加边框宽度：2px → 5px
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 3 ? 5 : 0
+                            // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 3，改为 1
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 1 ? 5 : 0
                             border.color: "#2196F3"
                         }
 
@@ -659,7 +580,8 @@ Rectangle {
                             // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
                             // 焦点时背景色更亮
                             color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 4) {
+                                // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 4，改为 2
+                                if (root.focusSubArea === 3 && root.focusButtonIndex === 2) {
                                     return "#95a5a6"  // 焦点时：亮灰色
                                 } else if (parent.pressed) {
                                     return "#7f8c8d"
@@ -671,7 +593,8 @@ Rectangle {
                             }
                             radius: 4
                             // 增加边框宽度：2px → 5px
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 4 ? 5 : 0
+                            // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 4，改为 2
+                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? 5 : 0
                             border.color: "#2196F3"
                         }
 
