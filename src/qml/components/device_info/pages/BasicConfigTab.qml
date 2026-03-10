@@ -505,23 +505,25 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
             Item {
+                id: motorRunItem
                 Layout.column: 1; Layout.row: 5
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 40
 
                 // ✅ 2026-03-10 [Phase 7.48.33]: 使用属性+Connections实现实时刷新
+                // ✅ 2026-03-10 [Phase 7.48.35]: 修复 parent 引用错误，改用 id 引用
                 property bool motorIsOn: false
 
                 Connections {
                     target: typeof diDataManager !== "undefined" ? diDataManager : null
                     function onModule1DataChanged() {
                         if (moduleAddressSpin.value === 1) {
-                            parent.motorIsOn = diDataManager.getBit(0, outputChannelSpin.value)
+                            motorRunItem.motorIsOn = diDataManager.getBit(0, outputChannelSpin.value)
                         }
                     }
                     function onModule2DataChanged() {
                         if (moduleAddressSpin.value === 2) {
-                            parent.motorIsOn = diDataManager.getBit(1, outputChannelSpin.value)
+                            motorRunItem.motorIsOn = diDataManager.getBit(1, outputChannelSpin.value)
                         }
                     }
                 }
@@ -536,7 +538,7 @@ Rectangle {
                         width: 24; height: 24; radius: 12
                         anchors.verticalCenter: parent.verticalCenter
 
-                        property bool isOn: parent.parent.motorIsOn
+                        property bool isOn: motorRunItem.motorIsOn
 
                         color: isOn ? "#22C55E" : "#1a1a2e"
                         border.color: isOn ? "#86EFAC" : "#475569"
@@ -587,24 +589,26 @@ Rectangle {
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
             }
             Item {
+                id: feedbackLedItem
                 Layout.column: 3; Layout.row: 5
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 40
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
 
                 // ✅ 2026-03-10 [Phase 7.48.33]: 使用属性+Connections实现实时刷新
+                // ✅ 2026-03-10 [Phase 7.48.35]: 修复 parent 引用错误，改用 id 引用
                 property bool feedbackIsOn: false
 
                 Connections {
                     target: typeof diDataManager !== "undefined" ? diDataManager : null
                     function onModule1DataChanged() {
                         if (moduleAddressSpin.value === 1) {
-                            parent.feedbackIsOn = diDataManager.getBit(0, feedbackChannelSpin.value)
+                            feedbackLedItem.feedbackIsOn = diDataManager.getBit(0, feedbackChannelSpin.value)
                         }
                     }
                     function onModule2DataChanged() {
                         if (moduleAddressSpin.value === 2) {
-                            parent.feedbackIsOn = diDataManager.getBit(1, feedbackChannelSpin.value)
+                            feedbackLedItem.feedbackIsOn = diDataManager.getBit(1, feedbackChannelSpin.value)
                         }
                     }
                 }
@@ -619,7 +623,7 @@ Rectangle {
                         width: 24; height: 24; radius: 12
                         anchors.verticalCenter: parent.verticalCenter
 
-                        property bool isOn: parent.parent.feedbackIsOn
+                        property bool isOn: feedbackLedItem.feedbackIsOn
 
                         color: isOn ? "#00d4ff" : "#1a1a2e"
                         border.color: isOn ? "#7dd3fc" : "#475569"
