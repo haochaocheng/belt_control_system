@@ -1378,6 +1378,31 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移015已执行过，跳过";
     }
+
+    // ✅ 2026-03-10 [Phase 7.48.37]: 迁移016 - 新增启动延时、预警语音、失败语音、启动键
+    query.exec("SELECT version FROM schema_migrations WHERE version = '016_motor_startup_params'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移016: 新增电机启动参数...";
+        QSqlQuery fix(m_database);
+
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN startup_delay INTEGER DEFAULT 5");
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN warning_voice TEXT DEFAULT ''");
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN failure_voice TEXT DEFAULT ''");
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN startup_key TEXT DEFAULT '无'");
+
+        // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名格式（电机X启动/电机X失败）
+        // 旧：warning_voice='电机X启动预警', failure_voice='电机X运行失败'
+        fix.exec("UPDATE device_motor_config SET "
+                 "warning_voice = '电机' || (motor_index + 1) || '启动', "
+                 "failure_voice = '电机' || (motor_index + 1) || '失败' "
+                 "WHERE tab_index = 0 AND warning_voice = ''");
+        int updated016 = fix.numRowsAffected();
+        qDebug() << "  ✅ 迁移016: 新增4列，更新" << updated016 << "条基本配置的默认语音文字";
+
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('016_motor_startup_params')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移016已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2194,7 +2219,8 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
 {
     QSqlQuery query(m_database);
     // ✅ 2026-03-10 [Phase 7.48.31]: 扩展为31列（原27列 + 新增4列：running_state, motor_module_address, output_channel, feedback_channel）
-    // 旧：27列 INSERT OR REPLACE（Phase 7.48.29）
+    // ✅ 2026-03-10 [Phase 7.48.37]: 扩展为35列（新增4列：startup_delay, warning_voice, failure_voice, startup_key）
+    // 旧：31列 INSERT OR REPLACE（Phase 7.48.31）
     query.prepare(R"(
         INSERT OR REPLACE INTO device_motor_config
         (device_id, motor_index, tab_index, tab_name, protection_name, protection_delay,
@@ -2204,8 +2230,9 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
          data_timeout, connection_timeout, play_mode, protection_level,
          sprinkler_enabled, filter_delay, use_text_to_speech,
          running_state, motor_module_address, output_channel, feedback_channel,
+         startup_delay, warning_voice, failure_voice, startup_key,
          updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -2240,6 +2267,11 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
     query.addBindValue(config.value("motor_module_address", 1).toInt());
     query.addBindValue(config.value("output_channel", -1).toInt());
     query.addBindValue(config.value("feedback_channel", -1).toInt());
+    // ✅ 2026-03-10 [Phase 7.48.37]: 新增4列绑定值（启动参数）
+    query.addBindValue(config.value("startup_delay", 5).toInt());
+    query.addBindValue(config.value("warning_voice", "").toString());
+    query.addBindValue(config.value("failure_voice", "").toString());
+    query.addBindValue(config.value("startup_key", "无").toString());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
@@ -2361,14 +2393,16 @@ bool DeviceConfigManager::initDefaultMotorConfigs(int deviceId)
             QString protectionName = QString("电机%1-%2").arg(motorIndex + 1).arg(def.tabName);
 
             // ✅ 2026-03-10 [Phase 7.48.31]: 扩展 INSERT 语句，包含基本配置字段
+            // ✅ 2026-03-10 [Phase 7.48.37]: 扩展 INSERT 语句，新增启动参数4列
             query.prepare(R"(
                 INSERT INTO device_motor_config
                 (device_id, motor_index, tab_index, tab_name, protection_name,
                  upper_limit, lower_limit, unit, range_value, input_type,
                  protection_delay, filter_delay, protection_level,
                  sprinkler_enabled, tts_text,
-                 running_state, motor_module_address, output_channel, feedback_channel)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 running_state, motor_module_address, output_channel, feedback_channel,
+                 startup_delay, warning_voice, failure_voice, startup_key)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             )");
             query.addBindValue(deviceId);
             query.addBindValue(motorIndex);
@@ -2390,6 +2424,12 @@ bool DeviceConfigManager::initDefaultMotorConfigs(int deviceId)
             query.addBindValue(1);                                         // motor_module_address
             query.addBindValue(tabIndex == 0 ? motorIndex : -1);           // output_channel
             query.addBindValue(tabIndex == 0 ? motorIndex : -1);           // feedback_channel
+            // ✅ Phase 7.48.37: Tab 0（基本配置）设置默认启动参数
+            // ✅ 2026-03-11: 改为音频文件名格式（电机X启动/电机X失败）
+            query.addBindValue(5);                                                                          // startup_delay
+            query.addBindValue(tabIndex == 0 ? QString("电机%1启动").arg(motorIndex + 1) : QString(""));    // warning_voice
+            query.addBindValue(tabIndex == 0 ? QString("电机%1失败").arg(motorIndex + 1) : QString(""));    // failure_voice
+            query.addBindValue("无");                                                                       // startup_key
 
             if (!query.exec()) {
                 QString error = QString("初始化设备%1电机%2 Tab%3配置失败: %4")

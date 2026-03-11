@@ -88,7 +88,8 @@ const QStringList PROTECTION_ITEMS = {
 } // namespace AnalogInputVoice
 
 // ========== 电机保护语音清单 ==========
-// 每台电机 12 个保护项
+// ✅ 2026-03-10 [Phase 7.48.37]: 从12项扩展到14项（新增启动预警、运行失败）
+// 每台电机 14 个保护项
 namespace MotorVoice {
 
 const QStringList PROTECTION_ITEMS = {
@@ -103,7 +104,9 @@ const QStringList PROTECTION_ITEMS = {
     "%1号皮带%2号电机冷却故障",
     "%1号皮带%2号电机振动过大",
     "%1号皮带%2号电机温度过高",
-    "%1号皮带%2号电机运行正常"
+    "%1号皮带%2号电机运行正常",
+    "%1号皮带%2号电机启动预警",   // ✅ 2026-03-10 [Phase 7.48.37]: 新增
+    "%1号皮带%2号电机运行失败"    // ✅ 2026-03-10 [Phase 7.48.37]: 新增
 };
 
 } // namespace MotorVoice
@@ -234,7 +237,8 @@ inline int calculateTotalFiles(int beltCount, int motorCount, int brakeCount,
     // 模拟量输入保护: 16 项 x 皮带数
     total += AnalogInputVoice::PROTECTION_ITEMS.size() * beltCount;
 
-    // 电机保护: 12 项 x 皮带数 x 电机数
+    // ✅ 2026-03-10 [Phase 7.48.37]: 从12项扩展到14项
+    // 电机保护: 14 项 x 皮带数 x 电机数
     total += MotorVoice::PROTECTION_ITEMS.size() * beltCount * motorCount;
 
     // 制动器保护: 8 项 x 皮带数 x 制动器数

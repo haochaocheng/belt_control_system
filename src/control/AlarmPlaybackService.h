@@ -16,6 +16,9 @@ typedef SherpaOnnxTTS TTSEngine;
 typedef QTextToSpeech TTSEngine;
 #endif
 
+// ✅ 2026-03-10 [Phase 7.48.37]: 前向声明 TTSEngineManager
+class TTSEngineManager;
+
 /**
  * @brief 报警播放服务 - 处理报警音频播放（音频文件 + TTS）
  *
@@ -38,6 +41,9 @@ public:
     Q_INVOKABLE void start();
     Q_INVOKABLE void stop();
     Q_INVOKABLE bool isRunning() const { return m_isRunning; }
+
+    // ✅ 2026-03-10 [Phase 7.48.37]: 注入 TTSEngineManager（使用 PaddleSpeech 替代内部 SherpaOnnxTTS）
+    void setTTSEngineManager(TTSEngineManager *mgr) { m_ttsEngineManager = mgr; }
 
     // 手动播放报警（用于测试）
     Q_INVOKABLE void playAlarm(const QString &protectionName, const QString &ttsText,
@@ -104,6 +110,9 @@ private:
     QMediaPlayer *m_mediaPlayer;
     QAudioOutput *m_audioOutput;
     TTSEngine *m_tts;
+
+    // ✅ 2026-03-10 [Phase 7.48.37]: 外部 TTSEngineManager（PaddleSpeech）
+    TTSEngineManager *m_ttsEngineManager = nullptr;
 
     // 当前播放信息
     struct PlaybackInfo {

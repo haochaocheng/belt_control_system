@@ -1,5 +1,7 @@
 #include "AlarmPlaybackService.h"
 #include "DataPathConfig.h"
+#include "tts/TTSEngineManager.h"  // ✅ 2026-03-10 [Phase 7.48.37]
+#include "tts/TTSEngineAdapter.h"  // ✅ 2026-03-10 [Phase 7.48.37]: TTSParameters 定义
 #include <QDebug>
 #include <QFile>
 #include <QDateTime>
@@ -231,12 +233,6 @@ void AlarmPlaybackService::playAudioFile(const QString &audioFile)
 
 void AlarmPlaybackService::playTtsText(const QString &ttsText)
 {
-    if (!m_tts) {
-        qWarning() << "❌ AlarmPlaybackService: TTS引擎不可用";
-        handleNextPlayback();
-        return;
-    }
-
     if (ttsText.isEmpty()) {
         qWarning() << "❌ AlarmPlaybackService: TTS文本为空";
         handleNextPlayback();
@@ -245,9 +241,37 @@ void AlarmPlaybackService::playTtsText(const QString &ttsText)
 
     qDebug() << "🗣️  AlarmPlaybackService: 实时TTS合成播放:" << ttsText;
 
+    // ✅ 2026-03-10 [Phase 7.48.37]: 优先使用 TTSEngineManager（PaddleSpeech）
+    // 旧逻辑：直接使用内部 SherpaOnnxTTS m_tts->say()
+    // 新逻辑：如果注入了 TTSEngineManager，用它合成到临时文件再播放
+    if (m_ttsEngineManager) {
+        TTSParameters params;
+        params.speakerId = 0;
+        params.rate = 0.9;
+        params.volume = 1.0;
+
+        // 生成唯一临时文件
+        QString tempFile = QString("/tmp/alarm_tts_%1.wav").arg(QDateTime::currentMSecsSinceEpoch());
+
+        qDebug() << "🗣️  PaddleSpeech合成:" << ttsText;
+        if (m_ttsEngineManager->synthesize(ttsText, tempFile, params)) {
+            qDebug() << "✅ PaddleSpeech合成成功:" << tempFile;
+            playAudioFile(tempFile);
+            // 播放完成后临时文件会在 onMediaPlayerStateChanged 中处理
+            return;
+        } else {
+            qWarning() << "⚠️ PaddleSpeech合成失败，回退到内部TTS引擎";
+        }
+    }
+
+    // 回退：使用内部 SherpaOnnxTTS
+    if (!m_tts) {
+        qWarning() << "❌ AlarmPlaybackService: TTS引擎不可用";
+        handleNextPlayback();
+        return;
+    }
+
     // ✅ 2026-03-04 [Phase 7.47.99]: 移除TTS缓存逻辑，直接使用实时合成
-    // 旧逻辑：先查缓存 getCachedTtsFile() → 命中则 playAudioFile(cachedFile)
-    // 新逻辑：直接实时合成（此函数仅在音频文件不存在时作为回退）
     m_tts->say(ttsText);
 }
 

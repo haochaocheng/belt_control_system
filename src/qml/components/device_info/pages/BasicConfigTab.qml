@@ -50,9 +50,13 @@ Rectangle {
                 // 超时未收到反馈 → 报警
                 console.log("⚠️ [BasicConfigTab] 电机", (root.motorIndex + 1), "反馈超时！延时:", feedbackDelaySpin.value, "秒")
                 root.waitingForFeedback = false
-                // 通过 commonControl 播放报警
-                if (typeof commonControl !== "undefined") {
-                    commonControl.playAlarmByName("电机" + (root.motorIndex + 1) + "运行失败")
+                // ✅ 2026-03-11 [Phase 7.48.37]: 播放失败语音（音频文件名 + TTS回退）
+                // 旧：alarmPlayback.playAlarm(failureVoiceField.text, failureVoiceField.text, "", ...)
+                if (typeof alarmPlayback !== "undefined") {
+                    var beltNum2 = typeof systemConfig !== "undefined" ? systemConfig.machineNumber() : 1
+                    var audioPath2 = audioBaseDir + "/" + beltNum2 + "#PD/" + failureVoiceField.text + ".wav"
+                    var ttsText2 = beltNum2 + "号皮带" + (root.motorIndex + 1) + "号电机运行失败"
+                    alarmPlayback.playAlarm(failureVoiceField.text, ttsText2, audioPath2, true, "count", 3, 5)
                 }
             }
         }
@@ -558,13 +562,224 @@ Rectangle {
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
             }
 
-            // ========== 第五行：状态指示区域（只读）==========
+            // ========== 第四行右侧：启动延时（索引7）==========
+            // ✅ 2026-03-10 [Phase 7.48.37]: 新增启动延时参数
+            Text {
+                text: "启动延时:"
+                font.pixelSize: 21; color: "#9E9E9E"
+                Layout.column: 2; Layout.row: 3
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+            Item {
+                Layout.column: 3; Layout.row: 3
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: startupDelaySpin.implicitHeight
+
+                DeviceInfo.CustomSpinBox {
+                    id: startupDelaySpin
+                    anchors.fill: parent
+                    from: 0
+                    to: 60
+                    value: 5  // 默认5秒
+                    editable: true
+                    keyboardManager: root.keyboardManager
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        root.requestFocusParamIndex(7)
+                        mouse.accepted = false
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 7) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
+            Text {
+                text: "秒"
+                font.pixelSize: 18; color: "#7dd3fc"
+                Layout.column: 3; Layout.row: 3
+                visible: false  // 启动延时单位由SpinBox右侧显示，此处隐藏避免冲突
+            }
+
+            // ========== 第五行：预警语音（左，索引8）、失败语音（右，索引9）==========
+            // ✅ 2026-03-10 [Phase 7.48.37]: 新增预警语音和失败语音参数
+            Text {
+                text: "预警语音:"
+                font.pixelSize: 21; color: "#9E9E9E"
+                Layout.column: 0; Layout.row: 4
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+            Item {
+                Layout.column: 1; Layout.row: 4
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: warningVoiceField.implicitHeight
+
+                TextField {
+                    id: warningVoiceField
+                    anchors.fill: parent
+                    // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名（不含扩展名）
+                    // 旧：text: "电机" + (root.motorIndex + 1) + "启动预警"
+                    text: "电机" + (root.motorIndex + 1) + "启动"
+                    font.pixelSize: 16
+                    color: "#E0E0E0"
+                    placeholderText: "预警音频文件名"
+                    placeholderTextColor: "#666"
+                    background: Rectangle {
+                        color: "#1a1a2e"
+                        border.color: warningVoiceField.activeFocus ? "#2196F3" : "#334155"
+                        border.width: warningVoiceField.activeFocus ? 2 : 1
+                        radius: 4
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        root.requestFocusParamIndex(8)
+                        mouse.accepted = false
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 8) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
+
+            Text {
+                text: "失败语音:"
+                font.pixelSize: 21; color: "#9E9E9E"
+                Layout.column: 2; Layout.row: 4
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+            Item {
+                Layout.column: 3; Layout.row: 4
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: failureVoiceField.implicitHeight
+
+                TextField {
+                    id: failureVoiceField
+                    anchors.fill: parent
+                    // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名（不含扩展名）
+                    // 旧：text: "电机" + (root.motorIndex + 1) + "运行失败"
+                    text: "电机" + (root.motorIndex + 1) + "失败"
+                    font.pixelSize: 16
+                    color: "#E0E0E0"
+                    placeholderText: "失败音频文件名"
+                    placeholderTextColor: "#666"
+                    background: Rectangle {
+                        color: "#1a1a2e"
+                        border.color: failureVoiceField.activeFocus ? "#2196F3" : "#334155"
+                        border.width: failureVoiceField.activeFocus ? 2 : 1
+                        radius: 4
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        root.requestFocusParamIndex(9)
+                        mouse.accepted = false
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 9) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 9) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
+
+            // ========== 第六行：启动键（左，索引10）==========
+            // ✅ 2026-03-10 [Phase 7.48.37]: 新增启动键选择（键盘按键）
+            Text {
+                text: "启动键:"
+                font.pixelSize: 21; color: "#9E9E9E"
+                Layout.column: 0; Layout.row: 5
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+            Item {
+                Layout.column: 1; Layout.row: 5
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: startupKeyCombo.implicitHeight
+
+                ComboBox {
+                    id: startupKeyCombo
+                    anchors.fill: parent
+                    model: ["无", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+                            "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+                            "A", "B", "C", "D", "E", "F", "G", "H"]
+                    currentIndex: 0
+                    font.pixelSize: 16
+
+                    background: Rectangle {
+                        color: "#1a1a2e"
+                        border.color: startupKeyCombo.activeFocus ? "#2196F3" : "#334155"
+                        border.width: startupKeyCombo.activeFocus ? 2 : 1
+                        radius: 4
+                    }
+                    contentItem: Text {
+                        text: startupKeyCombo.displayText
+                        font.pixelSize: 16
+                        color: "#E0E0E0"
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: 12
+                    }
+                    popup.background: Rectangle {
+                        color: "#1e293b"
+                        border.color: "#475569"
+                        radius: 4
+                    }
+                    delegate: ItemDelegate {
+                        width: startupKeyCombo.width
+                        contentItem: Text {
+                            text: modelData
+                            font.pixelSize: 16
+                            color: "#E0E0E0"
+                        }
+                        background: Rectangle {
+                            color: highlighted ? "#334155" : "transparent"
+                        }
+                        highlighted: startupKeyCombo.highlightedIndex === index
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        root.requestFocusParamIndex(10)
+                        mouse.accepted = false
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 10) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 10) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
+
+            // ========== 第七行：状态指示区域（只读）==========
             // ✅ 2026-03-10 [Phase 7.48.33]: 新增运行LED和反馈LED指示灯
             // ✅ 2026-03-10 [Phase 7.48.36]: 行号+1（插入反馈延时行）
 
             // 分隔线
             Rectangle {
-                Layout.column: 0; Layout.row: 4
+                Layout.column: 0; Layout.row: 6
                 Layout.columnSpan: 4
                 Layout.fillWidth: true
                 Layout.preferredHeight: 1
@@ -575,7 +790,7 @@ Rectangle {
             Text {
                 text: "状态指示"
                 font.pixelSize: 19; font.bold: true; color: "#7dd3fc"
-                Layout.column: 0; Layout.row: 5
+                Layout.column: 0; Layout.row: 7
                 Layout.columnSpan: 4
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -584,13 +799,13 @@ Rectangle {
             Text {
                 text: "运行状态:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 0; Layout.row: 6
+                Layout.column: 0; Layout.row: 8
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
                 id: motorRunItem
-                Layout.column: 1; Layout.row: 6
+                Layout.column: 1; Layout.row: 8
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 40
 
@@ -653,8 +868,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 7) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 7) ? 3 : 0
+                    border.color: (root.focusParamIndex === 11) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 11) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -663,14 +878,14 @@ Rectangle {
             Text {
                 text: "反馈状态:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 2; Layout.row: 6
+                Layout.column: 2; Layout.row: 8
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
             }
             Item {
                 id: feedbackLedItem
-                Layout.column: 3; Layout.row: 6
+                Layout.column: 3; Layout.row: 8
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 40
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
@@ -739,19 +954,19 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 8) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 8) ? 3 : 0
+                    border.color: (root.focusParamIndex === 12) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 12) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
 
-            // ========== 第六行：测试操作区域 ==========
+            // ========== 第九行：测试操作区域 ==========
             // ✅ 2026-03-10 [Phase 7.48.33]: 新增启动/停止测试按钮
             // ✅ 2026-03-10 [Phase 7.48.36]: 行号+1（插入反馈延时行）
 
             // 分隔线
             Rectangle {
-                Layout.column: 0; Layout.row: 7
+                Layout.column: 0; Layout.row: 9
                 Layout.columnSpan: 4
                 Layout.fillWidth: true
                 Layout.preferredHeight: 1
@@ -762,7 +977,7 @@ Rectangle {
             Text {
                 text: "测试操作"
                 font.pixelSize: 19; font.bold: true; color: "#fbbf24"
-                Layout.column: 0; Layout.row: 8
+                Layout.column: 0; Layout.row: 10
                 Layout.columnSpan: 4
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -771,12 +986,12 @@ Rectangle {
             Text {
                 text: "电机控制:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 0; Layout.row: 9
+                Layout.column: 0; Layout.row: 11
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.column: 1; Layout.row: 9
+                Layout.column: 1; Layout.row: 11
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 Layout.columnSpan: 3
                 implicitHeight: 56
@@ -833,6 +1048,15 @@ Rectangle {
                         }
 
                         onClicked: {
+                            // ✅ 2026-03-11 [Phase 7.48.37]: 播放预警语音
+                            // 音频文件名在 warningVoiceField.text（如"电机1启动"）
+                            // 先尝试播放音频文件，找不到则用TTS合成
+                            if (warningVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
+                                var beltNum = typeof systemConfig !== "undefined" ? systemConfig.machineNumber() : 1
+                                var audioPath = audioBaseDir + "/" + beltNum + "#PD/" + warningVoiceField.text + ".wav"
+                                var ttsText = beltNum + "号皮带" + (root.motorIndex + 1) + "号电机准备启动，请注意安全"
+                                alarmPlayback.playAlarm(warningVoiceField.text, ttsText, audioPath, true, "count", 1, 5)
+                            }
                             // ✅ 2026-03-10 [Phase 7.48.35]: 直接发布MQTT命令到DO模块1控制电机
                             // 设备5（Luckfox-Lyra-RK3506-5）= DO模块1，MQTT主题为 module1
                             var ch = outputChannelSpin.value
@@ -914,8 +1138,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 9) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 9) ? 3 : 0
+                    border.color: (root.focusParamIndex === 13) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 13) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -925,10 +1149,10 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
     // 获取参数字段数量
     // ✅ 2026-03-10 [Phase 7.48.34]: 从8扩展到9（新增"是否使用反馈"开关，反馈通道右移）
-    // ✅ 2026-03-10 [Phase 7.48.36]: 从9扩展到10（新增"反馈延时"参数）
-    // 旧值：return 9
+    // ✅ 2026-03-10 [Phase 7.48.37]: 从10扩展到14（新增启动延时、预警语音、失败语音、启动键）
+    // 旧值：return 10
     function getParamFieldCount() {
-        return 10  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6反馈延时、7运行LED、8反馈LED、9测试按钮
+        return 14  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6反馈延时、7启动延时、8预警语音、9失败语音、10启动键、11运行LED、12反馈LED、13测试按钮
     }
 
     // 触发参数输入
@@ -969,14 +1193,30 @@ Rectangle {
             console.log("✅ [BasicConfigTab] 反馈延时")
             inputField = feedbackDelaySpin
             break
-        // ✅ 2026-03-10 [Phase 7.48.36]: 索引+1（插入反馈延时）
-        case 7:  // 运行LED（只读）
+        // ✅ 2026-03-10 [Phase 7.48.37]: 新增4个参数
+        case 7:  // 启动延时
+            console.log("✅ [BasicConfigTab] 启动延时")
+            inputField = startupDelaySpin
+            break
+        case 8:  // 预警语音
+            console.log("✅ [BasicConfigTab] 预警语音")
+            warningVoiceField.forceActiveFocus()
+            break
+        case 9:  // 失败语音
+            console.log("✅ [BasicConfigTab] 失败语音")
+            failureVoiceField.forceActiveFocus()
+            break
+        case 10:  // 启动键
+            console.log("✅ [BasicConfigTab] 启动键")
+            startupKeyCombo.popup.open()
+            break
+        case 11:  // 运行LED（只读）
             console.log("✅ [BasicConfigTab] 运行LED（只读）")
             break
-        case 8:  // 反馈LED（只读）
+        case 12:  // 反馈LED（只读）
             console.log("✅ [BasicConfigTab] 反馈LED（只读）")
             break
-        case 9:  // 测试按钮（启动/停止切换）
+        case 13:  // 测试按钮（启动/停止切换）
             console.log("✅ [BasicConfigTab] 测试按钮 - 切换电机状态")
             var ch8 = outputChannelSpin.value
             var topic8 = "belt_control/do/module1/cmd"
@@ -1023,6 +1263,11 @@ Rectangle {
         config["use_feedback"] = useFeedbackSwitch.checked ? 1 : 0  // ✅ 2026-03-10 [Phase 7.48.34]
         config["feedback_channel"] = feedbackChannelSpin.value
         config["feedback_delay"] = feedbackDelaySpin.value  // ✅ 2026-03-10 [Phase 7.48.36]
+        // ✅ 2026-03-10 [Phase 7.48.37]: 新增4个参数
+        config["startup_delay"] = startupDelaySpin.value
+        config["warning_voice"] = warningVoiceField.text
+        config["failure_voice"] = failureVoiceField.text
+        config["startup_key"] = startupKeyCombo.currentText
 
         console.log("✅ [BasicConfigTab] 收集配置:", JSON.stringify(config))
         return config
@@ -1051,6 +1296,20 @@ Rectangle {
         // ✅ 2026-03-10 [Phase 7.48.36]: 加载反馈延时
         if (config["feedback_delay"] !== undefined) {
             feedbackDelaySpin.value = config["feedback_delay"]
+        }
+        // ✅ 2026-03-10 [Phase 7.48.37]: 加载新增4个参数
+        if (config["startup_delay"] !== undefined) {
+            startupDelaySpin.value = config["startup_delay"]
+        }
+        if (config["warning_voice"] !== undefined) {
+            warningVoiceField.text = config["warning_voice"]
+        }
+        if (config["failure_voice"] !== undefined) {
+            failureVoiceField.text = config["failure_voice"]
+        }
+        if (config["startup_key"] !== undefined) {
+            var keyIdx = startupKeyCombo.model.indexOf(config["startup_key"])
+            if (keyIdx >= 0) startupKeyCombo.currentIndex = keyIdx
         }
         // 注意：运行状态和模块类型暂时不处理，因为它们是自定义控件
     }

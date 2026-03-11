@@ -311,6 +311,9 @@ int main(int argc, char *argv[]) {
         QObject::connect(&aiDataManager, &AIDataManager::channelChanged,
                          &mqttProtectionMonitor, &MqttProtectionMonitor::onAIChannelChanged);
         logMessage("AI channel monitoring connected to MqttProtectionMonitor");
+        // ✅ 2026-03-10 [Phase 7.48.37]: 注入TTSEngineManager到AlarmPlaybackService
+        // 原因：AlarmPlaybackService内部使用SherpaOnnxTTS，应改用PaddleSpeech（通过TTSEngineManager）
+        alarmPlayback.setTTSEngineManager(commonControl.getTTSEngineManager());
         // ✅ 2026-03-04 [Phase 7.47.97]: 启动报警播放服务（设置m_isRunning=true，否则playAlarm拒绝播放）
         alarmPlayback.start();
         // ✅ 2026-02-28 [Phase 7.47.53]: 用systemConfig.machineNumber()覆盖硬编码的模块0→1号皮带映射
