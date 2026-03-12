@@ -59,6 +59,29 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-03-12 [Phase 7.48.41]: 启动延时计时器
+    // 点击启动按钮后，先播放预警语音，等待启动延时结束后才发送MQTT启动命令
+    Timer {
+        id: startupDelayTimer
+        interval: startupDelaySpin.value * 1000  // 启动延时（秒→毫秒）
+        repeat: false
+        onTriggered: {
+            // 延时结束，发送MQTT启动命令
+            var ch = outputChannelSpin.value
+            var topic = "belt_control/do/module1/cmd"
+            var cmd = JSON.stringify({"action": "set", "channel": ch, "value": 1})
+            console.log("🔌 [BasicConfigTab] 启动延时结束，发送启动命令 电机", (root.motorIndex + 1), "通道:", ch)
+            if (typeof mqttController !== "undefined") {
+                mqttController.publish(topic, cmd, 1, false)
+            }
+            // 启动反馈超时检测
+            if (useFeedbackSwitch.checked) {
+                root.waitingForFeedback = true
+                feedbackTimeoutTimer.restart()
+            }
+        }
+    }
+
     Timer {
         id: feedbackTimeoutTimer
         interval: feedbackDelaySpin.value * 1000  // 反馈延时（秒→毫秒）
@@ -727,45 +750,15 @@ Rectangle {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: startupKeyCombo.implicitHeight
 
-                ComboBox {
+                // ✅ 2026-03-12 [Phase 7.48.41]: 从ComboBox改为CustomComboBox（统一组件风格）
+                DeviceInfo.CustomComboBox {
                     id: startupKeyCombo
                     anchors.fill: parent
+                    keyboardManager: root.keyboardManager
                     model: ["无", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
                             "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
                             "A", "B", "C", "D", "E", "F", "G", "H"]
                     currentIndex: 0
-                    font.pixelSize: 16
-
-                    background: Rectangle {
-                        color: "#1a1a2e"
-                        border.color: startupKeyCombo.activeFocus ? "#2196F3" : "#334155"
-                        border.width: startupKeyCombo.activeFocus ? 2 : 1
-                        radius: 4
-                    }
-                    contentItem: Text {
-                        text: startupKeyCombo.displayText
-                        font.pixelSize: 16
-                        color: "#E0E0E0"
-                        verticalAlignment: Text.AlignVCenter
-                        leftPadding: 12
-                    }
-                    popup.background: Rectangle {
-                        color: "#1e293b"
-                        border.color: "#475569"
-                        radius: 4
-                    }
-                    delegate: ItemDelegate {
-                        width: startupKeyCombo.width
-                        contentItem: Text {
-                            text: modelData
-                            font.pixelSize: 16
-                            color: "#E0E0E0"
-                        }
-                        background: Rectangle {
-                            color: highlighted ? "#334155" : "transparent"
-                        }
-                        highlighted: startupKeyCombo.highlightedIndex === index
-                    }
                 }
 
                 MouseArea {
@@ -1204,31 +1197,18 @@ Rectangle {
                         }
 
                         onClicked: {
-                            // ✅ 2026-03-11 [Phase 7.48.37]: 播放预警语音
-                            // 音频文件名在 warningVoiceField.text（如"电机1启动"）
-                            // 先尝试播放音频文件，找不到则用TTS合成
+                            // ✅ 2026-03-12 [Phase 7.48.41]: 修改启动流程
+                            // 旧：点击后立即播放语音+立即发送MQTT命令
+                            // 新：点击后播放预警语音 → 等待启动延时 → 延时结束后发送MQTT命令
                             if (warningVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
                                 var beltNum = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
-                                // ✅ 2026-03-12: 使用buildAudioPath根据音频来源构建正确路径
-                                // 旧：var audioPath = audioBaseDir + "/" + beltNum + "#PD/" + warningVoiceField.text + ".wav"
                                 var audioPath = buildAudioPath(beltNum, warningVoiceField.text)
                                 var ttsText = beltNum + "号皮带" + (root.motorIndex + 1) + "号电机准备启动，请注意安全"
                                 alarmPlayback.playAlarm(warningVoiceField.text, ttsText, audioPath, true, "count", 1, 5)
                             }
-                            // ✅ 2026-03-10 [Phase 7.48.35]: 直接发布MQTT命令到DO模块1控制电机
-                            // 设备5（Luckfox-Lyra-RK3506-5）= DO模块1，MQTT主题为 module1
-                            var ch = outputChannelSpin.value
-                            var topic = "belt_control/do/module1/cmd"
-                            var cmd = JSON.stringify({"action": "set", "channel": ch, "value": 1})
-                            console.log("🔌 [BasicConfigTab] 启动电机", (root.motorIndex + 1), "通道:", ch)
-                            if (typeof mqttController !== "undefined") {
-                                mqttController.publish(topic, cmd, 1, false)
-                            }
-                            // ✅ 2026-03-10 [Phase 7.48.36]: 启动反馈超时检测
-                            if (useFeedbackSwitch.checked) {
-                                root.waitingForFeedback = true
-                                feedbackTimeoutTimer.restart()
-                            }
+                            // 启动延时计时器（延时结束后才发送MQTT启动命令）
+                            console.log("⏱️ [BasicConfigTab] 电机", (root.motorIndex + 1), "启动延时:", startupDelaySpin.value, "秒")
+                            startupDelayTimer.restart()
                         }
                     }
 
@@ -1394,15 +1374,23 @@ Rectangle {
             var ch8 = outputChannelSpin.value
             var topic8 = "belt_control/do/module1/cmd"
             if (motorRunLed.isOn) {
+                // 停止：立即发送
                 var cmd8off = JSON.stringify({"action": "set", "channel": ch8, "value": 0})
                 if (typeof mqttController !== "undefined") {
                     mqttController.publish(topic8, cmd8off, 1, false)
                 }
             } else {
-                var cmd8on = JSON.stringify({"action": "set", "channel": ch8, "value": 1})
-                if (typeof mqttController !== "undefined") {
-                    mqttController.publish(topic8, cmd8on, 1, false)
+                // ✅ 2026-03-12 [Phase 7.48.41]: 启动走延时流程（与启动按钮一致）
+                // 旧：立即发送MQTT命令
+                // 新：播放预警语音 → 启动延时 → 延时结束后发送
+                if (warningVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
+                    var beltNum8 = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
+                    var audioPath8 = buildAudioPath(beltNum8, warningVoiceField.text)
+                    var ttsText8 = beltNum8 + "号皮带" + (root.motorIndex + 1) + "号电机准备启动，请注意安全"
+                    alarmPlayback.playAlarm(warningVoiceField.text, ttsText8, audioPath8, true, "count", 1, 5)
                 }
+                console.log("⏱️ [BasicConfigTab] 测试按钮启动延时:", startupDelaySpin.value, "秒")
+                startupDelayTimer.restart()
             }
             break
         }
