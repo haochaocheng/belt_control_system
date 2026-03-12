@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import com.belt.control 1.0  // ✅ 2026-03-12: 导入TTSConfig单例（用于音频路径构建）
 import ".." as DeviceInfo
 
 // ✅ 2026-01-25 [电机控制-基本配置] 基本配置Tab内容
@@ -51,7 +52,7 @@ Rectangle {
         } else {
             // TTS合成音频（含引擎子目录）
             var modelIdx = typeof TTSConfig !== "undefined" ? TTSConfig.modelIndex(TTSConfig.Test) : 0
-            var modelName = typeof TTSConfig !== "undefined" ? TTSConfig.modelName(modelIdx) : "fastspeech2_aishell3"
+            var modelName = typeof TTSConfig !== "undefined" ? TTSConfig.modelName(modelIdx) : "fastspeech2_csmsc"
             var spkId = typeof TTSConfig !== "undefined" ? TTSConfig.speakerId(TTSConfig.Test) : 0
             var engineFolder = "paddlespeech-" + modelName + "-spk" + spkId
             return audioBaseDir + "/" + engineFolder + "/" + beltNum + "#PD/" + filename + ".wav"
