@@ -73,6 +73,8 @@ void MQTTAutoManager::initializeHealthStatus()
     m_lastConnectedStates.resize(8, false);
     // ✅ 2026-03-01 [Phase 7.47.64]: 初始化健康检查日志计数器
     m_healthCheckLogCounter.resize(8, 0);
+    // ✅ 2026-03-12: 初始化上次健康状态缓存
+    m_lastHealthStatus.resize(8, QString());
 
     for (int i = 0; i < 8; ++i) {
         m_healthStatus[i] = ModuleHealthStatus();
@@ -440,78 +442,69 @@ void MQTTAutoManager::checkModuleHealth(int moduleIndex)
     ModuleHealthStatus &health = m_healthStatus[moduleIndex];
     qint64 now = QDateTime::currentSecsSinceEpoch();
 
-    // ✅ 2026-03-01 [Phase 7.47.64]: 周期性详细状态日志（每10秒输出一次）
-    // 原因：帮助诊断"模块状态停留在正常/青色"的问题，暴露 lastDataTime 和 timeSinceLastData 真实值
-    m_healthCheckLogCounter[moduleIndex]++;
-    if (m_healthCheckLogCounter[moduleIndex] >= 10) {
-        m_healthCheckLogCounter[moduleIndex] = 0;
-        qint64 tSince = (health.lastDataTime > 0) ? (now - health.lastDataTime) : -1;
-        qDebug() << "[MQTTAutoManager] 模块" << moduleIndex
-                 << "健康检查 | connected:" << health.connected
-                 << "| lastDataTime:" << health.lastDataTime
-                 << "| timeSinceLastData:" << tSince << "s"
-                 << "| status:" << health.status
-                 << "| timeoutCount:" << health.dataTimeoutCount;
-    }
-
     // 检查连接状态
     health.connected = m_mqttController->isModuleConnected(moduleIndex);
 
     if (!health.connected) {
         health.status = "未连接";
-        return;
-    }
-
-    // 检查数据超时（5秒无数据）
-    // ✅ 2026-03-01 [Phase 7.47.62]: 修复 lastDataTime=0 时跳过超时检查的问题
-    // 旧逻辑：if (lastDataTime > 0) — 从未收到数据时不检查，status停留在"已连接"
-    // 新逻辑：lastDataTime=0 表示连上broker但从未收到硬件数据，也视为"等待数据"
-    if (health.lastDataTime == 0) {
+    } else if (health.lastDataTime == 0) {
+        // ✅ 2026-03-01 [Phase 7.47.62]: 修复 lastDataTime=0 时跳过超时检查的问题
         // 连上broker但从未收到数据 → 不算"正常"
         health.status = "等待数据";
-        return;
-    }
-
-    qint64 timeSinceLastData = now - health.lastDataTime;
-
-    if (timeSinceLastData > m_dataTimeoutThreshold) {
-        // ✅ 2026-03-01 [Phase 7.47.63]: 超过阈值立即降级 "正常" → "等待数据"
-        // 旧逻辑：超时计数达到3次才改 status，导致数据停止后 6~8 秒仍显示青色
-        // 新逻辑：超过阈值的第一次检查立即降级，用户断开测试工具后 5 秒内即可看到变化
-        if (health.status == "正常") {
-            health.status = "等待数据";
-            qDebug() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex
-                     << "数据中断，等待恢复 | timeSinceLastData:" << timeSinceLastData << "s";
-        }
-        health.dataTimeoutCount++;
-
-        if (health.dataTimeoutCount >= MAX_TIMEOUT_COUNT) {
-            health.status = "数据超时";
-            emit moduleHealthWarning(moduleIndex, "数据超时");
-            qWarning() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "数据超时";
-        }
     } else {
-        // 恢复正常
-        if (health.dataTimeoutCount > 0) {
-            health.dataTimeoutCount = 0;
-            health.status = "正常";
-            emit moduleHealthRecovered(moduleIndex);
-            qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "恢复正常";
+        qint64 timeSinceLastData = now - health.lastDataTime;
+
+        if (timeSinceLastData > m_dataTimeoutThreshold) {
+            // ✅ 2026-03-01 [Phase 7.47.63]: 超过阈值立即降级 "正常" → "等待数据"
+            if (health.status == "正常") {
+                health.status = "等待数据";
+                qDebug() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex
+                         << "数据中断，等待恢复 | timeSinceLastData:" << timeSinceLastData << "s";
+            }
+            health.dataTimeoutCount++;
+
+            if (health.dataTimeoutCount >= MAX_TIMEOUT_COUNT) {
+                health.status = "数据超时";
+                emit moduleHealthWarning(moduleIndex, "数据超时");
+                qWarning() << "⚠️ [MQTTAutoManager] 模块" << moduleIndex << "数据超时";
+            }
+        } else {
+            // 恢复正常
+            if (health.dataTimeoutCount > 0) {
+                health.dataTimeoutCount = 0;
+                health.status = "正常";
+                emit moduleHealthRecovered(moduleIndex);
+                qDebug() << "✅ [MQTTAutoManager] 模块" << moduleIndex << "恢复正常";
+            }
+        }
+
+        // ✅ 2026-03-02 [Phase 7.47.69]: 模块离线语音提示（只播放一次，恢复后重置）
+        if (health.status == "数据超时" && !health.offlineAlertSent) {
+            health.offlineAlertSent = true;
+            QString alertPath = AudioPathMapper::getModuleOfflinePath(moduleIndex);
+            if (!alertPath.isEmpty()) {
+                qDebug() << "🔊 [MQTTAutoManager] 模块" << moduleIndex << "触发离线语音:" << alertPath;
+                emit voiceAlertRequested(alertPath);
+            }
+        }
+        // 模块恢复正常时重置语音标志，下次离线可再次触发
+        if (health.status == "正常") {
+            health.offlineAlertSent = false;
         }
     }
 
-    // ✅ 2026-03-02 [Phase 7.47.69]: 模块离线语音提示（只播放一次，恢复后重置）
-    if (health.status == "数据超时" && !health.offlineAlertSent) {
-        health.offlineAlertSent = true;
-        QString alertPath = AudioPathMapper::getModuleOfflinePath(moduleIndex);
-        if (!alertPath.isEmpty()) {
-            qDebug() << "🔊 [MQTTAutoManager] 模块" << moduleIndex << "触发离线语音:" << alertPath;
-            emit voiceAlertRequested(alertPath);
-        }
-    }
-    // 模块恢复正常时重置语音标志，下次离线可再次触发
-    if (health.status == "正常") {
-        health.offlineAlertSent = false;
+    // ✅ 2026-03-12: 仅在状态变化时打印日志，减少日志刷屏
+    // 旧：每10次计数器输出一次（无论状态是否变化）
+    QString currentStatus = QString("%1|%2|%3").arg(health.connected).arg(health.status).arg(health.dataTimeoutCount);
+    if (m_lastHealthStatus[moduleIndex] != currentStatus) {
+        qint64 tSince = (health.lastDataTime > 0) ? (now - health.lastDataTime) : -1;
+        qDebug() << "[MQTTAutoManager] 模块" << moduleIndex
+                 << "状态变化 | connected:" << health.connected
+                 << "| lastDataTime:" << health.lastDataTime
+                 << "| timeSinceLastData:" << tSince << "s"
+                 << "| status:" << health.status
+                 << "| timeoutCount:" << health.dataTimeoutCount;
+        m_lastHealthStatus[moduleIndex] = currentStatus;
     }
 }
 

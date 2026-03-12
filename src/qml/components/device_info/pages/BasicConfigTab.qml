@@ -53,7 +53,7 @@ Rectangle {
                 // ✅ 2026-03-11 [Phase 7.48.37]: 播放失败语音（音频文件名 + TTS回退）
                 // 旧：alarmPlayback.playAlarm(failureVoiceField.text, failureVoiceField.text, "", ...)
                 if (typeof alarmPlayback !== "undefined") {
-                    var beltNum2 = typeof systemConfig !== "undefined" ? systemConfig.machineNumber() : 1
+                    var beltNum2 = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
                     var audioPath2 = audioBaseDir + "/" + beltNum2 + "#PD/" + failureVoiceField.text + ".wav"
                     var ttsText2 = beltNum2 + "号皮带" + (root.motorIndex + 1) + "号电机运行失败"
                     alarmPlayback.playAlarm(failureVoiceField.text, ttsText2, audioPath2, true, "count", 3, 5)
@@ -1052,7 +1052,7 @@ Rectangle {
                             // 音频文件名在 warningVoiceField.text（如"电机1启动"）
                             // 先尝试播放音频文件，找不到则用TTS合成
                             if (warningVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
-                                var beltNum = typeof systemConfig !== "undefined" ? systemConfig.machineNumber() : 1
+                                var beltNum = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
                                 var audioPath = audioBaseDir + "/" + beltNum + "#PD/" + warningVoiceField.text + ".wav"
                                 var ttsText = beltNum + "号皮带" + (root.motorIndex + 1) + "号电机准备启动，请注意安全"
                                 alarmPlayback.playAlarm(warningVoiceField.text, ttsText, audioPath, true, "count", 1, 5)
