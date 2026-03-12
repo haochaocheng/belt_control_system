@@ -16,14 +16,15 @@
    - **所有脚本必须使用 UTF-8 with BOM 编码**
    - 每个脚本开头必须包含 UTF-8 强制配置
    - 不再使用 GBK 编码
-8. **Git 提交规则（2026-01-08 新增，2026-02-05 更新）**：
+8. **Git 提交规则（2026-01-08 新增，2026-03-12 更新）**：
    - 每次完成修改总结和代码修改后，必须进行 Git 提交
-   - **⚠️ 重要：每次提交后必须推送到 GitHub 和 GitLab 两个远程仓库**
+   - **⚠️ 重要：GitLab 优先，GitHub 可选**
    - 推送命令：
      ```powershell
-     git push origin feature/hardware-video-codec  # 推送到 GitHub
-     git push gitlab feature/hardware-video-codec  # 推送到 GitLab
+     git push gitlab feature/hardware-video-codec  # 推送到 GitLab（必须）
+     git push origin feature/hardware-video-codec  # 推送到 GitHub（可选，失败则放弃）
      ```
+   - **2026-03-12 更新**：GitHub 推送经常因网络问题失败，不再强制推送。GitLab 为主要远程仓库，GitHub 推送失败直接跳过，不重试。
    - 当用户提示"下班"时，将当天所有工作内容提交到 Git
    - 提交信息要清晰描述修改内容，便于在其他电脑上查看工作进度
    - **✅ 2026-02-05 新增：工作流程整合**
@@ -40,11 +41,12 @@
    - **脚本语法**：所有自动化脚本使用 PowerShell，不使用 Bash/Shell 语法
    - **路径格式**：Windows 路径（`\` 或 `\\`），不使用 Unix 路径（`/`）
    - **命令选择**：优先使用 PowerShell cmdlet（如 `Get-ChildItem`），避免 Linux 命令（如 `find`、`grep`）
-10. **设备信息（2026-01-09 更新）**：
-    - **设备 IP**：192.168.10.188
+10. **设备信息（2026-03-10 更新）**：
+    - **设备 IP**：192.168.10.151
     - **用户名**：linaro
     - **密码**：linaro
-    - **SSH 连接**：`ssh linaro@192.168.10.188`
+    - **SSH 连接**：`ssh linaro@192.168.10.151`
+    - ⚠️ 2026-03-10：原185设备已退回厂家，数据已迁移到151设备
 ## 记忆系统（2025-12-25）
 
 ### 三层记忆架构

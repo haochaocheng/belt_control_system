@@ -41,6 +41,23 @@ Rectangle {
     // 电机启动后，如果在反馈延时时间内没有收到反馈，播放"运行失败"报警
     property bool waitingForFeedback: false  // 是否正在等待反馈
 
+    // ✅ 2026-03-12: 根据音频来源构建音频文件路径
+    // default模式：{baseDir}/{belt}#PD/{filename}.wav
+    // tts模式：{baseDir}/paddlespeech-{model}-spk{id}/{belt}#PD/{filename}.wav
+    function buildAudioPath(beltNum, filename) {
+        if (audioSourceCombo.currentIndex === 0) {
+            // 默认音频
+            return audioBaseDir + "/" + beltNum + "#PD/" + filename + ".wav"
+        } else {
+            // TTS合成音频（含引擎子目录）
+            var modelIdx = typeof TTSConfig !== "undefined" ? TTSConfig.modelIndex(TTSConfig.Test) : 0
+            var modelName = typeof TTSConfig !== "undefined" ? TTSConfig.modelName(modelIdx) : "fastspeech2_aishell3"
+            var spkId = typeof TTSConfig !== "undefined" ? TTSConfig.speakerId(TTSConfig.Test) : 0
+            var engineFolder = "paddlespeech-" + modelName + "-spk" + spkId
+            return audioBaseDir + "/" + engineFolder + "/" + beltNum + "#PD/" + filename + ".wav"
+        }
+    }
+
     Timer {
         id: feedbackTimeoutTimer
         interval: feedbackDelaySpin.value * 1000  // 反馈延时（秒→毫秒）
@@ -54,7 +71,9 @@ Rectangle {
                 // 旧：alarmPlayback.playAlarm(failureVoiceField.text, failureVoiceField.text, "", ...)
                 if (typeof alarmPlayback !== "undefined") {
                     var beltNum2 = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
-                    var audioPath2 = audioBaseDir + "/" + beltNum2 + "#PD/" + failureVoiceField.text + ".wav"
+                    // ✅ 2026-03-12: 使用buildAudioPath根据音频来源构建正确路径
+                    // 旧：var audioPath2 = audioBaseDir + "/" + beltNum2 + "#PD/" + failureVoiceField.text + ".wav"
+                    var audioPath2 = buildAudioPath(beltNum2, failureVoiceField.text)
                     var ttsText2 = beltNum2 + "号皮带" + (root.motorIndex + 1) + "号电机运行失败"
                     alarmPlayback.playAlarm(failureVoiceField.text, ttsText2, audioPath2, true, "count", 3, 5)
                 }
@@ -581,7 +600,7 @@ Rectangle {
                     anchors.fill: parent
                     from: 0
                     to: 60
-                    value: 5  // 默认5秒
+                    value: 8  // ✅ 2026-03-12: 默认8秒（原5秒）
                     editable: true
                     keyboardManager: root.keyboardManager
                 }
@@ -773,6 +792,74 @@ Rectangle {
                 }
             }
 
+            // ✅ 2026-03-12: 音频来源（右侧，索引11）
+            Text {
+                text: "音频来源:"
+                font.pixelSize: 21; color: "#9E9E9E"
+                Layout.column: 2; Layout.row: 5
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+            Item {
+                Layout.column: 3; Layout.row: 5
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: audioSourceCombo.implicitHeight
+
+                ComboBox {
+                    id: audioSourceCombo
+                    anchors.fill: parent
+                    model: ["默认", "TTS合成"]
+                    currentIndex: 1  // 默认TTS合成
+                    font.pixelSize: 16
+
+                    background: Rectangle {
+                        color: "#1a1a2e"
+                        border.color: audioSourceCombo.activeFocus ? "#2196F3" : "#334155"
+                        border.width: audioSourceCombo.activeFocus ? 2 : 1
+                        radius: 4
+                    }
+                    contentItem: Text {
+                        text: audioSourceCombo.displayText
+                        font.pixelSize: 16
+                        color: "#E0E0E0"
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: 12
+                    }
+                    popup.background: Rectangle {
+                        color: "#1e293b"
+                        border.color: "#475569"
+                        radius: 4
+                    }
+                    delegate: ItemDelegate {
+                        width: audioSourceCombo.width
+                        contentItem: Text {
+                            text: modelData
+                            font.pixelSize: 16
+                            color: "#E0E0E0"
+                        }
+                        background: Rectangle {
+                            color: highlighted ? "#334155" : "transparent"
+                        }
+                        highlighted: audioSourceCombo.highlightedIndex === index
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        root.requestFocusParamIndex(11)
+                        mouse.accepted = false
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 11) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 11) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
+
             // ========== 第七行：状态指示区域（只读）==========
             // ✅ 2026-03-10 [Phase 7.48.33]: 新增运行LED和反馈LED指示灯
             // ✅ 2026-03-10 [Phase 7.48.36]: 行号+1（插入反馈延时行）
@@ -868,8 +955,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 11) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 11) ? 3 : 0
+                    border.color: (root.focusParamIndex === 12) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 12) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -954,8 +1041,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 12) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 12) ? 3 : 0
+                    border.color: (root.focusParamIndex === 13) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 13) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -1053,7 +1140,9 @@ Rectangle {
                             // 先尝试播放音频文件，找不到则用TTS合成
                             if (warningVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
                                 var beltNum = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
-                                var audioPath = audioBaseDir + "/" + beltNum + "#PD/" + warningVoiceField.text + ".wav"
+                                // ✅ 2026-03-12: 使用buildAudioPath根据音频来源构建正确路径
+                                // 旧：var audioPath = audioBaseDir + "/" + beltNum + "#PD/" + warningVoiceField.text + ".wav"
+                                var audioPath = buildAudioPath(beltNum, warningVoiceField.text)
                                 var ttsText = beltNum + "号皮带" + (root.motorIndex + 1) + "号电机准备启动，请注意安全"
                                 alarmPlayback.playAlarm(warningVoiceField.text, ttsText, audioPath, true, "count", 1, 5)
                             }
@@ -1138,8 +1227,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 13) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 13) ? 3 : 0
+                    border.color: (root.focusParamIndex === 14) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 14) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -1149,10 +1238,10 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
     // 获取参数字段数量
     // ✅ 2026-03-10 [Phase 7.48.34]: 从8扩展到9（新增"是否使用反馈"开关，反馈通道右移）
-    // ✅ 2026-03-10 [Phase 7.48.37]: 从10扩展到14（新增启动延时、预警语音、失败语音、启动键）
-    // 旧值：return 10
+    // ✅ 2026-03-12: 从14扩展到15（新增音频来源）
+    // 旧值：return 14
     function getParamFieldCount() {
-        return 14  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6反馈延时、7启动延时、8预警语音、9失败语音、10启动键、11运行LED、12反馈LED、13测试按钮
+        return 15  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6反馈延时、7启动延时、8预警语音、9失败语音、10启动键、11音频来源、12运行LED、13反馈LED、14测试按钮
     }
 
     // 触发参数输入
@@ -1210,13 +1299,18 @@ Rectangle {
             console.log("✅ [BasicConfigTab] 启动键")
             startupKeyCombo.popup.open()
             break
-        case 11:  // 运行LED（只读）
+        // ✅ 2026-03-12: 新增音频来源
+        case 11:  // 音频来源
+            console.log("✅ [BasicConfigTab] 音频来源")
+            audioSourceCombo.popup.open()
+            break
+        case 12:  // 运行LED（只读）
             console.log("✅ [BasicConfigTab] 运行LED（只读）")
             break
-        case 12:  // 反馈LED（只读）
+        case 13:  // 反馈LED（只读）
             console.log("✅ [BasicConfigTab] 反馈LED（只读）")
             break
-        case 13:  // 测试按钮（启动/停止切换）
+        case 14:  // 测试按钮（启动/停止切换）
             console.log("✅ [BasicConfigTab] 测试按钮 - 切换电机状态")
             var ch8 = outputChannelSpin.value
             var topic8 = "belt_control/do/module1/cmd"
@@ -1268,6 +1362,8 @@ Rectangle {
         config["warning_voice"] = warningVoiceField.text
         config["failure_voice"] = failureVoiceField.text
         config["startup_key"] = startupKeyCombo.currentText
+        // ✅ 2026-03-12: 新增音频来源（default=默认, tts=TTS合成）
+        config["audio_source"] = audioSourceCombo.currentIndex === 0 ? "default" : "tts"
 
         console.log("✅ [BasicConfigTab] 收集配置:", JSON.stringify(config))
         return config
@@ -1310,6 +1406,10 @@ Rectangle {
         if (config["startup_key"] !== undefined) {
             var keyIdx = startupKeyCombo.model.indexOf(config["startup_key"])
             if (keyIdx >= 0) startupKeyCombo.currentIndex = keyIdx
+        }
+        // ✅ 2026-03-12: 加载音频来源
+        if (config["audio_source"] !== undefined) {
+            audioSourceCombo.currentIndex = (config["audio_source"] === "tts") ? 1 : 0
         }
         // 注意：运行状态和模块类型暂时不处理，因为它们是自定义控件
     }

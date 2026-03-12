@@ -1403,6 +1403,23 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移016已执行过，跳过";
     }
+
+    // ✅ 2026-03-12: 迁移017 - 新增音频来源列，启动延时默认改为8秒
+    query.exec("SELECT version FROM schema_migrations WHERE version = '017_motor_audio_source'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移017: 新增音频来源列...";
+        QSqlQuery fix(m_database);
+
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN audio_source TEXT DEFAULT 'tts'");
+        // 启动延时默认从5改为8秒
+        fix.exec("UPDATE device_motor_config SET startup_delay = 8 WHERE tab_index = 0 AND startup_delay = 5");
+        int updated017 = fix.numRowsAffected();
+        qDebug() << "  ✅ 迁移017: 新增audio_source列，更新" << updated017 << "条基本配置启动延时为8秒";
+
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('017_motor_audio_source')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移017已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2220,7 +2237,8 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
     QSqlQuery query(m_database);
     // ✅ 2026-03-10 [Phase 7.48.31]: 扩展为31列（原27列 + 新增4列：running_state, motor_module_address, output_channel, feedback_channel）
     // ✅ 2026-03-10 [Phase 7.48.37]: 扩展为35列（新增4列：startup_delay, warning_voice, failure_voice, startup_key）
-    // 旧：31列 INSERT OR REPLACE（Phase 7.48.31）
+    // ✅ 2026-03-12: 扩展为36列（新增1列：audio_source）
+    // 旧：35列 INSERT OR REPLACE（Phase 7.48.37）
     query.prepare(R"(
         INSERT OR REPLACE INTO device_motor_config
         (device_id, motor_index, tab_index, tab_name, protection_name, protection_delay,
@@ -2231,8 +2249,9 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
          sprinkler_enabled, filter_delay, use_text_to_speech,
          running_state, motor_module_address, output_channel, feedback_channel,
          startup_delay, warning_voice, failure_voice, startup_key,
+         audio_source,
          updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -2268,10 +2287,12 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
     query.addBindValue(config.value("output_channel", -1).toInt());
     query.addBindValue(config.value("feedback_channel", -1).toInt());
     // ✅ 2026-03-10 [Phase 7.48.37]: 新增4列绑定值（启动参数）
-    query.addBindValue(config.value("startup_delay", 5).toInt());
+    query.addBindValue(config.value("startup_delay", 8).toInt());  // ✅ 2026-03-12: 默认8秒（原5秒）
     query.addBindValue(config.value("warning_voice", "").toString());
     query.addBindValue(config.value("failure_voice", "").toString());
     query.addBindValue(config.value("startup_key", "无").toString());
+    // ✅ 2026-03-12: 新增音频来源
+    query.addBindValue(config.value("audio_source", "tts").toString());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
