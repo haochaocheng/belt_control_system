@@ -642,22 +642,18 @@ Rectangle {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: warningVoiceField.implicitHeight
 
-                TextField {
+                // ✅ 2026-03-12 [Phase 7.48.40]: 从TextField改为CustomTextField（参照AnalogInputPage组件风格）
+                // 旧：普通TextField，无keyboardManager支持
+                DeviceInfo.CustomTextField {
                     id: warningVoiceField
                     anchors.fill: parent
                     // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名（不含扩展名）
                     // 旧：text: "电机" + (root.motorIndex + 1) + "启动预警"
                     text: "电机" + (root.motorIndex + 1) + "启动"
-                    font.pixelSize: 16
-                    color: "#E0E0E0"
                     placeholderText: "预警音频文件名"
-                    placeholderTextColor: "#666"
-                    background: Rectangle {
-                        color: "#1a1a2e"
-                        border.color: warningVoiceField.activeFocus ? "#2196F3" : "#334155"
-                        border.width: warningVoiceField.activeFocus ? 2 : 1
-                        radius: 4
-                    }
+                    placeholderTextColor: "#6E6E6E"
+                    color: "#E0E0E0"
+                    keyboardManager: root.keyboardManager
                 }
 
                 MouseArea {
@@ -688,22 +684,17 @@ Rectangle {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: failureVoiceField.implicitHeight
 
-                TextField {
+                // ✅ 2026-03-12 [Phase 7.48.40]: 从TextField改为CustomTextField（参照AnalogInputPage组件风格）
+                DeviceInfo.CustomTextField {
                     id: failureVoiceField
                     anchors.fill: parent
                     // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名（不含扩展名）
                     // 旧：text: "电机" + (root.motorIndex + 1) + "运行失败"
                     text: "电机" + (root.motorIndex + 1) + "失败"
-                    font.pixelSize: 16
-                    color: "#E0E0E0"
                     placeholderText: "失败音频文件名"
-                    placeholderTextColor: "#666"
-                    background: Rectangle {
-                        color: "#1a1a2e"
-                        border.color: failureVoiceField.activeFocus ? "#2196F3" : "#334155"
-                        border.width: failureVoiceField.activeFocus ? 2 : 1
-                        radius: 4
-                    }
+                    placeholderTextColor: "#6E6E6E"
+                    color: "#E0E0E0"
+                    keyboardManager: root.keyboardManager
                 }
 
                 MouseArea {
@@ -804,44 +795,100 @@ Rectangle {
             Item {
                 Layout.column: 3; Layout.row: 5
                 Layout.fillWidth: true; Layout.maximumWidth: 300
-                implicitHeight: audioSourceCombo.implicitHeight
+                implicitHeight: 50
 
-                ComboBox {
+                // ✅ 2026-03-12 [Phase 7.48.40]: 从ComboBox改为ButtonGroup双按钮（参照AnalogInputPage音频来源风格）
+                // 旧：ComboBox audioSourceCombo
+                // 提供兼容属性，让collectConfig/applyConfig中的audioSourceCombo引用仍然有效
+                property int audioSourceIndex: 1  // 0=默认, 1=TTS合成（默认TTS）
+                Item {
                     id: audioSourceCombo
-                    anchors.fill: parent
-                    model: ["默认", "TTS合成"]
-                    currentIndex: 1  // 默认TTS合成
-                    font.pixelSize: 16
+                    property int currentIndex: parent.audioSourceIndex
+                    onCurrentIndexChanged: parent.audioSourceIndex = currentIndex
+                }
 
-                    background: Rectangle {
-                        color: "#1a1a2e"
-                        border.color: audioSourceCombo.activeFocus ? "#2196F3" : "#334155"
-                        border.width: audioSourceCombo.activeFocus ? 2 : 1
-                        radius: 4
-                    }
-                    contentItem: Text {
-                        text: audioSourceCombo.displayText
-                        font.pixelSize: 16
-                        color: "#E0E0E0"
-                        verticalAlignment: Text.AlignVCenter
-                        leftPadding: 12
-                    }
-                    popup.background: Rectangle {
-                        color: "#1e293b"
-                        border.color: "#475569"
-                        radius: 4
-                    }
-                    delegate: ItemDelegate {
-                        width: audioSourceCombo.width
-                        contentItem: Text {
-                            text: modelData
-                            font.pixelSize: 16
-                            color: "#E0E0E0"
-                        }
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 8
+
+                    // [默认] 按钮 - 深蓝背景 + 青色边框
+                    Button {
+                        id: defaultAudioBtn
+                        text: "默认"
+                        checkable: true
+                        checked: parent.parent.audioSourceIndex === 0
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+
                         background: Rectangle {
-                            color: highlighted ? "#334155" : "transparent"
+                            color: defaultAudioBtn.checked ? "#0a1929" :
+                                   (defaultAudioBtn.hovered ? "#1e2d42" : "#141920")
+                            radius: 6
+                            border.color: defaultAudioBtn.checked ? "#00d4ff" :
+                                          (defaultAudioBtn.hovered ? "#2196F3" : "#334155")
+                            border.width: defaultAudioBtn.checked ? 2 : 1
+
+                            Rectangle {
+                                visible: defaultAudioBtn.checked
+                                anchors.top: parent.top
+                                anchors.left: parent.left; anchors.right: parent.right
+                                anchors.leftMargin: 1; anchors.rightMargin: 1; anchors.topMargin: 1
+                                height: 2; radius: 1; color: "#00d4ff"
+                            }
                         }
-                        highlighted: audioSourceCombo.highlightedIndex === index
+
+                        contentItem: Text {
+                            text: defaultAudioBtn.text
+                            font.pixelSize: 16; font.bold: defaultAudioBtn.checked
+                            color: defaultAudioBtn.checked ? "#00d4ff" : "#9E9E9E"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            parent.parent.parent.audioSourceIndex = 0
+                            ttsAudioBtn.checked = false
+                        }
+                    }
+
+                    // [TTS] 按钮 - 深绿背景 + 绿色边框
+                    Button {
+                        id: ttsAudioBtn
+                        text: "TTS"
+                        checkable: true
+                        checked: parent.parent.audioSourceIndex === 1
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+
+                        background: Rectangle {
+                            color: ttsAudioBtn.checked ? "#0d2218" :
+                                   (ttsAudioBtn.hovered ? "#1e2d42" : "#141920")
+                            radius: 6
+                            border.color: ttsAudioBtn.checked ? "#22C55E" :
+                                          (ttsAudioBtn.hovered ? "#2196F3" : "#334155")
+                            border.width: ttsAudioBtn.checked ? 2 : 1
+
+                            Rectangle {
+                                visible: ttsAudioBtn.checked
+                                anchors.top: parent.top
+                                anchors.left: parent.left; anchors.right: parent.right
+                                anchors.leftMargin: 1; anchors.rightMargin: 1; anchors.topMargin: 1
+                                height: 2; radius: 1; color: "#22C55E"
+                            }
+                        }
+
+                        contentItem: Text {
+                            text: ttsAudioBtn.text
+                            font.pixelSize: 16; font.bold: ttsAudioBtn.checked
+                            color: ttsAudioBtn.checked ? "#22C55E" : "#9E9E9E"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            parent.parent.parent.audioSourceIndex = 1
+                            defaultAudioBtn.checked = false
+                        }
                     }
                 }
 
@@ -851,6 +898,7 @@ Rectangle {
                         root.requestFocusParamIndex(11)
                         mouse.accepted = false
                     }
+                    z: -1
                 }
 
                 Rectangle {
@@ -902,11 +950,31 @@ Rectangle {
                 // ✅ 2026-03-10 [Phase 7.48.36]: 改用 doDataManager（前后端分离）
                 // 旧：监听 diDataManager.module1DataChanged/module2DataChanged
                 // 新：监听 doDataManager.doStatesChanged，读取 do_states[outputChannel]
+                // ✅ 2026-03-12 [Phase 7.48.40]: 修复所有电机运行状态显示一致的bug
+                // 原因：仅在doStatesChanged信号时更新，切换电机/通道变化时不会刷新
+                // 修复：增加outputChannelSpin.value变化时也刷新LED状态
                 property bool motorIsOn: false
+
+                // ✅ 2026-03-12: 通道值变化时刷新LED状态
+                Connections {
+                    target: outputChannelSpin
+                    function onValueChanged() {
+                        if (typeof doDataManager !== "undefined") {
+                            motorRunItem.motorIsOn = doDataManager.getDoState(outputChannelSpin.value)
+                        }
+                    }
+                }
 
                 Connections {
                     target: typeof doDataManager !== "undefined" ? doDataManager : null
                     function onDoStatesChanged() {
+                        motorRunItem.motorIsOn = doDataManager.getDoState(outputChannelSpin.value)
+                    }
+                }
+
+                // ✅ 2026-03-12: 组件加载时读取当前状态
+                Component.onCompleted: {
+                    if (typeof doDataManager !== "undefined") {
                         motorRunItem.motorIsOn = doDataManager.getDoState(outputChannelSpin.value)
                     }
                 }
@@ -1300,10 +1368,20 @@ Rectangle {
             console.log("✅ [BasicConfigTab] 启动键")
             startupKeyCombo.popup.open()
             break
-        // ✅ 2026-03-12: 新增音频来源
+        // ✅ 2026-03-12: 音频来源改为ButtonGroup，点击切换选中状态
         case 11:  // 音频来源
-            console.log("✅ [BasicConfigTab] 音频来源")
-            audioSourceCombo.popup.open()
+            console.log("✅ [BasicConfigTab] 音频来源切换")
+            // 旧：audioSourceCombo.popup.open()
+            // 新：切换按钮选中状态
+            if (audioSourceCombo.currentIndex === 0) {
+                audioSourceCombo.currentIndex = 1
+                ttsAudioBtn.checked = true
+                defaultAudioBtn.checked = false
+            } else {
+                audioSourceCombo.currentIndex = 0
+                defaultAudioBtn.checked = true
+                ttsAudioBtn.checked = false
+            }
             break
         case 12:  // 运行LED（只读）
             console.log("✅ [BasicConfigTab] 运行LED（只读）")
