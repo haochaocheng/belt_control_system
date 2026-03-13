@@ -88,9 +88,19 @@ Rectangle {
         repeat: false
         onTriggered: {
             if (root.waitingForFeedback && useFeedbackSwitch.checked) {
-                // 超时未收到反馈 → 报警
+                // 超时未收到反馈 → 报警 + 停止电机
                 console.log("⚠️ [BasicConfigTab] 电机", (root.motorIndex + 1), "反馈超时！延时:", feedbackDelaySpin.value, "秒")
                 root.waitingForFeedback = false
+
+                // ✅ 2026-03-13 [Phase 7.48.43]: 反馈超时必须停止电机运行
+                var ch = outputChannelSpin.value
+                var topic = "belt_control/do/module1/cmd"
+                var stopCmd = JSON.stringify({"action": "set", "channel": ch, "value": 0})
+                console.log("🛑 [BasicConfigTab] 反馈超时，停止电机", (root.motorIndex + 1), "通道:", ch)
+                if (typeof mqttController !== "undefined") {
+                    mqttController.publish(topic, stopCmd, 1, false)
+                }
+
                 // ✅ 2026-03-11 [Phase 7.48.37]: 播放失败语音（音频文件名 + TTS回退）
                 // 旧：alarmPlayback.playAlarm(failureVoiceField.text, failureVoiceField.text, "", ...)
                 if (typeof alarmPlayback !== "undefined") {
@@ -917,7 +927,8 @@ Rectangle {
             }
 
             Text {
-                text: "状态指示"
+                // ✅ 2026-03-13 [Phase 7.48.43]: 合并状态指示和传感器数据为一个区域
+                text: "状态监控"
                 font.pixelSize: 19; font.bold: true; color: "#7dd3fc"
                 Layout.column: 0; Layout.row: 7
                 Layout.columnSpan: 4
@@ -1109,31 +1120,13 @@ Rectangle {
                 }
             }
 
-            // ========== 第八行：传感器实时数据区域 ==========
-            // ✅ 2026-03-13 [Phase 7.48.43]: 科技感模拟量显示面板（9个保护参数实时值）
-
-            // 分隔线
-            Rectangle {
-                Layout.column: 0; Layout.row: 9
-                Layout.columnSpan: 4
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                Layout.topMargin: 8; Layout.bottomMargin: 8
-                color: "#334155"
-            }
-
-            Text {
-                text: "传感器实时数据"
-                font.pixelSize: 19; font.bold: true; color: "#7dd3fc"
-                Layout.column: 0; Layout.row: 10
-                Layout.columnSpan: 4
-                Layout.alignment: Qt.AlignHCenter
-            }
+            // ========== 传感器实时数据（合并到状态监控区域）==========
+            // ✅ 2026-03-13 [Phase 7.48.43]: 去掉独立分隔线和标题，直接跟在LED后面
 
             // 9个保护参数的实时值网格
             Item {
                 id: sensorDataPanel
-                Layout.column: 0; Layout.row: 11
+                Layout.column: 0; Layout.row: 9
                 Layout.columnSpan: 4
                 Layout.fillWidth: true
                 Layout.preferredHeight: motorValueGrid.implicitHeight + 16
@@ -1177,16 +1170,16 @@ Rectangle {
                     anchors.fill: parent
                     anchors.margins: 4
                     columns: 3
-                    rowSpacing: 6
-                    columnSpacing: 8
+                    rowSpacing: 4
+                    columnSpacing: 6
 
                     Repeater {
                         model: sensorDataPanel.motorValues
 
                         Rectangle {
                             width: (motorValueGrid.width - motorValueGrid.columnSpacing * 2) / 3
-                            height: 64
-                            radius: 6
+                            height: 50
+                            radius: 4
                             color: "#0d1b2a"
                             border.width: 1
                             border.color: modelData.exceeded ? "#ef4444" : "#1e3a5f"
@@ -1209,8 +1202,8 @@ Rectangle {
 
                             Column {
                                 anchors.fill: parent
-                                anchors.margins: 6
-                                spacing: 2
+                                anchors.margins: 4
+                                spacing: 1
 
                                 Row {
                                     width: parent.width
@@ -1262,7 +1255,7 @@ Rectangle {
 
             // 分隔线
             Rectangle {
-                Layout.column: 0; Layout.row: 12
+                Layout.column: 0; Layout.row: 10
                 Layout.columnSpan: 4
                 Layout.fillWidth: true
                 Layout.preferredHeight: 1
@@ -1273,7 +1266,7 @@ Rectangle {
             Text {
                 text: "测试操作"
                 font.pixelSize: 19; font.bold: true; color: "#fbbf24"
-                Layout.column: 0; Layout.row: 13
+                Layout.column: 0; Layout.row: 11
                 Layout.columnSpan: 4
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -1282,12 +1275,12 @@ Rectangle {
             Text {
                 text: "电机控制:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 0; Layout.row: 14
+                Layout.column: 0; Layout.row: 12
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.column: 1; Layout.row: 14
+                Layout.column: 1; Layout.row: 12
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 Layout.columnSpan: 3
                 implicitHeight: 56
