@@ -710,3 +710,131 @@ void MqttProtectionMonitor::publishMotorCommand(int deviceId, int motorIndex, bo
                    << "控制命令发布失败 topic:" << topic;
     }
 }
+
+// ✅ 2026-03-13: PT100温度转换
+// 公式来自嵌入式代码：temperature = rawValue × 250 / 4096 - 50
+// 范围：-50℃ ~ +200℃
+double MqttProtectionMonitor::convertPT100(quint16 rawValue)
+{
+    return (double)(rawValue * 250) / 4096.0 - 50.0;
+}
+
+// ✅ 2026-03-13: 4-20mA电流型转换
+// 公式来自嵌入式代码：value = (rawValue - 819) × Range / (4096 - 819)
+// 4mA对应rawValue=819, 20mA对应rawValue=4096
+// rawValue < 819 表示欠量程（传感器断线）
+double MqttProtectionMonitor::convert420mA(quint16 rawValue, double range)
+{
+    if (rawValue < 819) return 0.0;  // 欠量程
+    return ((double)(rawValue - 819) * range) / (double)(4096 - 819);
+}
+
+// ✅ 2026-03-13: 电机保护Modbus TCP数据接收处理
+// 从NetworkTask接收motorRegisterReceived信号
+// 流程：加载device_motor_config → PT100/4-20mA转换 → 对比阈值 → 触发报警
+void MqttProtectionMonitor::onMotorRegisterReceived(int motorIndex, int tabIndex, quint16 rawValue)
+{
+    if (!m_isRunning) return;
+    if (!m_deviceConfigMgr) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] onMotorRegisterReceived: DeviceConfigManager未设置";
+        return;
+    }
+    if (motorIndex < 0 || motorIndex > 7) return;
+    if (tabIndex < 1 || tabIndex > 9) return;
+
+    // 使用AI模块0对应的皮带编号（电机保护测试模式下，所有电机属于同一皮带）
+    int beltNumber = m_aiBeltMapping.value(0, 1);
+
+    // 从device_motor_config加载该电机该Tab的保护配置
+    QVariantMap config = m_deviceConfigMgr->loadMotorConfig(beltNumber, motorIndex, tabIndex);
+    if (config.isEmpty()) {
+        return;  // 无配置，跳过
+    }
+
+    // 检查保护级别（0=禁用）
+    int protLevel = config.value("protection_level", 0).toInt();
+    if (protLevel <= 0) return;
+
+    // 读取保护配置参数
+    QString inputType = config.value("input_type", "4-20mA电流型").toString();
+    double rangeValue = config.value("range_value", 100.0).toDouble();
+    double upperLimit = config.value("upper_limit", 100.0).toDouble();
+    double lowerLimit = config.value("lower_limit", 0.0).toDouble();
+    QString protectionName = config.value("protection_name", "").toString();
+    QString unit = config.value("unit", "").toString();
+
+    // 根据输入类型选择转换公式
+    double engineeringValue = 0.0;
+    if (inputType.contains("PT100")) {
+        engineeringValue = convertPT100(rawValue);
+    } else {
+        // 4-20mA / 0-20mA / 0-5V / 0-10V / 1-5V 统一使用4-20mA公式
+        engineeringValue = convert420mA(rawValue, rangeValue);
+    }
+
+    // 边沿触发报警键
+    QString alarmKey = QString("motor:%1:%2").arg(motorIndex).arg(tabIndex);
+
+    // 超限检测
+    bool exceeded = false;
+    QString limitType;
+    if (engineeringValue > upperLimit) {
+        exceeded = true;
+        limitType = "超上限";
+    } else if (engineeringValue < lowerLimit && rawValue > 0) {
+        // rawValue > 0 排除传感器断线情况（断线时rawValue=0，不应报下限）
+        exceeded = true;
+        limitType = "低于下限";
+    }
+
+    bool wasActive = m_motorProtectionAlarmActive.value(alarmKey, false);
+
+    if (exceeded && !wasActive) {
+        // ===== 正常→超限（触发报警）=====
+        m_motorProtectionAlarmActive[alarmKey] = true;
+
+        QString displayName = QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName);
+        qWarning() << "🔴 [电机保护] " << displayName << limitType
+                   << "当前值:" << engineeringValue << unit
+                   << "上限:" << upperLimit << "下限:" << lowerLimit
+                   << "原始值:" << rawValue;
+
+        // 触发报警播放
+        if (m_alarmPlaybackService) {
+            bool useTTS = config.value("use_text_to_speech", false).toBool();
+            QString audioFile = config.value("audio_file", "").toString();
+            QString ttsText = config.value("tts_text", "").toString();
+            QString playMode = config.value("play_mode", "count").toString();
+            int playCount = config.value("play_count", 3).toInt();
+            double playDuration = config.value("play_duration", 10.0).toDouble();
+
+            // 如果没有自定义TTS文字，自动生成
+            if (ttsText.isEmpty()) {
+                ttsText = QString("%1%2，当前值%3%4")
+                    .arg(displayName).arg(limitType)
+                    .arg(QString::number(engineeringValue, 'f', 1)).arg(unit);
+            }
+
+            m_alarmPlaybackService->playAlarm(displayName, ttsText, audioFile,
+                                                useTTS, playMode, playCount, playDuration);
+        }
+
+        // 发射保护触发信号（用于报警历史记录）
+        emit analogProtectionTriggered(beltNumber, QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName),
+                                        engineeringValue, limitType);
+
+    } else if (!exceeded && wasActive) {
+        // ===== 超限→正常（恢复）=====
+        m_motorProtectionAlarmActive[alarmKey] = false;
+
+        QString displayName = QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName);
+        qDebug() << "🟢 [电机保护] " << displayName << "恢复正常"
+                 << "当前值:" << engineeringValue << unit;
+
+        // 恢复时不停止播放（AlarmPlaybackService按次数/时长自动结束）
+        // 如需停止可在此添加停止逻辑
+
+        emit analogProtectionRestored(beltNumber, QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName),
+                                       engineeringValue);
+    }
+}

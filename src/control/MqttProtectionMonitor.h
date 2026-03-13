@@ -138,6 +138,22 @@ public slots:
      */
     void onAIChannelChanged(int moduleIndex, int channelIndex, const ChannelData &data);
 
+    // ✅ 2026-03-13: 电机保护Modbus TCP数据接收槽函数
+    /**
+     * @brief 电机保护寄存器数据接收（来自NetworkTask）
+     * @param motorIndex 电机索引（0-7）
+     * @param tabIndex 保护Tab索引（1=电流, 2=前轴承温度, ..., 9=Y轴振动）
+     * @param rawValue Modbus原始寄存器值（0-4095）
+     *
+     * 流程：
+     * 1. 从 device_motor_config 加载该电机该Tab的保护配置
+     * 2. 根据 input_type 选择 PT100 或 4-20mA 转换公式
+     * 3. 转换为物理量（温度℃、电流A、振动mm/s）
+     * 4. 对比上下限阈值
+     * 5. 超限时触发 AlarmPlaybackService 播放报警语音
+     */
+    void onMotorRegisterReceived(int motorIndex, int tabIndex, quint16 rawValue);
+
     // ✅ 2026-03-05 [Phase 7.48.10]: 电机启动/停止通知（用于速度保护延时启动）
     /**
      * @brief 通知电机已启动（开始速度保护延时计时）
@@ -254,6 +270,24 @@ private:
      * @param activate true=启动洒水, false=停止洒水
      */
     void publishSprinklerCommand(int sprinklerIndex, bool activate);
+
+    // ✅ 2026-03-13: PT100/4-20mA 转换函数
+    /**
+     * @brief PT100温度转换：rawValue(0-4095) → 温度(-50℃~+200℃)
+     * 公式：temperature = rawValue × 250 / 4096 - 50
+     */
+    static double convertPT100(quint16 rawValue);
+
+    /**
+     * @brief 4-20mA电流型转换：rawValue(819-4096) → 物理量(0~Range)
+     * 公式：value = (rawValue - 819) × Range / (4096 - 819)
+     * rawValue < 819 表示欠量程（传感器断线）
+     */
+    static double convert420mA(quint16 rawValue, double range);
+
+    // ✅ 2026-03-13: 电机保护报警状态追踪（边沿触发）
+    // Key = "motor:电机索引:Tab索引" (如 "motor:0:2" = 电机1的前轴承温度)
+    QMap<QString, bool> m_motorProtectionAlarmActive;
 
     // ✅ 2026-03-10 [Phase 7.48.31]: publishMotorCommand 已移至 public 区域（Q_INVOKABLE）
 };

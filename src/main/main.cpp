@@ -324,6 +324,16 @@ int main(int argc, char *argv[]) {
         mqttProtectionMonitor.start();
         logMessage("MQTT Protection Monitor started");
 
+        // ✅ 2026-03-13: 连接NetworkTask电机保护寄存器信号到MqttProtectionMonitor
+        // 电机保护Modbus TCP测试模式：轮询192.168.10.142，8电机×9保护
+        QObject::connect(&networkTask, &NetworkTask::motorRegisterReceived,
+                         &mqttProtectionMonitor, &MqttProtectionMonitor::onMotorRegisterReceived);
+        // 启用电机保护测试模式（连接到模拟从站192.168.10.142:502）
+        networkTask.setSystemConfig(&systemConfig);
+        networkTask.setMotorTestMode(true, "192.168.10.142", 502);
+        networkTask.start();
+        logMessage("Motor protection Modbus TCP test mode enabled (192.168.10.142:502)");
+
         // ✅ 2026-03-02 [Phase 7.47.69]: 连接 MQTTAutoManager 语音提醒信号到 CommonControl 播放
         // 触发场景：①模块离线（数据超时）②程序连接EMQX服务器超时
         QObject::connect(&mqttAutoManager, &MQTTAutoManager::voiceAlertRequested,

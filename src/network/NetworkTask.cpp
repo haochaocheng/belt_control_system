@@ -10,6 +10,9 @@ NetworkTask::NetworkTask(QObject *parent)
     , m_isRunning(false)
     , m_isConnected(false)
     , m_isRequestInProgress(false)
+    , m_motorTestMode(false)
+    , m_motorTestIp("192.168.10.142")
+    , m_motorTestPort(502)
 {
     qDebug() << "✅ NetworkTask: 网络任务已创建";
 
@@ -84,11 +87,35 @@ void NetworkTask::connectToServer()
         return;
     }
 
-    QString serverIp = m_systemConfig->modbusServerIp();
-    int serverPort = 502;  // Modbus TCP默认端口
-
-    qDebug() << "🔌 NetworkTask: 连接到Modbus服务器" << serverIp << ":" << serverPort;
+    // ✅ 2026-03-13: 电机保护测试模式使用独立IP
+    QString serverIp;
+    int serverPort;
+    if (m_motorTestMode) {
+        serverIp = m_motorTestIp;
+        serverPort = m_motorTestPort;
+        qDebug() << "🔌 NetworkTask: [电机测试模式] 连接到模拟从站" << serverIp << ":" << serverPort;
+    } else {
+        serverIp = m_systemConfig->modbusServerIp();
+        serverPort = 502;
+        qDebug() << "🔌 NetworkTask: 连接到Modbus服务器" << serverIp << ":" << serverPort;
+    }
     m_modbusClient->connectToServer(serverIp, serverPort);
+}
+
+// ✅ 2026-03-13: 设置电机保护测试模式
+void NetworkTask::setMotorTestMode(bool enabled, const QString &ip, int port)
+{
+    m_motorTestMode = enabled;
+    m_motorTestIp = ip;
+    m_motorTestPort = port;
+    qDebug() << "🧪 NetworkTask: 电机测试模式" << (enabled ? "启用" : "禁用")
+             << "IP:" << ip << "端口:" << port;
+
+    // 如果正在运行，重新连接
+    if (m_isRunning) {
+        m_modbusClient->disconnectFromServer();
+        QTimer::singleShot(500, this, &NetworkTask::connectToServer);
+    }
 }
 
 void NetworkTask::updatePollInterval()
@@ -118,21 +145,31 @@ void NetworkTask::onPollTimerTimeout()
     }
 
     // ========== 构建请求队列（串行化处理） ==========
-    // 1. 数字保护 - 输入模块1（寄存器2）
-    //    包含：急停、跑偏、撕裂、烟雾、温度、护网、堆煤、主机急停
-    m_requestQueue.append({2, 1});
 
-    // 2. 模拟量保护 - 模拟量模块1（寄存器5-12，共8个）
-    //    包含：速度、张力、红外温度一/二、电流一/二、电压、1号电机温度
-    m_requestQueue.append({5, 8});
+    if (m_motorTestMode) {
+        // ✅ 2026-03-13: 电机保护测试模式 - 轮询8电机×12寄存器=96个寄存器
+        // 分两次读取（每次最多125个寄存器）：0-47 和 48-95
+        m_requestQueue.append({0, 48});   // 电机1-4
+        m_requestQueue.append({48, 48});  // 电机5-8
+    } else {
+        // 旧模式：只轮询模拟量模块2/3
+        // ✅ 2026-03-13: DI模块1和AI模块1已改用MQTT协议采集，注释掉Modbus轮询
+        // 旧：1. 数字保护 - 输入模块1（寄存器2）
+        //    包含：急停、跑偏、撕裂、烟雾、温度、护网、堆煤、主机急停
+        // m_requestQueue.append({2, 1});
 
-    // 3. 模拟量保护 - 模拟量模块2（寄存器13-20，共8个）
-    //    包含：2号电机温度、1号电机X/Y振动、2号电机X/Y振动、1号电机绕组温度
-    m_requestQueue.append({13, 8});
+        // 旧：2. 模拟量保护 - 模拟量模块1（寄存器5-12，共8个）
+        //    包含：速度、张力、红外温度一/二、电流一/二、电压、1号电机温度
+        // m_requestQueue.append({5, 8});
 
-    // 4. 模拟量保护 - 模拟量模块3（寄存器21-23，共3个）
-    //    包含：2号电机第一/二/三项绕组温度
-    m_requestQueue.append({21, 3});
+        // 3. 模拟量保护 - 模拟量模块2（寄存器13-20，共8个）
+        //    包含：2号电机温度、1号电机X/Y振动、2号电机X/Y振动、1号电机绕组温度
+        m_requestQueue.append({13, 8});
+
+        // 4. 模拟量保护 - 模拟量模块3（寄存器21-23，共3个）
+        //    包含：2号电机第一/二/三项绕组温度
+        m_requestQueue.append({21, 3});
+    }
 
     // 开始发送第一个请求
     sendNextRequest();
@@ -183,7 +220,12 @@ void NetworkTask::onReadSuccess(int startAddress, const QVector<quint16> &values
         return;
     }
 
-    // 处理批量读取的寄存器值
+    // ✅ 2026-03-13: 电机测试模式下，解析电机保护寄存器
+    if (m_motorTestMode && startAddress < TOTAL_MOTOR_REGS) {
+        processMotorRegisters(startAddress, values);
+    }
+
+    // 处理批量读取的寄存器值（旧逻辑保留兼容）
     for (int i = 0; i < values.size(); ++i) {
         int currentAddress = startAddress + i;
         quint16 value = values[i];
@@ -202,6 +244,26 @@ void NetworkTask::onReadSuccess(int startAddress, const QVector<quint16> &values
     // 标记请求完成，发送下一个请求
     m_isRequestInProgress = false;
     sendNextRequest();
+}
+
+// ✅ 2026-03-13: 解析电机保护寄存器，映射到(motorIndex, tabIndex)并发射信号
+void NetworkTask::processMotorRegisters(int startAddress, const QVector<quint16> &values)
+{
+    for (int i = 0; i < values.size(); ++i) {
+        int regAddr = startAddress + i;
+        if (regAddr >= TOTAL_MOTOR_REGS) break;
+
+        int motorIndex = regAddr / REGS_PER_MOTOR;     // 0-7
+        int offset = regAddr % REGS_PER_MOTOR;          // 0-11
+
+        // 只处理有效的保护通道（偏移0-8，即9个保护）
+        if (offset >= MOTOR_PROTECTIONS) continue;
+
+        int tabIndex = offsetToTabIndex(offset);         // Tab 1-9
+        quint16 rawValue = values[i];
+
+        emit motorRegisterReceived(motorIndex, tabIndex, rawValue);
+    }
 }
 
 void NetworkTask::onReadError(const QString &errorString)
