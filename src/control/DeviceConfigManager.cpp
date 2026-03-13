@@ -1420,6 +1420,35 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移017已执行过，跳过";
     }
+
+    // ✅ 2026-03-13 [Phase 7.48.43]: 迁移018 - 填充device_motor_config默认数据
+    // 原因：initDefaultData()仅在devices表为空时执行，旧数据库升级后motor_config表为空
+    query.exec("SELECT version FROM schema_migrations WHERE version = '018_populate_motor_configs'");
+    if (!query.next()) {
+        QSqlQuery countQuery(m_database);
+        countQuery.exec("SELECT COUNT(*) FROM device_motor_config");
+        int existingCount = 0;
+        if (countQuery.next()) existingCount = countQuery.value(0).toInt();
+
+        if (existingCount == 0) {
+            qDebug() << "🔄 [DeviceConfigManager] 执行迁移018: 填充电机保护默认配置...";
+            QSqlQuery deviceQuery(m_database);
+            deviceQuery.exec("SELECT device_id FROM devices ORDER BY device_id");
+            int totalInserted = 0;
+            while (deviceQuery.next()) {
+                int devId = deviceQuery.value(0).toInt();
+                if (initDefaultMotorConfigs(devId)) {
+                    totalInserted++;
+                }
+            }
+            qDebug() << "  ✅ 迁移018: 为" << totalInserted << "个设备填充了电机保护默认配置";
+        } else {
+            qDebug() << "  ⏭️ 迁移018: device_motor_config已有" << existingCount << "条数据，跳过";
+        }
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('018_populate_motor_configs')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移018已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2317,7 +2346,9 @@ QVariantMap DeviceConfigManager::loadMotorConfig(int deviceId, int motorIndex, i
     query.addBindValue(tabIndex);
 
     if (!query.exec() || !query.next()) {
-        qWarning() << "加载设备" << deviceId << "电机" << motorIndex << "Tab" << tabIndex << "配置失败";
+        // ✅ 2026-03-13 [Phase 7.48.43]: 降级为qDebug，避免高频轮询时刷大量WARNING日志
+        // 旧：qWarning() << "加载设备" << deviceId << "电机" << motorIndex << "Tab" << tabIndex << "配置失败";
+        qDebug() << "加载设备" << deviceId << "电机" << motorIndex << "Tab" << tabIndex << "配置失败";
         return QVariantMap();
     }
 
