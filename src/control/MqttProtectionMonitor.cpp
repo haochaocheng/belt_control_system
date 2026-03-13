@@ -751,9 +751,10 @@ void MqttProtectionMonitor::onMotorRegisterReceived(int motorIndex, int tabIndex
         return;  // 无配置，跳过
     }
 
-    // 检查保护级别（0=禁用）
+    // 检查保护级别（0=禁用）— 不提前返回，需要先转换值供QML显示
+    // ✅ 2026-03-13 [Phase 7.48.43]: 移到转换后检查，保证motorValueUpdated信号始终发射
     int protLevel = config.value("protection_level", 0).toInt();
-    if (protLevel <= 0) return;
+    // 旧：if (protLevel <= 0) return;  // 2026-03-13 注释：移到转换后
 
     // 读取保护配置参数
     QString inputType = config.value("input_type", "4-20mA电流型").toString();
@@ -771,6 +772,14 @@ void MqttProtectionMonitor::onMotorRegisterReceived(int motorIndex, int tabIndex
         // 4-20mA / 0-20mA / 0-5V / 0-10V / 1-5V 统一使用4-20mA公式
         engineeringValue = convert420mA(rawValue, rangeValue);
     }
+
+    // ✅ 2026-03-13 [Phase 7.48.43]: 发射实时值更新信号（供QML显示，无论保护是否启用）
+    bool isExceeded = (engineeringValue > upperLimit) ||
+                      (engineeringValue < lowerLimit && rawValue > 0);
+    emit motorValueUpdated(motorIndex, tabIndex, engineeringValue, unit, protectionName, isExceeded);
+
+    // 保护级别检查（0=禁用时不触发报警，但上面的值更新信号仍然发射）
+    if (protLevel <= 0) return;
 
     // 边沿触发报警键
     QString alarmKey = QString("motor:%1:%2").arg(motorIndex).arg(tabIndex);

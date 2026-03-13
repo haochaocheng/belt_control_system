@@ -1109,9 +1109,8 @@ Rectangle {
                 }
             }
 
-            // ========== 第九行：测试操作区域 ==========
-            // ✅ 2026-03-10 [Phase 7.48.33]: 新增启动/停止测试按钮
-            // ✅ 2026-03-10 [Phase 7.48.36]: 行号+1（插入反馈延时行）
+            // ========== 第八行：传感器实时数据区域 ==========
+            // ✅ 2026-03-13 [Phase 7.48.43]: 科技感模拟量显示面板（9个保护参数实时值）
 
             // 分隔线
             Rectangle {
@@ -1124,9 +1123,156 @@ Rectangle {
             }
 
             Text {
+                text: "传感器实时数据"
+                font.pixelSize: 19; font.bold: true; color: "#7dd3fc"
+                Layout.column: 0; Layout.row: 10
+                Layout.columnSpan: 4
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            // 9个保护参数的实时值网格
+            Item {
+                id: sensorDataPanel
+                Layout.column: 0; Layout.row: 11
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                Layout.preferredHeight: motorValueGrid.implicitHeight + 16
+                Layout.leftMargin: 8; Layout.rightMargin: 8
+
+                // 数据模型：9个保护参数 (tabIndex 1-9)
+                property var motorValues: [
+                    { tab: 1, name: "电流",     value: 0.0, unit: "A",  exceeded: false },
+                    { tab: 2, name: "前轴承温度", value: 0.0, unit: "℃", exceeded: false },
+                    { tab: 3, name: "后轴承温度", value: 0.0, unit: "℃", exceeded: false },
+                    { tab: 4, name: "A相绕组",   value: 0.0, unit: "℃", exceeded: false },
+                    { tab: 5, name: "B相绕组",   value: 0.0, unit: "℃", exceeded: false },
+                    { tab: 6, name: "C相绕组",   value: 0.0, unit: "℃", exceeded: false },
+                    { tab: 7, name: "电机温度",   value: 0.0, unit: "℃", exceeded: false },
+                    { tab: 8, name: "X轴振动",   value: 0.0, unit: "mm/s", exceeded: false },
+                    { tab: 9, name: "Y轴振动",   value: 0.0, unit: "mm/s", exceeded: false }
+                ]
+
+                // 接收 MqttProtectionMonitor 的 motorValueUpdated 信号
+                Connections {
+                    target: typeof mqttProtectionMonitor !== "undefined" ? mqttProtectionMonitor : null
+                    function onMotorValueUpdated(motorIdx, tabIdx, engValue, unitStr, protName, isExceeded) {
+                        if (motorIdx !== root.motorIndex) return
+                        var vals = sensorDataPanel.motorValues
+                        for (var i = 0; i < vals.length; i++) {
+                            if (vals[i].tab === tabIdx) {
+                                vals[i].value = engValue
+                                vals[i].exceeded = isExceeded
+                                if (unitStr !== "") vals[i].unit = unitStr
+                                if (protName !== "") vals[i].name = protName
+                                sensorDataPanel.motorValues = vals
+                                break
+                            }
+                        }
+                    }
+                }
+
+                Grid {
+                    id: motorValueGrid
+                    anchors.fill: parent
+                    anchors.margins: 4
+                    columns: 3
+                    rowSpacing: 6
+                    columnSpacing: 8
+
+                    Repeater {
+                        model: sensorDataPanel.motorValues
+
+                        Rectangle {
+                            width: (motorValueGrid.width - motorValueGrid.columnSpacing * 2) / 3
+                            height: 64
+                            radius: 6
+                            color: "#0d1b2a"
+                            border.width: 1
+                            border.color: modelData.exceeded ? "#ef4444" : "#1e3a5f"
+
+                            // 超限脉冲发光
+                            Rectangle {
+                                anchors.fill: parent; radius: parent.radius
+                                color: "transparent"
+                                border.width: 2
+                                border.color: modelData.exceeded ? "#ef4444" : "transparent"
+                                visible: modelData.exceeded
+                                opacity: 0.6
+                                SequentialAnimation on opacity {
+                                    running: modelData.exceeded
+                                    loops: Animation.Infinite
+                                    NumberAnimation { from: 0.6; to: 0.15; duration: 800 }
+                                    NumberAnimation { from: 0.15; to: 0.6; duration: 800 }
+                                }
+                            }
+
+                            Column {
+                                anchors.fill: parent
+                                anchors.margins: 6
+                                spacing: 2
+
+                                Row {
+                                    width: parent.width
+                                    spacing: 4
+                                    Rectangle {
+                                        width: 6; height: 6; radius: 3
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: modelData.exceeded ? "#ef4444" :
+                                               (modelData.value !== 0.0 ? "#22c55e" : "#475569")
+                                    }
+                                    Text {
+                                        text: modelData.name
+                                        font.pixelSize: 13; color: "#94a3b8"
+                                        elide: Text.ElideRight
+                                        width: parent.width - 10
+                                    }
+                                }
+
+                                Row {
+                                    width: parent.width
+                                    spacing: 2
+                                    anchors.horizontalCenter: parent.horizontalCenter
+
+                                    Text {
+                                        text: modelData.value.toFixed(1)
+                                        font.pixelSize: 22
+                                        font.family: "Consolas"
+                                        font.bold: true
+                                        color: modelData.exceeded ? "#ef4444" :
+                                               (modelData.value !== 0.0 ? "#00d4ff" : "#475569")
+                                    }
+                                    Text {
+                                        text: modelData.unit
+                                        font.pixelSize: 12; color: "#64748b"
+                                        anchors.bottom: parent.children[0].bottom
+                                        anchors.bottomMargin: 2
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ========== 第九行：测试操作区域 ==========
+            // ✅ 2026-03-10 [Phase 7.48.33]: 新增启动/停止测试按钮
+            // ✅ 2026-03-10 [Phase 7.48.36]: 行号+1（插入反馈延时行）
+            // ✅ 2026-03-13 [Phase 7.48.43]: 行号+3（插入传感器实时数据区域）
+
+            // 分隔线
+            Rectangle {
+                Layout.column: 0; Layout.row: 12
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                Layout.topMargin: 8; Layout.bottomMargin: 8
+                color: "#334155"
+            }
+
+            Text {
                 text: "测试操作"
                 font.pixelSize: 19; font.bold: true; color: "#fbbf24"
-                Layout.column: 0; Layout.row: 10
+                Layout.column: 0; Layout.row: 13
                 Layout.columnSpan: 4
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -1135,12 +1281,12 @@ Rectangle {
             Text {
                 text: "电机控制:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 0; Layout.row: 11
+                Layout.column: 0; Layout.row: 14
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.column: 1; Layout.row: 11
+                Layout.column: 1; Layout.row: 14
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 Layout.columnSpan: 3
                 implicitHeight: 56

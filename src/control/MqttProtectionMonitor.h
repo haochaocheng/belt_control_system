@@ -199,6 +199,10 @@ signals:
     void analogProtectionRestored(int beltNumber, const QString &protectionName,
                                   double engineeringValue);
 
+    // ✅ 2026-03-13 [Phase 7.48.43]: 电机模拟量实时值更新信号（供QML显示）
+    void motorValueUpdated(int motorIndex, int tabIndex, double engineeringValue,
+                           const QString &unit, const QString &protectionName, bool exceeded);
+
 private slots:
     /**
      * @brief DI位变化槽函数
