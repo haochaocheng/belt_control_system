@@ -1473,6 +1473,37 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移019已执行过，跳过";
     }
+
+    // ✅ 2026-03-13 [Phase 7.48.43]: 迁移020 - 去掉protection_name的"电机X-"前缀 + 重命名英文
+    // 原因：initDefaultMotorConfigs存了"电机1-后轴承温度"，导致音频路径变成"1号电机电机1-后轴承温度过高.wav"
+    query.exec("SELECT version FROM schema_migrations WHERE version = '020_fix_motor_protection_names'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移020: 去掉protection_name的电机前缀+重命名英文...";
+        QSqlQuery fix(m_database);
+        int total = 0;
+
+        // 1. 去掉"电机X-"前缀（电机1-后轴承温度 → 后轴承温度）
+        for (int m = 1; m <= 8; m++) {
+            QString prefix = QString("电机%1-").arg(m);
+            QString sql = QString("UPDATE device_motor_config SET protection_name = REPLACE(protection_name, '%1', '') "
+                                  "WHERE protection_name LIKE '%1%'").arg(prefix);
+            fix.exec(sql);
+            total += fix.numRowsAffected();
+        }
+        qDebug() << "  ✅ 去掉电机前缀:" << total << "条";
+
+        // 2. 重命名英文→中文（可能019已处理部分，这里兜底）
+        fix.exec("UPDATE device_motor_config SET protection_name = '甲相绕组' WHERE protection_name = 'A相绕组'");
+        fix.exec("UPDATE device_motor_config SET protection_name = '乙相绕组' WHERE protection_name = 'B相绕组'");
+        fix.exec("UPDATE device_motor_config SET protection_name = '丙相绕组' WHERE protection_name = 'C相绕组'");
+        fix.exec("UPDATE device_motor_config SET protection_name = '水平振动' WHERE protection_name = 'X轴振动'");
+        fix.exec("UPDATE device_motor_config SET protection_name = '垂直振动' WHERE protection_name = 'Y轴振动'");
+        qDebug() << "  ✅ 迁移020完成";
+
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('020_fix_motor_protection_names')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移020已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2470,7 +2501,9 @@ bool DeviceConfigManager::initDefaultMotorConfigs(int deviceId)
     for (int motorIndex = 0; motorIndex < 8; motorIndex++) {
         for (int tabIndex = 0; tabIndex < tabDefaults.size(); tabIndex++) {
             const auto &def = tabDefaults[tabIndex];
-            QString protectionName = QString("电机%1-%2").arg(motorIndex + 1).arg(def.tabName);
+            // ✅ 2026-03-13 [Phase 7.48.43]: protection_name不加电机前缀，避免音频路径重复
+            // 旧：QString protectionName = QString("电机%1-%2").arg(motorIndex + 1).arg(def.tabName);
+            QString protectionName = def.tabName;
 
             // ✅ 2026-03-10 [Phase 7.48.31]: 扩展 INSERT 语句，包含基本配置字段
             // ✅ 2026-03-10 [Phase 7.48.37]: 扩展 INSERT 语句，新增启动参数4列
