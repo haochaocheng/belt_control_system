@@ -157,8 +157,9 @@ Rectangle {
 
                 Repeater {
                     // ✅ 2026-03-10 [Phase 7.48.29]: 从10个Tab扩展到14个Tab（新增4种保护类型）
-                    // 旧：["基本配置", "电流保护", "前轴承温度", "后轴承温度", "A相绕组", "B相绕组", "C相绕组", "电机温度", "X轴振动", "Y轴振动"]
-                    model: ["基本配置", "电流保护", "前轴承温度", "后轴承温度", "A相绕组", "B相绕组", "C相绕组", "电机温度", "X轴振动", "Y轴振动", "堵转保护", "起动超时", "功率保护", "三相不平衡"]
+                    // ✅ 2026-03-13 [Phase 7.48.43]: A/B/C→甲/乙/丙，X/Y→水平/垂直（TTS中文兼容）
+                    // 旧：["基本配置", "电流保护", "前轴承温度", "后轴承温度", "A相绕组", "B相绕组", "C相绕组", "电机温度", "X轴振动", "Y轴振动", ...]
+                    model: ["基本配置", "电流保护", "前轴承温度", "后轴承温度", "甲相绕组", "乙相绕组", "丙相绕组", "电机温度", "水平振动", "垂直振动", "堵转保护", "起动超时", "功率保护", "三相不平衡"]
 
                     Rectangle {
                         id: rectangle
@@ -359,7 +360,7 @@ Rectangle {
                 source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.tabIndex = 4; item.protectionName = "A相绕组"
+                        item.tabIndex = 4; item.protectionName = "甲相绕组"
                         item.defaultUnit = "℃"; item.defaultUpperLimit = 130; item.defaultLowerLimit = 0
                         item.defaultRange = 200; item.defaultInputType = "PT100热电阻"
                         item.defaultProtectionDelay = 50; item.defaultFilterDelay = 10.0
@@ -379,7 +380,7 @@ Rectangle {
                 source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.tabIndex = 5; item.protectionName = "B相绕组"
+                        item.tabIndex = 5; item.protectionName = "乙相绕组"
                         item.defaultUnit = "℃"; item.defaultUpperLimit = 130; item.defaultLowerLimit = 0
                         item.defaultRange = 200; item.defaultInputType = "PT100热电阻"
                         item.defaultProtectionDelay = 50; item.defaultFilterDelay = 10.0
@@ -399,7 +400,7 @@ Rectangle {
                 source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.tabIndex = 6; item.protectionName = "C相绕组"
+                        item.tabIndex = 6; item.protectionName = "丙相绕组"
                         item.defaultUnit = "℃"; item.defaultUpperLimit = 130; item.defaultLowerLimit = 0
                         item.defaultRange = 200; item.defaultInputType = "PT100热电阻"
                         item.defaultProtectionDelay = 50; item.defaultFilterDelay = 10.0
@@ -439,7 +440,7 @@ Rectangle {
                 source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.tabIndex = 8; item.protectionName = "X轴振动"
+                        item.tabIndex = 8; item.protectionName = "水平振动"
                         item.defaultUnit = "mm/s"; item.defaultUpperLimit = 7; item.defaultLowerLimit = 0
                         item.defaultRange = 20; item.defaultInputType = "4-20mA电流型"
                         item.defaultProtectionDelay = 100; item.defaultFilterDelay = 20.0
@@ -459,7 +460,7 @@ Rectangle {
                 source: "MotorProtectionTab.qml"
                 onLoaded: {
                     if (item) {
-                        item.tabIndex = 9; item.protectionName = "Y轴振动"
+                        item.tabIndex = 9; item.protectionName = "垂直振动"
                         item.defaultUnit = "mm/s"; item.defaultUpperLimit = 7; item.defaultLowerLimit = 0
                         item.defaultRange = 20; item.defaultInputType = "4-20mA电流型"
                         item.defaultProtectionDelay = 100; item.defaultFilterDelay = 20.0

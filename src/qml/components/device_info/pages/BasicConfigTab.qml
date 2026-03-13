@@ -1140,16 +1140,17 @@ Rectangle {
                 Layout.leftMargin: 8; Layout.rightMargin: 8
 
                 // 数据模型：9个保护参数 (tabIndex 1-9)
+                // ✅ 2026-03-13 [Phase 7.48.43]: 改为中文名称（TTS兼容）
                 property var motorValues: [
                     { tab: 1, name: "电流",     value: 0.0, unit: "A",  exceeded: false },
                     { tab: 2, name: "前轴承温度", value: 0.0, unit: "℃", exceeded: false },
                     { tab: 3, name: "后轴承温度", value: 0.0, unit: "℃", exceeded: false },
-                    { tab: 4, name: "A相绕组",   value: 0.0, unit: "℃", exceeded: false },
-                    { tab: 5, name: "B相绕组",   value: 0.0, unit: "℃", exceeded: false },
-                    { tab: 6, name: "C相绕组",   value: 0.0, unit: "℃", exceeded: false },
+                    { tab: 4, name: "甲相绕组",   value: 0.0, unit: "℃", exceeded: false },
+                    { tab: 5, name: "乙相绕组",   value: 0.0, unit: "℃", exceeded: false },
+                    { tab: 6, name: "丙相绕组",   value: 0.0, unit: "℃", exceeded: false },
                     { tab: 7, name: "电机温度",   value: 0.0, unit: "℃", exceeded: false },
-                    { tab: 8, name: "X轴振动",   value: 0.0, unit: "mm/s", exceeded: false },
-                    { tab: 9, name: "Y轴振动",   value: 0.0, unit: "mm/s", exceeded: false }
+                    { tab: 8, name: "水平振动",   value: 0.0, unit: "mm/s", exceeded: false },
+                    { tab: 9, name: "垂直振动",   value: 0.0, unit: "mm/s", exceeded: false }
                 ]
 
                 // 接收 MqttProtectionMonitor 的 motorValueUpdated 信号

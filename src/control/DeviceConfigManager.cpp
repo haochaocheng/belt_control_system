@@ -1449,6 +1449,30 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移018已执行过，跳过";
     }
+
+    // ✅ 2026-03-13 [Phase 7.48.43]: 迁移019 - 重命名电机保护参数（英文→中文，TTS兼容）
+    query.exec("SELECT version FROM schema_migrations WHERE version = '019_rename_motor_protections_cn'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移019: 重命名电机保护参数为中文...";
+        QSqlQuery fix(m_database);
+        // A/B/C相绕组 → 甲/乙/丙相绕组（TTS无法播报英文字母）
+        fix.exec("UPDATE device_motor_config SET protection_name = '甲相绕组' WHERE protection_name = 'A相绕组'");
+        int r1 = fix.numRowsAffected();
+        fix.exec("UPDATE device_motor_config SET protection_name = '乙相绕组' WHERE protection_name = 'B相绕组'");
+        int r2 = fix.numRowsAffected();
+        fix.exec("UPDATE device_motor_config SET protection_name = '丙相绕组' WHERE protection_name = 'C相绕组'");
+        int r3 = fix.numRowsAffected();
+        // X/Y轴振动 → 水��/垂直振动
+        fix.exec("UPDATE device_motor_config SET protection_name = '水平振动' WHERE protection_name = 'X轴振动'");
+        int r4 = fix.numRowsAffected();
+        fix.exec("UPDATE device_motor_config SET protection_name = '垂直振动' WHERE protection_name = 'Y轴振动'");
+        int r5 = fix.numRowsAffected();
+        qDebug() << "  ✅ 迁移019: 重命名完成 甲相:" << r1 << "乙相:" << r2 << "丙相:" << r3
+                 << "水平振动:" << r4 << "垂直振动:" << r5;
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('019_rename_motor_protections_cn')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移019已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2417,17 +2441,21 @@ bool DeviceConfigManager::initDefaultMotorConfigs(int deviceId)
         // Tab 3: 后轴承温度
         {"后轴承温度",  "℃",   60,  0,   150,  "PT100热电阻",   50,  10.0, 3, true},
         // Tab 4: A相绕组
-        {"A相绕组",     "℃",   130, 0,   200,  "PT100热电阻",   50,  10.0, 3, false},
+        // ✅ 2026-03-13 [Phase 7.48.43]: 改为中文名称，TTS无法播报英文字母
+        // 旧：{"A相绕组", ...}  {"B相绕组", ...}  {"C相绕组", ...}
+        {"甲相绕组",    "℃",   130, 0,   200,  "PT100热电阻",   50,  10.0, 3, false},
         // Tab 5: B相绕组
-        {"B相绕组",     "℃",   130, 0,   200,  "PT100热电阻",   50,  10.0, 3, false},
+        {"乙相绕组",    "℃",   130, 0,   200,  "PT100热电阻",   50,  10.0, 3, false},
         // Tab 6: C相绕组
-        {"C相绕组",     "℃",   130, 0,   200,  "PT100热电阻",   50,  10.0, 3, false},
+        {"丙相绕组",    "℃",   130, 0,   200,  "PT100热电阻",   50,  10.0, 3, false},
         // Tab 7: 电机温度
         {"电机温度",    "℃",   80,  0,   150,  "PT100热电阻",   50,  10.0, 2, true},
         // Tab 8: X轴振动
-        {"X轴振动",     "mm/s", 7,   0,   20,   "4-20mA电流型",  100, 20.0, 2, false},
+        // ✅ 2026-03-13 [Phase 7.48.43]: 改为中文名称，TTS无法播报英文字母
+        // 旧：{"X轴振动", ...}  {"Y轴振动", ...}
+        {"水平振动",    "mm/s", 7,   0,   20,   "4-20mA电流型",  100, 20.0, 2, false},
         // Tab 9: Y轴振动
-        {"Y轴振动",     "mm/s", 7,   0,   20,   "4-20mA电流型",  100, 20.0, 2, false},
+        {"垂直振动",    "mm/s", 7,   0,   20,   "4-20mA电流型",  100, 20.0, 2, false},
         // Tab 10: 堵转保护（新增）
         {"堵转保护",    "A",    500, 0,   1000, "4-20mA电流型",  80,  5.0,  3, false},
         // Tab 11: 起动超时（新增）

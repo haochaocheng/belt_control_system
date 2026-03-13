@@ -140,7 +140,7 @@ Rectangle {
                     spacing: 5
 
                     Repeater {
-                        model: ["基本配置", "电流保护", "前轴承温度", "后轴承温度", "A相绕组", "B相绕组", "C相绕组", "电机温度", "X轴振动"]
+                        model: ["基本配置", "电流保护", "前轴承温度", "后轴承温度", "甲相绕组", "乙相绕组", "丙相绕组", "电机温度", "水平振动"]
                         delegate: Rectangle {
                             Layout.fillWidth: true
                             Layout.fillHeight: true

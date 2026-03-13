@@ -802,7 +802,10 @@ void MqttProtectionMonitor::onMotorRegisterReceived(int motorIndex, int tabIndex
         // ===== 正常→超限（触发报警）=====
         m_motorProtectionAlarmActive[alarmKey] = true;
 
-        QString displayName = QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName);
+        // ✅ 2026-03-13 [Phase 7.48.43]: displayName加皮带号，TTS播报更完整
+        // 旧：QString displayName = QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName);
+        QString displayName = QString("%1号皮带%2号电机%3")
+            .arg(beltNumber).arg(motorIndex + 1).arg(protectionName);
         qWarning() << "🔴 [电机保护] " << displayName << limitType
                    << "当前值:" << engineeringValue << unit
                    << "上限:" << upperLimit << "下限:" << lowerLimit
@@ -836,7 +839,10 @@ void MqttProtectionMonitor::onMotorRegisterReceived(int motorIndex, int tabIndex
         // ===== 超限→正常（恢复）=====
         m_motorProtectionAlarmActive[alarmKey] = false;
 
-        QString displayName = QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName);
+        // ✅ 2026-03-13 [Phase 7.48.43]: displayName加皮带号
+        // 旧：QString displayName = QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName);
+        QString displayName = QString("%1号皮带%2号电机%3")
+            .arg(beltNumber).arg(motorIndex + 1).arg(protectionName);
         qDebug() << "🟢 [电机保护] " << displayName << "恢复正常"
                  << "当前值:" << engineeringValue << unit;
 
