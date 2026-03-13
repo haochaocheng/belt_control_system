@@ -814,7 +814,21 @@ void MqttProtectionMonitor::onMotorRegisterReceived(int motorIndex, int tabIndex
         // 触发报警播放
         if (m_alarmPlaybackService) {
             bool useTTS = config.value("use_text_to_speech", false).toBool();
-            QString audioFile = config.value("audio_file", "").toString();
+            // ✅ 2026-03-13 [Phase 7.48.43]: 使用AudioPathMapper生成预生成音频路径
+            // 音频文件名格式：X号电机+描述（如"1号电机甲相绕组温度过高"）
+            // 映射保护名→音频文件描述后缀
+            QString audioDesc;
+            if (protectionName.contains("绕组"))       audioDesc = protectionName + "温度过高";
+            else if (protectionName.contains("轴承"))   audioDesc = protectionName + "过高";
+            else if (protectionName.contains("振动"))   audioDesc = protectionName + "过大";
+            else if (protectionName.contains("电流"))   audioDesc = "电流过载";
+            else if (protectionName.contains("电机温度")) audioDesc = "温度过高";
+            else                                        audioDesc = protectionName;
+
+            QString motorAudioName = QString("%1号电机%2").arg(motorIndex + 1).arg(audioDesc);
+            QString audioFile = m_audioPathMapper->getAudioPath(beltNumber, motorAudioName);
+            qDebug() << "🔊 [电机保护] 音频路径:" << audioFile;
+
             QString ttsText = config.value("tts_text", "").toString();
             QString playMode = config.value("play_mode", "count").toString();
             int playCount = config.value("play_count", 3).toInt();
