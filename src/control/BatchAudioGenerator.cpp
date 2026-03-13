@@ -715,19 +715,20 @@ void BatchAudioGenerator::generateBeltOperationTasks(const EngineConfig &engine)
             m_tasks.append(task);
         }
 
-        // 电机运行失败：每台电机1个
-        for (int motorNum : m_motorNumbers) {
-            FileTask task;
-            task.category = "beltOperation";
-            task.text = QString("%1号电机运行失败").arg(motorNum);
-            task.outputPath = QString("%1%2号电机运行失败.wav").arg(outputDir).arg(motorNum);
-            task.engineName = engine.engineName;
-            task.modelName = engine.modelName;
-            task.speakerId = engine.speakerId;
-            task.rate = engine.rate;
-            task.volume = engine.volume;
-            m_tasks.append(task);
-        }
+        // 旧：电机运行失败：每台电机1个（已在DEFS中定义"电机%1失败"，此处重复且文件名不一致）
+        // ✅ 2026-03-13 [Phase 7.48.44]: 注释掉重复代码，避免生成"1号电机运行失败.wav"和"电机1失败.wav"两个文件
+        // for (int motorNum : m_motorNumbers) {
+        //     FileTask task;
+        //     task.category = "beltOperation";
+        //     task.text = QString("%1号电机运行失败").arg(motorNum);
+        //     task.outputPath = QString("%1%2号电机运行失败.wav").arg(outputDir).arg(motorNum);
+        //     task.engineName = engine.engineName;
+        //     task.modelName = engine.modelName;
+        //     task.speakerId = engine.speakerId;
+        //     task.rate = engine.rate;
+        //     task.volume = engine.volume;
+        //     m_tasks.append(task);
+        // }
 
         // 松闸运行失败：每台制动器1个
         for (int brakeNum : m_brakeNumbers) {

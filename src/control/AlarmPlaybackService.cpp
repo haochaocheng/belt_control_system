@@ -8,6 +8,7 @@
 #include <QCoreApplication>
 #include <QSettings>
 #include <QDir>
+#include <QFileInfo>  // ✅ 2026-03-13 [Phase 7.48.44]: TTS合成结果保存到正式路径
 #include <QCryptographicHash>
 
 AlarmPlaybackService::AlarmPlaybackService(QObject *parent)
@@ -256,6 +257,25 @@ void AlarmPlaybackService::playTtsText(const QString &ttsText)
         qDebug() << "🗣️  PaddleSpeech合成:" << ttsText;
         if (m_ttsEngineManager->synthesize(ttsText, tempFile, params)) {
             qDebug() << "✅ PaddleSpeech合成成功:" << tempFile;
+
+            // ✅ 2026-03-13 [Phase 7.48.44]: 合成成功后保存到正式音频路径，下次直接复用不再重复合成
+            QString targetPath = m_currentPlayback.audioFile;
+            if (!targetPath.isEmpty()) {
+                QFileInfo fi(targetPath);
+                QDir dir = fi.absoluteDir();
+                if (!dir.exists()) {
+                    dir.mkpath(".");
+                }
+                if (QFile::copy(tempFile, targetPath)) {
+                    qDebug() << "💾 AlarmPlaybackService: TTS合成结果已保存到正式路径:" << targetPath;
+                    playAudioFile(targetPath);
+                    QFile::remove(tempFile);
+                    return;
+                } else {
+                    qWarning() << "⚠️ AlarmPlaybackService: 保存到正式路径失败，使用临时文件:" << targetPath;
+                }
+            }
+
             playAudioFile(tempFile);
             // 播放完成后临时文件会在 onMediaPlayerStateChanged 中处理
             return;
