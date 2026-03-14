@@ -19,6 +19,9 @@ Rectangle {
     // ========== 公开属性 ==========
     property int deviceId: 1  // ✅ 2026-02-06 [参数持久化]: 设备ID（从父组件传递）
     property int brakeIndex: 0  // 当前制动器索引 (0-7)
+    // ✅ 2026-03-14 [Phase 7.48.45]: 新增松闸/抱闸反馈等待状态
+    property bool waitingForRelease: false  // 等待松闸到位反馈
+    property bool waitingForBrake: false    // 等待抱闸到位反馈
     // ✅ 2026-01-28 [虚拟键盘]: 键盘管理器属性（已废弃，保留兼容性）
     property var keyboardManager: null
     // ✅ 2026-01-31 [FIX 100.300.111]: Qt 虚拟键盘引用
@@ -160,7 +163,193 @@ Rectangle {
                     color: "#3d4556"
                 }
 
-                // ========== GridLayout 参数区域 ==========
+                // ========== 状态指示区域 ==========
+                // ✅ 2026-03-14 [Phase 7.48.45]: 新增松闸到位/抱闸到位 LED
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 10
+                    spacing: 30
+
+                    Text {
+                        text: "状态指示:"
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        color: "#E0E0E0"
+                    }
+
+                    // 松闸到位 LED
+                    Row {
+                        spacing: 6
+                        Rectangle {
+                            id: releasePositionLed
+                            width: 14; height: 14; radius: 7
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: "#475569"  // 灰色=未到位
+                            border.width: 1; border.color: "#1e3a5f"
+                        }
+                        Text {
+                            text: "松闸到位"
+                            font.pixelSize: 14; color: "#9E9E9E"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    // 抱闸到位 LED
+                    Row {
+                        spacing: 6
+                        Rectangle {
+                            id: brakePositionLed
+                            width: 14; height: 14; radius: 7
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: "#475569"  // 灰色=未到位
+                            border.width: 1; border.color: "#1e3a5f"
+                        }
+                        Text {
+                            text: "抱闸到位"
+                            font.pixelSize: 14; color: "#9E9E9E"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                }
+
+                // DI反馈通道值变化监听
+                Connections {
+                    target: typeof mqttController !== "undefined" ? mqttController : null
+                    function onBitChanged(moduleType, channel, value) {
+                        if (moduleType !== "di") return
+                        if (useReleaseFeedbackSwitch.checked && channel === releasePositionChannelSpin.value) {
+                            releasePositionLed.color = (value === 1) ? "#22c55e" : "#475569"
+                        }
+                        if (useBrakeFeedbackSwitch.checked && channel === brakePositionChannelSpin.value) {
+                            brakePositionLed.color = (value === 1) ? "#22c55e" : "#475569"
+                        }
+                    }
+                }
+
+                // ========== 分割线 ==========
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: "#3d4556"
+                }
+                // ========== 控制参数区域 ==========
+                // ✅ 2026-03-14 [Phase 7.48.45]: 新增输出通道、反馈开关、反馈通道、超时时间
+                GridLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
+                    columns: 4
+                    columnSpacing: 10
+                    rowSpacing: 12
+
+                    // ========== 行0：松闸输出通道（左）、抱闸输出通道（右）==========
+                    Text {
+                        text: "松闸输出通道:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.column: 0; Layout.row: 0; Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                    }
+                    DeviceInfo.CustomSpinBox {
+                        id: releaseOutputChannelSpin
+                        Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
+                        from: 0; to: 15; value: 0
+                    }
+                    Text {
+                        text: "抱闸输出通道:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.column: 2; Layout.row: 0; Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                    }
+                    DeviceInfo.CustomSpinBox {
+                        id: brakeOutputChannelSpin
+                        Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
+                        from: -1; to: 15; value: 0
+                    }
+
+                    // ========== 行1：使用松闸反馈（左）、使用抱闸反馈（右）==========
+                    Text {
+                        text: "使用松闸反馈:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.column: 0; Layout.row: 1; Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                    }
+                    Switch {
+                        id: useReleaseFeedbackSwitch
+                        Layout.column: 1; Layout.row: 1
+                        checked: false
+                    }
+                    Text {
+                        text: "使用抱闸反馈:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.column: 2; Layout.row: 1; Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                    }
+                    Switch {
+                        id: useBrakeFeedbackSwitch
+                        Layout.column: 3; Layout.row: 1
+                        checked: false
+                    }
+
+                    // ========== 行2：松闸反馈通道（左）、抱闸反馈通道（右）==========
+                    Text {
+                        text: "松闸反馈通道:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.column: 0; Layout.row: 2; Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                        opacity: useReleaseFeedbackSwitch.checked ? 1.0 : 0.4
+                    }
+                    DeviceInfo.CustomSpinBox {
+                        id: releasePositionChannelSpin
+                        Layout.column: 1; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
+                        from: 0; to: 15; value: 0
+                        enabled: useReleaseFeedbackSwitch.checked
+                        opacity: useReleaseFeedbackSwitch.checked ? 1.0 : 0.4
+                    }
+                    Text {
+                        text: "抱闸反馈通道:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.column: 2; Layout.row: 2; Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                        opacity: useBrakeFeedbackSwitch.checked ? 1.0 : 0.4
+                    }
+                    DeviceInfo.CustomSpinBox {
+                        id: brakePositionChannelSpin
+                        Layout.column: 3; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
+                        from: 0; to: 15; value: 0
+                        enabled: useBrakeFeedbackSwitch.checked
+                        opacity: useBrakeFeedbackSwitch.checked ? 1.0 : 0.4
+                    }
+
+                    // ========== 行3：松闸反馈超时（左）、抱闸反馈超时（右）==========
+                    Text {
+                        text: "松闸反馈超时:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.column: 0; Layout.row: 3; Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                        opacity: useReleaseFeedbackSwitch.checked ? 1.0 : 0.4
+                    }
+                    DeviceInfo.CustomSpinBox {
+                        id: releaseTimeoutSpin
+                        Layout.column: 1; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
+                        from: 1; to: 60; value: 10
+                        enabled: useReleaseFeedbackSwitch.checked
+                        opacity: useReleaseFeedbackSwitch.checked ? 1.0 : 0.4
+                    }
+                    Text {
+                        text: "抱闸反馈超时:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.column: 2; Layout.row: 3; Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                        opacity: useBrakeFeedbackSwitch.checked ? 1.0 : 0.4
+                    }
+                    DeviceInfo.CustomSpinBox {
+                        id: brakeTimeoutSpin
+                        Layout.column: 3; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
+                        from: 1; to: 60; value: 10
+                        enabled: useBrakeFeedbackSwitch.checked
+                        opacity: useBrakeFeedbackSwitch.checked ? 1.0 : 0.4
+                    }
+                }
+
+                // ========== 分割线 ==========
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: "#3d4556"
+                }
+
                 // ✅ 2026-01-31 [FIX 100.300.111]: 改为 GridLayout 4列布局，与 AnalogInputPage 保持一致
                 // ❌ 2026-01-31 [注释]: 移除旧的 RowLayout 两列布局（Line 140-381）
                 // 原因：统一界面布局风格，提高代码可维护性，优化参数字段的视觉对齐
@@ -539,113 +728,240 @@ Rectangle {
 
                 }  // GridLayout 结束
 
-                // ========== 底部按钮区域 ==========
-                // ✅ 2026-01-31 [FIX 100.300.111]: 添加焦点指示器，与 MotorControlPage 保持一致
+                // ========== 语音配置区域 ==========
+                // ✅ 2026-03-14 [Phase 7.48.45]: 新增松闸预警/松闸失败/抱闸失败语音
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: "#3d4556"
+                }
+
+                GridLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
+                    columns: 2
+                    columnSpacing: 10
+                    rowSpacing: 12
+
+                    Text {
+                        text: "松闸预警语音:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                    }
+                    DeviceInfo.CustomTextField {
+                        id: releaseWarningVoiceField
+                        Layout.fillWidth: true
+                        keyboardManager: root.keyboardManager
+                        text: "制动器" + (root.brakeIndex + 1) + "松闸"
+                        placeholderText: "松闸预警音频文件名"
+                    }
+
+                    Text {
+                        text: "松闸失败语音:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                    }
+                    DeviceInfo.CustomTextField {
+                        id: releaseFailureVoiceField
+                        Layout.fillWidth: true
+                        keyboardManager: root.keyboardManager
+                        text: "制动器" + (root.brakeIndex + 1) + "松闸失败"
+                        placeholderText: "松闸失败音频文件名"
+                    }
+
+                    Text {
+                        text: "抱闸失败语音:"; font.pixelSize: 21; color: "#9E9E9E"
+                        Layout.preferredWidth: 160
+                        horizontalAlignment: Text.AlignRight
+                    }
+                    DeviceInfo.CustomTextField {
+                        id: brakeFailureVoiceField
+                        Layout.fillWidth: true
+                        keyboardManager: root.keyboardManager
+                        text: "制动器" + (root.brakeIndex + 1) + "抱闸失败"
+                        placeholderText: "抱闸失败音频文件名"
+                    }
+                }
+
+                // ========== 底部操作按钮区域 ==========
+                // ✅ 2026-03-14 [Phase 7.48.45]: 替换保存/重置为松闸/抱闸/停止
+                // 旧：保存和重置按钮（已在右上角，此处不再重复）
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: "#3d4556"
+                }
+
+                // 松闸反馈超时Timer
+                Timer {
+                    id: releaseTimeoutTimer
+                    interval: releaseTimeoutSpin.value * 1000
+                    repeat: false
+                    onTriggered: {
+                        console.log("⚠️ [BrakeConfigPanel] 制动器", (root.brakeIndex + 1), "松闸反馈超时！")
+                        root.waitingForRelease = false
+                        // 自动抱闸
+                        var ch = releaseOutputChannelSpin.value
+                        var topic = "belt_control/do/module1/cmd"
+                        var cmd = JSON.stringify({"action": "set", "channel": ch, "value": 0})
+                        if (typeof mqttController !== "undefined") {
+                            mqttController.publish(topic, cmd, 1, false)
+                            console.log("🛑 [BrakeConfigPanel] 松闸失败，自动抱闸 通道:", ch)
+                        }
+                        // 播放松闸失败语音
+                        if (typeof alarmPlayback !== "undefined") {
+                            var beltNum = 1
+                            var audioPath = buildAudioPath(beltNum, releaseFailureVoiceField.text)
+                            var ttsText = beltNum + "号皮带" + (root.brakeIndex + 1) + "号制动器松闸失败"
+                            alarmPlayback.playAlarm(releaseFailureVoiceField.text, ttsText, audioPath, true, "count", 3, 5)
+                        }
+                    }
+                }
+
+                // 抱闸反馈超时Timer
+                Timer {
+                    id: brakeTimeoutTimer
+                    interval: brakeTimeoutSpin.value * 1000
+                    repeat: false
+                    onTriggered: {
+                        console.log("⚠️ [BrakeConfigPanel] 制动器", (root.brakeIndex + 1), "抱闸反馈超时！")
+                        root.waitingForBrake = false
+                        // 自动松闸释放（通道置0）
+                        var brCh = brakeOutputChannelSpin.value
+                        if (brCh >= 0) {
+                            var topic2 = "belt_control/do/module1/cmd"
+                            var cmd2 = JSON.stringify({"action": "set", "channel": brCh, "value": 0})
+                            if (typeof mqttController !== "undefined") {
+                                mqttController.publish(topic2, cmd2, 1, false)
+                                console.log("🛑 [BrakeConfigPanel] 抱闸失败，自动释放 通道:", brCh)
+                            }
+                        }
+                        // 播放抱闸失败语音
+                        if (typeof alarmPlayback !== "undefined") {
+                            var beltNum2 = 1
+                            var audioPath2 = buildAudioPath(beltNum2, brakeFailureVoiceField.text)
+                            var ttsText2 = beltNum2 + "号皮带" + (root.brakeIndex + 1) + "号制动器抱闸失败"
+                            alarmPlayback.playAlarm(brakeFailureVoiceField.text, ttsText2, audioPath2, true, "count", 3, 5)
+                        }
+                    }
+                }
+
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.topMargin: 20
                     spacing: 15
 
-                    // 保存按钮（索引 0）
-                    Item {
-                        Layout.preferredWidth: 100
-                        Layout.preferredHeight: 40
-
-                        // 焦点指示器
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "transparent"
-                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? 5 : 0
-                            radius: 4
-                            z: 10
+                    // 松闸按钮
+                    Button {
+                        Layout.preferredWidth: 120
+                        Layout.preferredHeight: 45
+                        text: "松 闸"
+                        font.pixelSize: 16; font.bold: true
+                        background: Rectangle {
+                            color: parent.pressed ? "#1565C0" : (parent.hovered ? "#1976D2" : "#1E88E5")
+                            radius: 6
                         }
-
-                        Button {
-                            anchors.fill: parent
-                            text: "保存"
-                            font.pixelSize: 14
-
-                            background: Rectangle {
-                                // 焦点时背景色更亮
-                                color: {
-                                    if (root.focusSubArea === 3 && root.focusButtonIndex === 0) {
-                                        return "#2ecc71"  // 焦点时：亮绿色
-                                    } else if (parent.pressed) {
-                                        return "#1976D2"
-                                    } else if (parent.hovered) {
-                                        return "#2196F3"
-                                    } else {
-                                        return "#1E88E5"
-                                    }
-                                }
-                                radius: 4
+                        contentItem: Text {
+                            text: parent.text; font: parent.font; color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: {
+                            console.log("🔓 [BrakeConfigPanel] 松闸 制动器", (root.brakeIndex + 1))
+                            // 播放预警语音
+                            if (releaseWarningVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
+                                var beltNum = 1
+                                var audioPath = buildAudioPath(beltNum, releaseWarningVoiceField.text)
+                                var ttsText = beltNum + "号皮带" + (root.brakeIndex + 1) + "号制动器准备松闸，请注意安全"
+                                alarmPlayback.playAlarm(releaseWarningVoiceField.text, ttsText, audioPath, true, "count", 1, 5)
                             }
-
-                            contentItem: Text {
-                                text: parent.text
-                                font: parent.font
-                                color: "#FFFFFF"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
+                            // 发送松闸命令
+                            var ch = releaseOutputChannelSpin.value
+                            var topic = "belt_control/do/module1/cmd"
+                            var cmd = JSON.stringify({"action": "set", "channel": ch, "value": 1})
+                            if (typeof mqttController !== "undefined") {
+                                mqttController.publish(topic, cmd, 1, false)
+                                console.log("🔓 [BrakeConfigPanel] 松闸命令已发送 通道:", ch)
                             }
-
-                            onClicked: {
-                                console.log("保存制动器配置:", root.brakeIndex + 1)
-                                // ✅ 2026-02-06 [参数持久化]: 保存配置到数据库
-                                saveBrakeConfig()
+                            // 启动反馈超时检测
+                            if (useReleaseFeedbackSwitch.checked) {
+                                root.waitingForRelease = true
+                                releaseTimeoutTimer.restart()
                             }
                         }
                     }
 
-                    // 重置按钮（索引 1）
-                    Item {
-                        Layout.preferredWidth: 100
-                        Layout.preferredHeight: 40
-
-                        // 焦点指示器
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "transparent"
-                            border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? "#2196F3" : "transparent"
-                            border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? 5 : 0
-                            radius: 4
-                            z: 10
+                    // 抱闸按钮
+                    Button {
+                        Layout.preferredWidth: 120
+                        Layout.preferredHeight: 45
+                        text: "抱 闸"
+                        font.pixelSize: 16; font.bold: true
+                        background: Rectangle {
+                            color: parent.pressed ? "#c62828" : (parent.hovered ? "#d32f2f" : "#e53935")
+                            radius: 6
                         }
-
-                        Button {
-                            anchors.fill: parent
-                            text: "重置"
-                            font.pixelSize: 14
-
-                            background: Rectangle {
-                                // 焦点时背景色更亮
-                                color: {
-                                    if (root.focusSubArea === 3 && root.focusButtonIndex === 1) {
-                                        return "#95a5a6"  // 焦点时：亮灰色
-                                    } else if (parent.pressed) {
-                                        return "#616161"
-                                    } else if (parent.hovered) {
-                                        return "#757575"
-                                    } else {
-                                        return "#9E9E9E"
-                                    }
-                                }
-                                radius: 4
+                        contentItem: Text {
+                            text: parent.text; font: parent.font; color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: {
+                            console.log("🔒 [BrakeConfigPanel] 抱闸 制动器", (root.brakeIndex + 1))
+                            // 松闸通道置0
+                            var relCh = releaseOutputChannelSpin.value
+                            var topic = "belt_control/do/module1/cmd"
+                            var cmd1 = JSON.stringify({"action": "set", "channel": relCh, "value": 0})
+                            if (typeof mqttController !== "undefined") {
+                                mqttController.publish(topic, cmd1, 1, false)
                             }
-
-                            contentItem: Text {
-                                text: parent.text
-                                font: parent.font
-                                color: "#FFFFFF"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
+                            // 如果有独立抱闸通道
+                            var brCh = brakeOutputChannelSpin.value
+                            if (brCh >= 0 && brCh !== relCh) {
+                                var cmd2 = JSON.stringify({"action": "set", "channel": brCh, "value": 1})
+                                mqttController.publish(topic, cmd2, 1, false)
                             }
-
-                            onClicked: {
-                                console.log("重置制动器配置:", root.brakeIndex + 1)
-                                // TODO: 重置为默认值
+                            console.log("🔒 [BrakeConfigPanel] 抱闸命令已发送")
+                            // 启动反馈超时检测
+                            if (useBrakeFeedbackSwitch.checked) {
+                                root.waitingForBrake = true
+                                brakeTimeoutTimer.restart()
                             }
+                        }
+                    }
+
+                    // 停止按钮
+                    Button {
+                        Layout.preferredWidth: 120
+                        Layout.preferredHeight: 45
+                        text: "停 止"
+                        font.pixelSize: 16; font.bold: true
+                        background: Rectangle {
+                            color: parent.pressed ? "#424242" : (parent.hovered ? "#616161" : "#757575")
+                            radius: 6
+                        }
+                        contentItem: Text {
+                            text: parent.text; font: parent.font; color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: {
+                            console.log("⏹️ [BrakeConfigPanel] 停止 制动器", (root.brakeIndex + 1))
+                            releaseTimeoutTimer.stop()
+                            brakeTimeoutTimer.stop()
+                            root.waitingForRelease = false
+                            root.waitingForBrake = false
+                            var topic = "belt_control/do/module1/cmd"
+                            // 松闸通道置0
+                            var cmd1 = JSON.stringify({"action": "set", "channel": releaseOutputChannelSpin.value, "value": 0})
+                            if (typeof mqttController !== "undefined") {
+                                mqttController.publish(topic, cmd1, 1, false)
+                            }
+                            // 抱闸通道置0
+                            var brCh = brakeOutputChannelSpin.value
+                            if (brCh >= 0) {
+                                var cmd2 = JSON.stringify({"action": "set", "channel": brCh, "value": 0})
+                                mqttController.publish(topic, cmd2, 1, false)
+                            }
+                            console.log("⏹️ [BrakeConfigPanel] 所有通道已置0")
                         }
                     }
                 }
@@ -778,6 +1094,16 @@ Rectangle {
             console.warn("⚠️ [BrakeConfigPanel] 未知的按钮索引:", buttonIndex)
             break
         }
+    }
+
+    // ========== 音频路径构建 ==========
+    // ✅ 2026-03-14 [Phase 7.48.45]: 构建预生成音频文件路径
+    function buildAudioPath(beltNum, fileName) {
+        if (typeof audioPathMapper !== "undefined") {
+            return audioPathMapper.getAudioPath(beltNum, fileName)
+        }
+        // 回退：手动拼接路径
+        return "/home/linaro/belt-control-data/audio/paddlespeech-fastspeech2_csmsc-spk0/" + beltNum + "#PD/" + fileName + ".wav"
     }
 
     // ========== 参数持久化函数 ==========
