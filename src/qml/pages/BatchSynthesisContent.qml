@@ -261,7 +261,9 @@ Rectangle {
                         Text { text: "制动器数量:"; color: "#cccccc"; Layout.preferredWidth: 80 }
                         SpinBox {
                             id: spinBrakeCount
-                            from: 1; to: 4; value: 4
+                            // 旧：from: 1; to: 4; value: 4
+                            // ✅ 2026-03-14 [Phase 7.48.45]: 制动器数量最大改为8
+                            from: 1; to: 8; value: 8
                             editable: true
                             Layout.fillWidth: true
                             Layout.preferredHeight: 35
@@ -868,7 +870,9 @@ Rectangle {
         // 旧：spinMotorCount.value = TTSConfig.getValue("batch/motorCount", 4)
         // ✅ 2026-03-13 [Phase 7.48.44]: 默认电机数量改为8（覆盖全部电机）
         spinMotorCount.value = TTSConfig.getValue("batch/motorCount", 8)
-        spinBrakeCount.value = TTSConfig.getValue("batch/brakeCount", 4)
+        // 旧：spinBrakeCount.value = TTSConfig.getValue("batch/brakeCount", 4)
+        // ✅ 2026-03-14 [Phase 7.48.45]: 默认制动器数量改为8
+        spinBrakeCount.value = TTSConfig.getValue("batch/brakeCount", 8)
         spinTensionCount.value = TTSConfig.getValue("batch/tensionCount", 2)
         spinLineStart.value = TTSConfig.getValue("batch/lineStart", 1)
         spinLineEnd.value = TTSConfig.getValue("batch/lineEnd", 64)
