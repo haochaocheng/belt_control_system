@@ -250,7 +250,9 @@ Rectangle {
                         Text { text: "电机数量:"; color: "#cccccc"; Layout.preferredWidth: 80 }
                         SpinBox {
                             id: spinMotorCount
-                            from: 1; to: 4; value: 4
+                            // 旧：from: 1; to: 4; value: 4
+                            // ✅ 2026-03-14 [Phase 7.48.44]: 电机数量最大改为8
+                            from: 1; to: 8; value: 8
                             editable: true
                             Layout.fillWidth: true
                             Layout.preferredHeight: 35
