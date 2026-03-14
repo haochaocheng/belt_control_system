@@ -665,12 +665,16 @@ Rectangle {
         // ✅ 2026-03-11 [Phase 7.48.37]: 从14个扩展到15个（+启动预警）
         // 旧：if (chkMotor.checked) total += 14 * beltCount * motorCount
         if (chkMotor.checked) total += 15 * beltCount * motorCount   // 电机：15个/皮带/电机
-        if (chkBrake.checked) total += 3 * beltCount * brakeCount    // 制动器：3个/皮带/制动器
+        // 旧：if (chkBrake.checked) total += 3 * beltCount * brakeCount    // 制动器：3个/皮带/制动器
+        // ✅ 2026-03-14 [Phase 7.48.45]: 制动器从3种扩展到6种（新增松闸预警/松闸失败/抱闸失败）
+        if (chkBrake.checked) total += 6 * beltCount * brakeCount    // 制动器：6个/皮带/制动器
         if (chkTension.checked) total += 3 * beltCount * tensionCount // 张紧：3个/皮带/张紧
         if (chkLinePosition.checked) total += 3 * lineCount * beltCount // 沿线：3个/皮带/点位
         if (chkSystemSound.checked) total += 16                       // 系统提示音：16个
         // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
-        if (chkBeltOperation.checked) total += (5 + motorCount + brakeCount + tensionCount) * beltCount  // 皮带操作：(5+电机+制动器+张紧)/皮带
+        // 旧：if (chkBeltOperation.checked) total += (5 + motorCount + brakeCount + tensionCount) * beltCount
+        // ✅ 2026-03-14 [Phase 7.48.45]: 松闸运行失败已移到制动器DEFS，电机运行失败已移到电机DEFS
+        if (chkBeltOperation.checked) total += (5 + tensionCount) * beltCount  // 皮带操作：(5+张紧)/皮带
         if (chkSystemStatus.checked) total += 7 * beltCount            // 系统/通讯状态：7个/皮带
         // ✅ 2026-03-02 [Phase 7.47.69]: 模块在线状态：5个固定文件（不绑定皮带号）
         if (chkModuleStatus.checked) total += 5
