@@ -520,6 +520,10 @@ void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
         {"%1号皮带%2号制动器温度过高保护", "%1号制动器温度过高"},
         {"%1号皮带%2号制动器压力异常保护", "%1号制动器压力异常"},
         {"%1号皮带%2号制动器故障保护",     "%1号制动器故障"},
+        // ✅ 2026-03-14 [Phase 7.48.45]: 新增松闸预警、松闸失败、抱闸失败
+        {"%1号皮带%2号制动器准备松闸，请注意安全", "制动器%1松闸"},
+        {"%1号皮带%2号制动器松闸失败",             "制动器%1松闸失败"},
+        {"%1号皮带%2号制动器抱闸失败",             "制动器%1抱闸失败"},
     };
 
     for (int beltNum : m_beltNumbers) {
@@ -730,19 +734,20 @@ void BatchAudioGenerator::generateBeltOperationTasks(const EngineConfig &engine)
         //     m_tasks.append(task);
         // }
 
-        // 松闸运行失败：每台制动器1个
-        for (int brakeNum : m_brakeNumbers) {
-            FileTask task;
-            task.category = "beltOperation";
-            task.text = QString("%1号松闸运行失败").arg(brakeNum);
-            task.outputPath = QString("%1%2号松闸运行失败.wav").arg(outputDir).arg(brakeNum);
-            task.engineName = engine.engineName;
-            task.modelName = engine.modelName;
-            task.speakerId = engine.speakerId;
-            task.rate = engine.rate;
-            task.volume = engine.volume;
-            m_tasks.append(task);
-        }
+        // 旧：松闸运行失败（已在DEFS中定义"制动器X松闸失败"，此处重复且文件名不一致）
+        // ✅ 2026-03-14 [Phase 7.48.45]: 注释掉重复代码
+        // for (int brakeNum : m_brakeNumbers) {
+        //     FileTask task;
+        //     task.category = "beltOperation";
+        //     task.text = QString("%1号松闸运行失败").arg(brakeNum);
+        //     task.outputPath = QString("%1%2号松闸运行失败.wav").arg(outputDir).arg(brakeNum);
+        //     task.engineName = engine.engineName;
+        //     task.modelName = engine.modelName;
+        //     task.speakerId = engine.speakerId;
+        //     task.rate = engine.rate;
+        //     task.volume = engine.volume;
+        //     m_tasks.append(task);
+        // }
 
         // 张紧运行失败：每台张紧1个
         for (int tensionNum : m_tensionNumbers) {
