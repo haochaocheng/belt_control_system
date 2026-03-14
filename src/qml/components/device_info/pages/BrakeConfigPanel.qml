@@ -91,33 +91,44 @@ Rectangle {
 
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
 
-        // ========== 行3-5：原有参数（8列GridLayout对齐） ==========
+        // ========== 行3-5：原有参数（4列GridLayout，每列=Row(标签+输入框)） ==========
         GridLayout {
-            Layout.fillWidth: true; columns: 8; columnSpacing: 4; rowSpacing: 6
+            Layout.fillWidth: true; columns: 4; columnSpacing: 4; rowSpacing: 6
             // 行3
-            Text { text: "抱闸保持:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: holdTimeField; Layout.preferredWidth: root.fldW; text: "0"; keyboardManager: root.keyboardManager }
-            Text { text: "松闸保持:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: releaseTimeField; Layout.preferredWidth: root.fldW; text: "0"; keyboardManager: root.keyboardManager }
-            Text { text: "抱闸动作延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: brakeDelayField; Layout.preferredWidth: root.fldW; text: "0"; keyboardManager: root.keyboardManager }
-            Text { text: "抱闸释放延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: releaseDelayField; Layout.preferredWidth: root.fldW; text: "0"; keyboardManager: root.keyboardManager }
+            Row { spacing: 2; Layout.fillWidth: true
+                Text { text: "抱闸保持:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
+                DeviceInfo.CustomTextField { id: holdTimeField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
+            Row { spacing: 2; Layout.fillWidth: true
+                Text { text: "松闸保持:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
+                DeviceInfo.CustomTextField { id: releaseTimeField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
+            Row { spacing: 2; Layout.fillWidth: true
+                Text { text: "抱闸动作延时:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
+                DeviceInfo.CustomTextField { id: brakeDelayField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
+            Row { spacing: 2; Layout.fillWidth: true
+                Text { text: "抱闸释放延时:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
+                DeviceInfo.CustomTextField { id: releaseDelayField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
             // 行4
-            Text { text: "抱闸检测延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: detectDelayField; Layout.preferredWidth: root.fldW; text: "0"; keyboardManager: root.keyboardManager }
-            Text { text: "抱闸故障延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: faultDelayField; Layout.preferredWidth: root.fldW; text: "0"; keyboardManager: root.keyboardManager }
-            Text { text: "抱闸动作电流:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: brakeCurrentField; Layout.preferredWidth: root.fldW; text: "0"; keyboardManager: root.keyboardManager }
-            Text { text: "抱闸释放电流:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: releaseCurrentField; Layout.preferredWidth: root.fldW; text: "0"; keyboardManager: root.keyboardManager }
+            Row { spacing: 2; Layout.fillWidth: true
+                Text { text: "抱闸检测延时:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
+                DeviceInfo.CustomTextField { id: detectDelayField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
+            Row { spacing: 2; Layout.fillWidth: true
+                Text { text: "抱闸故障延时:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
+                DeviceInfo.CustomTextField { id: faultDelayField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
+            Row { spacing: 2; Layout.fillWidth: true
+                Text { text: "抱闸动作电流:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
+                DeviceInfo.CustomTextField { id: brakeCurrentField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
+            Row { spacing: 2; Layout.fillWidth: true
+                Text { text: "抱闸释放电流:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
+                DeviceInfo.CustomTextField { id: releaseCurrentField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
             // 行5
-            Text { text: "抱闸动作电压:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: brakeVoltageField; Layout.preferredWidth: root.fldW; text: "0"; keyboardManager: root.keyboardManager }
-            Text { text: "抱闸释放电压:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: releaseVoltageField; Layout.preferredWidth: root.fldW; text: "0"; keyboardManager: root.keyboardManager }
-            Item { Layout.columnSpan: 4; Layout.fillWidth: true }
+            Row { spacing: 2; Layout.fillWidth: true
+                Text { text: "抱闸动作电压:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
+                DeviceInfo.CustomTextField { id: brakeVoltageField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
+            Row { spacing: 2; Layout.fillWidth: true
+                Text { text: "抱闸释放电压:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
+                DeviceInfo.CustomTextField { id: releaseVoltageField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
+            Item { Layout.fillWidth: true }
+            Item { Layout.fillWidth: true }
         }
 
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
