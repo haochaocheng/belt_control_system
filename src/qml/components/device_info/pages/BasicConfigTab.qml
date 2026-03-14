@@ -1581,6 +1581,13 @@ Rectangle {
     function applyConfig(config) {
         console.log("✅ [BasicConfigTab] 应用配置:", JSON.stringify(config))
 
+        // ✅ 2026-03-14 [Phase 7.48.44]: 检查配置的motor_index是否匹配当前电机
+        // 原因：Qt.callLater竞态条件，切换电机时上一个电机的loadMotorConfig可能延迟执行
+        if (config["motor_index"] !== undefined && config["motor_index"] !== root.motorIndex) {
+            console.log("⚠️ [BasicConfigTab] 配置motor_index:", config["motor_index"], "≠ 当前motorIndex:", root.motorIndex, "，忽略")
+            return
+        }
+
         // 应用所有参数字段
         // 旧：config["module_address"]
         if (config["motor_module_address"] !== undefined) {
