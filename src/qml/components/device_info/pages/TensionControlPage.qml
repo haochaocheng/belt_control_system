@@ -160,59 +160,47 @@ Rectangle {
         // function moveInUsageStatusArea(direction) { ... }
 
         // 导航函数：参数区域
-        // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 左键和上键返回控制列表（无使用状态）
+        // 2026-03-17 [Phase 7.48.48]: 重写导航，17个参数(0-16)，匹配新8列GridLayout
+        // 行布局: A(0,1) B(2,3) C(4,5,6) D(7,8,9) E(10,11,12) F(13,14) G(15,16)
         function moveInParamArea(direction) {
             console.log("✅ [TensionControlPage] moveInParamArea - direction:", direction, "paramIndex:", paramIndex)
-            var newIndex = paramIndex
-            // 参数数量根据控制类型不同：张力传感器(14个) vs 独立张紧控制(待定)
-            var maxIndex = 13  // 暂定最大索引
+            var idx = paramIndex
+            var rows = [[0,2],[2,2],[4,3],[7,3],[10,3],[13,2],[15,2]]
+            var curRow = -1, colInRow = 0
+            for (var r = 0; r < rows.length; r++) {
+                if (idx >= rows[r][0] && idx < rows[r][0] + rows[r][1]) {
+                    curRow = r; colInRow = idx - rows[r][0]; break
+                }
+            }
+            if (curRow < 0) return
 
             switch(direction) {
             case "Left":
-                if (paramIndex % 2 === 1) {
-                    // 右列 → 左列
-                    newIndex = paramIndex - 1
-                } else {
-                    // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 左列最左，返回控制列表
-                    switchToArea(areaControlList)
-                    return
-                }
+                if (colInRow > 0) { paramIndex = idx - 1 }
+                else { switchToArea(areaControlList); return }
                 break
             case "Right":
-                if (paramIndex % 2 === 0 && paramIndex < maxIndex) {
-                    // 左列 → 右列
-                    newIndex = paramIndex + 1
-                }
+                if (colInRow < rows[curRow][1] - 1) { paramIndex = idx + 1 }
                 break
             case "Up":
-                if (paramIndex >= 2) {
-                    newIndex = paramIndex - 2
-                } else {
-                    // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 第一行，返回控制列表
-                    switchToArea(areaControlList)
-                    return
-                }
+                if (curRow > 0) {
+                    var prevRow = rows[curRow - 1]
+                    var targetCol = Math.min(colInRow, prevRow[1] - 1)
+                    paramIndex = prevRow[0] + targetCol
+                } else { switchToArea(areaControlList); return }
                 break
             case "Down":
-                if (paramIndex <= maxIndex - 2) {
-                    newIndex = paramIndex + 2
-                } else {
-                    // 最后一行，进入按钮区域
-                    switchToArea(areaButtons)
-                    buttonIndex = 0
-                    return
-                }
+                if (curRow < rows.length - 1) {
+                    var nextRow = rows[curRow + 1]
+                    var targetCol2 = Math.min(colInRow, nextRow[1] - 1)
+                    paramIndex = nextRow[0] + targetCol2
+                } else { switchToArea(areaButtons); buttonIndex = 0; return }
                 break
-            }
-
-            if (newIndex !== paramIndex && newIndex >= 0 && newIndex <= maxIndex) {
-                console.log("✅ [TensionControlPage] 更新 paramIndex:", paramIndex, "→", newIndex)
-                paramIndex = newIndex
             }
         }
 
-        // 导航函数：按钮区域（3个按钮，0-2）
-        // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 左键返回控制列表（无使用状态）
+        // 导航函数：按钮区域（2个按钮：启动/停止）
+        // 2026-03-16 [Phase 7.48.47]: 更新为启动/停止按钮（删除旧保存/重置）
         function moveInButtonArea(direction) {
             console.log("✅ [TensionControlPage] moveInButtonArea - direction:", direction, "buttonIndex:", buttonIndex)
             var newIndex = buttonIndex
@@ -222,20 +210,20 @@ Rectangle {
                 if (buttonIndex > 0) {
                     newIndex = buttonIndex - 1
                 } else {
-                    // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 最左，返回控制列表（无使用状态）
                     switchToArea(areaControlList)
                     return
                 }
                 break
             case "Right":
-                if (buttonIndex < 2) {
+                if (buttonIndex < 1) {
                     newIndex = buttonIndex + 1
                 }
                 break
             case "Up":
                 // 返回参数区域最后一个参数
+                // 2026-03-17 [Phase 7.48.48]: 从19改为16（匹配新布局17个参数）
                 switchToArea(areaParams)
-                paramIndex = 13  // 暂定
+                paramIndex = 16
                 return
             }
 
