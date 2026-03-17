@@ -122,6 +122,7 @@ Rectangle {
         Rectangle { Layout.fillWidth: true; height: 1; color: "#3d4556" }
 
         // ========== 音频来源 ==========
+        // ✅ 2026-03-17 [Phase 7.48.53]: 默认使用TTS（因为没有预录音频文件）
         RowLayout {
             Layout.fillWidth: true
             spacing: 16
@@ -129,13 +130,13 @@ Rectangle {
             Text { text: "音频来源:"; font.pixelSize: root.lblFs; color: root.lblC }
             ButtonGroup { id: audioSourceGroup }
             RadioButton {
-                id: audioDefaultRadio; text: "默认"; checked: true
+                id: audioDefaultRadio; text: "默认"
                 ButtonGroup.group: audioSourceGroup
                 enabled: tensionEnabledSwitch.checked
                 contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
             }
             RadioButton {
-                id: audioTtsRadio; text: "TTS"
+                id: audioTtsRadio; text: "TTS"; checked: true
                 ButtonGroup.group: audioSourceGroup
                 enabled: tensionEnabledSwitch.checked
                 contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
@@ -143,6 +144,7 @@ Rectangle {
         }
 
         // ========== 预警语音(4) + 失败语音(5) ==========
+        // ✅ 2026-03-17 [Phase 7.48.53]: 设置默认TTS文本
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
@@ -150,9 +152,9 @@ Rectangle {
             Text { text: "预警语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
             DeviceInfo.CustomTextField {
                 id: warningVoiceField
-                text: ""
+                text: "一号皮带张紧准备启动，请注意安全"
                 Layout.fillWidth: true
-                placeholderText: "预警语音文件名"
+                placeholderText: audioTtsRadio.checked ? "TTS文本" : "音频文件名"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
@@ -166,9 +168,9 @@ Rectangle {
             Text { text: "失败语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
             DeviceInfo.CustomTextField {
                 id: failureVoiceField
-                text: ""
+                text: "一号皮带张紧运行失败"
                 Layout.fillWidth: true
-                placeholderText: "失败语音文件名"
+                placeholderText: audioTtsRadio.checked ? "TTS文本" : "音频文件名"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
@@ -247,13 +249,13 @@ Rectangle {
         interval: startupDelaySpin.value * 1000
         repeat: false
         onTriggered: {
+            // ✅ 2026-03-17 [Phase 7.48.53]: 修复语音播放逻辑
             // 延时结束，播放预警语音
-            var warnPath = buildAudioPath(warningVoiceField.text)
-            if (warnPath !== "" && typeof audioPlayer !== "undefined") {
-                audioPlayer.play(warnPath)
-            }
+            playVoice(warningVoiceField.text, "预警")
+
             // 发送MQTT启动命令
             sendMqttCommand("start")
+
             // 如果使用反馈，启动反馈超时定时器
             if (useFeedbackSwitch.checked) {
                 feedbackTimeoutTimer.start()
@@ -270,11 +272,10 @@ Rectangle {
         repeat: false
         onTriggered: {
             console.log("✅ [TensionControlConfigPanel] 反馈超时")
+            // ✅ 2026-03-17 [Phase 7.48.53]: 修复语音播放逻辑
             // 播放失败语音
-            var failPath = buildAudioPath(failureVoiceField.text)
-            if (failPath !== "" && typeof audioPlayer !== "undefined") {
-                audioPlayer.play(failPath)
-            }
+            playVoice(failureVoiceField.text, "失败")
+
             // 停止张紧控制
             sendMqttCommand("stop")
             root.tensionOpened = false
@@ -284,6 +285,33 @@ Rectangle {
     // ========== 函数 ==========
 
     function getParamFieldCount() { return 6 }  // 参数索引 0-5
+
+    // ✅ 2026-03-17 [Phase 7.48.53]: 统一语音播放函数
+    // TTS模式：使用 commonControl.testTTS() 合成并播放
+    // 默认模式：使用 commonControl.playAudio() 播放音频文件
+    function playVoice(voiceText, label) {
+        if (!voiceText || voiceText === "") {
+            console.log("⚠️ [TensionControlConfigPanel]", label, "语音文本为空，跳过播放")
+            return
+        }
+
+        if (audioTtsRadio.checked) {
+            // TTS模式：使用 commonControl.testTTS 合成并播放
+            console.log("🗣️ [TensionControlConfigPanel] TTS播放" + label + "语音:", voiceText)
+            if (typeof commonControl !== "undefined") {
+                commonControl.testTTS(voiceText, 0, 0.9, 1.0)
+            } else {
+                console.log("⚠️ [TensionControlConfigPanel] commonControl 未定义")
+            }
+        } else {
+            // 默认模式：播放音频文件
+            var audioPath = buildAudioPath(voiceText)
+            console.log("🔊 [TensionControlConfigPanel] 播放" + label + "音频文件:", audioPath)
+            if (audioPath !== "" && typeof commonControl !== "undefined") {
+                commonControl.playAudio(audioPath)
+            }
+        }
+    }
 
     function buildAudioPath(filename) {
         if (!filename || filename === "") return ""
