@@ -75,13 +75,12 @@ Rectangle {
             Text { text: "单位:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             ComboBox {
-                id: unitCombo; Layout.preferredWidth: root.fldW
+                id: unitCombo; Layout.columnSpan: 3; Layout.fillWidth: true; Layout.minimumWidth: root.fldW
                 model: ["N", "kN", "kg", "t"]
                 enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4
                 // ✅ focusParamIndex: 1
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: "#4FC3F7"; border.width: 2; radius: 4; visible: root.focusSubArea === 1 && root.focusParamIndex === 1 }
             }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
 
             // ---- 分隔线 ----
             Rectangle { Layout.columnSpan: 8; Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
@@ -104,16 +103,12 @@ Rectangle {
             Text { text: "超时(秒):"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: (enabledSwitch.checked && useFeedbackSwitch.checked) ? 1.0 : 0.4 }
             DeviceInfo.CustomSpinBox {
-                id: feedbackTimeoutSpin; Layout.preferredWidth: root.fldW; from: 1; to: 60; value: 10
+                id: feedbackTimeoutSpin; Layout.columnSpan: 3; Layout.fillWidth: true; Layout.minimumWidth: root.fldW; from: 1; to: 60; value: 10
                 enabled: enabledSwitch.checked && useFeedbackSwitch.checked
                 opacity: (enabledSwitch.checked && useFeedbackSwitch.checked) ? 1.0 : 0.4
                 // ✅ focusParamIndex: 3
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: "#4FC3F7"; border.width: 2; radius: 4; visible: root.focusSubArea === 1 && root.focusParamIndex === 3 }
             }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
-
-            // ---- 分隔线 ----
-            Rectangle { Layout.columnSpan: 8; Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
 
             // ---- 分隔线 ----
             Rectangle { Layout.columnSpan: 8; Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
@@ -132,7 +127,8 @@ Rectangle {
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             ComboBox {
                 id: moduleTypeCombo; Layout.preferredWidth: root.fldW
-                model: ["无", "MCP3208", "ADS1115", "HX711"]
+                // 2026-03-17: 修正模块类型选项（原MCP3208/ADS1115/HX711错误）
+                model: ["无", "模拟量模块1", "模拟量模块2"]
                 enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4
                 // ✅ focusParamIndex: 5
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: "#4FC3F7"; border.width: 2; radius: 4; visible: root.focusSubArea === 1 && root.focusParamIndex === 5 }
@@ -140,12 +136,11 @@ Rectangle {
             Text { text: "寄存器地址:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomSpinBox {
-                id: registerAddressSpin; Layout.preferredWidth: root.fldW; from: 0; to: 65535; value: 0
+                id: registerAddressSpin; Layout.columnSpan: 3; Layout.fillWidth: true; Layout.minimumWidth: root.fldW; from: 0; to: 65535; value: 0
                 enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4
                 // ✅ focusParamIndex: 6
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: "#4FC3F7"; border.width: 2; radius: 4; visible: root.focusSubArea === 1 && root.focusParamIndex === 6 }
             }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
 
             // ---- 行3：保护延时 + 上限值 + 量程 ----
             Text { text: "保护延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
@@ -167,12 +162,11 @@ Rectangle {
             Text { text: "量程:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomSpinBox {
-                id: rangeSpin; Layout.preferredWidth: root.fldW; from: 0; to: 99999; value: 0
+                id: rangeSpin; Layout.columnSpan: 3; Layout.fillWidth: true; Layout.minimumWidth: root.fldW; from: 0; to: 99999; value: 0
                 enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4
                 // ✅ focusParamIndex: 9
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: "#4FC3F7"; border.width: 2; radius: 4; visible: root.focusSubArea === 1 && root.focusParamIndex === 9 }
             }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
 
             // ---- 行4：额定值 + 播放次数 + 播放时长 ----
             Text { text: "额定值:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
@@ -194,12 +188,11 @@ Rectangle {
             Text { text: "播放时长:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomSpinBox {
-                id: durationSpin; Layout.preferredWidth: root.fldW; from: 1; to: 60; value: 5
+                id: durationSpin; Layout.columnSpan: 3; Layout.fillWidth: true; Layout.minimumWidth: root.fldW; from: 1; to: 60; value: 5
                 enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4
                 // ✅ focusParamIndex: 12
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: "#4FC3F7"; border.width: 2; radius: 4; visible: root.focusSubArea === 1 && root.focusParamIndex === 12 }
             }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
 
             // ---- 分隔线 ----
             Rectangle { Layout.columnSpan: 8; Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
@@ -227,7 +220,7 @@ Rectangle {
             Text { text: "TTS文本:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 visible: ttsRadio.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             TextField {
-                id: ttsTextField; Layout.columnSpan: 5; Layout.fillWidth: true
+                id: ttsTextField; Layout.columnSpan: 7; Layout.fillWidth: true
                 text: "张力传感器报警"; color: "#E0E0E0"; font.pixelSize: 18
                 visible: ttsRadio.checked
                 background: Rectangle { color: "#1E293B"; border.color: ttsTextField.activeFocus ? "#4FC3F7" : "#334155"; radius: 4 }
@@ -235,13 +228,12 @@ Rectangle {
                 // ✅ focusParamIndex: 13
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: "#4FC3F7"; border.width: 2; radius: 4; visible: root.focusSubArea === 1 && root.focusParamIndex === 13 }
             }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true; visible: ttsRadio.checked }
 
             // ---- 行7：音频文件路径（fileRadio选中时显示） ----
             Text { text: "音频文件:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 visible: fileRadio.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             TextField {
-                id: audioFileField; Layout.columnSpan: 5; Layout.fillWidth: true
+                id: audioFileField; Layout.columnSpan: 7; Layout.fillWidth: true
                 text: ""; placeholderText: "音频文件路径"; color: "#E0E0E0"; font.pixelSize: 18
                 visible: fileRadio.checked
                 background: Rectangle { color: "#1E293B"; border.color: audioFileField.activeFocus ? "#4FC3F7" : "#334155"; radius: 4 }
@@ -249,7 +241,6 @@ Rectangle {
                 // ✅ focusParamIndex: 14
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: "#4FC3F7"; border.width: 2; radius: 4; visible: root.focusSubArea === 1 && root.focusParamIndex === 14 }
             }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true; visible: fileRadio.checked }
 
             // ---- 分隔线 ----
             Rectangle { Layout.columnSpan: 8; Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
@@ -269,14 +260,13 @@ Rectangle {
             Text { text: "失败语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             TextField {
-                id: failureVoiceField; Layout.columnSpan: 2; Layout.fillWidth: true
+                id: failureVoiceField; Layout.columnSpan: 4; Layout.fillWidth: true
                 text: ""; placeholderText: "失败语音路径"; color: "#E0E0E0"; font.pixelSize: 18
                 background: Rectangle { color: "#1E293B"; border.color: failureVoiceField.activeFocus ? "#4FC3F7" : "#334155"; radius: 4 }
                 enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4
                 // ✅ focusParamIndex: 16
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: "#4FC3F7"; border.width: 2; radius: 4; visible: root.focusSubArea === 1 && root.focusParamIndex === 16 }
             }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
         } // GridLayout end
 
         // ========== 状态指示灯 + 启动/停止按钮 ==========
