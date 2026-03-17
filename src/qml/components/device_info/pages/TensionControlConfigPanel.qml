@@ -17,6 +17,7 @@ Rectangle {
     property int focusParamIndex: -1
     property int focusButtonIndex: -1
     property var virtualKeyboard: null
+    property var keyboardManager: null  // ✅ 2026-03-17 [Phase 7.48.52]: 键盘管理器（CustomSpinBox/CustomTextField需要）
     property bool tensionOpened: false  // 张紧打开状态
 
     // ========== 布局常量 ==========
@@ -81,7 +82,7 @@ Rectangle {
             Item {
                 Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: outputChannelSpin.implicitHeight
-                SpinBox { id: outputChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked }
+                DeviceInfo.CustomSpinBox { id: outputChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
@@ -96,7 +97,7 @@ Rectangle {
             Item {
                 Layout.column: 3; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: feedbackChannelSpin.implicitHeight
-                SpinBox { id: feedbackChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked }
+                DeviceInfo.CustomSpinBox { id: feedbackChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
@@ -105,14 +106,14 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: feedbackTimeoutSpin.implicitHeight
-                SpinBox { id: feedbackTimeoutSpin; from: 1; to: 60; value: 10; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked }
+                DeviceInfo.CustomSpinBox { id: feedbackTimeoutSpin; from: 1; to: 60; value: 10; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 2; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: startupDelaySpin.implicitHeight
-                SpinBox { id: startupDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked }
+                DeviceInfo.CustomSpinBox { id: startupDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         } // GridLayout end
@@ -147,14 +148,13 @@ Rectangle {
             spacing: 8
 
             Text { text: "预警语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            TextField {
+            DeviceInfo.CustomTextField {
                 id: warningVoiceField
                 text: ""
-                font.pixelSize: 21; color: "#E0E0E0"
                 Layout.fillWidth: true
                 placeholderText: "预警语音文件名"
                 enabled: tensionEnabledSwitch.checked
-                background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" }
+                keyboardManager: root.keyboardManager
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
@@ -164,14 +164,13 @@ Rectangle {
             spacing: 8
 
             Text { text: "失败语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            TextField {
+            DeviceInfo.CustomTextField {
                 id: failureVoiceField
                 text: ""
-                font.pixelSize: 21; color: "#E0E0E0"
                 Layout.fillWidth: true
                 placeholderText: "失败语音文件名"
                 enabled: tensionEnabledSwitch.checked
-                background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" }
+                keyboardManager: root.keyboardManager
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }

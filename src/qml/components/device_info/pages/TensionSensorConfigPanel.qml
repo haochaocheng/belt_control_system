@@ -17,6 +17,7 @@ Rectangle {
     property int focusParamIndex: -1
     property int focusButtonIndex: -1
     property var virtualKeyboard: null
+    property var keyboardManager: null  // ✅ 2026-03-17 [Phase 7.48.52]: 键盘管理器（CustomSpinBox/CustomTextField需要）
 
     // ========== 布局常量（参照AnalogInputPage） ==========
     readonly property int lblFs: 21
@@ -79,14 +80,14 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: nameField.implicitHeight
-                TextField { id: nameField; text: "张力传感器"; font.pixelSize: 21; color: "#E0E0E0"; anchors.fill: parent; background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" } }
+                DeviceInfo.CustomTextField { id: nameField; text: "张力传感器"; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "播放次数:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: playCountSpin.implicitHeight
-                SpinBox { id: playCountSpin; from: 1; to: 99; value: 3; editable: true; anchors.fill: parent }
+                DeviceInfo.CustomSpinBox { id: playCountSpin; from: 1; to: 99; value: 3; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
@@ -95,14 +96,14 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: moduleTypeCombo.implicitHeight
-                ComboBox { id: moduleTypeCombo; model: ["模拟量模块1", "模拟量模块2", "未分配"]; currentIndex: 0; anchors.fill: parent }
+                DeviceInfo.CustomComboBox { id: moduleTypeCombo; model: ["模拟量模块1", "模拟量模块2", "未分配"]; currentIndex: 0; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "播放时长(秒):"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 1; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: playDurationSpin.implicitHeight
-                SpinBox { id: playDurationSpin; from: 1; to: 999; value: 10; editable: true; anchors.fill: parent }
+                DeviceInfo.CustomSpinBox { id: playDurationSpin; from: 1; to: 999; value: 10; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
@@ -111,14 +112,14 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: channelSpin.implicitHeight
-                SpinBox { id: channelSpin; from: -1; to: 7; value: -1; editable: true; anchors.fill: parent }
+                DeviceInfo.CustomSpinBox { id: channelSpin; from: -1; to: 7; value: -1; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "上限值:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 2; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: upperLimitSpin.implicitHeight
-                SpinBox { id: upperLimitSpin; from: 0; to: 99999; value: 100; editable: true; anchors.fill: parent }
+                DeviceInfo.CustomSpinBox { id: upperLimitSpin; from: 0; to: 99999; value: 100; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
@@ -127,14 +128,14 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: lowerLimitSpin.implicitHeight
-                SpinBox { id: lowerLimitSpin; from: 0; to: 99999; value: 0; editable: true; anchors.fill: parent }
+                DeviceInfo.CustomSpinBox { id: lowerLimitSpin; from: 0; to: 99999; value: 0; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 6 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "量程:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 3; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: rangeSpin.implicitHeight
-                SpinBox { id: rangeSpin; from: 1; to: 99999; value: 200; editable: true; anchors.fill: parent }
+                DeviceInfo.CustomSpinBox { id: rangeSpin; from: 1; to: 99999; value: 200; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 7 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
@@ -143,14 +144,14 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 4; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: unitCombo.implicitHeight
-                ComboBox { id: unitCombo; model: ["kN", "N", "kg", "t", "MPa", "bar"]; currentIndex: 0; anchors.fill: parent }
+                DeviceInfo.CustomComboBox { id: unitCombo; model: ["kN", "N", "kg", "t", "MPa", "bar"]; currentIndex: 0; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 8 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "输入类型:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 4; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 4; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: inputTypeCombo.implicitHeight
-                ComboBox { id: inputTypeCombo; model: ["4-20mA电流型", "0-20mA电流型", "0-5V电压型", "0-10V电压型", "1-5V电压型", "PT100热电阻"]; currentIndex: 0; anchors.fill: parent }
+                DeviceInfo.CustomComboBox { id: inputTypeCombo; model: ["4-20mA电流型", "0-20mA电流型", "0-5V电压型", "0-10V电压型", "1-5V电压型", "PT100热电阻"]; currentIndex: 0; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 9 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
@@ -159,14 +160,14 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 5; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: protectionDelaySpin.implicitHeight
-                SpinBox { id: protectionDelaySpin; from: 0; to: 9999; value: 30; editable: true; anchors.fill: parent }
+                DeviceInfo.CustomSpinBox { id: protectionDelaySpin; from: 0; to: 9999; value: 30; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 10 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "保护级别:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 5; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 5; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: protectionLevelCombo.implicitHeight
-                ComboBox { id: protectionLevelCombo; model: ["仅预警", "预警+正常停车", "预警+紧急停车"]; currentIndex: 2; anchors.fill: parent }
+                DeviceInfo.CustomComboBox { id: protectionLevelCombo; model: ["仅预警", "预警+正常停车", "预警+紧急停车"]; currentIndex: 2; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 11 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         } // GridLayout end
@@ -194,16 +195,16 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 8
             Text { text: audioTtsRadio.checked ? "TTS文本:" : "音频文件:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            TextField {
-                id: ttsTextField; text: "张力传感器报警"; font.pixelSize: 21; color: "#E0E0E0"
+            DeviceInfo.CustomTextField {
+                id: ttsTextField; text: "张力传感器报警"
                 Layout.fillWidth: true; visible: audioTtsRadio.checked
-                background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" }
+                keyboardManager: root.keyboardManager
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 12 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
-            TextField {
-                id: audioFileField; text: ""; font.pixelSize: 21; color: "#E0E0E0"
+            DeviceInfo.CustomTextField {
+                id: audioFileField; text: ""
                 Layout.fillWidth: true; readOnly: true; visible: audioDefaultRadio.checked; placeholderText: "自动生成"
-                background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" }
+                keyboardManager: root.keyboardManager
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 13 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
@@ -219,9 +220,9 @@ Rectangle {
             Switch { id: sprinklerSwitch; checked: false }
             Item { width: 16 }
             Text { text: "洒水编号:"; font.pixelSize: root.lblFs; color: root.lblC }
-            SpinBox {
+            DeviceInfo.CustomSpinBox {
                 id: sprinklerIndexSpin; from: 0; to: 7; value: 0; enabled: sprinklerSwitch.checked
-                Layout.preferredWidth: 120
+                Layout.preferredWidth: 120; keyboardManager: root.keyboardManager
             }
             Rectangle { anchors.fill: sprinklerIndexSpin; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 14 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
         }
