@@ -676,7 +676,9 @@ Rectangle {
         // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
         // 旧：if (chkBeltOperation.checked) total += (5 + motorCount + brakeCount + tensionCount) * beltCount
         // ✅ 2026-03-14 [Phase 7.48.45]: 松闸运行失败已移到制动器DEFS，电机运行失败已移到电机DEFS
-        if (chkBeltOperation.checked) total += (5 + tensionCount) * beltCount  // 皮带操作：(5+张紧)/皮带
+        // ✅ 2026-03-17 [Phase 7.48.53]: 新增张紧启动预警语音，张紧从1个变为2个（启动+失败）
+        // 旧：if (chkBeltOperation.checked) total += (5 + tensionCount) * beltCount  // 皮带操作：(5+张紧失败)/皮带
+        if (chkBeltOperation.checked) total += (5 + tensionCount * 2) * beltCount  // 皮带操作：(5+张紧启动+张紧失败)/皮带
         if (chkSystemStatus.checked) total += 7 * beltCount            // 系统/通讯状态：7个/皮带
         // ✅ 2026-03-02 [Phase 7.47.69]: 模块在线状态：5个固定文件（不绑定皮带号）
         if (chkModuleStatus.checked) total += 5

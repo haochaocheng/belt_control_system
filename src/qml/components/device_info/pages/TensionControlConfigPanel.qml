@@ -153,7 +153,10 @@ Rectangle {
             Text { text: "预警语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
             DeviceInfo.CustomTextField {
                 id: warningVoiceField
-                text: "一号皮带张紧准备启动，请注意安全"
+                // ✅ 2026-03-17 [Phase 7.48.53]: 改为音频文件名（不含扩展名），参照BasicConfigTab命名规范
+                // 旧：text: "一号皮带张紧准备启动，请注意安全"（TTS全文，不是文件名）
+                // 新：匹配BatchAudioGenerator生成的文件名 "{tensionNum}号张紧启动.wav"
+                text: root.controlIndex + "号张紧启动"
                 Layout.fillWidth: true
                 placeholderText: audioTtsRadio.checked ? "TTS文本" : "音频文件名"
                 enabled: tensionEnabledSwitch.checked
@@ -169,7 +172,10 @@ Rectangle {
             Text { text: "失败语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
             DeviceInfo.CustomTextField {
                 id: failureVoiceField
-                text: "一号皮带张紧运行失败"
+                // ✅ 2026-03-17 [Phase 7.48.53]: 改为音频文件名（不含扩展名），参照BasicConfigTab命名规范
+                // 旧：text: "一号皮带张紧运行失败"（TTS全文，不是文件名）
+                // 新：匹配BatchAudioGenerator生成的文件名 "{tensionNum}号张紧运行失败.wav"
+                text: root.controlIndex + "号张紧运行失败"
                 Layout.fillWidth: true
                 placeholderText: audioTtsRadio.checked ? "TTS文本" : "音频文件名"
                 enabled: tensionEnabledSwitch.checked
