@@ -4,7 +4,7 @@ import QtQuick.Layouts 1.15
 import "../" as DeviceInfo
 
 // 2026-03-17 [Phase 7.48.51] 张力传感器配置面板
-// 参数参照 AnalogInputPage，布局参照 BrakeConfigPanel 8列GridLayout
+// 2026-03-17 [Phase 7.48.52] 参照 AnalogInputPage 4列GridLayout布局重排参数
 Rectangle {
     id: root
     color: "transparent"
@@ -18,12 +18,10 @@ Rectangle {
     property int focusButtonIndex: -1
     property var virtualKeyboard: null
 
-    // ========== 布局常量 ==========
+    // ========== 布局常量（参照AnalogInputPage） ==========
     readonly property int lblFs: 21
     readonly property string lblC: "#9E9E9E"
-    readonly property int fldW: 120
-    readonly property int lblW: 130
-    readonly property int cmbW: 160
+    readonly property int lblW: 160
 
     // ========== 标题栏 ==========
     Rectangle {
@@ -51,116 +49,126 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 10
-        spacing: 6
+        anchors.margins: 15
+        spacing: 12
 
-        // ========== GridLayout 8列参数区 ==========
-        GridLayout {
-            id: paramGrid
-            columns: 8
-            columnSpacing: 8
-            rowSpacing: 8
+        // ========== 传感器启用 ==========
+        RowLayout {
             Layout.fillWidth: true
-
-            // ===== Row 0: 传感器启用 + 名称(0) + 单位(1) =====
-            Text { text: "传感器启用"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
+            spacing: 16
+            Text { text: "传感器启用:"; font.pixelSize: root.lblFs; color: root.lblC }
             Switch {
                 id: sensorEnabledSwitch
                 checked: true
-                Layout.preferredWidth: root.fldW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === -1 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
             }
-            Text { text: "名称"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            TextField {
-                id: nameField
-                text: "张力传感器"
-                font.pixelSize: 14; color: "#E0E0E0"; Layout.preferredWidth: root.fldW
-                background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" }
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-            Text { text: "单位"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            ComboBox {
-                id: unitCombo
-                model: ["kN", "N", "kg", "t", "MPa", "bar"]
-                currentIndex: 0
-                Layout.preferredWidth: root.cmbW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
+        }
 
-            // ===== Row 1: 模块类型(2) + 通道号(3) + 输入类型(4) =====
-            Text { text: "模块类型"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            ComboBox {
-                id: moduleTypeCombo
-                model: ["未分配", "模拟量模块1", "模拟量模块2"]
-                currentIndex: 1
-                Layout.preferredWidth: root.cmbW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-            Text { text: "通道号"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: channelSpin
-                from: -1; to: 7; value: -1
-                Layout.preferredWidth: root.fldW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-            Text { text: "输入类型"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            ComboBox {
-                id: inputTypeCombo
-                model: ["4-20mA电流型", "0-20mA电流型", "0-5V电压型", "0-10V电压型", "1-5V电压型", "PT100热电阻"]
-                currentIndex: 0
-                Layout.preferredWidth: root.cmbW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
+        // ========== GridLayout 4列参数区（参照AnalogInputPage） ==========
+        // 参数索引: 0=名称, 1=播放次数, 2=模块类型, 3=播放时长,
+        //          4=通道号, 5=上限值, 6=下限值, 7=量程,
+        //          8=单位, 9=输入类型, 10=保护延时, 11=保护级别
+        GridLayout {
+            id: paramGrid
+            Layout.fillWidth: true
+            columns: 4
+            columnSpacing: 10
+            rowSpacing: 12
 
-            // ===== Row 2: 上限值(5) + 下限值(6) + 量程(7) =====
-            Text { text: "上限值"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: upperLimitSpin
-                from: 0; to: 99999; value: 100
-                Layout.preferredWidth: root.fldW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+            // ===== Row 0: 名称(0) | 播放次数(1) =====
+            Text { text: "名称:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: nameField.implicitHeight
+                TextField { id: nameField; text: "张力传感器"; font.pixelSize: 21; color: "#E0E0E0"; anchors.fill: parent; background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" } }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
-            Text { text: "下限值"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: lowerLimitSpin
-                from: 0; to: 99999; value: 0
-                Layout.preferredWidth: root.fldW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 6 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+            Text { text: "播放次数:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: playCountSpin.implicitHeight
+                SpinBox { id: playCountSpin; from: 1; to: 99; value: 3; editable: true; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
-            Text { text: "量程"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: rangeSpin
-                from: 1; to: 99999; value: 200
-                Layout.preferredWidth: root.fldW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 7 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
 
-            // ===== Row 3: 保护延时(8) + 播放次数(9) + 播放时长(10) =====
-            Text { text: "保护延时"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: protectionDelaySpin
-                from: 0; to: 9999; value: 30
-                Layout.preferredWidth: root.fldW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 8 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+            // ===== Row 1: 模块类型(2) | 播放时长(3) =====
+            Text { text: "模块类型:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 1; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: moduleTypeCombo.implicitHeight
+                ComboBox { id: moduleTypeCombo; model: ["模拟量模块1", "模拟量模块2", "未分配"]; currentIndex: 0; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
-            Text { text: "播放次数"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: playCountSpin
-                from: 1; to: 99; value: 3
-                Layout.preferredWidth: root.fldW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 9 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+            Text { text: "播放时长(秒):"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 1; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: playDurationSpin.implicitHeight
+                SpinBox { id: playDurationSpin; from: 1; to: 999; value: 10; editable: true; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
-            Text { text: "播放时长"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: playDurationSpin
-                from: 1; to: 999; value: 10
-                Layout.preferredWidth: root.fldW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 10 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+
+            // ===== Row 2: 通道号(4) | 上限值(5) =====
+            Text { text: "通道号:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 2; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: channelSpin.implicitHeight
+                SpinBox { id: channelSpin; from: -1; to: 7; value: -1; editable: true; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
+            Text { text: "上限值:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 2; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: upperLimitSpin.implicitHeight
+                SpinBox { id: upperLimitSpin; from: 0; to: 99999; value: 100; editable: true; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
+
+            // ===== Row 3: 下限值(6) | 量程(7) =====
+            Text { text: "下限值:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 3; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: lowerLimitSpin.implicitHeight
+                SpinBox { id: lowerLimitSpin; from: 0; to: 99999; value: 0; editable: true; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 6 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
+            Text { text: "量程:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 3; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: rangeSpin.implicitHeight
+                SpinBox { id: rangeSpin; from: 1; to: 99999; value: 200; editable: true; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 7 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
+
+            // ===== Row 4: 单位(8) | 输入类型(9) =====
+            Text { text: "单位:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 4; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 4; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: unitCombo.implicitHeight
+                ComboBox { id: unitCombo; model: ["kN", "N", "kg", "t", "MPa", "bar"]; currentIndex: 0; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 8 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
+            Text { text: "输入类型:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 4; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 4; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: inputTypeCombo.implicitHeight
+                ComboBox { id: inputTypeCombo; model: ["4-20mA电流型", "0-20mA电流型", "0-5V电压型", "0-10V电压型", "1-5V电压型", "PT100热电阻"]; currentIndex: 0; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 9 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
+
+            // ===== Row 5: 保护延时(10) | 保护级别(11) =====
+            Text { text: "保护延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 5; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 5; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: protectionDelaySpin.implicitHeight
+                SpinBox { id: protectionDelaySpin; from: 0; to: 9999; value: 30; editable: true; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 10 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
+            Text { text: "保护级别:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 5; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 5; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: protectionLevelCombo.implicitHeight
+                ComboBox { id: protectionLevelCombo; model: ["仅预警", "预警+正常停车", "预警+紧急停车"]; currentIndex: 2; anchors.fill: parent }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 11 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
         } // GridLayout end
 
         // ========== 分隔线 ==========
@@ -170,97 +178,52 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             spacing: 16
-
-            Text { text: "音频来源"; font.pixelSize: root.lblFs; color: root.lblC }
+            Text { text: "音频来源:"; font.pixelSize: root.lblFs; color: root.lblC }
             ButtonGroup { id: audioSourceGroup }
-            RadioButton {
-                id: audioDefaultRadio; text: "默认"; checked: true
-                ButtonGroup.group: audioSourceGroup
-                contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
-            }
-            RadioButton {
-                id: audioTtsRadio; text: "TTS"
-                ButtonGroup.group: audioSourceGroup
-                contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
-            }
-
+            RadioButton { id: audioDefaultRadio; text: "默认"; checked: true; ButtonGroup.group: audioSourceGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
+            RadioButton { id: audioTtsRadio; text: "TTS"; ButtonGroup.group: audioSourceGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
             Item { width: 20 }
-
-            Text { text: "播放方式"; font.pixelSize: root.lblFs; color: root.lblC }
+            Text { text: "播放方式:"; font.pixelSize: root.lblFs; color: root.lblC }
             ButtonGroup { id: playModeGroup }
-            RadioButton {
-                id: playCountRadio; text: "按次数"; checked: true
-                ButtonGroup.group: playModeGroup
-                contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
-            }
-            RadioButton {
-                id: playDurationRadio; text: "按时长"
-                ButtonGroup.group: playModeGroup
-                contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
-            }
+            RadioButton { id: playCountRadio; text: "按次数"; checked: true; ButtonGroup.group: playModeGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
+            RadioButton { id: playDurationRadio; text: "按时长"; ButtonGroup.group: playModeGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
         }
 
-        // ========== TTS文本(11) / 音频文件(12) ==========
+        // ========== TTS文本(12) / 音频文件(13) ==========
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
-
-            Text { text: audioTtsRadio.checked ? "TTS文本" : "音频文件"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
+            Text { text: audioTtsRadio.checked ? "TTS文本:" : "音频文件:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
             TextField {
-                id: ttsTextField
-                text: "张力传感器报警"
-                font.pixelSize: 14; color: "#E0E0E0"
-                Layout.fillWidth: true
-                visible: audioTtsRadio.checked
+                id: ttsTextField; text: "张力传感器报警"; font.pixelSize: 21; color: "#E0E0E0"
+                Layout.fillWidth: true; visible: audioTtsRadio.checked
                 background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" }
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 11 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 12 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             TextField {
-                id: audioFileField
-                text: ""
-                font.pixelSize: 14; color: "#E0E0E0"
-                Layout.fillWidth: true
-                readOnly: true
-                visible: audioDefaultRadio.checked
-                placeholderText: "自动生成"
+                id: audioFileField; text: ""; font.pixelSize: 21; color: "#E0E0E0"
+                Layout.fillWidth: true; readOnly: true; visible: audioDefaultRadio.checked; placeholderText: "自动生成"
                 background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" }
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 12 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 13 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
 
         // ========== 分隔线2 ==========
         Rectangle { Layout.fillWidth: true; height: 1; color: "#3d4556" }
 
-        // ========== 保护级别(13) + 洒水启用 + 洒水编号(14) ==========
+        // ========== 洒水启用 + 洒水编号(14) ==========
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
-
-            Text { text: "保护级别"; font.pixelSize: root.lblFs; color: root.lblC }
-            ComboBox {
-                id: protectionLevelCombo
-                model: ["仅预警", "预警+正常停车", "预警+紧急停车"]
-                currentIndex: 2
-                Layout.preferredWidth: root.cmbW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 13 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-
+            spacing: 16
+            Text { text: "洒水启用:"; font.pixelSize: root.lblFs; color: root.lblC }
+            Switch { id: sprinklerSwitch; checked: false }
             Item { width: 16 }
-
-            Text { text: "洒水启用"; font.pixelSize: root.lblFs; color: root.lblC }
-            Switch {
-                id: sprinklerSwitch
-                checked: false
-            }
-
-            Text { text: "洒水编号"; font.pixelSize: root.lblFs; color: root.lblC }
+            Text { text: "洒水编号:"; font.pixelSize: root.lblFs; color: root.lblC }
             SpinBox {
-                id: sprinklerIndexSpin
-                from: 0; to: 7; value: 0
-                enabled: sprinklerSwitch.checked
-                Layout.preferredWidth: root.fldW
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 14 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+                id: sprinklerIndexSpin; from: 0; to: 7; value: 0; enabled: sprinklerSwitch.checked
+                Layout.preferredWidth: 120
             }
+            Rectangle { anchors.fill: sprinklerIndexSpin; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 14 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
         }
 
         // ========== 弹性空间 ==========
@@ -268,40 +231,27 @@ Rectangle {
 
         // ========== 底部按钮行 ==========
         RowLayout {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 40
-            spacing: 16
-
+            Layout.fillWidth: true; Layout.preferredHeight: 40; spacing: 16
             Item { Layout.fillWidth: true }
-
             Button {
-                id: saveBtn
-                text: "保存"
-                Layout.preferredWidth: 100
-                Layout.preferredHeight: 36
+                id: saveBtn; text: "保存"; Layout.preferredWidth: 100; Layout.preferredHeight: 36
                 background: Rectangle { color: saveBtn.pressed ? "#1e8449" : "#27ae60"; radius: 4 }
                 contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: saveTensionSensorConfig()
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#FFFFFF" : "transparent"; border.width: 2; radius: 4; z: 100 }
             }
-
             Button {
-                id: resetBtn
-                text: "重置"
-                Layout.preferredWidth: 100
-                Layout.preferredHeight: 36
+                id: resetBtn; text: "重置"; Layout.preferredWidth: 100; Layout.preferredHeight: 36
                 background: Rectangle { color: resetBtn.pressed ? "#5d6d7e" : "#7f8c8d"; radius: 4 }
                 contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: loadTensionSensorConfig()
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 1 ? "#FFFFFF" : "transparent"; border.width: 2; radius: 4; z: 100 }
             }
-
             Item { Layout.fillWidth: true }
         }
     } // ColumnLayout end
 
     // ========== 函数 ==========
-
     function getParamFieldCount() { return 15 }  // 参数索引 0-14
 
     function collectConfig() {
@@ -367,23 +317,27 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-03-17 [Phase 7.48.52]: 参数索引重排后的triggerParamInput
+    // 新索引: 0=名称, 1=播放次数, 2=模块类型, 3=播放时长, 4=通道号, 5=上限值,
+    //         6=下限值, 7=量程, 8=单位, 9=输入类型, 10=保护延时, 11=保护级别,
+    //         12=TTS文本, 13=音频文件, 14=洒水编号
     function triggerParamInput(paramIndex) {
         console.log("✅ [TensionSensorConfigPanel] triggerParamInput:", paramIndex)
         switch(paramIndex) {
         case 0: nameField.forceActiveFocus(); break
-        case 1: unitCombo.popup.open(); break
+        case 1: playCountSpin.forceActiveFocus(); break
         case 2: moduleTypeCombo.popup.open(); break
-        case 3: channelSpin.forceActiveFocus(); break
-        case 4: inputTypeCombo.popup.open(); break
+        case 3: playDurationSpin.forceActiveFocus(); break
+        case 4: channelSpin.forceActiveFocus(); break
         case 5: upperLimitSpin.forceActiveFocus(); break
         case 6: lowerLimitSpin.forceActiveFocus(); break
         case 7: rangeSpin.forceActiveFocus(); break
-        case 8: protectionDelaySpin.forceActiveFocus(); break
-        case 9: playCountSpin.forceActiveFocus(); break
-        case 10: playDurationSpin.forceActiveFocus(); break
-        case 11: ttsTextField.forceActiveFocus(); break
-        case 12: audioFileField.forceActiveFocus(); break
-        case 13: protectionLevelCombo.popup.open(); break
+        case 8: unitCombo.popup.open(); break
+        case 9: inputTypeCombo.popup.open(); break
+        case 10: protectionDelaySpin.forceActiveFocus(); break
+        case 11: protectionLevelCombo.popup.open(); break
+        case 12: ttsTextField.forceActiveFocus(); break
+        case 13: audioFileField.forceActiveFocus(); break
         case 14: sprinklerIndexSpin.forceActiveFocus(); break
         }
     }

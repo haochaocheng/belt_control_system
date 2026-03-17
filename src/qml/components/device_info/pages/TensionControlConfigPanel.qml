@@ -20,11 +20,12 @@ Rectangle {
     property bool tensionOpened: false  // 张紧打开状态
 
     // ========== 布局常量 ==========
-    readonly property int lblFs: 21
-    readonly property string lblC: "#9E9E9E"
-    readonly property int fldW: 120
-    readonly property int lblW: 130
-    readonly property int cmbW: 160
+    // ✅ 2026-03-17 [Phase 7.48.52]: 参照 BasicConfigTab 调整布局常量
+    readonly property int lblFs: 21  // 标签字体大小（与BasicConfigTab一致）
+    readonly property string lblC: "#9E9E9E"  // 标签颜色（与BasicConfigTab一致）
+    readonly property int fldW: 120  // 输入框宽度（与BasicConfigTab一致）
+    readonly property int lblW: 160  // 标签宽度（从130改为160，与BasicConfigTab一致）
+    readonly property int cmbW: 300  // ComboBox宽度（从160改为300，与BasicConfigTab一致）
 
     // ========== 标题栏 ==========
     Rectangle {
@@ -56,72 +57,64 @@ Rectangle {
         spacing: 6
 
         // ========== GridLayout 8列参数区 ==========
+        // ✅ 2026-03-17 [Phase 7.48.52]: 改为4列GridLayout，参照BasicConfigTab布局
         GridLayout {
             id: paramGrid
-            columns: 8
-            columnSpacing: 8
-            rowSpacing: 8
+            columns: 4  // 4列：标签1、输入框1、标签2、输入框2
+            columnSpacing: 10  // 参照BasicConfigTab
+            rowSpacing: 12  // 参照BasicConfigTab
             Layout.fillWidth: true
 
-            // ===== Row 0: 张紧启用 + 输出通道(0) =====
-            Text { text: "张紧启用"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            Switch {
-                id: tensionEnabledSwitch
-                checked: true
-                Layout.preferredWidth: root.fldW
+            // ✅ 2026-03-17 [Phase 7.48.52]: 参照BasicConfigTab 4列布局重排参数
+            // Row 0: 张紧启用(Switch) | 输出通道(0)
+            // Row 1: 使用反馈(Switch) | 反馈通道(1)
+            // Row 2: 反馈超时(2) | 启动延时(3)
+
+            // ===== Row 0: 张紧启用 | 输出通道(0) =====
+            Text { text: "张紧启用:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: tensionEnabledSwitch.implicitHeight
+                Switch { id: tensionEnabledSwitch; checked: true; anchors.verticalCenter: parent.verticalCenter }
+            }
+            Text { text: "输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: outputChannelSpin.implicitHeight
+                SpinBox { id: outputChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
-            Text { text: "输出通道"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: outputChannelSpin
-                from: 0; to: 7; value: 0
-                Layout.preferredWidth: root.fldW
-                enabled: tensionEnabledSwitch.checked
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+            // ===== Row 1: 使用反馈 | 反馈通道(1) =====
+            Text { text: "使用反馈:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 1; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: useFeedbackSwitch.implicitHeight
+                Switch { id: useFeedbackSwitch; checked: false; anchors.verticalCenter: parent.verticalCenter; enabled: tensionEnabledSwitch.checked }
+            }
+            Text { text: "反馈通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 1; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: feedbackChannelSpin.implicitHeight
+                SpinBox { id: feedbackChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
-            Item { Layout.columnSpan: 4; Layout.fillWidth: true }
-
-            // ===== Row 1: 使用反馈 + 反馈通道(1) + 反馈超时(2) =====
-            Text { text: "使用反馈"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            Switch {
-                id: useFeedbackSwitch
-                checked: false
-                Layout.preferredWidth: root.fldW
-                enabled: tensionEnabledSwitch.checked
+            // ===== Row 2: 反馈超时(2) | 启动延时(3) =====
+            Text { text: "反馈超时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 2; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: feedbackTimeoutSpin.implicitHeight
+                SpinBox { id: feedbackTimeoutSpin; from: 1; to: 60; value: 10; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
-
-            Text { text: "反馈通道"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: feedbackChannelSpin
-                from: 0; to: 7; value: 0
-                Layout.preferredWidth: root.fldW
-                enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+            Text { text: "启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 2; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: startupDelaySpin.implicitHeight
+                SpinBox { id: startupDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
-
-            Text { text: "反馈超时"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: feedbackTimeoutSpin
-                from: 1; to: 60; value: 10
-                Layout.preferredWidth: root.fldW
-                enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-
-            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
-
-            // ===== Row 2: 启动延时(3) =====
-            Text { text: "启动延时"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            SpinBox {
-                id: startupDelaySpin
-                from: 0; to: 60; value: 0
-                Layout.preferredWidth: root.fldW
-                enabled: tensionEnabledSwitch.checked
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-
-            Item { Layout.columnSpan: 6; Layout.fillWidth: true }
         } // GridLayout end
 
         // ========== 分隔线 ==========
@@ -132,19 +125,19 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 16
 
-            Text { text: "音频来源"; font.pixelSize: root.lblFs; color: root.lblC }
+            Text { text: "音频来源:"; font.pixelSize: root.lblFs; color: root.lblC }
             ButtonGroup { id: audioSourceGroup }
             RadioButton {
                 id: audioDefaultRadio; text: "默认"; checked: true
                 ButtonGroup.group: audioSourceGroup
                 enabled: tensionEnabledSwitch.checked
-                contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
+                contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
             }
             RadioButton {
                 id: audioTtsRadio; text: "TTS"
                 ButtonGroup.group: audioSourceGroup
                 enabled: tensionEnabledSwitch.checked
-                contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
+                contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
             }
         }
 
@@ -153,16 +146,16 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 8
 
-            Text { text: "预警语音"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
+            Text { text: "预警语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
             TextField {
                 id: warningVoiceField
                 text: ""
-                font.pixelSize: 14; color: "#E0E0E0"
+                font.pixelSize: 21; color: "#E0E0E0"
                 Layout.fillWidth: true
                 placeholderText: "预警语音文件名"
                 enabled: tensionEnabledSwitch.checked
                 background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" }
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
 
@@ -170,16 +163,16 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 8
 
-            Text { text: "失败语音"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
+            Text { text: "失败语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
             TextField {
                 id: failureVoiceField
                 text: ""
-                font.pixelSize: 14; color: "#E0E0E0"
+                font.pixelSize: 21; color: "#E0E0E0"
                 Layout.fillWidth: true
                 placeholderText: "失败语音文件名"
                 enabled: tensionEnabledSwitch.checked
                 background: Rectangle { color: "#3d4556"; radius: 4; border.color: "#556070" }
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#4FC3F7" : "transparent"; border.width: 2; radius: 4; z: 100 }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
 
@@ -231,7 +224,7 @@ Rectangle {
                 background: Rectangle { color: startBtn.pressed ? "#2E7D32" : "#4CAF50"; radius: 4 }
                 contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: startTensionControl()
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#FFFFFF" : "transparent"; border.width: 2; radius: 4; z: 100 }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 100 }
             }
 
             // 停止按钮
@@ -244,7 +237,7 @@ Rectangle {
                 background: Rectangle { color: stopBtn.pressed ? "#C62828" : "#F44336"; radius: 4 }
                 contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: stopTensionControl()
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 1 ? "#FFFFFF" : "transparent"; border.width: 2; radius: 4; z: 100 }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 100 }
             }
         }
     } // ColumnLayout end
