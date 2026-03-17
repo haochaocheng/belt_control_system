@@ -1,7 +1,7 @@
-# Phase 7.48.53 修复张紧控制语音播放问题
+# Phase 7.48.53 修复张紧控制语音播放问题（v2 修正）
 
 ## 修改文件
-- `src/qml/components/device_info/pages/TensionControlConfigPanel.qml` — 修复语音播放逻辑（392行）
+- `src/qml/components/device_info/pages/TensionControlConfigPanel.qml` — 修复语音播放逻辑（426行）
 
 ## 问题背景
 
@@ -13,221 +13,153 @@
 
 ### 问题1：语音播放失败
 
-**根因**（从 voip.md 日志分析）：
-```
-[DEBUG] ✅ [TensionControlConfigPanel] 启动张紧控制
-[DEBUG] ✅ [TensionControlConfigPanel] 发送MQTT命令: start
-```
-
-- 启动按钮点击了，MQTT命令也发送了
-- 但代码中使用的 `audioPlayer.play(path)` 对象不存在（`typeof audioPlayer !== "undefined"` 检查失败）
+**根因**：
+- 旧代码使用 `audioPlayer.play(path)` 对象不存在（`typeof audioPlayer !== "undefined"` 检查失败）
 - 预警/失败语音文本字段默认为空，即使 `audioPlayer` 存在也不会播放
-- 正确做法是使用全局的 `commonControl.testTTS()` 进行TTS合成播放，或使用 `commonControl.playAudio()` 播放音频文件
 
-**错误代码**（line 251-254, 274-276）：
-```qml
-// 旧代码：使用不存在的 audioPlayer
-var warnPath = buildAudioPath(warningVoiceField.text)
-if (warnPath !== "" && typeof audioPlayer !== "undefined") {
-    audioPlayer.play(warnPath)
-}
-```
+**第一次修复（错误）**：使用 `commonControl.testTTS()` 实时合成 — 方法不对
+- `commonControl.testTTS()` 是测试TTS功能用的，合成到 `/tmp/test_tts.wav`
+- 不是正式的语音播放流程
 
-**问题点**：
-1. `audioPlayer` 对象不存在于 QML 上下文中
-2. `warningVoiceField.text` 和 `failureVoiceField.text` 默认为空
-3. 没有区分 TTS 模式和文件模式的播放逻辑
+**第二次修复（正确）**：参照 BasicConfigTab.qml，使用 `alarmPlayback.playAlarm()` + `buildAudioPath()` + 预合成音频文件
+- 语音文件是通过"语音管理"界面的"张紧控制批量生成"分类预合成的
+- 播放时使用音频文件路径，TTS文本作为回退（文件不存在时自动合成）
 
 ### 问题2：PaddleSpeech NLTK 错误
 
-**根因**（从 voip.md 日志分析）：
-```
-[WARNING] [PaddleSpeech Error] "[nltk_data] Error loading cmudict: <urlopen error [Errno 111]
-[nltk_data]     Connection refused>
-[WARNING] [PaddleSpeech Error] "[nltk_data] Error loading averaged_perceptron_tagger: <urlopen error
-[nltk_data]     [Errno -3] Temporary failure in name resolution>
-```
+- PaddleSpeech 启动时尝试下载 NLTK 数据包，容器内无外网
+- **只是警告，不影响功能**：PaddleSpeech 最终初始化成功
 
-- PaddleSpeech 启动时尝试从网络下载 NLTK 数据包（cmudict、averaged_perceptron_tagger）
-- 容器内无法访问外网，导致下载失败
-- **但这只是警告，不影响功能**：从日志 line 1264-1266 可以看到 PaddleSpeech 最终初始化成功
+## 实施内容（v2 修正版）
 
-```
-[DEBUG] 📥 [PaddleSpeech] 收到响应: "success"
-[DEBUG] ✅ [PaddleSpeech] 初始化成功
-[DEBUG] ✅ [CommonControl] TTS 模型切换成功: "fastspeech2_csmsc (中文女声)"
-```
-
-**结论**：NLTK 错误可以忽略，不影响 TTS 功能。
-
-## 实施内容
-
-### 1. 设置默认 TTS 文本
-
-**预警语音默认值**：
-```qml
-text: "一号皮带张紧准备启动，请注意安全"
-```
-
-**失败语音默认值**：
-```qml
-text: "一号皮带张紧运行失败"
-```
-
-**placeholderText 动态提示**：
-```qml
-placeholderText: audioTtsRadio.checked ? "TTS文本" : "音频文件名"
-```
-
-### 2. 默认使用 TTS 模式
-
-**原因**：容器内 `/app/audio/` 目录不存在，没有预录音频文件
+### 1. 添加 TTSConfig 导入
 
 ```qml
-RadioButton {
-    id: audioTtsRadio; text: "TTS"; checked: true  // ✅ 默认选中TTS
-    ButtonGroup.group: audioSourceGroup
-    enabled: tensionEnabledSwitch.checked
-    contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
+import com.belt.control 1.0  // TTSConfig单例（用于音频路径构建）
+```
+
+### 2. 重写 buildAudioPath() — 参照 BasicConfigTab
+
+**旧**（单参数，硬编码路径）：
+```javascript
+function buildAudioPath(filename) {
+    return "/app/audio/" + filename
 }
 ```
 
-### 3. 新增 `playVoice()` 统一语音播放函数
-
-**函数签名**：
+**新**（双参数，根据音频来源构建正确路径）：
 ```javascript
-function playVoice(voiceText, label)
+function buildAudioPath(beltNum, filename) {
+    if (!filename || filename === "") return ""
+    if (audioDefaultRadio.checked) {
+        // 默认音频：{audioBaseDir}/{beltNum}#PD/{filename}.wav
+        return audioBaseDir + "/" + beltNum + "#PD/" + filename + ".wav"
+    } else {
+        // TTS合成音频：{audioBaseDir}/paddlespeech-{model}-spk{id}/{beltNum}#PD/{filename}.wav
+        var modelIdx = typeof TTSConfig !== "undefined" ? TTSConfig.modelIndex(TTSConfig.Test) : 0
+        var modelName = typeof TTSConfig !== "undefined" ? TTSConfig.modelName(modelIdx) : "fastspeech2_csmsc"
+        var spkId = typeof TTSConfig !== "undefined" ? TTSConfig.speakerId(TTSConfig.Test) : 0
+        var engineFolder = "paddlespeech-" + modelName + "-spk" + spkId
+        return audioBaseDir + "/" + engineFolder + "/" + beltNum + "#PD/" + filename + ".wav"
+    }
+}
 ```
 
-**功能**：
-- TTS 模式：使用 `commonControl.testTTS(text, speakerId, rate, volume)` 合成并播放
-- 默认模式：使用 `commonControl.playAudio(audioPath)` 播放音频文件
+### 3. 删除旧 playVoice() 函数
 
-**实现**：
+**旧**（使用 `commonControl.testTTS()` — 错误）：
 ```javascript
 function playVoice(voiceText, label) {
-    if (!voiceText || voiceText === "") {
-        console.log("⚠️ [TensionControlConfigPanel]", label, "语音文本为空，跳过播放")
-        return
-    }
-
     if (audioTtsRadio.checked) {
-        // TTS模式：使用 commonControl.testTTS 合成并播放
-        console.log("🗣️ [TensionControlConfigPanel] TTS播放" + label + "语音:", voiceText)
-        if (typeof commonControl !== "undefined") {
-            commonControl.testTTS(voiceText, 0, 0.9, 1.0)
-        } else {
-            console.log("⚠️ [TensionControlConfigPanel] commonControl 未定义")
-        }
-    } else {
-        // 默认模式：播放音频文件
-        var audioPath = buildAudioPath(voiceText)
-        console.log("🔊 [TensionControlConfigPanel] 播放" + label + "音频文件:", audioPath)
-        if (audioPath !== "" && typeof commonControl !== "undefined") {
-            commonControl.playAudio(audioPath)
-        }
+        commonControl.testTTS(voiceText, 0, 0.9, 1.0)  // ❌ 错误方法
     }
 }
 ```
 
-**参数说明**：
-- `voiceText`：TTS 文本或音频文件名
-- `label`：日志标签（"预警" 或 "失败"）
-- TTS 参数：`speakerId=0`（默认说话人），`rate=0.9`（语速），`volume=1.0`（音量）
+**新**：直接在定时器 onTriggered 中调用 `alarmPlayback.playAlarm()`（参照 BasicConfigTab）
 
-### 4. 修改定时器触发逻辑
+### 4. 重写启动延时定时器（line 252-262）
 
-**启动延时定时器**（line 249-263）：
 ```javascript
 onTriggered: {
-    // ✅ 2026-03-17 [Phase 7.48.53]: 修复语音播放逻辑
-    // 延时结束，播放预警语音
-    playVoice(warningVoiceField.text, "预警")
-
-    // 发送MQTT启动命令
+    // 使用alarmPlayback.playAlarm()播放预合成音频文件
+    if (warningVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
+        var beltNum = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
+        var audioPath = buildAudioPath(beltNum, warningVoiceField.text)
+        var ttsText = beltNum + "号皮带张紧准备启动，请注意安全"
+        alarmPlayback.playAlarm(warningVoiceField.text, ttsText, audioPath, true, "count", 1, 5)
+    }
     sendMqttCommand("start")
-
-    // 如果使用反馈，启动反馈超时定时器
-    if (useFeedbackSwitch.checked) {
-        feedbackTimeoutTimer.start()
-    } else {
-        root.tensionOpened = true
-    }
+    ...
 }
 ```
 
-**反馈超时定时器**（line 267-282）：
+### 5. 重写反馈超时定时器（line 281-292）
+
 ```javascript
 onTriggered: {
-    console.log("✅ [TensionControlConfigPanel] 反馈超时")
-    // ✅ 2026-03-17 [Phase 7.48.53]: 修复语音播放逻辑
-    // 播放失败语音
-    playVoice(failureVoiceField.text, "失败")
-
-    // 停止张紧控制
+    // 使用alarmPlayback.playAlarm()播放预合成音频文件
+    if (failureVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
+        var beltNum = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
+        var audioPath = buildAudioPath(beltNum, failureVoiceField.text)
+        var ttsText = beltNum + "号皮带张紧运行失败"
+        alarmPlayback.playAlarm(failureVoiceField.text, ttsText, audioPath, true, "count", 3, 5)
+    }
     sendMqttCommand("stop")
     root.tensionOpened = false
 }
 ```
 
-## 技术细节
+## 关键技术对比
 
-### commonControl 上下文注册
+| 方面 | 旧方法（错误） | 新方法（正确） |
+|------|---------------|---------------|
+| 播放API | `commonControl.testTTS()` | `alarmPlayback.playAlarm()` |
+| 音频来源 | 实时TTS合成到 `/tmp/test_tts.wav` | 预合成音频文件 + TTS回退 |
+| 路径构建 | `"/app/audio/" + filename` | `buildAudioPath(beltNum, filename)` + audioBaseDir |
+| TTSConfig | 不需要 | 需要（`import com.belt.control 1.0`） |
+| 皮带编号 | 硬编码 | `systemConfig.machineNumber` |
+| 参考文件 | 无 | BasicConfigTab.qml |
 
-**位置**：`src/main/main.cpp:448`
-```cpp
-engine.rootContext()->setContextProperty("commonControl", &commonControl);
+## alarmPlayback.playAlarm() 参数说明
+
+```javascript
+alarmPlayback.playAlarm(name, ttsText, audioPath, useTextToSpeech, playMode, playCount, playDuration)
 ```
 
-**可用方法**：
-- `commonControl.testTTS(text, speakerId, rate, volume)` — TTS 合成并播放
-- `commonControl.playAudio(audioPath)` — 播放音频文件
-
-### TTS 播放流程
-
-1. `commonControl.testTTS()` 调用 `TTSEngineManager::synthesize()`
-2. 合成到临时文件 `/tmp/test_tts.wav`
-3. 清除 Opus 缓存（避免播放旧音频）
-4. 调用 `playAudio()` 播放合成的音频文件
-5. 通过 `AudioNetworkTcpSender` 发送到网络（VoIP 通话）
-
-**参考代码**：`src/control/CommonControl.cpp:1578-1618`
-
-### 音频文件播放流程
-
-1. `commonControl.playAudio()` 检查文件是否存在
-2. 如果文件不存在，回退到实时 TTS 合成
-3. 通过 `AudioNetworkTcpSender` 发送到网络（VoIP 通话）
-
-**参考代码**：`src/control/AlarmPlaybackService.cpp:366-373`
+| 参数 | 预警语音 | 失败语音 |
+|------|---------|---------|
+| name | warningVoiceField.text | failureVoiceField.text |
+| ttsText | "{beltNum}号皮带张紧准备启动，请注意安全" | "{beltNum}号皮带张紧运行失败" |
+| audioPath | buildAudioPath(beltNum, filename) | buildAudioPath(beltNum, filename) |
+| useTextToSpeech | true | true |
+| playMode | "count" | "count" |
+| playCount | 1 | 3 |
+| playDuration | 5 | 5 |
 
 ## 验证方案
 
 1. 编译并部署到设备
-2. 打开设备设置对话框 → 张紧控制
-3. 点击"张紧控制"（index 1）
+2. 先在"语音管理"界面，确认"张紧控制"分类已批量生成音频文件
+3. 打开设备设置对话框 → 张紧控制
 4. 点击"启动"按钮
 5. 验证：
    - 应该听到"一号皮带张紧准备启动，请注意安全"
    - 如果反馈超时，应该听到"一号皮带张紧运行失败"
 6. 检查日志：
-   - 应该看到 `🗣️ [TensionControlConfigPanel] TTS播放预警语音: 一号皮带张紧准备启动，请注意安全`
-   - 应该看到 `🎙️ [CommonControl] 测试 TTS - 文本: 一号皮带张紧准备启动，请注意安全`
+   - 应该看到 `🗣️ [TensionControlConfigPanel] 播放预警语音: {audioPath}`
 
 ## Git 提交
 
 ```
-fix: Phase 7.48.53 修复张紧控制语音播放问题
+fix: Phase 7.48.53 修复张紧控制语音播放-改用alarmPlayback.playAlarm
 
-- 修复语音播放逻辑：使用 commonControl.testTTS() 替代不存在的 audioPlayer
-- 设置预警/失败语音默认文本："一号皮带张紧准备启动，请注意安全" / "一号皮带张紧运行失败"
-- 默认使用 TTS 模式（因为容器内无预录音频文件）
-- 新增 playVoice() 统一语音播放函数，支持 TTS 和文件两种模式
-- 修改启动延时定时器和反馈超时定时器的语音播放调用
-
-问题分析：
-- 问题1：audioPlayer 对象不存在，导致语音播放失败
-- 问题2：PaddleSpeech NLTK 错误只是警告，不影响功能（容器内无法访问外网下载 NLTK 数据）
+- 修复语音播放方法：从commonControl.testTTS()改为alarmPlayback.playAlarm()（参照BasicConfigTab）
+- 重写buildAudioPath为双参数版本：buildAudioPath(beltNum, filename)，使用audioBaseDir全局属性
+- 添加 import com.belt.control 1.0 导入TTSConfig单例（用于TTS音频路径构建）
+- 删除旧playVoice()函数，改为在定时器onTriggered中直接调用alarmPlayback.playAlarm()
+- 预警语音：playCount=1（播放1次），失败语音：playCount=3（播放3次）
+- 使用systemConfig.machineNumber动态获取皮带编号
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 ```

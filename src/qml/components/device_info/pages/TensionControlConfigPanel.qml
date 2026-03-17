@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import com.belt.control 1.0  // ✅ 2026-03-17 [Phase 7.48.53]: 导入TTSConfig单例（用于音频路径构建）
 import ".." as DeviceInfo
 
 // 2026-03-17 [Phase 7.48.51] 张紧控制配置面板（重写）
@@ -249,9 +250,16 @@ Rectangle {
         interval: startupDelaySpin.value * 1000
         repeat: false
         onTriggered: {
-            // ✅ 2026-03-17 [Phase 7.48.53]: 修复语音播放逻辑
-            // 延时结束，播放预警语音
-            playVoice(warningVoiceField.text, "预警")
+            // ✅ 2026-03-17 [Phase 7.48.53]: 重写语音播放逻辑，参照BasicConfigTab
+            // 旧：playVoice(warningVoiceField.text, "预警")  // 使用commonControl.testTTS()，错误
+            // 新：使用alarmPlayback.playAlarm()播放预合成音频文件，TTS文本作为回退
+            if (warningVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
+                var beltNum = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
+                var audioPath = buildAudioPath(beltNum, warningVoiceField.text)
+                var ttsText = beltNum + "号皮带张紧准备启动，请注意安全"
+                console.log("🗣️ [TensionControlConfigPanel] 播放预警语音:", audioPath)
+                alarmPlayback.playAlarm(warningVoiceField.text, ttsText, audioPath, true, "count", 1, 5)
+            }
 
             // 发送MQTT启动命令
             sendMqttCommand("start")
@@ -272,9 +280,16 @@ Rectangle {
         repeat: false
         onTriggered: {
             console.log("✅ [TensionControlConfigPanel] 反馈超时")
-            // ✅ 2026-03-17 [Phase 7.48.53]: 修复语音播放逻辑
-            // 播放失败语音
-            playVoice(failureVoiceField.text, "失败")
+            // ✅ 2026-03-17 [Phase 7.48.53]: 重写语音播放逻辑，参照BasicConfigTab
+            // 旧：playVoice(failureVoiceField.text, "失败")  // 使用commonControl.testTTS()，错误
+            // 新：使用alarmPlayback.playAlarm()播放预合成音频文件，TTS文本作为回退
+            if (failureVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
+                var beltNum = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
+                var audioPath = buildAudioPath(beltNum, failureVoiceField.text)
+                var ttsText = beltNum + "号皮带张紧运行失败"
+                console.log("🗣️ [TensionControlConfigPanel] 播放失败语音:", audioPath)
+                alarmPlayback.playAlarm(failureVoiceField.text, ttsText, audioPath, true, "count", 3, 5)
+            }
 
             // 停止张紧控制
             sendMqttCommand("stop")
@@ -286,37 +301,27 @@ Rectangle {
 
     function getParamFieldCount() { return 6 }  // 参数索引 0-5
 
-    // ✅ 2026-03-17 [Phase 7.48.53]: 统一语音播放函数
-    // TTS模式：使用 commonControl.testTTS() 合成并播放
-    // 默认模式：使用 commonControl.playAudio() 播放音频文件
-    function playVoice(voiceText, label) {
-        if (!voiceText || voiceText === "") {
-            console.log("⚠️ [TensionControlConfigPanel]", label, "语音文本为空，跳过播放")
-            return
-        }
+    // ✅ 2026-03-17 [Phase 7.48.53]: 删除旧playVoice函数
+    // 旧：function playVoice(voiceText, label) { ... commonControl.testTTS() ... }
+    // 原因：语音播放方法不对，应该使用alarmPlayback.playAlarm()播放预合成音频文件
+    // 新：直接在定时器onTriggered中调用alarmPlayback.playAlarm()（参照BasicConfigTab）
 
-        if (audioTtsRadio.checked) {
-            // TTS模式：使用 commonControl.testTTS 合成并播放
-            console.log("🗣️ [TensionControlConfigPanel] TTS播放" + label + "语音:", voiceText)
-            if (typeof commonControl !== "undefined") {
-                commonControl.testTTS(voiceText, 0, 0.9, 1.0)
-            } else {
-                console.log("⚠️ [TensionControlConfigPanel] commonControl 未定义")
-            }
-        } else {
-            // 默认模式：播放音频文件
-            var audioPath = buildAudioPath(voiceText)
-            console.log("🔊 [TensionControlConfigPanel] 播放" + label + "音频文件:", audioPath)
-            if (audioPath !== "" && typeof commonControl !== "undefined") {
-                commonControl.playAudio(audioPath)
-            }
-        }
-    }
-
-    function buildAudioPath(filename) {
+    // ✅ 2026-03-17 [Phase 7.48.53]: 重写buildAudioPath，参照BasicConfigTab
+    // 旧：function buildAudioPath(filename) { return "/app/audio/" + filename }
+    // 新：根据音频来源（默认/TTS）构建正确路径，使用audioBaseDir全局属性
+    function buildAudioPath(beltNum, filename) {
         if (!filename || filename === "") return ""
-        if (filename.startsWith("/")) return filename
-        return "/app/audio/" + filename
+        if (audioDefaultRadio.checked) {
+            // 默认音频：{audioBaseDir}/{beltNum}#PD/{filename}.wav
+            return audioBaseDir + "/" + beltNum + "#PD/" + filename + ".wav"
+        } else {
+            // TTS合成音频：{audioBaseDir}/paddlespeech-{model}-spk{id}/{beltNum}#PD/{filename}.wav
+            var modelIdx = typeof TTSConfig !== "undefined" ? TTSConfig.modelIndex(TTSConfig.Test) : 0
+            var modelName = typeof TTSConfig !== "undefined" ? TTSConfig.modelName(modelIdx) : "fastspeech2_csmsc"
+            var spkId = typeof TTSConfig !== "undefined" ? TTSConfig.speakerId(TTSConfig.Test) : 0
+            var engineFolder = "paddlespeech-" + modelName + "-spk" + spkId
+            return audioBaseDir + "/" + engineFolder + "/" + beltNum + "#PD/" + filename + ".wav"
+        }
     }
 
     function sendMqttCommand(action) {
