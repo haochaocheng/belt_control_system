@@ -18,7 +18,8 @@ Rectangle {
     }
 
     // ========== 公开属性 ==========
-    property int currentControlIndex: 0  // 当前选中的控制索引 (0=张力传感器, 1=独立张紧控制)
+    // 2026-03-17 [Phase 7.48.51]: 改为0=张力传感器, 1=张紧控制（分离两个功能）
+    property int currentControlIndex: 0  // 当前选中的控制索引 (0=张力传感器, 1=张紧控制)
     // ✅ 2026-01-31 [FIX 100.300.112.8.2]: 导航焦点索引（从父页面传递）
     property int focusItemIndex: -1  // -1 表示无焦点
     // ✅ 2026-01-31 [FIX 100.300.112.8.2]: 导航子区域（从父页面传递）
@@ -92,7 +93,8 @@ Rectangle {
 
         model: ListModel {
             ListElement { name: "张力传感器"; status: "投入" }
-            ListElement { name: "独立张紧控制"; status: "待实现" }
+            // 2026-03-17 [Phase 7.48.51]: 旧名"独立张紧控制"→"张紧控制"，状态"待实现"→"投入"
+            ListElement { name: "张紧控制"; status: "投入" }
         }
         currentIndex: root.currentControlIndex
 
@@ -176,7 +178,7 @@ Rectangle {
                     width: 8
                     height: 8
                     radius: 4
-                    // 张力传感器：绿色（投入），独立张紧控制：灰色（待实现）
+                    // 张力传感器和张紧控制：都是绿色（投入）
                     color: model.status === "投入" ? "#4CAF50" : "#95a5a6"
                     anchors.verticalCenter: parent.verticalCenter
                 }

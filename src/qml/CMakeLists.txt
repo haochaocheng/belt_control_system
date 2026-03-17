@@ -104,6 +104,8 @@ qt_add_qml_module(qml_module
         components/device_info/pages/TensionControlPage.qml
         components/device_info/pages/TensionControlListPanel.qml
         components/device_info/pages/TensionControlConfigPanel.qml
+        # 2026-03-17 [Phase 7.48.51]: 张力传感器配置面板（从张紧控制分离）
+        components/device_info/pages/TensionSensorConfigPanel.qml
         # ✅ 2026-03-09: 洒水控制页面组件
         components/device_info/pages/SprinklerControlPage.qml
         components/device_info/pages/SprinklerListPanel.qml

@@ -160,12 +160,23 @@ Rectangle {
         // function moveInUsageStatusArea(direction) { ... }
 
         // 导航函数：参数区域
-        // 2026-03-17 [Phase 7.48.48]: 重写导航，17个参数(0-16)，匹配新8列GridLayout
-        // 行布局: A(0,1) B(2,3) C(4,5,6) D(7,8,9) E(10,11,12) F(13,14) G(15,16)
+        // 2026-03-17 [Phase 7.48.51]: 动态导航数组，根据currentControlIndex切换
+        // 张力传感器(0): 15个参数(0-14), 行布局: A(0,1) B(2,3,4) C(5,6,7) D(8,9,10) E(11,12) F(13,14)
+        // 张紧控制(1): 6个参数(0-5), 行布局: A(0) B(1,2) C(3) D(4) E(5)
         function moveInParamArea(direction) {
-            console.log("✅ [TensionControlPage] moveInParamArea - direction:", direction, "paramIndex:", paramIndex)
+            console.log("✅ [TensionControlPage] moveInParamArea - direction:", direction, "paramIndex:", paramIndex, "controlIndex:", root.currentControlIndex)
             var idx = paramIndex
-            var rows = [[0,2],[2,2],[4,3],[7,3],[10,3],[13,2],[15,2]]
+            var rows = []
+
+            // 根据当前选中的控制类型选择导航数组
+            if (root.currentControlIndex === 0) {
+                // 张力传感器: 15个参数
+                rows = [[0,2],[2,3],[5,3],[8,3],[11,2],[13,2]]
+            } else {
+                // 张紧控制: 6个参数
+                rows = [[0,1],[1,2],[3,1],[4,1],[5,1]]
+            }
+
             var curRow = -1, colInRow = 0
             for (var r = 0; r < rows.length; r++) {
                 if (idx >= rows[r][0] && idx < rows[r][0] + rows[r][1]) {
@@ -221,9 +232,9 @@ Rectangle {
                 break
             case "Up":
                 // 返回参数区域最后一个参数
-                // 2026-03-17 [Phase 7.48.48]: 从19改为16（匹配新布局17个参数）
+                // 2026-03-17 [Phase 7.48.51]: 动态返回，张力传感器14，张紧控制5
                 switchToArea(areaParams)
-                paramIndex = 16
+                paramIndex = (root.currentControlIndex === 0) ? 14 : 5
                 return
             }
 
@@ -354,11 +365,12 @@ Rectangle {
         }
 
         // ========== 右侧：控制配置面板（使用Loader加载）==========
+        // 2026-03-17 [Phase 7.48.51]: 动态切换source，0→TensionSensorConfigPanel, 1→TensionControlConfigPanel
         Loader {
             id: tensionControlConfigPanel
             width: parent.width - tensionControlListPanel.width - 2
             height: parent.height
-            source: "TensionControlConfigPanel.qml"
+            source: root.currentControlIndex === 0 ? "TensionSensorConfigPanel.qml" : "TensionControlConfigPanel.qml"
 
             onLoaded: {
                 item.deviceId = Qt.binding(function() { return root.deviceId })  // ✅ 2026-02-06 [参数持久化]: 传递设备ID
