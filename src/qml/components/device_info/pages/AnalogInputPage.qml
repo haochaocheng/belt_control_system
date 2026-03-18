@@ -119,28 +119,30 @@ Rectangle {
         // ✅ 2026-03-06 [Phase 7.48.12]: 重新定义通道号映射
         // ✅ 2026-03-06 [Phase 7.48.13]: 重新排序 — 皮带机头常用项放顶部
         // ✅ 2026-03-07 [Phase 7.48.22]: 通道按截图从上到下顺序分配
-        //   前8项 = 模拟量模块1 CH0-CH7，后8项 = 模拟量模块2 CH0-CH7
-        //   旧映射（Phase 7.48.21）：甲烷/一氧化碳/二氧化碳在模块2，温度/煤流/煤仓高度在模块1
-        // 模拟量模块1 CH0-CH7
-        ListElement { name: "速度"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 0; enabled: true }
-        ListElement { name: "张力"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 1; enabled: true }
-        ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 2; enabled: true }
-        ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 3; enabled: true }
-        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 4; enabled: true }
-        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "模拟量模块1"; registerAddress: 5; enabled: true }
-        ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块1"; registerAddress: 6; enabled: true }
-        ListElement { name: "二氧化碳"; active: false; currentValue: 0.0; unit: "%CO₂"; moduleType: "模拟量模块1"; registerAddress: 7; enabled: true }
-        // 模拟量模块2 CH0-CH7
-        ListElement { name: "硫化氢"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "模拟量模块2"; registerAddress: 0; enabled: true }
-        ListElement { name: "氧气"; active: false; currentValue: 0.0; unit: "%O₂"; moduleType: "模拟量模块2"; registerAddress: 1; enabled: true }
-        ListElement { name: "烟雾"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 2; enabled: true }
-        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "模拟量模块2"; registerAddress: 3; enabled: true }
-        ListElement { name: "温度"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块2"; registerAddress: 4; enabled: true }
-        ListElement { name: "湿度"; active: false; currentValue: 0.0; unit: "%RH"; moduleType: "模拟量模块2"; registerAddress: 5; enabled: true }
-        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "模拟量模块2"; registerAddress: 6; enabled: true }
-        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "模拟量模块2"; registerAddress: 7; enabled: true }
-        ListElement { name: "气压"; active: false; currentValue: 0.0; unit: "kPa"; moduleType: "未分配"; registerAddress: -1; enabled: true }
-        ListElement { name: "风速"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "未分配"; registerAddress: -1; enabled: true }
+        // ✅ 2026-03-18 [Phase 7.48.53]: 只保留速度/张力/温度一/温度二/电压通道，其余设为-1（未分配）
+        //   添加group字段用于列表分组显示
+        // ── 运行参数 ──
+        ListElement { name: "速度"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "模拟量模块1"; registerAddress: 0; enabled: true; group: "运行参数" }
+        ListElement { name: "电压"; active: false; currentValue: 0.0; unit: "V"; moduleType: "模拟量模块1"; registerAddress: 4; enabled: true; group: "运行参数" }
+        // ── 温度保护 ──
+        ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 2; enabled: true; group: "温度保护" }
+        ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 3; enabled: true; group: "温度保护" }
+        // ── 张力监测 ──
+        ListElement { name: "张力"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 1; enabled: true; group: "张力监测" }
+        // ── 环境监测 ──
+        ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "二氧化碳"; active: false; currentValue: 0.0; unit: "%CO₂"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "硫化氢"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "氧气"; active: false; currentValue: 0.0; unit: "%O₂"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "烟雾"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "粉尘浓度"; active: false; currentValue: 0.0; unit: "mg/m³"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "温度"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "湿度"; active: false; currentValue: 0.0; unit: "%RH"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "煤流"; active: false; currentValue: 0.0; unit: "t/h"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "煤仓高度"; active: false; currentValue: 0.0; unit: "m"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "气压"; active: false; currentValue: 0.0; unit: "kPa"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
+        ListElement { name: "风速"; active: false; currentValue: 0.0; unit: "m/s"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
     }
 
     // ✅ 2026-03-09 [Phase 7.48.27]: 通道冲突对话框
@@ -334,7 +336,46 @@ Rectangle {
                     spacing: 0
                     currentIndex: root.currentProtectionIndex
 
-                    delegate: Rectangle {
+                    // ✅ 2026-03-18 [Phase 7.48.53]: 判断是否为分组第一项
+                    function isGroupFirst(index) {
+                        if (index <= 0) return true
+                        var curr = analogProtectionModel.get(index)
+                        var prev = analogProtectionModel.get(index - 1)
+                        return curr.group !== prev.group
+                    }
+
+                    delegate: Column {
+                        width: protectionListView.width
+
+                        // ✅ 2026-03-18 [Phase 7.48.53]: 分组标题
+                        Rectangle {
+                            visible: protectionListView.isGroupFirst(index)
+                            width: parent.width
+                            height: visible ? 28 : 0
+                            color: "transparent"
+
+                            Row {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.leftMargin: 8
+                                anchors.right: parent.right
+                                anchors.rightMargin: 8
+                                spacing: 6
+
+                                Rectangle { width: 3; height: 14; color: "#2196F3"; radius: 1; anchors.verticalCenter: parent.verticalCenter }
+                                Text {
+                                    text: model.group
+                                    font.pixelSize: 11
+                                    font.weight: Font.Bold
+                                    color: "#7788AA"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Rectangle { height: 1; color: "#333355"; Layout.fillWidth: true; anchors.verticalCenter: parent.verticalCenter; width: 80 }
+                            }
+                        }
+
+                        // 保护项
+                        Rectangle {
                         width: protectionListView.width
                         // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
                         height: 45  // 从 60 改为 45（一级标题是 40）
@@ -443,7 +484,7 @@ Rectangle {
                                 loadProtectionData(index)
                             }
                         }
-                    }
+                    } // Column delegate end
                 }
             }
         }
