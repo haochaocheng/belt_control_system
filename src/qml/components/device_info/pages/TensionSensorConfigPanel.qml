@@ -215,7 +215,9 @@ Rectangle {
             // ===== Row 1: TTS文本(12) / 音频文件(13) =====
             Text { text: audioTtsRadio.checked ? "TTS文本:" : "音频文件:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 1; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
-                Layout.column: 1; Layout.row: 1; Layout.columnSpan: 3; Layout.fillWidth: true
+                // ✅ 2026-03-18 [Phase 7.48.54]: 去掉columnSpan:3，宽度与保护延时输入框一致
+                // 旧：Layout.columnSpan: 3; Layout.fillWidth: true  // 跨3列太宽
+                Layout.column: 1; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: ttsTextField.implicitHeight
                 DeviceInfo.CustomTextField {
                     id: ttsTextField; text: "张力传感器报警"

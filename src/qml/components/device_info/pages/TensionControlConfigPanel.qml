@@ -158,7 +158,8 @@ Rectangle {
                 // 新：匹配BatchAudioGenerator生成的文件名 "{tensionNum}号张紧启动.wav"
                 // ✅ 2026-03-18 [Phase 7.48.54]: placeholderText改为具体文件名，不再显示通用"TTS文本"/"音频文件名"
                 text: root.controlIndex + "号张紧启动"
-                Layout.fillWidth: true
+                // ✅ 2026-03-18 [Phase 7.48.54]: 限制宽度与GridLayout输入框一致
+                Layout.fillWidth: true; Layout.maximumWidth: 300
                 placeholderText: root.controlIndex + "号张紧启动"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
@@ -178,7 +179,8 @@ Rectangle {
                 // 新：匹配BatchAudioGenerator生成的文件名 "{tensionNum}号张紧运行失败.wav"
                 // ✅ 2026-03-18 [Phase 7.48.54]: placeholderText改为具体文件名
                 text: root.controlIndex + "号张紧运行失败"
-                Layout.fillWidth: true
+                // ✅ 2026-03-18 [Phase 7.48.54]: 限制宽度与GridLayout输入框一致
+                Layout.fillWidth: true; Layout.maximumWidth: 300
                 placeholderText: root.controlIndex + "号张紧运行失败"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
