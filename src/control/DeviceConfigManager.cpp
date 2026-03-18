@@ -1662,6 +1662,31 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移024已执行过，跳过";
     }
+
+    // ✅ 2026-03-18 [Phase 7.48.55]: 迁移025 - 洒水2-8默认禁用（只保留洒水1启用）
+    query.exec("SELECT version FROM schema_migrations WHERE version = '025_sprinkler_default_disabled'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移025: 洒水2-8默认禁用...";
+        QSqlQuery fix(m_database);
+        fix.exec("UPDATE sprinkler_output_config SET enabled = 0 WHERE sprinkler_index > 1");
+        int updated = fix.numRowsAffected();
+        qDebug() << "  ✅ 迁移025: 禁用" << updated << "个洒水装置(洒水2-8)";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('025_sprinkler_default_disabled')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移025已执行过，跳过";
+    }
+
+    // ✅ 2026-03-18 [Phase 7.48.55]: 迁移026 - 开关量保护新增洒水延时字段
+    query.exec("SELECT version FROM schema_migrations WHERE version = '026_digital_sprinkler_delay'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移026: 开关量保护新增sprinkler_delay列...";
+        QSqlQuery fix(m_database);
+        fix.exec("ALTER TABLE device_digital_protections ADD COLUMN sprinkler_delay INTEGER DEFAULT 30");
+        qDebug() << "  ✅ 迁移026: sprinkler_delay列已添加(默认30秒)";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('026_digital_sprinkler_delay')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移026已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()

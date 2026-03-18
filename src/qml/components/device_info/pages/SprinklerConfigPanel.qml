@@ -96,12 +96,90 @@ Rectangle {
             }
         }
 
+        // ========== 分隔线 ==========
+        // ✅ 2026-03-18 [Phase 7.48.55]: 手动控制区域
+        Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: "#3d4556"
+            Layout.topMargin: 8
+            Layout.bottomMargin: 8
+        }
+
+        // ========== Row 3: 手动启动/停止按钮 ==========
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 16
+            Text { text: "手动控制:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            RowLayout {
+                spacing: 16
+                // 启动按钮（绿色）
+                Rectangle {
+                    id: startBtn
+                    width: 120; height: 40
+                    radius: 6
+                    color: startBtnMa.pressed ? "#2E7D32" : (startBtnMa.containsMouse ? "#43A047" : "#388E3C")
+                    border.color: "#4CAF50"; border.width: 1
+                    Text { anchors.centerIn: parent; text: "启 动"; font.pixelSize: 16; font.weight: Font.Bold; color: "#FFFFFF" }
+                    MouseArea {
+                        id: startBtnMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: root.sendSprinklerCommand(true)
+                    }
+                    Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 6; z: 10 }
+                }
+                // 停止按钮（红色）
+                Rectangle {
+                    id: stopBtn
+                    width: 120; height: 40
+                    radius: 6
+                    color: stopBtnMa.pressed ? "#C62828" : (stopBtnMa.containsMouse ? "#E53935" : "#D32F2F")
+                    border.color: "#F44336"; border.width: 1
+                    Text { anchors.centerIn: parent; text: "停 止"; font.pixelSize: 16; font.weight: Font.Bold; color: "#FFFFFF" }
+                    MouseArea {
+                        id: stopBtnMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: root.sendSprinklerCommand(false)
+                    }
+                    Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 6; z: 10 }
+                }
+            }
+        }
+
         // ========== 弹性空间 ==========
         Item { Layout.fillHeight: true }
     }
 
     // ========== 函数 ==========
     function getParamFieldCount() { return 3 }  // 参数索引 0-2
+
+    // ✅ 2026-03-18 [Phase 7.48.55]: 手动洒水控制 - 发送MQTT命令
+    function sendSprinklerCommand(activate) {
+        if (typeof mqttController === "undefined" || !mqttController) {
+            console.log("⚠️ [SprinklerConfigPanel] mqttController 未定义，无法发送洒水命令")
+            return
+        }
+
+        var topic = "belt_control/relay/module1/control"
+        var cmd = {
+            "cmd": "write",
+            "channel": channelSpin.value,
+            "value": activate ? 1 : 0,
+            "timestamp": Math.floor(Date.now() / 1000)
+        }
+        var message = JSON.stringify(cmd)
+
+        var success = mqttController.publish(topic, message, 1, false)
+        if (success) {
+            console.log("✅ [SprinklerConfigPanel] 洒水" + (root.sprinklerIndex + 1) +
+                        (activate ? " 启动" : " 停止") + "命令已发送 channel:" + channelSpin.value)
+        } else {
+            console.log("❌ [SprinklerConfigPanel] 洒水" + (root.sprinklerIndex + 1) +
+                        " 命令发送失败")
+        }
+    }
 
     function loadSprinklerConfig() {
         if (typeof deviceConfigMgr === "undefined") {
@@ -151,8 +229,10 @@ Rectangle {
     function triggerButton(buttonIndex) {
         console.log("✅ [SprinklerConfigPanel] triggerButton:", buttonIndex)
         switch(buttonIndex) {
-        case 0: saveSprinklerConfig(); break
-        case 1: loadSprinklerConfig(); break
+        case 0: sendSprinklerCommand(true); break   // 启动洒水
+        case 1: sendSprinklerCommand(false); break  // 停止洒水
+        case 2: saveSprinklerConfig(); break         // 保存配置
+        case 3: loadSprinklerConfig(); break         // 加载配置
         }
     }
 

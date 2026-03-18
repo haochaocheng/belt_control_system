@@ -1382,6 +1382,124 @@ Rectangle {
                             }
                         }
 
+                        // ✅ 2026-03-18 [Phase 7.48.55]: Row 7 - 超温洒水使能（左列，索引13）+ 洒水选择（右列，索引14）
+                        Text {
+                            text: "超温洒水:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 0
+                            Layout.row: 7
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 1
+                            Layout.row: 7
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: sprinklerSwitch.implicitHeight
+
+                            Switch {
+                                id: sprinklerSwitch
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: false
+                            }
+
+                            Text {
+                                anchors.left: sprinklerSwitch.right
+                                anchors.leftMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: sprinklerSwitch.checked ? "已启用" : "已禁用"
+                                font.pixelSize: 16
+                                color: sprinklerSwitch.checked ? "#4CAF50" : "#757575"
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 13) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 13) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
+                        Text {
+                            text: "洒水选择:"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 2
+                            Layout.row: 7
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 3
+                            Layout.row: 7
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: sprinklerCombo.implicitHeight
+
+                            DeviceInfo.CustomComboBox {
+                                id: sprinklerCombo
+                                anchors.fill: parent
+                                keyboardManager: root.keyboardManager
+                                model: ["洒水1", "洒水2", "洒水3", "洒水4", "洒水5", "洒水6", "洒水7", "洒水8"]
+                                currentIndex: 0
+                                enabled: sprinklerSwitch.checked
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 14) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 14) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
+                        // ✅ 2026-03-18 [Phase 7.48.55]: Row 8 - 洒水延时（左列，索引15）
+                        Text {
+                            text: "洒水延时(秒):"
+                            font.pixelSize: 21
+                            color: "#9E9E9E"
+                            Layout.column: 0
+                            Layout.row: 8
+                            Layout.preferredWidth: 120
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        Item {
+                            Layout.column: 1
+                            Layout.row: 8
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 300
+                            implicitHeight: sprinklerDelaySpin.implicitHeight
+
+                            DeviceInfo.CustomSpinBox {
+                                id: sprinklerDelaySpin
+                                anchors.fill: parent
+                                from: 0
+                                to: 300
+                                value: 30
+                                editable: true
+                                keyboardManager: root.keyboardManager
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: (root.focusSubArea === 1 && root.focusParamIndex === 15) ? "#2196F3" : "transparent"
+                                border.width: (root.focusSubArea === 1 && root.focusParamIndex === 15) ? 3 : 0
+                                radius: 4
+                                z: 10
+                            }
+                        }
+
                         /* ✅ 2026-03-04 [Phase 7.47.80]: 注释掉GridLayout内模块状态指示器
                          * 原因：已移至 ScrollView 下方独立的「模块状态（只读）」区域
                          */
@@ -2562,6 +2680,11 @@ Rectangle {
             // ✅ 2026-03-04 [Phase 7.47.96]: 加载保护级别（默认1=预警+正常停车）
             root.protectionLevel = (protection.protection_level !== undefined) ? protection.protection_level : 1
 
+            // ✅ 2026-03-18 [Phase 7.48.55]: 加载超温洒水配置
+            sprinklerSwitch.checked = (protection.sprinkler_enabled == 1)
+            sprinklerCombo.currentIndex = (protection.sprinkler_index !== undefined && protection.sprinkler_index > 0) ? (protection.sprinkler_index - 1) : 0
+            sprinklerDelaySpin.value = (protection.sprinkler_delay !== undefined) ? protection.sprinkler_delay : 30
+
             console.log("✅ [SwitchInputPage] 从数据库加载完整参数:", item.name)
         } else {
             // 数据库中没有，使用ListModel中的基本数据
@@ -2589,6 +2712,11 @@ Rectangle {
             root.playModeSelection = 0
             // ✅ 2026-03-04 [Phase 7.47.96]: 默认保护级别 - 预警+正常停车
             root.protectionLevel = 1
+
+            // ✅ 2026-03-18 [Phase 7.48.55]: 超温洒水默认值
+            sprinklerSwitch.checked = false
+            sprinklerCombo.currentIndex = 0  // 默认洒水1
+            sprinklerDelaySpin.value = 30    // 默认30秒
 
             console.log("⚠️ [SwitchInputPage] 数据库中没有详细参数，使用默认值:", item.name)
         }
@@ -2627,7 +2755,11 @@ Rectangle {
             // ✅ 2026-03-04 [Phase 7.47.94]: 新增播放方式字段
             "play_mode": root.playModeSelection === 0 ? "count" : "duration",
             // ✅ 2026-03-04 [Phase 7.47.96]: 新增保护级别字段（0-3，默认1）
-            "protection_level": root.protectionLevel
+            "protection_level": root.protectionLevel,
+            // ✅ 2026-03-18 [Phase 7.48.55]: 新增超温洒水字段
+            "sprinkler_enabled": sprinklerSwitch.checked ? 1 : 0,
+            "sprinkler_index": sprinklerCombo.currentIndex + 1,  // ComboBox索引0-7 → 洒水1-8
+            "sprinkler_delay": sprinklerDelaySpin.value
         }
 
         if (deviceConfigMgr.saveDigitalProtection(root.deviceId, protection)) {
@@ -2639,9 +2771,9 @@ Rectangle {
 
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.29]: 获取参数字段数量
     function getParamFieldCount() {
-        // ✅ 2026-03-04 [Phase 7.47.96]: 更新为13（新增保护级别索引12）
-        // 旧值（Phase 7.47.94）：12
-        // 新值：13（新增保护级别=12在row6左列）
+        // ✅ 2026-03-18 [Phase 7.48.55]: 更新为16（新增超温洒水3个参数索引13-15）
+        // 旧值（Phase 7.47.96）：13
+        // 新值：16（新增超温洒水使能=13、洒水选择=14、洒水延时=15）
         // 索引说明：
         //   0-8:  保护参数（保护名称0、播放次数1、模块类型2、播放时长3、
         //          寄存器地址4、TTS文字5、通道编号6、音频文件7、保护延时8）
@@ -2649,7 +2781,10 @@ Rectangle {
         //   10:   连接超时 SpinBox（row5 左列）
         //   11:   播放方式 按钮组（row5 右列，按次数/按时长切换）
         //   12:   保护级别 ComboBox（row6 左列，4级下拉选择）
-        return 13
+        //   13:   超温洒水使能 Switch（row7 左列）
+        //   14:   洒水选择 ComboBox（row7 右列）
+        //   15:   洒水延时 SpinBox（row8 左列）
+        return 16
     }
 
     // ✅ 2026-03-04 [Phase 7.47.81]: 所有索引0-10均可交互，无占位
@@ -2727,6 +2862,22 @@ Rectangle {
             console.log("✅ [SwitchInputPage] 切换保护级别:", root.protectionLevel,
                         ["预警+紧急停车", "预警+正常停车", "仅预警不停车", "不预警不停车"][root.protectionLevel])
             return
+        // ✅ 2026-03-18 [Phase 7.48.55]: 超温洒水参数交互
+        case 13:
+            // 超温洒水使能 - 直接切换开关
+            sprinklerSwitch.toggle()
+            console.log("✅ [SwitchInputPage] 切换超温洒水使能:", sprinklerSwitch.checked)
+            return
+        case 14:
+            // 洒水选择 - ComboBox
+            inputField = sprinklerCombo
+            inputMode = "numeric"
+            break
+        case 15:
+            // 洒水延时 - SpinBox
+            inputField = sprinklerDelaySpin
+            inputMode = "numeric"
+            break
         default:
             console.warn("⚠️ [SwitchInputPage] 无效的参数索引:", paramIndex)
             return
