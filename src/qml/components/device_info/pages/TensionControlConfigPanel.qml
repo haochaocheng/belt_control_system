@@ -156,9 +156,10 @@ Rectangle {
                 // ✅ 2026-03-17 [Phase 7.48.53]: 改为音频文件名（不含扩展名），参照BasicConfigTab命名规范
                 // 旧：text: "一号皮带张紧准备启动，请注意安全"（TTS全文，不是文件名）
                 // 新：匹配BatchAudioGenerator生成的文件名 "{tensionNum}号张紧启动.wav"
+                // ✅ 2026-03-18 [Phase 7.48.54]: placeholderText改为具体文件名，不再显示通用"TTS文本"/"音频文件名"
                 text: root.controlIndex + "号张紧启动"
                 Layout.fillWidth: true
-                placeholderText: audioTtsRadio.checked ? "TTS文本" : "音频文件名"
+                placeholderText: root.controlIndex + "号张紧启动"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
@@ -175,9 +176,10 @@ Rectangle {
                 // ✅ 2026-03-17 [Phase 7.48.53]: 改为音频文件名（不含扩展名），参照BasicConfigTab命名规范
                 // 旧：text: "一号皮带张紧运行失败"（TTS全文，不是文件名）
                 // 新：匹配BatchAudioGenerator生成的文件名 "{tensionNum}号张紧运行失败.wav"
+                // ✅ 2026-03-18 [Phase 7.48.54]: placeholderText改为具体文件名
                 text: root.controlIndex + "号张紧运行失败"
                 Layout.fillWidth: true
-                placeholderText: audioTtsRadio.checked ? "TTS文本" : "音频文件名"
+                placeholderText: root.controlIndex + "号张紧运行失败"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
@@ -390,8 +392,9 @@ Rectangle {
         if (config.feedback_timeout !== undefined) feedbackTimeoutSpin.value = config.feedback_timeout
         if (config.startup_delay !== undefined) startupDelaySpin.value = config.startup_delay
         if (config.audio_source !== undefined) { audioTtsRadio.checked = (config.audio_source === "tts"); audioDefaultRadio.checked = (config.audio_source !== "tts") }
-        if (config.warning_voice !== undefined) warningVoiceField.text = config.warning_voice
-        if (config.failure_voice !== undefined) failureVoiceField.text = config.failure_voice
+        // ✅ 2026-03-18 [Phase 7.48.54]: 仅在非空时覆盖，避免数据库空值清掉默认文件名
+        if (config.warning_voice !== undefined && config.warning_voice !== "") warningVoiceField.text = config.warning_voice
+        if (config.failure_voice !== undefined && config.failure_voice !== "") failureVoiceField.text = config.failure_voice
     }
 
     function saveTensionControlConfig() {
