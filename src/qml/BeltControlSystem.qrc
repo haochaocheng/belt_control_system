@@ -2,6 +2,8 @@
     <qresource>
         <file>App.qml</file>
         <file>BeltControlSystem.qmlproject</file>
+        <file>com/belt/control/qmldir</file>
+        <file>com/belt/control/TTSConfig.qml</file>
         <file>components/AlarmSummaryPanel.qml</file>
         <file>components/common/Footer.qml</file>
         <file>components/common/Header.qml</file>
@@ -13,13 +15,13 @@
         <file>components/control_panel/DeviceStatusBar.qml</file>
         <file>components/control_panel/DeviceStatusPanel.qml</file>
         <file>components/control_panel/ImageInputField.qml</file>
-        <file>components/control_panel/StateInputField.qml</file>
         <file>components/control_panel/ModuleConnectionPanel.qml</file>
         <file>components/control_panel/OperationLogPanel.qml</file>
         <file>components/control_panel/OutputDevicePanel.qml</file>
         <file>components/control_panel/OutputDeviceSettingsPopup.qml</file>
         <file>components/control_panel/ProtectionPanel.qml</file>
         <file>components/control_panel/ProtectionSettingsPopup.qml</file>
+        <file>components/control_panel/StateInputField.qml</file>
         <file>components/device_info/CustomComboBox.qml</file>
         <file>components/device_info/CustomReadOnlyField.qml</file>
         <file>components/device_info/CustomSpinBox.qml</file>
@@ -133,6 +135,8 @@
         <file>components/device_info/pages/CurrentProtectionTab.qml</file>
         <file>components/device_info/pages/DIModulePanel.qml</file>
         <file>components/device_info/pages/FrontBearingTempTab.qml</file>
+        <file>components/device_info/pages/LinePositionConfigPanel.qml</file>
+        <file>components/device_info/pages/LinePositionPage.qml</file>
         <file>components/device_info/pages/ModbusRegisterTab.qml</file>
         <file>components/device_info/pages/ModbusTCPMasterTab.qml</file>
         <file>components/device_info/pages/ModbusTCPSlaveTab.qml</file>
@@ -141,6 +145,7 @@
         <file>components/device_info/pages/MotorControlPage_QDS.qml</file>
         <file>components/device_info/pages/MotorListPanel.qml</file>
         <file>components/device_info/pages/MotorListPanel_QDS.qml</file>
+        <file>components/device_info/pages/MotorProtectionTab.qml</file>
         <file>components/device_info/pages/MotorTempTab.qml</file>
         <file>components/device_info/pages/MQTTAutoControlTab.qml</file>
         <file>components/device_info/pages/MQTTConfigPanel.qml</file>
@@ -165,6 +170,9 @@
         <file>components/device_info/pages/SerialPortParamsTab.qml</file>
         <file>components/device_info/pages/SerialPortReceiveTab.qml</file>
         <file>components/device_info/pages/SerialPortSendTab.qml</file>
+        <file>components/device_info/pages/SprinklerConfigPanel.qml</file>
+        <file>components/device_info/pages/SprinklerControlPage.qml</file>
+        <file>components/device_info/pages/SprinklerListPanel.qml</file>
         <file>components/device_info/pages/SwitchInputPage.qml</file>
         <file>components/device_info/pages/TCPConfigPanel.qml</file>
         <file>components/device_info/pages/TCPControlPage.qml</file>
@@ -172,12 +180,15 @@
         <file>components/device_info/pages/TensionControlConfigPanel.qml</file>
         <file>components/device_info/pages/TensionControlListPanel.qml</file>
         <file>components/device_info/pages/TensionControlPage.qml</file>
+        <file>components/device_info/pages/TensionSensorConfigPanel.qml</file>
         <file>components/device_info/pages/VoiceModulePanel.qml</file>
         <file>components/device_info/pages/XAxisVibrationTab.qml</file>
         <file>components/device_info/pages/YAxisVibrationTab.qml</file>
         <file>components/device_info/qmldir</file>
         <file>components/device_info/VirtualKeyboardManager.qml</file>
+        <file>components/device_monitor/AnimatedCounter.qml</file>
         <file>components/device_monitor/BeltConnectionDiagram.qml</file>
+        <file>components/device_monitor/CircularProgress.qml</file>
         <file>components/device_monitor/CornerDecoration.qml</file>
         <file>components/device_monitor/DeviceStatusCard.qml</file>
         <file>components/device_monitor/GlowLed.qml</file>
@@ -188,6 +199,7 @@
         <file>components/device_monitor/SmoothLineChart.qml</file>
         <file>components/device_monitor/StationCard.qml</file>
         <file>components/device_monitor/StatusBadge.qml</file>
+        <file>components/device_monitor/Theme.qml</file>
         <file>components/MotorControlBtn.qml</file>
         <file>components/MotorControlPanel.qml</file>
         <file>components/parameter_settings/BasicParametersSection.qml</file>
@@ -363,6 +375,8 @@
         <file>main_qds.qml</file>
         <file>MockBackend.qml</file>
         <file>pages/AlarmPage.qml</file>
+        <file>pages/BatchSynthesisContent.qml</file>
+        <file>pages/BatchSynthesisDialog.qml</file>
         <file>pages/ControlPanel.qml</file>
         <file>pages/DeviceMonitorPage.qml</file>
         <file>pages/DeviceOperationLog.qml</file>

@@ -313,6 +313,12 @@ int main(int argc, char *argv[]) {
         mqttProtectionMonitor.setAIDataManager(&aiDataManager);
         // ✅ 2026-03-09 [Phase 7.48.26]: 注入MQTTController，用于洒水控制MQTT发布
         mqttProtectionMonitor.setMQTTController(&mqttController);
+        // ✅ 2026-03-18 [Phase 7.48.56]: 注入CSDataManager，用于沿线点位保护监控
+        mqttProtectionMonitor.setCSDataManager(&csDataManager);
+        // 连接CSDataManager的bitChanged信号到MqttProtectionMonitor
+        QObject::connect(&csDataManager, &CSDataManager::bitChanged,
+                         &mqttProtectionMonitor, &MqttProtectionMonitor::onCSBitChanged);
+        logMessage("CS module protection monitoring connected to MqttProtectionMonitor");
         mqttProtectionMonitor.setAIBeltMapping(0, systemConfig.machineNumber());  // AI模块0(模拟量模块1) → 当前皮带
         // ✅ 2026-03-07 [Phase 7.48.19]: 补充模拟量模块2的皮带映射（旧代码遗漏，导致模块2保护查询默认皮带1）
         mqttProtectionMonitor.setAIBeltMapping(1, systemConfig.machineNumber());  // AI模块1(模拟量模块2) → 当前皮带

@@ -27,6 +27,7 @@ class CommonControl;
 class DeviceConfigManager;  // ✅ 2026-02-28 [Phase 7.47.49]
 class AlarmPlaybackService; // ✅ 2026-03-04 [Phase 7.47.95]
 class MQTTController;       // ✅ 2026-03-09 [Phase 7.48.26]: 洒水控制用MQTT发布
+class CSDataManager;        // ✅ 2026-03-18 [Phase 7.48.56]: CS模块（沿线点位保护）
 
 /**
  * @brief MQTT开关量保护监控器
@@ -90,6 +91,9 @@ public:
     // ✅ 2026-03-09 [Phase 7.48.26]: 新增 - 设置MQTT控制器（用于洒水控制MQTT发布）
     void setMQTTController(MQTTController *ctrl) { m_mqttController = ctrl; }
 
+    // ✅ 2026-03-18 [Phase 7.48.56]: 设置CS数据管理器（沿线点位保护）
+    void setCSDataManager(CSDataManager *csManager) { m_csDataManager = csManager; }
+
     /**
      * @brief 设置AI模块的皮带编号映射
      * @param moduleIndex AI模块索引（0或1，对应模拟量模块1和2）
@@ -137,6 +141,20 @@ public slots:
      * - 超限时触发AlarmPlaybackService
      */
     void onAIChannelChanged(int moduleIndex, int channelIndex, const ChannelData &data);
+
+    // ✅ 2026-03-18 [Phase 7.48.56]: CS模块位变化槽函数（沿线点位保护）
+    /**
+     * @brief CS模块位变化槽函数（沿线急停/跑偏/撕裂）
+     * @param protType 保护类型（0=急停, 1=跑偏, 2=撕裂）
+     * @param pointIndex 点位索引（0-63）
+     * @param value 位值（true=触发, false=恢复）
+     *
+     * 流程：
+     * 1. 计算 channel_number = protType * 100 + pointIndex
+     * 2. 查询 device_digital_protections WHERE module_type='CS模块' AND channel_number=?
+     * 3. 触发 AlarmPlaybackService 播放报警语音
+     */
+    void onCSBitChanged(int protType, int pointIndex, bool value);
 
     // ✅ 2026-03-13: 电机保护Modbus TCP数据接收槽函数
     /**
@@ -215,6 +233,7 @@ private slots:
 private:
     DIDataManager *m_diManager;        ///< DI数据管理器
     AIDataManager *m_aiManager;        ///< AI数据管理器 ✅ Phase 7.48.5
+    CSDataManager *m_csDataManager;    ///< CS数据管理器（沿线点位保护）✅ Phase 7.48.56
     CommonControl *m_commonControl;    ///< 公共控制器
     AudioPathMapper *m_audioPathMapper; ///< 音频路径映射器
     DeviceConfigManager *m_deviceConfigMgr; ///< 设备配置管理器（查询use_text_to_speech）✅ Phase 7.47.49
@@ -294,6 +313,10 @@ private:
     QMap<QString, bool> m_motorProtectionAlarmActive;
 
     // ✅ 2026-03-10 [Phase 7.48.31]: publishMotorCommand 已移至 public 区域（Q_INVOKABLE）
+
+    // ✅ 2026-03-18 [Phase 7.48.56]: CS保护报警状态追踪（边沿触发）
+    // Key = "cs:保护类型:点位索引" (如 "cs:0:5" = 急停6号点位)
+    QMap<QString, bool> m_csProtectionAlarmActive;
 };
 
 #endif // MQTTPROTECTIONMONITOR_H

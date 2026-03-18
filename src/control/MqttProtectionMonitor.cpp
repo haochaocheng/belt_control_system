@@ -2,6 +2,7 @@
 #include "../mqtt/DIDataManager.h"
 #include "../mqtt/AIDataManager.h"  // ✅ 2026-03-05 [Phase 7.48.5]
 #include "../mqtt/MQTTController.h" // ✅ 2026-03-09 [Phase 7.48.26]: 洒水控制
+#include "../mqtt/CSDataManager.h"  // ✅ 2026-03-18 [Phase 7.48.56]: 沿线点位保护
 #include "CommonControl.h"
 #include "DataPathConfig.h"      // ✅ 2026-02-28 [Phase 7.47.43]: 统一音频路径
 #include "DeviceConfigManager.h" // ✅ 2026-02-28 [Phase 7.47.49]: 查询use_text_to_speech
@@ -20,6 +21,7 @@ MqttProtectionMonitor::MqttProtectionMonitor(DIDataManager *diManager,
     : QObject(parent)
     , m_diManager(diManager)
     , m_aiManager(nullptr)  // ✅ 2026-03-05 [Phase 7.48.5]: 由main.cpp通过setAIDataManager注入
+    , m_csDataManager(nullptr)  // ✅ 2026-03-18 [Phase 7.48.56]: 由main.cpp通过setCSDataManager注入
     , m_commonControl(commonControl)
     // ✅ 2026-02-27 11:00 [Phase 7.47.35]: 修复编译错误，AudioPathMapper不是QObject，不接受parent参数
     // ⚠️ 2026-02-28 [Phase 7.47.43]: 先用默认构造，构造体内再设置正确路径（见下方）
@@ -105,6 +107,8 @@ void MqttProtectionMonitor::stop()
 
     // ✅ 2026-03-09 [Phase 7.48.23]: 清理报警状态，下次启动时重新检测
     m_protectionAlarmActive.clear();
+    // ✅ 2026-03-18 [Phase 7.48.56]: 清理CS保护报警状态
+    m_csProtectionAlarmActive.clear();
 }
 
 void MqttProtectionMonitor::setBeltMapping(int moduleIndex, int beltNumber)
@@ -865,5 +869,98 @@ void MqttProtectionMonitor::onMotorRegisterReceived(int motorIndex, int tabIndex
 
         emit analogProtectionRestored(beltNumber, QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName),
                                        engineeringValue);
+    }
+}
+
+// ✅ 2026-03-18 [Phase 7.48.56]: CS模块位变化槽函数（沿线急停/跑偏/撕裂）
+void MqttProtectionMonitor::onCSBitChanged(int protType, int pointIndex, bool value)
+{
+    if (!m_isRunning) {
+        return;
+    }
+
+    // 保护类型名称映射
+    static const QStringList protTypeNames = {"沿线急停", "沿线跑偏", "沿线撕裂"};
+    if (protType < 0 || protType >= protTypeNames.size()) {
+        qWarning() << "⚠️ [MqttProtectionMonitor] 无效的CS保护类型:" << protType;
+        return;
+    }
+
+    QString protTypeName = protTypeNames[protType];
+    int pointNumber = pointIndex + 1;  // 点位编号从1开始
+    QString protectionName = QString("%1号%2").arg(pointNumber).arg(protTypeName);
+
+    // 边沿触发：使用 m_csProtectionAlarmActive 追踪状态
+    QString alarmKey = QString("cs:%1:%2").arg(protType).arg(pointIndex);
+    bool wasActive = m_csProtectionAlarmActive.value(alarmKey, false);
+
+    if (value && !wasActive) {
+        // ===== 正常→触发（0→1）=====
+        m_csProtectionAlarmActive[alarmKey] = true;
+
+        qDebug() << "🚨 [CS保护] " << protectionName << "触发！"
+                 << "protType:" << protType << "pointIndex:" << pointIndex;
+
+        // 计算 channel_number = protType * 100 + pointIndex
+        int channelNumber = protType * 100 + pointIndex;
+
+        // 查询数据库获取保护配置
+        QString audioPath;
+        bool useTTS = false;
+        QString playMode = "count";
+        int playCount = 3;
+        double playDuration = 5.0;
+        QString ttsText;
+
+        if (m_deviceConfigMgr) {
+            QVariantMap protection = m_deviceConfigMgr->loadDigitalProtectionByChannel("CS模块", channelNumber);
+            if (!protection.isEmpty()) {
+                useTTS = (protection.value("use_text_to_speech", 0).toInt() == 1);
+                playMode = protection.value("play_mode", "count").toString();
+                playCount = protection.value("play_count", 3).toInt();
+                playDuration = protection.value("play_duration", 5.0).toDouble();
+                ttsText = protection.value("tts_text", "").toString();
+                // 优先使用数据库中的音频文件路径
+                QString dbAudioFile = protection.value("audio_file", "").toString();
+                if (!dbAudioFile.isEmpty()) {
+                    // 构建完整路径：{audioBaseDir}/{beltNumber}#PD/{audioFile}
+                    int beltNumber = m_beltMapping.value(0, 1);  // CS模块使用默认皮带映射
+                    QString audioBaseDir = m_audioPathMapper->baseDirectory();
+                    audioPath = QString("%1/%2#PD/%3").arg(audioBaseDir).arg(beltNumber).arg(dbAudioFile);
+                }
+                qDebug() << "📋 [CS保护] " << protectionName
+                         << "音频来源:" << (useTTS ? "TTS" : "默认")
+                         << "播放方式:" << playMode
+                         << "次数:" << playCount << "时长:" << playDuration;
+            } else {
+                qWarning() << "⚠️ [CS保护] 未找到保护配置: module_type=CS模块, channel=" << channelNumber;
+            }
+        }
+
+        // 如果没有从DB获取到路径，使用默认命名
+        if (audioPath.isEmpty()) {
+            int beltNumber = m_beltMapping.value(0, 1);
+            QString audioBaseDir = m_audioPathMapper->baseDirectory();
+            audioPath = QString("%1/%2#PD/%3.wav").arg(audioBaseDir).arg(beltNumber).arg(protectionName);
+        }
+
+        // 播放报警音频
+        if (m_alarmPlaybackService) {
+            qDebug() << "🔊 [CS保护] 触发播放:" << audioPath << "模式:" << playMode;
+            m_alarmPlaybackService->playAlarm(protectionName, ttsText, audioPath,
+                                              useTTS, playMode, playCount, playDuration);
+        } else if (m_commonControl) {
+            qDebug() << "🔊 [CS保护] 回退到CommonControl单次播放:" << audioPath;
+            m_commonControl->playAudio(audioPath);
+        }
+
+        // 发射保护触发信号（用于报警历史记录）
+        int beltNumber = m_beltMapping.value(0, 1);
+        emit protectionTriggered(5, pointIndex, beltNumber, protectionName, audioPath);
+
+    } else if (!value && wasActive) {
+        // ===== 触发→恢复（1→0）=====
+        m_csProtectionAlarmActive[alarmKey] = false;
+        qDebug() << "🟢 [CS保护] " << protectionName << "恢复正常";
     }
 }
