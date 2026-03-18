@@ -565,7 +565,9 @@ Popup {
         // 旧：if (chkMotor.checked) total += 12 * beltCount * motorCount
         if (chkMotor.checked) total += 14 * beltCount * motorCount
         if (chkBrake.checked) total += 8 * beltCount * brakeCount
-        if (chkTension.checked) total += 10 * beltCount * tensionCount
+        // 旧：if (chkTension.checked) total += 10 * beltCount * tensionCount
+        // ✅ 2026-03-18 [Phase 7.48.53]: 修正为实际数量：3种保护+1启动预警+1运行失败=5个/张紧装置
+        if (chkTension.checked) total += 5 * beltCount * tensionCount
         if (chkLinePosition.checked) total += lineCount * beltCount
         if (chkSystemSound.checked) total += 20
 

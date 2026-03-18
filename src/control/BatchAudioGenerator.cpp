@@ -591,6 +591,35 @@ void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
                 task.volume = engine.volume;
                 m_tasks.append(task);
             }
+
+            // ✅ 2026-03-18 [Phase 7.48.53]: 从generateBeltOperationTasks移入，确保tension分类包含启动预警和运行失败语音
+            // 张紧启动预警：每台张紧1个
+            {
+                FileTask task;
+                task.category = "tension";
+                task.text = QString("%1号皮带%2号张紧准备启动，请注意安全").arg(beltNum).arg(tensionNum);
+                task.outputPath = QString("%1%2号张紧启动.wav").arg(outputDir).arg(tensionNum);
+                task.engineName = engine.engineName;
+                task.modelName = engine.modelName;
+                task.speakerId = engine.speakerId;
+                task.rate = engine.rate;
+                task.volume = engine.volume;
+                m_tasks.append(task);
+            }
+
+            // 张紧运行失败：每台张紧1个
+            {
+                FileTask task;
+                task.category = "tension";
+                task.text = QString("%1号张紧运行失败").arg(tensionNum);
+                task.outputPath = QString("%1%2号张紧运行失败.wav").arg(outputDir).arg(tensionNum);
+                task.engineName = engine.engineName;
+                task.modelName = engine.modelName;
+                task.speakerId = engine.speakerId;
+                task.rate = engine.rate;
+                task.volume = engine.volume;
+                m_tasks.append(task);
+            }
         }
     }
 }
@@ -749,34 +778,22 @@ void BatchAudioGenerator::generateBeltOperationTasks(const EngineConfig &engine)
         //     m_tasks.append(task);
         // }
 
-        // 张紧启动预警：每台张紧1个
-        // ✅ 2026-03-17 [Phase 7.48.53]: 新增张紧启动预警语音（参照电机启动预警）
-        for (int tensionNum : m_tensionNumbers) {
-            FileTask task;
-            task.category = "beltOperation";
-            task.text = QString("%1号皮带%2号张紧准备启动，请注意安全").arg(beltNum).arg(tensionNum);
-            task.outputPath = QString("%1%2号张紧启动.wav").arg(outputDir).arg(tensionNum);
-            task.engineName = engine.engineName;
-            task.modelName = engine.modelName;
-            task.speakerId = engine.speakerId;
-            task.rate = engine.rate;
-            task.volume = engine.volume;
-            m_tasks.append(task);
-        }
-
-        // 张紧运行失败：每台张紧1个
-        for (int tensionNum : m_tensionNumbers) {
-            FileTask task;
-            task.category = "beltOperation";
-            task.text = QString("%1号张紧运行失败").arg(tensionNum);
-            task.outputPath = QString("%1%2号张紧运行失败.wav").arg(outputDir).arg(tensionNum);
-            task.engineName = engine.engineName;
-            task.modelName = engine.modelName;
-            task.speakerId = engine.speakerId;
-            task.rate = engine.rate;
-            task.volume = engine.volume;
-            m_tasks.append(task);
-        }
+        // 旧：张紧启动预警和运行失败
+        // ✅ 2026-03-18 [Phase 7.48.53]: 已移至generateTensionTasks中，确保tension分类勾选即可生成
+        // for (int tensionNum : m_tensionNumbers) {
+        //     FileTask task;
+        //     task.category = "beltOperation";
+        //     task.text = QString("%1号皮带%2号张紧准备启动，请注意安全").arg(beltNum).arg(tensionNum);
+        //     task.outputPath = QString("%1%2号张紧启动.wav").arg(outputDir).arg(tensionNum);
+        //     ...
+        // }
+        // for (int tensionNum : m_tensionNumbers) {
+        //     FileTask task;
+        //     task.category = "beltOperation";
+        //     task.text = QString("%1号张紧运行失败").arg(tensionNum);
+        //     task.outputPath = QString("%1%2号张紧运行失败.wav").arg(outputDir).arg(tensionNum);
+        //     ...
+        // }
     }
 }
 
