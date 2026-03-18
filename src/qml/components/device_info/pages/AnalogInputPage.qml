@@ -484,6 +484,7 @@ Rectangle {
                                 loadProtectionData(index)
                             }
                         }
+                    } // Rectangle (保护项) end
                     } // Column delegate end
                 }
             }
