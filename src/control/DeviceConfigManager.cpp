@@ -1687,6 +1687,49 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移026已执行过，跳过";
     }
+
+    // ✅ 2026-03-18 [Phase 7.48.56]: 迁移027 - 初始化沿线点位保护默认记录（3种×64点位=192条）
+    query.exec("SELECT version FROM schema_migrations WHERE version = '027_line_position_protections'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移027: 初始化沿线点位保护默认记录...";
+        QSqlQuery fix(m_database);
+
+        // 3种保护类型：急停(base=0), 跑偏(base=100), 撕裂(base=200)
+        struct LineProtDef { int channelBase; QString name; QString file; };
+        QList<LineProtDef> defs = {
+            {0,   "沿线急停", "沿线急停"},
+            {100, "沿线跑偏", "沿线跑偏"},
+            {200, "沿线撕裂", "沿线撕裂"},
+        };
+
+        int insertCount = 0;
+        for (const auto &def : defs) {
+            for (int pos = 1; pos <= 64; ++pos) {
+                fix.prepare(R"(
+                    INSERT INTO device_digital_protections (
+                        device_id, protection_name, module_type, register_address,
+                        channel_number, tts_text, use_text_to_speech, audio_file,
+                        protection_delay, play_count, play_duration, play_mode, protection_level
+                    ) SELECT ?, ?, 'CS模块', 5, ?, ?, 1, ?, 1.0, 3, 5.0, 'count', 1
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM device_digital_protections
+                        WHERE module_type = 'CS模块' AND channel_number = ?
+                    )
+                )");
+                fix.addBindValue(1);
+                fix.addBindValue(QString("%1号%2").arg(pos).arg(def.name));
+                fix.addBindValue(def.channelBase + pos - 1);
+                fix.addBindValue(QString("%1号%2保护").arg(pos).arg(def.name));
+                fix.addBindValue(QString("%1号%2.wav").arg(pos).arg(def.file));
+                fix.addBindValue(def.channelBase + pos - 1);
+                if (fix.exec() && fix.numRowsAffected() > 0) insertCount++;
+            }
+        }
+        qDebug() << "  ✅ 迁移027: 插入" << insertCount << "条沿线点位保护记录";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('027_line_position_protections')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移027已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2106,6 +2149,36 @@ QVariantList DeviceConfigManager::loadAllDigitalProtections(int deviceId)
 
     if (!query.exec()) {
         qWarning() << "加载设备" << deviceId << "的所有开关量保护失败:" << query.lastError().text();
+        return QVariantList();
+    }
+
+    return queryToList(query);
+}
+
+// ✅ 2026-03-18 [Phase 7.48.56]: 按模块类型和通道号加载保护配置（沿线点位保护用）
+QVariantMap DeviceConfigManager::loadDigitalProtectionByChannel(const QString &moduleType, int channelNumber)
+{
+    QSqlQuery query(m_database);
+    query.prepare("SELECT * FROM device_digital_protections WHERE module_type = ? AND channel_number = ?");
+    query.addBindValue(moduleType);
+    query.addBindValue(channelNumber);
+
+    if (!query.exec() || !query.next()) {
+        return QVariantMap();
+    }
+
+    return queryToMap(query);
+}
+
+// ✅ 2026-03-18 [Phase 7.48.56]: 加载指定模块类型的所有保护配置（沿线点位保护列表用）
+QVariantList DeviceConfigManager::loadDigitalProtectionsByModuleType(const QString &moduleType)
+{
+    QSqlQuery query(m_database);
+    query.prepare("SELECT * FROM device_digital_protections WHERE module_type = ? ORDER BY channel_number");
+    query.addBindValue(moduleType);
+
+    if (!query.exec()) {
+        qWarning() << "加载模块类型" << moduleType << "的保护配置失败:" << query.lastError().text();
         return QVariantList();
     }
 

@@ -131,6 +131,23 @@ public:
     Q_INVOKABLE QVariantList loadAllDigitalProtections(int deviceId);
 
     /**
+     * @brief 按模块类型和通道号加载开关量保护配置
+     * @param moduleType 模块类型（如"CS模块"）
+     * @param channelNumber 通道号
+     * @return 保护配置（QVariantMap）
+     * @date 2026-03-18 [Phase 7.48.56]
+     */
+    Q_INVOKABLE QVariantMap loadDigitalProtectionByChannel(const QString &moduleType, int channelNumber);
+
+    /**
+     * @brief 加载指定模块类型的所有保护配置
+     * @param moduleType 模块类型（如"CS模块"）
+     * @return 保护配置列表（QVariantList）
+     * @date 2026-03-18 [Phase 7.48.56]
+     */
+    Q_INVOKABLE QVariantList loadDigitalProtectionsByModuleType(const QString &moduleType);
+
+    /**
      * @brief 删除开关量保护配置
      * @param deviceId 设备ID（1-12）
      * @param protectionName 保护名称
