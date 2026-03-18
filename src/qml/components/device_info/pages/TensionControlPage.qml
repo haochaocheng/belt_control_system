@@ -314,6 +314,13 @@ Rectangle {
         event.accepted = true
     }
 
+    // ✅ 2026-03-18 [Phase 7.48.53]: 添加保存转发函数，供DeviceSettingsDialog保存按钮调用
+    function saveTensionControlConfig() {
+        if (tensionControlConfigPanel.item && typeof tensionControlConfigPanel.item.saveTensionControlConfig === "function") {
+            tensionControlConfigPanel.item.saveTensionControlConfig()
+        }
+    }
+
     // ✅ 2026-01-31 [FIX 100.300.112.8]: 处理键盘事件（供 DeviceSettingsDialog 调用）
     // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 改为3区域模式（移除使用状态区域）
     function handleKeyPress(direction) {
