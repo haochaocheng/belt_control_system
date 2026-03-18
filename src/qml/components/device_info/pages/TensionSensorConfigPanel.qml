@@ -200,15 +200,68 @@ Rectangle {
                 }
             }
             Text { text: "播放方式:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            // ✅ 2026-03-18 [Phase 7.48.55]: 播放方式切换按钮（Cyberpunk工业风，与开关量输入统一）
+            // 旧：RadioButton playCountRadio/playDurationRadio  // 2026-03-18 删除，改为切换按钮
             Item {
                 Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
-                implicitHeight: playCountRadio.implicitHeight
+                implicitHeight: 50
+
+                // 隐藏的 RadioButton（保持与现有保存/加载逻辑兼容）
                 ButtonGroup { id: playModeGroup }
-                Row {
-                    anchors.verticalCenter: parent.verticalCenter
+                RadioButton { id: playCountRadio; visible: false; checked: true; ButtonGroup.group: playModeGroup }
+                RadioButton { id: playDurationRadio; visible: false; ButtonGroup.group: playModeGroup }
+
+                RowLayout {
+                    anchors.fill: parent
                     spacing: 8
-                    RadioButton { id: playCountRadio; text: "按次数"; checked: true; ButtonGroup.group: playModeGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
-                    RadioButton { id: playDurationRadio; text: "按时长"; ButtonGroup.group: playModeGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
+
+                    Button {
+                        id: playModeCountBtn
+                        text: "按次数"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+                        checkable: true
+                        checked: playCountRadio.checked
+                        background: Rectangle {
+                            color: playModeCountBtn.checked ? "#0d1b2e" : (playModeCountBtn.hovered ? "#1e2d42" : "#141920")
+                            radius: 6
+                            border.color: playModeCountBtn.checked ? "#00d4ff" : (playModeCountBtn.hovered ? "#2196F3" : "#334155")
+                            border.width: playModeCountBtn.checked ? 2 : 1
+                            Rectangle { visible: playModeCountBtn.checked; anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: 1; anchors.rightMargin: 1; anchors.topMargin: 1; height: 2; radius: 1; color: "#00d4ff" }
+                        }
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent; spacing: 8
+                                Rectangle { width: 8; height: 8; radius: 4; anchors.verticalCenter: parent.verticalCenter; color: playModeCountBtn.checked ? "#00d4ff" : "#475569"; Rectangle { width: 4; height: 4; radius: 2; anchors.centerIn: parent; color: playModeCountBtn.checked ? "#e0f7ff" : "#64748B" } }
+                                Text { text: playModeCountBtn.text; font.pixelSize: 16; font.weight: playModeCountBtn.checked ? Font.Medium : Font.Normal; color: playModeCountBtn.checked ? "#00d4ff" : "#9E9E9E"; verticalAlignment: Text.AlignVCenter }
+                            }
+                        }
+                        onClicked: { playCountRadio.checked = true }
+                    }
+
+                    Button {
+                        id: playModeDurationBtn
+                        text: "按时长"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+                        checkable: true
+                        checked: playDurationRadio.checked
+                        background: Rectangle {
+                            color: playModeDurationBtn.checked ? "#1b1500" : (playModeDurationBtn.hovered ? "#1e2d42" : "#141920")
+                            radius: 6
+                            border.color: playModeDurationBtn.checked ? "#F59E0B" : (playModeDurationBtn.hovered ? "#2196F3" : "#334155")
+                            border.width: playModeDurationBtn.checked ? 2 : 1
+                            Rectangle { visible: playModeDurationBtn.checked; anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: 1; anchors.rightMargin: 1; anchors.topMargin: 1; height: 2; radius: 1; color: "#F59E0B" }
+                        }
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent; spacing: 8
+                                Rectangle { width: 8; height: 8; radius: 4; anchors.verticalCenter: parent.verticalCenter; color: playModeDurationBtn.checked ? "#F59E0B" : "#475569"; Rectangle { width: 4; height: 4; radius: 2; anchors.centerIn: parent; color: playModeDurationBtn.checked ? "#FDE68A" : "#64748B" } }
+                                Text { text: playModeDurationBtn.text; font.pixelSize: 16; font.weight: playModeDurationBtn.checked ? Font.Medium : Font.Normal; color: playModeDurationBtn.checked ? "#F59E0B" : "#9E9E9E"; verticalAlignment: Text.AlignVCenter }
+                            }
+                        }
+                        onClicked: { playDurationRadio.checked = true }
+                    }
                 }
             }
 

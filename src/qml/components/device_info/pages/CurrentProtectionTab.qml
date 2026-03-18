@@ -14,6 +14,9 @@ Rectangle {
     // ========== 公开属性 ==========
     property int motorIndex: 0
 
+    // ✅ 2026-03-18 [Phase 7.48.55]: 播放方式 0=按次数 1=按时长（统一Cyberpunk切换按钮样式）
+    property int playModeSelection: 0
+
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引（从父页面传递）
     property int focusParamIndex: 0  // 参数区域焦点索引
     property var virtualKeyboard: null  // Qt 虚拟键盘引用
@@ -96,9 +99,9 @@ Rectangle {
                 }
             }
 
-            // 报警类型标签
+            // ✅ 2026-03-18 [Phase 7.48.55]: 播放方式标签（原：报警类型标签）
             Text {
-                text: "报警类型:"
+                text: "播放方式:"
                 font.pixelSize: 21
                 color: "#9E9E9E"
                 Layout.column: 2
@@ -107,43 +110,104 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // ✅ 2026-02-02 [FIX 100.300.112.8.25]: 改为 CustomComboBox，支持回车键切换
-            // 报警类型输入（下拉框）
+            // ✅ 2026-03-18 [Phase 7.48.55]: 播放方式切换按钮（Cyberpunk工业风，与开关量输入统一）
+            // 旧：CustomComboBox ["按次数", "按时间"]  // 2026-03-18 删除，改为切换按钮
             Item {
                 Layout.column: 3
                 Layout.row: 0
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: alarmTypeField.implicitHeight
+                implicitHeight: 50
 
-                DeviceInfo.CustomComboBox {
-                    id: alarmTypeField
+                RowLayout {
                     anchors.fill: parent
-                    model: ["按次数", "按时间"]
-                    currentIndex: 0  // 默认选中"按次数"
-                    keyboardManager: root.keyboardManager
-                }
+                    spacing: 8
 
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: function(mouse) {
-                        console.log("✅ [CurrentProtectionTab] 鼠标点击报警类型，发射信号: requestFocusParamIndex(1)")
-                        root.requestFocusParamIndex(1)
-                        mouse.accepted = false
+                    // [按次数] 按钮
+                    Button {
+                        id: playModeCountBtn
+                        text: "按次数"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+                        checkable: true
+                        checked: root.playModeSelection === 0
+
+                        background: Rectangle {
+                            color: playModeCountBtn.checked ? "#0d1b2e" :
+                                   (playModeCountBtn.hovered ? "#1e2d42" : "#141920")
+                            radius: 6
+                            border.color: playModeCountBtn.checked ? "#00d4ff" :
+                                          (playModeCountBtn.hovered ? "#2196F3" : "#334155")
+                            border.width: playModeCountBtn.checked ? 2 : 1
+
+                            Rectangle {
+                                visible: playModeCountBtn.checked
+                                anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+                                anchors.leftMargin: 1; anchors.rightMargin: 1; anchors.topMargin: 1
+                                height: 2; radius: 1; color: "#00d4ff"
+                            }
+                        }
+
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent; spacing: 8
+                                Rectangle {
+                                    width: 8; height: 8; radius: 4; anchors.verticalCenter: parent.verticalCenter
+                                    color: playModeCountBtn.checked ? "#00d4ff" : "#475569"
+                                    Rectangle { width: 4; height: 4; radius: 2; anchors.centerIn: parent; color: playModeCountBtn.checked ? "#e0f7ff" : "#64748B" }
+                                }
+                                Text { text: playModeCountBtn.text; font.pixelSize: 16; font.weight: playModeCountBtn.checked ? Font.Medium : Font.Normal; color: playModeCountBtn.checked ? "#00d4ff" : "#9E9E9E"; verticalAlignment: Text.AlignVCenter }
+                            }
+                        }
+                        onClicked: root.playModeSelection = 0
+                    }
+
+                    // [按时长] 按钮
+                    Button {
+                        id: playModeDurationBtn
+                        text: "按时长"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+                        checkable: true
+                        checked: root.playModeSelection === 1
+
+                        background: Rectangle {
+                            color: playModeDurationBtn.checked ? "#1b1500" :
+                                   (playModeDurationBtn.hovered ? "#1e2d42" : "#141920")
+                            radius: 6
+                            border.color: playModeDurationBtn.checked ? "#F59E0B" :
+                                          (playModeDurationBtn.hovered ? "#2196F3" : "#334155")
+                            border.width: playModeDurationBtn.checked ? 2 : 1
+
+                            Rectangle {
+                                visible: playModeDurationBtn.checked
+                                anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+                                anchors.leftMargin: 1; anchors.rightMargin: 1; anchors.topMargin: 1
+                                height: 2; radius: 1; color: "#F59E0B"
+                            }
+                        }
+
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent; spacing: 8
+                                Rectangle {
+                                    width: 8; height: 8; radius: 4; anchors.verticalCenter: parent.verticalCenter
+                                    color: playModeDurationBtn.checked ? "#F59E0B" : "#475569"
+                                    Rectangle { width: 4; height: 4; radius: 2; anchors.centerIn: parent; color: playModeDurationBtn.checked ? "#FDE68A" : "#64748B" }
+                                }
+                                Text { text: playModeDurationBtn.text; font.pixelSize: 16; font.weight: playModeDurationBtn.checked ? Font.Medium : Font.Normal; color: playModeDurationBtn.checked ? "#F59E0B" : "#9E9E9E"; verticalAlignment: Text.AlignVCenter }
+                            }
+                        }
+                        onClicked: root.playModeSelection = 1
                     }
                 }
 
                 // 焦点指示器
-                // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 增加 z 值到 1000
                 Rectangle {
-                    anchors.fill: parent
-                    color: "transparent"
+                    anchors.fill: parent; color: "transparent"
                     border.color: (root.focusParamIndex === 1) ? "#2196F3" : "transparent"
                     border.width: (root.focusParamIndex === 1) ? 3 : 0
-                    radius: 4
-                    z: 1000  // ✅ 从 10 增加到 1000
-                    enabled: false
+                    radius: 4; z: 1000; enabled: false
                 }
             }
 
@@ -154,7 +218,7 @@ Rectangle {
             Text {
                 text: "次数设置:"
                 font.pixelSize: 21
-                color: alarmTypeField.currentIndex === 0 ? "#9E9E9E" : "#3E3E3E"  // 按次数时正常色，否则变深灰（更明显）
+                color: root.playModeSelection === 0 ? "#9E9E9E" : "#3E3E3E"  // 按次数时正常色，否则变深灰（更明显）
                 Layout.column: 0
                 Layout.row: 1
                 Layout.preferredWidth: 160
@@ -175,14 +239,14 @@ Rectangle {
                     from: 1
                     to: 100
                     value: 3
-                    enabled: alarmTypeField.currentIndex === 0  // 按次数时启用，否则禁用
+                    enabled: root.playModeSelection === 0  // 按次数时启用，否则禁用
                     keyboardManager: root.keyboardManager
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
                 MouseArea {
                     anchors.fill: parent
-                    enabled: alarmTypeField.currentIndex === 0  // 按次数时启用，否则禁用
+                    enabled: root.playModeSelection === 0  // 按次数时启用，否则禁用
                     onClicked: function(mouse) {
                         console.log("✅ [CurrentProtectionTab] 鼠标点击次数设置，发射信号: requestFocusParamIndex(2)")
                         root.requestFocusParamIndex(2)
@@ -207,7 +271,7 @@ Rectangle {
             Text {
                 text: "时间设置:"
                 font.pixelSize: 21
-                color: alarmTypeField.currentIndex === 1 ? "#9E9E9E" : "#3E3E3E"  // 按时间时正常色，否则变深灰（更明显）
+                color: root.playModeSelection === 1 ? "#9E9E9E" : "#3E3E3E"  // 按时间时正常色，否则变深灰（更明显）
                 Layout.column: 2
                 Layout.row: 1
                 Layout.preferredWidth: 160
@@ -235,14 +299,14 @@ Rectangle {
                         from: 1
                         to: 1000
                         value: 10
-                        enabled: alarmTypeField.currentIndex === 1  // 按时间时启用，否则禁用
+                        enabled: root.playModeSelection === 1  // 按时间时启用，否则禁用
                         keyboardManager: root.keyboardManager
                     }
 
                     Text {
                         text: "0.1秒"
                         font.pixelSize: 21
-                        color: alarmTypeField.currentIndex === 1 ? "#9E9E9E" : "#3E3E3E"  // 按时间时正常色，否则变深灰（更明显）
+                        color: root.playModeSelection === 1 ? "#9E9E9E" : "#3E3E3E"  // 按时间时正常色，否则变深灰（更明显）
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -250,7 +314,7 @@ Rectangle {
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.9]: 鼠标点击发射信号
                 MouseArea {
                     anchors.fill: parent
-                    enabled: alarmTypeField.currentIndex === 1  // 按时间时启用，否则禁用
+                    enabled: root.playModeSelection === 1  // 按时间时启用，否则禁用
                     onClicked: function(mouse) {
                         console.log("✅ [CurrentProtectionTab] 鼠标点击时间设置，发射信号: requestFocusParamIndex(3)")
                         root.requestFocusParamIndex(3)
@@ -759,20 +823,21 @@ Rectangle {
             // ComboBox 不需要虚拟键盘，直接切换选项
             enabledField.currentIndex = (enabledField.currentIndex + 1) % enabledField.model.length
             break
-        case 1:  // 报警类型（CustomComboBox）
-            console.log("✅ [CurrentProtectionTab] 切换报警类型")
-            // ComboBox 不需要虚拟键盘，直接切换选项
-            alarmTypeField.currentIndex = (alarmTypeField.currentIndex + 1) % alarmTypeField.model.length
+        case 1:  // 播放方式（Cyberpunk切换按钮）
+            console.log("✅ [CurrentProtectionTab] 切换播放方式")
+            // ✅ 2026-03-18 [Phase 7.48.55]: 改为切换 playModeSelection
+            // 旧：alarmTypeField.currentIndex = (alarmTypeField.currentIndex + 1) % alarmTypeField.model.length
+            root.playModeSelection = (root.playModeSelection + 1) % 2
             break
         case 2:  // 次数设置（CustomSpinBox，条件启用）
             console.log("✅ [CurrentProtectionTab] 次数设置")
-            if (alarmTypeField.currentIndex === 0) {
+            if (root.playModeSelection === 0) {
                 inputField = countSettingField
             }
             break
         case 3:  // 时间设置（CustomSpinBox，条件启用）
             console.log("✅ [CurrentProtectionTab] 时间设置")
-            if (alarmTypeField.currentIndex === 1) {
+            if (root.playModeSelection === 1) {
                 inputField = timeSettingField
             }
             break
