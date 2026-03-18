@@ -376,22 +376,22 @@ Rectangle {
 
                         // 保护项
                         Rectangle {
-                        width: protectionListView.width
-                        // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
-                        height: 45  // 从 60 改为 45（一级标题是 40）
-                        color: "transparent"
-                        // ✅ 2026-01-30 [FIX 100.300.105]: 添加焦点指示器边框
-                        border.color: isFocused ? "#2196F3" : "transparent"
-                        border.width: isFocused ? 3 : 0
-                        // ✅ 2026-03-09 [Phase 7.48.27]: 禁用保护项半透明显示
-                        opacity: model.enabled ? 1.0 : 0.45
+                            id: itemRect
+                            width: protectionListView.width
+                            // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整高度，使二级标题比一级标题小
+                            height: 45  // 从 60 改为 45（一级标题是 40）
+                            color: "transparent"
 
-                        // ✅ 2026-01-30 [FIX 100.300.105]: 焦点状态判断
-                        readonly property bool isFocused: (root.focusSubArea === 0 && root.focusItemIndex === index)
-                        // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 分离选中状态和焦点状态
-                        // 选中状态：只依赖 currentProtectionIndex（焦点离开列表时保持选中）
-                        // 焦点状态：依赖 focusSubArea 和 focusItemIndex（焦点离开列表时消失）
-                        readonly property bool isSelected: (root.currentProtectionIndex === index)
+                            // ✅ 2026-01-30 [FIX 100.300.105]: 焦点状态判断（移到顶部确保先声明）
+                            readonly property bool isFocused: (root.focusSubArea === 0 && root.focusItemIndex === index)
+                            // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 分离选中状态和焦点状态
+                            readonly property bool isSelected: (root.currentProtectionIndex === index)
+
+                            // ✅ 2026-01-30 [FIX 100.300.105]: 添加焦点指示器边框
+                            border.color: itemRect.isFocused ? "#2196F3" : "transparent"
+                            border.width: itemRect.isFocused ? 3 : 0
+                            // ✅ 2026-03-09 [Phase 7.48.27]: 禁用保护项半透明显示
+                            opacity: model.enabled ? 1.0 : 0.45
 
                         // ✅ 2026-01-26 [FIX 100.300.25.5]: 添加背景图片
                         Image {
@@ -402,7 +402,7 @@ Rectangle {
 
                             // ✅ 2026-01-30 [FIX 100.300.105]: 根据焦点状态切换背景图片
                             // ✅ 2026-01-31 [FIX 100.300.112.8.12]: 背景图片只依赖选中状态，不依赖焦点状态
-                            source: isSelected ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
+                            source: itemRect.isSelected ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
 
                             // ✅ 2026-01-30 [注释]: 保留原有的 states，但现在由 isFocused 控制
                             // states: [
@@ -448,8 +448,8 @@ Rectangle {
                             Text {
                                 text: model.name
                                 font.pixelSize: 14
-                                font.weight: isFocused ? Font.Bold : Font.Normal
-                                color: isFocused ? "#E0E0E0" : "#9E9E9E"
+                                font.weight: itemRect.isFocused ? Font.Bold : Font.Normal
+                                color: itemRect.isFocused ? "#E0E0E0" : "#9E9E9E"
                                 Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignHCenter
                                 elide: Text.ElideRight
