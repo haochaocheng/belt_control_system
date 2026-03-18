@@ -43,6 +43,7 @@
 #include "mqtt/DIDataManager.h"  // ✅ 2026-02-09 [Phase 7.44.3]: 添加开关量数据管理器头文件
 #include "mqtt/AIDataManager.h"  // ✅ 2026-02-09 [Phase 7.44.4]: 添加模拟量数据管理器头文件
 #include "mqtt/DODataManager.h"  // ✅ 2026-03-10 [Phase 7.48.36]: 添加DO模块数据管理器头文件
+#include "mqtt/CSDataManager.h"  // ✅ 2026-03-18 [Phase 7.48.56]: 添加CS模块数据管理器头文件
 #include "control/MqttProtectionMonitor.h"  // ✅ 2026-02-27 [Phase 7.47.35]: 添加MQTT保护监控器头文件
 #endif
 #include "network/NetworkTask.h"
@@ -222,10 +223,11 @@ int main(int argc, char *argv[]) {
         DIDataManager diDataManager;
         AIDataManager aiDataManager;
         DODataManager doDataManager;  // ✅ 2026-03-10 [Phase 7.48.36]: DO模块数据管理器
+        CSDataManager csDataManager;  // ✅ 2026-03-18 [Phase 7.48.56]: CS模块数据管理器（沿线点位保护）
 
         // 连接信号：自动管理器 → 数据管理器
         QObject::connect(&mqttAutoManager, &MQTTAutoManager::moduleDataReceived,
-                        [&diDataManager, &aiDataManager, &doDataManager](int moduleIndex, const QString &topic, const QByteArray &payload) {
+                        [&diDataManager, &aiDataManager, &doDataManager, &csDataManager](int moduleIndex, const QString &topic, const QByteArray &payload) {
             if (moduleIndex < 2) {
                 // 开关量模块（0, 1）
                 diDataManager.parseData(moduleIndex, payload);
@@ -235,6 +237,9 @@ int main(int argc, char *argv[]) {
             } else if (moduleIndex == 4) {
                 // ✅ 2026-03-10 [Phase 7.48.36]: DO模块（4）
                 doDataManager.parseData(payload);
+            } else if (moduleIndex == 5 || moduleIndex == 6) {
+                // ✅ 2026-03-18 [Phase 7.48.56]: CS模块（5, 6）沿线点位保护
+                csDataManager.parseData(payload);
             }
         });
 
@@ -242,13 +247,17 @@ int main(int argc, char *argv[]) {
         // 原因：模块断开后 DIDataManager 保持最后值不清零，导致通道状态冻结
         // 效果：模块离线 → 对应DI模块数据立即清零 → QML通道状态LED熄灭
         QObject::connect(&mqttController, &MQTTController::connectedChanged,
-                        [&diDataManager, &doDataManager](int moduleIndex, bool connected) {
+                        [&diDataManager, &doDataManager, &csDataManager](int moduleIndex, bool connected) {
             if (!connected && moduleIndex < 2) {
                 diDataManager.resetModule(moduleIndex);
             }
             // ✅ 2026-03-10 [Phase 7.48.36]: DO模块断开时重置数据
             if (!connected && moduleIndex == 4) {
                 doDataManager.reset();
+            }
+            // ✅ 2026-03-18 [Phase 7.48.56]: CS模块断开时重置数据
+            if (!connected && (moduleIndex == 5 || moduleIndex == 6)) {
+                csDataManager.reset();
             }
         });
 
@@ -437,6 +446,7 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("diDataManager", &diDataManager);
         engine.rootContext()->setContextProperty("aiDataManager", &aiDataManager);
         engine.rootContext()->setContextProperty("doDataManager", &doDataManager);  // ✅ 2026-03-10 [Phase 7.48.36]
+        engine.rootContext()->setContextProperty("csDataManager", &csDataManager);  // ✅ 2026-03-18 [Phase 7.48.56]
 #endif
         // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.40]: 注册MODBUS从站控制器到QML（6个串口，每个串口一个从站）
         engine.rootContext()->setContextProperty("modbusSlaveController1", &modbusSlaveController1);

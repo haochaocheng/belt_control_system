@@ -391,6 +391,23 @@ void MQTTAutoManager::pollDIModules()
         // 发布命令
         m_mqttController->publishBytes(controlTopic, payload, 1, false, i);
     }
+
+    // ✅ 2026-03-18 [Phase 7.48.56]: 轮询CS模块（模块5和模块6，沿线点位保护）
+    for (int i = 5; i <= 6; ++i) {
+        if (!m_mqttController->isModuleConnected(i)) {
+            continue;
+        }
+
+        QString controlTopic = QString("belt_control/cs/module%1/control").arg(i - 4);
+
+        QJsonObject cmd;
+        cmd["cmd"] = "read";
+        cmd["timestamp"] = QDateTime::currentSecsSinceEpoch();
+
+        QByteArray payload = QJsonDocument(cmd).toJson(QJsonDocument::Compact);
+
+        m_mqttController->publishBytes(controlTopic, payload, 1, false, i);
+    }
 }
 
 void MQTTAutoManager::pollAIModules()
@@ -661,10 +678,10 @@ void MQTTAutoManager::onModuleConnected(int moduleIndex, bool connected)
             } else if (moduleIndex == 4) {
                 // ✅ 2026-03-10 [Phase 7.48.36]: DO模块（继电器输出+反馈+急停）
                 statusTopic = QString("belt_control/do/module1/status");
+            } else if (moduleIndex == 5 || moduleIndex == 6) {
+                // ✅ 2026-03-18 [Phase 7.48.56]: CS模块（沿线点位保护）
+                statusTopic = QString("belt_control/cs/module%1/status").arg(moduleIndex - 4);
             } else {
-                // 其他模块（暂未实施）
-                emit healthStatusChanged();
-                return;
             }
 
             // 订阅状态主题
@@ -721,6 +738,9 @@ void MQTTAutoManager::onModuleMessageReceived(int moduleIndex, const QString &to
     } else if (moduleIndex == 4) {
         // ✅ 2026-03-10 [Phase 7.48.36]: DO模块
         expectedHardwareTopic = QString("belt_control/do/module1/status");
+    } else if (moduleIndex == 5 || moduleIndex == 6) {
+        // ✅ 2026-03-18 [Phase 7.48.56]: CS模块（沿线点位保护）
+        expectedHardwareTopic = QString("belt_control/cs/module%1/status").arg(moduleIndex - 4);
     }
 
     bool isHardwareTopic = (!expectedHardwareTopic.isEmpty() && topic == expectedHardwareTopic);
