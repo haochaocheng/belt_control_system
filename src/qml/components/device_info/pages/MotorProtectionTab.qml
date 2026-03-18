@@ -695,37 +695,72 @@ Rectangle {
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
+            // ✅ 2026-03-18 [Phase 7.48.55]: 播放方式切换按钮（Cyberpunk工业风，与开关量输入统一）
+            // 旧：简单Button蓝色/灰色切换  // 2026-03-18 删除，改为Cyberpunk切换按钮
             Item {
                 Layout.column: 1; Layout.row: 9
                 Layout.fillWidth: true; Layout.maximumWidth: 300
-                implicitHeight: playModeRow.implicitHeight
-                Row {
+                implicitHeight: 50
+                // 保留 playModeRow 兼容性（保存/加载函数引用 playModeRow.selectedMode）
+                Item {
                     id: playModeRow
-                    spacing: 5
+                    visible: false
                     property string selectedMode: "count"
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 8
+
                     Button {
-                        id: playByCountBtn
+                        id: playModeCountBtn
                         text: "按次数"
-                        width: 80; height: 36
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+                        checkable: true
+                        checked: playModeRow.selectedMode === "count"
+                        background: Rectangle {
+                            color: playModeCountBtn.checked ? "#0d1b2e" : (playModeCountBtn.hovered ? "#1e2d42" : "#141920")
+                            radius: 6
+                            border.color: playModeCountBtn.checked ? "#00d4ff" : (playModeCountBtn.hovered ? "#2196F3" : "#334155")
+                            border.width: playModeCountBtn.checked ? 2 : 1
+                            Rectangle { visible: playModeCountBtn.checked; anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: 1; anchors.rightMargin: 1; anchors.topMargin: 1; height: 2; radius: 1; color: "#00d4ff" }
+                        }
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent; spacing: 8
+                                Rectangle { width: 8; height: 8; radius: 4; anchors.verticalCenter: parent.verticalCenter; color: playModeCountBtn.checked ? "#00d4ff" : "#475569"; Rectangle { width: 4; height: 4; radius: 2; anchors.centerIn: parent; color: playModeCountBtn.checked ? "#e0f7ff" : "#64748B" } }
+                                Text { text: playModeCountBtn.text; font.pixelSize: 16; font.weight: playModeCountBtn.checked ? Font.Medium : Font.Normal; color: playModeCountBtn.checked ? "#00d4ff" : "#9E9E9E"; verticalAlignment: Text.AlignVCenter }
+                            }
+                        }
                         onClicked: playModeRow.selectedMode = "count"
-                        background: Rectangle {
-                            color: playModeRow.selectedMode === "count" ? "#2196F3" : "#3A3A3A"
-                            radius: 4
-                        }
-                        contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     }
+
                     Button {
-                        id: playByDurationBtn
+                        id: playModeDurationBtn
                         text: "按时长"
-                        width: 80; height: 36
-                        onClicked: playModeRow.selectedMode = "duration"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+                        checkable: true
+                        checked: playModeRow.selectedMode === "duration"
                         background: Rectangle {
-                            color: playModeRow.selectedMode === "duration" ? "#2196F3" : "#3A3A3A"
-                            radius: 4
+                            color: playModeDurationBtn.checked ? "#1b1500" : (playModeDurationBtn.hovered ? "#1e2d42" : "#141920")
+                            radius: 6
+                            border.color: playModeDurationBtn.checked ? "#F59E0B" : (playModeDurationBtn.hovered ? "#2196F3" : "#334155")
+                            border.width: playModeDurationBtn.checked ? 2 : 1
+                            Rectangle { visible: playModeDurationBtn.checked; anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: 1; anchors.rightMargin: 1; anchors.topMargin: 1; height: 2; radius: 1; color: "#F59E0B" }
                         }
-                        contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent; spacing: 8
+                                Rectangle { width: 8; height: 8; radius: 4; anchors.verticalCenter: parent.verticalCenter; color: playModeDurationBtn.checked ? "#F59E0B" : "#475569"; Rectangle { width: 4; height: 4; radius: 2; anchors.centerIn: parent; color: playModeDurationBtn.checked ? "#FDE68A" : "#64748B" } }
+                                Text { text: playModeDurationBtn.text; font.pixelSize: 16; font.weight: playModeDurationBtn.checked ? Font.Medium : Font.Normal; color: playModeDurationBtn.checked ? "#F59E0B" : "#9E9E9E"; verticalAlignment: Text.AlignVCenter }
+                            }
+                        }
+                        onClicked: playModeRow.selectedMode = "duration"
                     }
                 }
+
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) { root.requestFocusParamIndex(18); mouse.accepted = false }
