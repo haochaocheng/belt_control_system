@@ -94,7 +94,10 @@ Item {
         7: 0,  // CAN控制
         8: 0,  // TCP控制
         9: 0,  // MQTT控制
-        10: 0  // 逻辑控制
+        10: 0,  // 逻辑控制
+        // ✅ 2026-03-18 [Phase 7.48.56]: 沿线点位保护
+        11: 0,  // 沿线点位保护
+        12: 0   // 沿线点位保护（预留）
     })
 
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听类别切换，保存和恢复内容索引
@@ -2302,7 +2305,7 @@ Item {
                 Repeater {
                     // 旧：model: ["基本配置", "开关量输入", "模拟量输入", ...]
                     // ✅ 2026-03-18 [Phase 7.48.53]: "模拟量输入"重命名为"模拟量保护"
-                    model: ["基本配置", "开关量输入", "模拟量保护", "电机控制", "制动器控制", "张紧控制", "洒水控制", "串口控制", "CAN控制", "TCP控制", "MQTT控制", "逻辑控制"]
+                    model: ["基本配置", "开关量输入", "模拟量保护", "电机控制", "制动器控制", "张紧控制", "洒水控制", "串口控制", "CAN控制", "TCP控制", "MQTT控制", "逻辑控制", "沿线点位保护"]
 
                     Button {
                         width: parent.width - 20
@@ -3482,6 +3485,82 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                     }
                 }
+
+                // ✅ 2026-03-18 [Phase 7.48.56]: 12: 沿线点位保护
+                Loader {
+                    id: linePositionPageLoader
+                    source: "pages/LinePositionPage.qml"
+
+                    onLoaded: {
+                        console.log("✅ [DeviceSettingsDialog] LinePositionPage 加载成功")
+                        if (item) {
+                            item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                            item.keyboardManager = Qt.binding(function() { return root.keyboardManager })
+                        }
+                    }
+
+                    onStatusChanged: {
+                        if (status === Loader.Error) {
+                            console.error("❌ [DeviceSettingsDialog] LinePositionPage 加载失败")
+                        }
+                    }
+
+                    Connections {
+                        target: root
+                        enabled: linePositionPageLoader.item !== null
+
+                        function onCurrentFocusAreaChanged() {
+                            if (linePositionPageLoader.item && root.currentCategory === 12) {
+                                if (root.currentFocusArea === 2) {
+                                    linePositionPageLoader.item.focusSubArea = 0
+                                    linePositionPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    linePositionPageLoader.item.focusItemIndex = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentCategoryChanged() {
+                            if (linePositionPageLoader.item) {
+                                if (root.currentFocusArea === 2 && root.currentCategory === 12) {
+                                    linePositionPageLoader.item.focusSubArea = 0
+                                    linePositionPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                                } else {
+                                    linePositionPageLoader.item.focusItemIndex = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentContentItemIndexChanged() {
+                            if (linePositionPageLoader.item &&
+                                root.currentFocusArea === 2 &&
+                                root.currentCategory === 12 &&
+                                linePositionPageLoader.item.focusSubArea === 0) {
+                                linePositionPageLoader.item.focusItemIndex = root.currentContentItemIndex
+                            }
+                        }
+                    }
+
+                    Connections {
+                        target: linePositionPageLoader.item
+                        enabled: linePositionPageLoader.item !== null
+
+                        function onFocusItemIndexChanged() {
+                            if (linePositionPageLoader.item &&
+                                root.currentCategory === 12 &&
+                                root.currentFocusArea === 2 &&
+                                linePositionPageLoader.item.focusSubArea === 0 &&
+                                linePositionPageLoader.item.focusItemIndex >= 0) {
+                                root.currentContentItemIndex = linePositionPageLoader.item.focusItemIndex
+                            }
+                        }
+
+                        function onRequestReturnToCategory() {
+                            console.log("✅ [DeviceSettingsDialog] 沿线点位保护请求返回类别")
+                            root.currentFocusArea = 1
+                        }
+                    }
+                }
             }
         }
 
@@ -3711,6 +3790,8 @@ Item {
             return mqttControlPageLoader.item  // ✅ 2026-02-08 [Phase 7.43.7]: 返回MQTT控制页面
         case 11:
             return null  // 逻辑控制待实现
+        case 12:
+            return linePositionPageLoader.item  // ✅ 2026-03-18 [Phase 7.48.56]: 沿线点位保护
         default:
             return null
         }
