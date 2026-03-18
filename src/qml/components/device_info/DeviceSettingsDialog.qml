@@ -2133,7 +2133,11 @@ Item {
                             // TODO: 调用制动器控制的保存函数
                             break
                         case 5:  // 张紧控制
-                            // TODO: 调用张紧控制的保存函数
+                            // 旧：// TODO: 调用张紧控制的保存函数
+                            // ✅ 2026-03-18 [Phase 7.48.53]: 实现张紧控制保存功能
+                            if (tensionControlPageLoader.item && typeof tensionControlPageLoader.item.saveTensionControlConfig === "function") {
+                                tensionControlPageLoader.item.saveTensionControlConfig()
+                            }
                             break
                         case 6:  // 洒水控制
                             if (sprinklerControlPageLoader.item && typeof sprinklerControlPageLoader.item.saveAllConfig === "function") {
@@ -3540,9 +3544,11 @@ Item {
         case 3: // 电机控制
             return []  // ✅ 2026-03-10 [Phase 7.48.29]: 删除底部按钮（启动测试/停止测试/参数校验），按钮已在 MotorControlPage 内部实现
         case 4: // 制动器控制
-            return ["制动测试", "释放测试", "参数校验"]
+            // return ["制动测试", "释放测试", "参数校验"]  // 2026-03-15 [Phase 7.48.45]: 删除底部按钮，按钮已在 BrakeConfigPanel 内部实现
+            return []
         case 5: // 张紧控制
-            return ["张紧测试", "释放测试", "参数校验"]
+            // return ["张紧测试", "释放测试", "参数校验"]  // 2026-03-16: 删除底部按钮，功能在面板内部实现
+            return []
         case 6: // 洒水控制
             return []  // 洒水控制按钮在 SprinklerControlPage 内部实现
         case 7: // 串口控制

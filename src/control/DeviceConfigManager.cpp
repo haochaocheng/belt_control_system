@@ -235,6 +235,30 @@ bool DeviceConfigManager::createTables()
     query.exec("ALTER TABLE device_analog_protections ADD COLUMN sprinkler_index INTEGER DEFAULT 0");
     query.exec("ALTER TABLE device_digital_protections ADD COLUMN sprinkler_index INTEGER DEFAULT 0");
 
+    // 2026-03-14 [Phase 7.48.45]: 制动器配置表新增列（松闸/抱闸输出通道、反馈配置、启用状态）
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN enabled BOOLEAN DEFAULT 1");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN release_output_channel INTEGER DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN brake_output_channel INTEGER DEFAULT -1");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN use_release_feedback BOOLEAN DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN release_feedback_channel INTEGER DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN release_feedback_timeout INTEGER DEFAULT 10");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN use_brake_feedback BOOLEAN DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN brake_feedback_channel INTEGER DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN brake_feedback_timeout INTEGER DEFAULT 10");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN hold_time REAL DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN release_time REAL DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN brake_delay REAL DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN release_delay REAL DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN detect_delay REAL DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN fault_delay REAL DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN brake_current REAL DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN release_current REAL DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN brake_voltage REAL DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN release_voltage REAL DEFAULT 0");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN release_warning_voice TEXT DEFAULT ''");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN release_failure_voice TEXT DEFAULT ''");
+    query.exec("ALTER TABLE device_brake_config ADD COLUMN brake_failure_voice TEXT DEFAULT ''");
+
     // ✅ 2026-02-02 [参数持久化]: 添加电机配置表
     // 5. 电机配置表
     QString createMotorConfigTable = R"(
@@ -320,29 +344,49 @@ bool DeviceConfigManager::createTables()
     }
 
     query.exec("CREATE INDEX IF NOT EXISTS idx_brake_config_device ON device_brake_config(device_id)");
+    // 2026-03-14 [Phase 7.48.45]: 添加UNIQUE约束，确保INSERT OR REPLACE按(device_id, brake_index)更新
+    // 先清理可能存在的重复行（保留最新的一条）
+    query.exec(R"(
+        DELETE FROM device_brake_config WHERE id NOT IN (
+            SELECT MAX(id) FROM device_brake_config GROUP BY device_id, brake_index
+        )
+    )");
+    query.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_brake_config_unique ON device_brake_config(device_id, brake_index)");
 
     // ✅ 2026-02-02 [参数持久化]: 添加张紧控制配置表
+    // ✅ 2026-03-16 [Phase 7.48.46]: 重写表结构，统一QML/C++字段名，新增反馈/输出/语音字段
     // 7. 张紧控制配置表
+    // ✅ 2026-03-18 [Phase 7.48.53]: 新增startup_delay和audio_source字段
     QString createTensionConfigTable = R"(
         CREATE TABLE IF NOT EXISTS device_tension_config (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             device_id INTEGER NOT NULL,
             tension_index INTEGER NOT NULL,
-            tension_name TEXT,
-            tension_force REAL,
-            position_upper_limit REAL,
-            position_lower_limit REAL,
-            pressure_upper_limit REAL,
-            pressure_lower_limit REAL,
-            temperature_upper_limit REAL,
-            temperature_lower_limit REAL,
-            voice_alarm_enabled BOOLEAN DEFAULT 0,
-            voice_alarm_type TEXT DEFAULT 'tts',
-            tts_text TEXT,
-            audio_file TEXT,
+            enabled INTEGER DEFAULT 1,
+            protection_name TEXT DEFAULT '',
+            unit TEXT DEFAULT 'kN',
+            protection_type TEXT DEFAULT '上限报警',
+            protection_delay REAL DEFAULT 10.0,
+            module_type TEXT DEFAULT '模拟量模块1',
             play_count INTEGER DEFAULT 1,
-            play_duration INTEGER DEFAULT 5,
-            enabled BOOLEAN DEFAULT 1,
+            register_address INTEGER DEFAULT -1,
+            play_duration REAL DEFAULT 5.0,
+            channel_number INTEGER DEFAULT 0,
+            upper_limit REAL DEFAULT 100.0,
+            lower_limit REAL DEFAULT 0.0,
+            range_value REAL DEFAULT 100.0,
+            rated_value REAL DEFAULT 50.0,
+            output_channel INTEGER DEFAULT 0,
+            use_feedback INTEGER DEFAULT 0,
+            feedback_channel INTEGER DEFAULT 0,
+            feedback_timeout INTEGER DEFAULT 10,
+            use_text_to_speech INTEGER DEFAULT 0,
+            tts_text TEXT DEFAULT '',
+            audio_file TEXT DEFAULT '',
+            warning_voice TEXT DEFAULT '',
+            failure_voice TEXT DEFAULT '',
+            startup_delay INTEGER DEFAULT 5,
+            audio_source TEXT DEFAULT 'default',
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE,
             UNIQUE(device_id, tension_index)
@@ -1504,6 +1548,87 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移020已执行过，跳过";
     }
+
+    // ✅ 2026-03-16 [Phase 7.48.46]: 迁移021 - 重建张紧控制配置表（字段与QML完全对齐）
+    // 原因：旧表字段(tension_name/tension_force/position_upper_limit等)与QML collectConfig()字段完全不匹配
+    // 策略：删除旧表数据，用新结构重新初始化
+    query.exec("SELECT version FROM schema_migrations WHERE version = '021_rebuild_tension_config'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移021: 重建张紧控制配置表...";
+        QSqlQuery fix(m_database);
+
+        // 1. 删除旧表
+        fix.exec("DROP TABLE IF EXISTS device_tension_config");
+        qDebug() << "  ✅ 删除旧张紧配置表";
+
+        // 2. 创建新表（与建表语句一致）
+        // ✅ 2026-03-18 [Phase 7.48.53]: 新增startup_delay和audio_source字段
+        fix.exec(R"(
+            CREATE TABLE IF NOT EXISTS device_tension_config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id INTEGER NOT NULL,
+                tension_index INTEGER NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                protection_name TEXT DEFAULT '',
+                unit TEXT DEFAULT 'kN',
+                protection_type TEXT DEFAULT '上限报警',
+                protection_delay REAL DEFAULT 10.0,
+                module_type TEXT DEFAULT '模拟量模块1',
+                play_count INTEGER DEFAULT 1,
+                register_address INTEGER DEFAULT -1,
+                play_duration REAL DEFAULT 5.0,
+                channel_number INTEGER DEFAULT 0,
+                upper_limit REAL DEFAULT 100.0,
+                lower_limit REAL DEFAULT 0.0,
+                range_value REAL DEFAULT 100.0,
+                rated_value REAL DEFAULT 50.0,
+                output_channel INTEGER DEFAULT 0,
+                use_feedback INTEGER DEFAULT 0,
+                feedback_channel INTEGER DEFAULT 0,
+                feedback_timeout INTEGER DEFAULT 10,
+                use_text_to_speech INTEGER DEFAULT 0,
+                tts_text TEXT DEFAULT '',
+                audio_file TEXT DEFAULT '',
+                warning_voice TEXT DEFAULT '',
+                failure_voice TEXT DEFAULT '',
+                startup_delay INTEGER DEFAULT 5,
+                audio_source TEXT DEFAULT 'default',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE,
+                UNIQUE(device_id, tension_index)
+            )
+        )");
+        fix.exec("CREATE INDEX IF NOT EXISTS idx_tension_config_device ON device_tension_config(device_id)");
+        qDebug() << "  ✅ 创建新张紧配置表";
+
+        // 3. 为所有设备重新初始化默认数据
+        QSqlQuery deviceQuery(m_database);
+        deviceQuery.exec("SELECT device_id FROM devices ORDER BY device_id");
+        int deviceCount = 0;
+        while (deviceQuery.next()) {
+            int deviceId = deviceQuery.value(0).toInt();
+            initDefaultTensionConfigs(deviceId);
+            deviceCount++;
+        }
+        qDebug() << "  ✅ 迁移021: 为" << deviceCount << "个设备重新初始化张紧配置";
+
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('021_rebuild_tension_config')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移021已执行过，跳过";
+    }
+
+    // ✅ 2026-03-18 [Phase 7.48.53]: 迁移022 - 张紧配置表新增startup_delay和audio_source列
+    query.exec("SELECT version FROM schema_migrations WHERE version = '022_tension_startup_audio'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移022: 张紧配置新增startup_delay和audio_source...";
+        QSqlQuery fix(m_database);
+        fix.exec("ALTER TABLE device_tension_config ADD COLUMN startup_delay INTEGER DEFAULT 5");
+        fix.exec("ALTER TABLE device_tension_config ADD COLUMN audio_source TEXT DEFAULT 'default'");
+        qDebug() << "  ✅ 迁移022: 新增startup_delay和audio_source列";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('022_tension_startup_audio')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移022已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2567,8 +2692,16 @@ bool DeviceConfigManager::saveBrakeConfig(int deviceId, int brakeIndex, const QV
         INSERT OR REPLACE INTO device_brake_config
         (device_id, brake_index, brake_name, brake_delay, brake_force,
          temperature_upper_limit, temperature_lower_limit, pressure_upper_limit, pressure_lower_limit,
-         voice_alarm_enabled, voice_alarm_type, tts_text, audio_file, play_count, play_duration, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         voice_alarm_enabled, voice_alarm_type, tts_text, audio_file, play_count, play_duration, updated_at,
+         enabled, release_output_channel, brake_output_channel,
+         use_release_feedback, release_feedback_channel, release_feedback_timeout,
+         use_brake_feedback, brake_feedback_channel, brake_feedback_timeout,
+         hold_time, release_time, brake_delay_time, release_delay,
+         detect_delay, fault_delay, brake_current, release_current,
+         brake_voltage, release_voltage,
+         release_warning_voice, release_failure_voice, brake_failure_voice)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -2587,6 +2720,29 @@ bool DeviceConfigManager::saveBrakeConfig(int deviceId, int brakeIndex, const QV
     query.addBindValue(config.value("play_count", 1).toInt());
     query.addBindValue(config.value("play_duration", 5).toInt());
     query.addBindValue(QDateTime::currentDateTime());
+    // 2026-03-14 [Phase 7.48.45]: 新增制动器配置列绑定值
+    query.addBindValue(config.value("enabled", true).toBool() ? 1 : 0);
+    query.addBindValue(config.value("release_output_channel", 0).toInt());
+    query.addBindValue(config.value("brake_output_channel", -1).toInt());
+    query.addBindValue(config.value("use_release_feedback", 0).toInt());
+    query.addBindValue(config.value("release_feedback_channel", 0).toInt());
+    query.addBindValue(config.value("release_feedback_timeout", 10).toInt());
+    query.addBindValue(config.value("use_brake_feedback", 0).toInt());
+    query.addBindValue(config.value("brake_feedback_channel", 0).toInt());
+    query.addBindValue(config.value("brake_feedback_timeout", 10).toInt());
+    query.addBindValue(config.value("hold_time", 0).toDouble());
+    query.addBindValue(config.value("release_time", 0).toDouble());
+    query.addBindValue(config.value("brake_delay", 0).toDouble());
+    query.addBindValue(config.value("release_delay", 0).toDouble());
+    query.addBindValue(config.value("detect_delay", 0).toDouble());
+    query.addBindValue(config.value("fault_delay", 0).toDouble());
+    query.addBindValue(config.value("brake_current", 0).toDouble());
+    query.addBindValue(config.value("release_current", 0).toDouble());
+    query.addBindValue(config.value("brake_voltage", 0).toDouble());
+    query.addBindValue(config.value("release_voltage", 0).toDouble());
+    query.addBindValue(config.value("release_warning_voice", "").toString());
+    query.addBindValue(config.value("release_failure_voice", "").toString());
+    query.addBindValue(config.value("brake_failure_voice", "").toString());
 
     if (!query.exec()) {
         QString error = QString("保存设备%1制动器%2配置失败: %3")
@@ -2671,31 +2827,47 @@ bool DeviceConfigManager::initDefaultBrakeConfigs(int deviceId)
 bool DeviceConfigManager::saveTensionConfig(int deviceId, int tensionIndex, const QVariantMap &config)
 {
     QSqlQuery query(m_database);
+    // 2026-03-16 [Phase 7.48.46]: 重写保存函数，字段与QML collectConfig()完全对应
+    // ✅ 2026-03-18 [Phase 7.48.53]: 新增startup_delay和audio_source字段
     query.prepare(R"(
         INSERT OR REPLACE INTO device_tension_config
-        (device_id, tension_index, tension_name, tension_force,
-         position_upper_limit, position_lower_limit, pressure_upper_limit, pressure_lower_limit,
-         temperature_upper_limit, temperature_lower_limit,
-         voice_alarm_enabled, voice_alarm_type, tts_text, audio_file, play_count, play_duration, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (device_id, tension_index, enabled, protection_name, unit, protection_type, protection_delay,
+         module_type, play_count, register_address, play_duration, channel_number,
+         upper_limit, lower_limit, range_value, rated_value,
+         output_channel, use_feedback, feedback_channel, feedback_timeout,
+         use_text_to_speech, tts_text, audio_file, warning_voice, failure_voice,
+         startup_delay, audio_source, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
     query.addBindValue(tensionIndex);
-    query.addBindValue(config.value("tension_name", "").toString());
-    query.addBindValue(config.value("tension_force", 0.0).toDouble());
-    query.addBindValue(config.value("position_upper_limit", 100.0).toDouble());
-    query.addBindValue(config.value("position_lower_limit", 0.0).toDouble());
-    query.addBindValue(config.value("pressure_upper_limit", 10.0).toDouble());
-    query.addBindValue(config.value("pressure_lower_limit", 0.0).toDouble());
-    query.addBindValue(config.value("temperature_upper_limit", 80.0).toDouble());
-    query.addBindValue(config.value("temperature_lower_limit", 0.0).toDouble());
-    query.addBindValue(config.value("voice_alarm_enabled", false).toBool() ? 1 : 0);
-    query.addBindValue(config.value("voice_alarm_type", "tts").toString());
+    query.addBindValue(config.value("enabled", true).toBool() ? 1 : 0);
+    query.addBindValue(config.value("protection_name", "").toString());
+    query.addBindValue(config.value("unit", "kN").toString());
+    query.addBindValue(config.value("protection_type", "上限报警").toString());
+    query.addBindValue(config.value("protection_delay", 10.0).toDouble());
+    query.addBindValue(config.value("module_type", "模拟量模块1").toString());
+    query.addBindValue(config.value("play_count", 1).toInt());
+    query.addBindValue(config.value("register_address", -1).toInt());
+    query.addBindValue(config.value("play_duration", 5.0).toDouble());
+    query.addBindValue(config.value("channel_number", 0).toInt());
+    query.addBindValue(config.value("upper_limit", 100.0).toDouble());
+    query.addBindValue(config.value("lower_limit", 0.0).toDouble());
+    query.addBindValue(config.value("range_value", 100.0).toDouble());
+    query.addBindValue(config.value("rated_value", 50.0).toDouble());
+    query.addBindValue(config.value("output_channel", 0).toInt());
+    query.addBindValue(config.value("use_feedback", false).toBool() ? 1 : 0);
+    query.addBindValue(config.value("feedback_channel", 0).toInt());
+    query.addBindValue(config.value("feedback_timeout", 10).toInt());
+    query.addBindValue(config.value("use_text_to_speech", false).toBool() ? 1 : 0);
     query.addBindValue(config.value("tts_text", "").toString());
     query.addBindValue(config.value("audio_file", "").toString());
-    query.addBindValue(config.value("play_count", 1).toInt());
-    query.addBindValue(config.value("play_duration", 5).toInt());
+    query.addBindValue(config.value("warning_voice", "").toString());
+    query.addBindValue(config.value("failure_voice", "").toString());
+    // ✅ 2026-03-18 [Phase 7.48.53]: 新增字段
+    query.addBindValue(config.value("startup_delay", 5).toInt());
+    query.addBindValue(config.value("audio_source", "default").toString());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
@@ -2743,27 +2915,24 @@ QVariantList DeviceConfigManager::loadAllTensionConfigs(int deviceId)
 bool DeviceConfigManager::initDefaultTensionConfigs(int deviceId)
 {
     // 默认2个张紧装置
+    // 2026-03-16 [Phase 7.48.46]: 重写默认配置，与新表结构对应
     QSqlQuery query(m_database);
     for (int tensionIndex = 0; tensionIndex < 2; tensionIndex++) {
         QString tensionName = QString("张紧装置%1").arg(tensionIndex + 1);
 
         query.prepare(R"(
             INSERT INTO device_tension_config
-            (device_id, tension_index, tension_name, tension_force,
-             position_upper_limit, position_lower_limit, pressure_upper_limit, pressure_lower_limit,
-             temperature_upper_limit, temperature_lower_limit, tts_text)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (device_id, tension_index, enabled, protection_name, unit, protection_type,
+             protection_delay, module_type, play_count, register_address, play_duration,
+             channel_number, upper_limit, lower_limit, range_value, rated_value,
+             output_channel, use_feedback, feedback_channel, feedback_timeout,
+             use_text_to_speech, tts_text, warning_voice, failure_voice)
+            VALUES (?, ?, 1, ?, 'kN', '上限报警', 10.0, '模拟量模块1', 1, -1, 5.0,
+                    0, 100.0, 0.0, 100.0, 50.0, 0, 0, 0, 10, 0, ?, '', '')
         )");
         query.addBindValue(deviceId);
         query.addBindValue(tensionIndex);
         query.addBindValue(tensionName);
-        query.addBindValue(50.0);   // 默认张紧力
-        query.addBindValue(100.0);  // 位置上限
-        query.addBindValue(0.0);    // 位置下限
-        query.addBindValue(10.0);   // 压力上限
-        query.addBindValue(0.0);    // 压力下限
-        query.addBindValue(80.0);   // 温度上限
-        query.addBindValue(0.0);    // 温度下限
         query.addBindValue(tensionName + "报警");
 
         if (!query.exec()) {

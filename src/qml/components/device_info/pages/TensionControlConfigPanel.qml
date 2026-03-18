@@ -365,7 +365,9 @@ Rectangle {
 
     function collectConfig() {
         return {
-            "tension_enabled": tensionEnabledSwitch.checked,
+            // ✅ 2026-03-18 [Phase 7.48.53]: 字段名与C++后端saveTensionConfig对应
+            // 旧：tension_enabled → 改为 enabled（匹配C++字段名）
+            "enabled": tensionEnabledSwitch.checked,
             "output_channel": outputChannelSpin.value,
             "use_feedback": useFeedbackSwitch.checked,
             "feedback_channel": feedbackChannelSpin.value,
@@ -379,7 +381,9 @@ Rectangle {
 
     function applyConfig(config) {
         if (!config) return
-        if (config.tension_enabled !== undefined) tensionEnabledSwitch.checked = config.tension_enabled
+        // ✅ 2026-03-18 [Phase 7.48.53]: 兼容新旧字段名
+        if (config.enabled !== undefined) tensionEnabledSwitch.checked = config.enabled
+        else if (config.tension_enabled !== undefined) tensionEnabledSwitch.checked = config.tension_enabled
         if (config.output_channel !== undefined) outputChannelSpin.value = config.output_channel
         if (config.use_feedback !== undefined) useFeedbackSwitch.checked = config.use_feedback
         if (config.feedback_channel !== undefined) feedbackChannelSpin.value = config.feedback_channel
@@ -394,14 +398,26 @@ Rectangle {
         var config = collectConfig()
         console.log("✅ [TensionControlConfigPanel] 保存张紧控制配置:", JSON.stringify(config))
         if (typeof deviceConfigMgr !== "undefined") {
-            deviceConfigMgr.saveTensionControlConfig(root.deviceId, config)
+            // ✅ 2026-03-18 [Phase 7.48.53]: 先加载已有配置再合并，避免覆盖传感器面板的字段
+            var existing = deviceConfigMgr.loadTensionConfig(root.deviceId, root.controlIndex)
+            if (existing) {
+                // 将控制面板字段合并到已有配置
+                for (var key in config) {
+                    existing[key] = config[key]
+                }
+                deviceConfigMgr.saveTensionConfig(root.deviceId, root.controlIndex, existing)
+            } else {
+                deviceConfigMgr.saveTensionConfig(root.deviceId, root.controlIndex, config)
+            }
         }
     }
 
     function loadTensionControlConfig() {
         console.log("✅ [TensionControlConfigPanel] 加载张紧控制配置, deviceId:", root.deviceId)
         if (typeof deviceConfigMgr !== "undefined") {
-            var config = deviceConfigMgr.loadTensionControlConfig(root.deviceId)
+            // 旧：var config = deviceConfigMgr.loadTensionControlConfig(root.deviceId)  // 函数名和参数不匹配
+            // ✅ 2026-03-18 [Phase 7.48.53]: 修正为C++后端实际函数名loadTensionConfig，增加tensionIndex参数
+            var config = deviceConfigMgr.loadTensionConfig(root.deviceId, root.controlIndex)
             applyConfig(config)
         }
     }
