@@ -143,118 +143,71 @@ Rectangle {
             }
         }
 
-        // 导航函数（参考 MotorControlPage 的实现）
-        // ✅ 2026-01-31 [FIX 100.300.112.7]: 右键进入使用状态区域
+        // 导航函数
+        // 2026-03-14 [Phase 7.48.45]: 简化导航，去掉usageStatus区域，投入/禁用改为Switch在参数区
         function moveInListArea(direction) {
-            console.log("✅ [BrakeControlPage] moveInListArea - direction:", direction, "brakeListIndex:", brakeListIndex)
-            // 制动器列表导航（8个制动器，0-7）
             var newIndex = brakeListIndex
-
             switch(direction) {
             case "Up":
-                if (brakeListIndex > 0) {
-                    newIndex = brakeListIndex - 1
-                }
+                if (brakeListIndex > 0) newIndex = brakeListIndex - 1
                 break
             case "Down":
-                if (brakeListIndex < 7) {
-                    newIndex = brakeListIndex + 1
-                }
+                if (brakeListIndex < 7) newIndex = brakeListIndex + 1
                 break
             case "Right":
-                // ✅ 2026-01-31 [FIX 100.300.112.7]: 右键进入使用状态区域
-                switchToArea(areaUsageStatus)
-                usageStatusIndex = 0
+                // 右键直接进入参数区域
+                switchToArea(areaParams)
+                paramIndex = 0
                 return
             }
-
-            if (newIndex !== brakeListIndex) {
-                console.log("✅ [BrakeControlPage] 更新 brakeListIndex:", brakeListIndex, "→", newIndex)
-                brakeListIndex = newIndex
-            } else {
-                console.log("⚠️ [BrakeControlPage] brakeListIndex 未变化，仍为:", brakeListIndex)
-            }
+            if (newIndex !== brakeListIndex) brakeListIndex = newIndex
         }
 
-        // ✅ 2026-01-31 [FIX 100.300.112.7]: 使用状态区域导航
-        // ✅ 2026-01-31 [FIX 100.300.112.7.1]: 修复右键切换逻辑，支持双向切换
-        // ✅ 2026-01-31 [FIX 100.300.112.7.3]: 右键进入参数区域，回车键切换选项
+        // 2026-03-14 [Phase 7.48.45]: 保留兼容性，实际不再使用
         function moveInUsageStatusArea(direction) {
-            // 使用状态区域导航（整个区域作为一个焦点单元）
-            // 左键：返回制动器列表
-            // 右键：进入参数区域
-            // 下键：进入参数区域
-            // 回车键：切换投入/禁用选项（在 Keys.onPressed 中处理）
-
-            switch(direction) {
-            case "Left":
-                // 左键：返回制动器列表
-                switchToArea(areaBrakeList)
-                return
-            case "Right":
-                // ✅ 2026-01-31 [FIX 100.300.112.7.3]: 右键进入参数区域（不再切换选项）
-                switchToArea(areaParams)
-                paramIndex = 0
-                return
-            case "Down":
-                // 下键：进入参数区域
-                switchToArea(areaParams)
-                paramIndex = 0
-                return
-            }
+            switchToArea(areaParams); paramIndex = 0
         }
 
-        // ✅ 2026-01-31 [FIX 100.300.112.7]: 参数区域导航（左键和上键返回使用状态区域）
+        // 2026-03-14 [Phase 7.48.45]: 参数区域导航（19个参数，混合行宽）
+        // 行布局: A(0,1,2) B(3,4,5) C(6,7,8) D(9,10,11,12) E(13,14,15,16) F(17,18)
         function moveInParamArea(direction) {
-            // 参数区域导航（10个参数，0-9，GridLayout 4列布局）
-            var newIndex = paramIndex
+            var idx = paramIndex
+            var rows = [[0,3],[3,3],[6,3],[9,4],[13,4],[17,2]]
+            var curRow = -1, colInRow = 0
+            for (var r = 0; r < rows.length; r++) {
+                if (idx >= rows[r][0] && idx < rows[r][0] + rows[r][1]) {
+                    curRow = r; colInRow = idx - rows[r][0]; break
+                }
+            }
+            if (curRow < 0) return
 
             switch(direction) {
             case "Left":
-                if (paramIndex % 2 === 1) {
-                    // 右列 → 左列
-                    newIndex = paramIndex - 1
-                } else {
-                    // ✅ 2026-01-31 [FIX 100.300.112.7]: 左列最左，返回使用状态区域
-                    switchToArea(areaUsageStatus)
-                    return
-                }
+                if (colInRow > 0) { paramIndex = idx - 1 }
+                else { switchToArea(areaBrakeList); return }
                 break
             case "Right":
-                if (paramIndex % 2 === 0) {
-                    // 左列 → 右列
-                    newIndex = paramIndex + 1
-                }
+                if (colInRow < rows[curRow][1] - 1) { paramIndex = idx + 1 }
                 break
             case "Up":
-                if (paramIndex >= 2) {
-                    newIndex = paramIndex - 2
-                } else {
-                    // ✅ 2026-01-31 [FIX 100.300.112.7]: 第一行，返回使用状态区域
-                    switchToArea(areaUsageStatus)
-                    return
-                }
+                if (curRow > 0) {
+                    var prevRow = rows[curRow - 1]
+                    var targetCol = Math.min(colInRow, prevRow[1] - 1)
+                    paramIndex = prevRow[0] + targetCol
+                } else { switchToArea(areaBrakeList); return }
                 break
             case "Down":
-                if (paramIndex <= 7) {
-                    newIndex = paramIndex + 2
-                } else {
-                    // 最后一行，进入按钮区域
-                    switchToArea(areaButtons)
-                    buttonIndex = 0
-                    return
-                }
+                if (curRow < rows.length - 1) {
+                    var nextRow = rows[curRow + 1]
+                    var targetCol2 = Math.min(colInRow, nextRow[1] - 1)
+                    paramIndex = nextRow[0] + targetCol2
+                } else { switchToArea(areaButtons); buttonIndex = 0; return }
                 break
-            }
-
-            if (newIndex !== paramIndex && newIndex >= 0 && newIndex <= 9) {
-                paramIndex = newIndex
             }
         }
 
-        // ✅ 2026-01-31 [FIX 100.300.112.7]: 按钮区域导航（左键返回使用状态区域）
+        // 2026-03-14 [Phase 7.48.45]: 按钮区域导航（3个按钮：松闸/抱闸/停止）
         function moveInButtonArea(direction) {
-            // 底部按钮导航（2个按钮，0-1）
             var newIndex = buttonIndex
 
             switch(direction) {
@@ -262,20 +215,18 @@ Rectangle {
                 if (buttonIndex > 0) {
                     newIndex = buttonIndex - 1
                 } else {
-                    // ✅ 2026-01-31 [FIX 100.300.112.7]: 最左，返回使用状态区域
-                    switchToArea(areaUsageStatus)
+                    switchToArea(areaBrakeList)
                     return
                 }
                 break
             case "Right":
-                if (buttonIndex < 1) {
+                if (buttonIndex < 2) {
                     newIndex = buttonIndex + 1
                 }
                 break
             case "Up":
-                // 返回参数区域最后一个参数
                 switchToArea(areaParams)
-                paramIndex = 9
+                paramIndex = 18
                 return
             }
 
@@ -427,6 +378,13 @@ Rectangle {
     // ========== 转发函数（供 DeviceSettingsDialog 调用）==========
     // ✅ 2026-01-31 [FIX 100.300.112.2]: 添加转发函数，将调用转发给 BrakeConfigPanel
     // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 添加 handleKeyPress 函数，处理 DeviceSettingsDialog 的键盘事件
+
+    // ✅ 2026-03-18 [Phase 7.48.53]: 添加保存转发函数，供DeviceSettingsDialog保存按钮调用
+    function saveBrakeConfig() {
+        if (brakeConfigPanel.item && typeof brakeConfigPanel.item.saveBrakeConfig === "function") {
+            brakeConfigPanel.item.saveBrakeConfig()
+        }
+    }
 
     // 处理键盘事件（供 DeviceSettingsDialog 调用）
     function handleKeyPress(direction) {

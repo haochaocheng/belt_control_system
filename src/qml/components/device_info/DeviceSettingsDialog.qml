@@ -2124,13 +2124,25 @@ Item {
                             }
                             break
                         case 2:  // 模拟量输入
-                            // TODO: 调用模拟量输入的保存函数
+                            // 旧：// TODO: 调用模拟量输入的保存函数
+                            // ✅ 2026-03-18 [Phase 7.48.53]: 实现模拟量输入保存功能
+                            if (analogInputPageLoader.item && typeof analogInputPageLoader.item.saveProtectionData === "function") {
+                                analogInputPageLoader.item.saveProtectionData()
+                            }
                             break
                         case 3:  // 电机控制
-                            // TODO: 调用电机控制的保存函数
+                            // 旧：// TODO: 调用电机控制的保存函数
+                            // ✅ 2026-03-18 [Phase 7.48.53]: 实现电机控制保存功能
+                            if (motorControlPageLoader.item && typeof motorControlPageLoader.item.saveMotorConfig === "function") {
+                                motorControlPageLoader.item.saveMotorConfig()
+                            }
                             break
                         case 4:  // 制动器控制
-                            // TODO: 调用制动器控制的保存函数
+                            // 旧：// TODO: 调用制动器控制的保存函数
+                            // ✅ 2026-03-18 [Phase 7.48.53]: 实现制动器控制保存功能
+                            if (brakeControlPageLoader.item && typeof brakeControlPageLoader.item.saveBrakeConfig === "function") {
+                                brakeControlPageLoader.item.saveBrakeConfig()
+                            }
                             break
                         case 5:  // 张紧控制
                             // 旧：// TODO: 调用张紧控制的保存函数
