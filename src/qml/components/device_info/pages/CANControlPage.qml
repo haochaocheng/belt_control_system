@@ -159,21 +159,7 @@ Rectangle {
             console.log("✅ [CANControlPage] 执行关闭CAN")
             canController.closeCAN()
             return true
-        case 2:  // 保存
-            console.log("✅ [CANControlPage] 执行保存配置")
-            canController.saveConfig()
-            return true
-        case 3:  // 删除
-            console.log("✅ [CANControlPage] 执行删除配置")
-            if (canController.isUp) {
-                canController.closeCAN()
-            }
-            canController.resetConfig()
-            return true
-        case 4:  // 重置
-            console.log("✅ [CANControlPage] 执行重置配置")
-            canController.resetConfig()
-            return true
+        // 旧：case 2(保存)/3(删除)/4(重置)  // 2026-03-18 [Phase 7.48.55] 删除按钮，不需要
         default:
             console.warn("⚠️ [CANControlPage] 未知按钮索引:", buttonIndex)
             return false
@@ -711,131 +697,7 @@ Rectangle {
                     }
                 }
 
-                // 第二行：保存、删除、重置
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
-
-                    Button {
-                        id: saveButton
-                        text: "保存"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 2) {
-                                    return "#2ecc71"
-                                } else if (parent.pressed) {
-                                    return "#27ae60"
-                                } else if (parent.hovered) {
-                                    return "#2ecc71"
-                                } else {
-                                    return "#27ae60"
-                                }
-                            }
-                            radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [CANControlPage] 保存")
-                            canController.saveConfig()
-                            console.log("✅ [CANControlPage] 配置已保存")
-                        }
-                    }
-
-                    Button {
-                        id: deleteButton
-                        text: "删除"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 3) {
-                                    return "#e74c3c"
-                                } else if (parent.pressed) {
-                                    return "#c0392b"
-                                } else if (parent.hovered) {
-                                    return "#e74c3c"
-                                } else {
-                                    return "#d35400"
-                                }
-                            }
-                            radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 3 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [CANControlPage] 删除")
-                            if (canController.isUp) {
-                                canController.closeCAN()
-                            }
-                            canController.resetConfig()
-                            console.log("✅ [CANControlPage] 当前 CAN 配置已删除（重置为默认值）")
-                        }
-                    }
-
-                    Button {
-                        id: resetButton
-                        text: "重置"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 4) {
-                                    return "#3498db"
-                                } else if (parent.pressed) {
-                                    return "#2980b9"
-                                } else if (parent.hovered) {
-                                    return "#3498db"
-                                } else {
-                                    return "#2980b9"
-                                }
-                            }
-                            radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 4 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [CANControlPage] 重置")
-                            canController.resetConfig()
-                            console.log("✅ [CANControlPage] 配置已重置为默认值")
-                        }
-                    }
-                }
+                // 旧：第二行：保存、删除、重置  // 2026-03-18 [Phase 7.48.55] 删除，不需要
             }
         }
     }

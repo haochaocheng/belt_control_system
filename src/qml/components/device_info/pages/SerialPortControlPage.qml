@@ -155,21 +155,7 @@ Rectangle {
                 console.log("✅ [SerialPortControlPage] 执行关闭串口")
                 serialPortController.closeSerialPort()
                 return true
-            case 2:  // 保存
-                console.log("✅ [SerialPortControlPage] 执行保存配置")
-                serialPortController.saveConfig()
-                return true
-            case 3:  // 删除
-                console.log("✅ [SerialPortControlPage] 执行删除配置")
-                if (serialPortController.isOpen) {
-                    serialPortController.closeSerialPort()
-                }
-                serialPortController.resetConfig()
-                return true
-            case 4:  // 重置
-                console.log("✅ [SerialPortControlPage] 执行重置配置")
-                serialPortController.resetConfig()
-                return true
+            // 旧：case 2(保存)/3(删除)/4(重置)  // 2026-03-18 [Phase 7.48.55] 删除按钮，不需要
             default:
                 console.warn("⚠️ [SerialPortControlPage] 未知按钮索引:", focusButtonIndex)
                 return false
@@ -198,21 +184,7 @@ Rectangle {
             console.log("✅ [SerialPortControlPage] 执行关闭串口")
             serialPortController.closeSerialPort()
             return true
-        case 2:  // 保存
-            console.log("✅ [SerialPortControlPage] 执行保存配置")
-            serialPortController.saveConfig()
-            return true
-        case 3:  // 删除
-            console.log("✅ [SerialPortControlPage] 执行删除配置")
-            if (serialPortController.isOpen) {
-                serialPortController.closeSerialPort()
-            }
-            serialPortController.resetConfig()
-            return true
-        case 4:  // 重置
-            console.log("✅ [SerialPortControlPage] 执行重置配置")
-            serialPortController.resetConfig()
-            return true
+        // 旧：case 2(保存)/3(删除)/4(重置)  // 2026-03-18 [Phase 7.48.55] 删除按钮，不需要
         default:
             console.warn("⚠️ [SerialPortControlPage] 未知按钮索引:", buttonIndex)
             return false
@@ -760,144 +732,7 @@ Rectangle {
                     }
                 }
 
-                // 第二行：保存、删除、重置
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
-
-                    Button {
-                        id: saveButton
-                        text: "保存"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 5]: 焦点指示器
-                            // 焦点时背景色更亮
-                            color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 2) {
-                                    return "#2ecc71"  // 焦点时：亮绿色
-                                } else if (parent.pressed) {
-                                    return "#27ae60"
-                                } else if (parent.hovered) {
-                                    return "#2ecc71"
-                                } else {
-                                    return "#27ae60"
-                                }
-                            }
-                            radius: 4
-                            // 增加边框宽度：5px
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [SerialPortControlPage] 保存")
-                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.6]: 实现保存功能
-                            serialPortController.saveConfig()
-                            console.log("✅ [SerialPortControlPage] 配置已保存")
-                        }
-                    }
-
-                    Button {
-                        id: deleteButton
-                        text: "删除"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 5]: 焦点指示器
-                            // 焦点时背景色更亮
-                            color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 3) {
-                                    return "#e74c3c"  // 焦点时：亮红色
-                                } else if (parent.pressed) {
-                                    return "#c0392b"
-                                } else if (parent.hovered) {
-                                    return "#e74c3c"
-                                } else {
-                                    return "#d35400"
-                                }
-                            }
-                            radius: 4
-                            // 增加边框宽度：5px
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 3 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [SerialPortControlPage] 删除")
-                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.6]: 实现删除功能
-                            // 删除操作：关闭当前串口并重置配置
-                            if (serialPortController.isOpen) {
-                                serialPortController.closeSerialPort()
-                            }
-                            serialPortController.resetConfig()
-                            console.log("✅ [SerialPortControlPage] 当前串口配置已删除（重置为默认值）")
-                        }
-                    }
-
-                    Button {
-                        id: resetButton
-                        text: "重置"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            // ✅ 2026-02-04 [FIX 100.300.113 Phase 7.37 - Phase 5]: 焦点指示器
-                            // 焦点时背景色更亮
-                            color: {
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 4) {
-                                    return "#3498db"  // 焦点时：亮蓝色
-                                } else if (parent.pressed) {
-                                    return "#2980b9"
-                                } else if (parent.hovered) {
-                                    return "#3498db"
-                                } else {
-                                    return "#2980b9"
-                                }
-                            }
-                            radius: 4
-                            // 增加边框宽度：5px
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 4 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [SerialPortControlPage] 重置")
-                            // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.6]: 实现重置功能
-                            serialPortController.resetConfig()
-                            console.log("✅ [SerialPortControlPage] 配置已重置为默认值")
-                        }
-                    }
-                }
+                // 旧：第二行：保存、删除、重置  // 2026-03-18 [Phase 7.48.55] 删除，不需要
             }
         }
     }

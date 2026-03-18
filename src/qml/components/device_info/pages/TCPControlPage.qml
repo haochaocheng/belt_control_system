@@ -144,18 +144,7 @@ Rectangle {
             console.log("✅ [TCPControlPage] 执行关闭连接")
             // TODO: 实现关闭连接逻辑
             return true
-        case 2:  // 保存
-            console.log("✅ [TCPControlPage] 执行保存配置")
-            // TODO: 实现保存配置逻辑
-            return true
-        case 3:  // 删除
-            console.log("✅ [TCPControlPage] 执行删除配置")
-            // TODO: 实现删除配置逻辑
-            return true
-        case 4:  // 重置
-            console.log("✅ [TCPControlPage] 执行重置配置")
-            // TODO: 实现重置配置逻辑
-            return true
+        // 旧：case 2(保存)/3(删除)/4(重置)  // 2026-03-18 [Phase 7.48.55] 删除按钮，不需要
         default:
             return false
         }
@@ -492,83 +481,7 @@ Rectangle {
                     }
                 }
 
-                // 第二行：保存、删除、重置
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
-
-                    Button {
-                        text: "保存"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            color: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? "#2ecc71" : "#27ae60"
-                            radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: triggerButton(2)
-                    }
-
-                    Button {
-                        text: "删除"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            color: root.focusSubArea === 3 && root.focusButtonIndex === 3 ? "#e74c3c" : "#d35400"
-                            radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 3 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: triggerButton(3)
-                    }
-
-                    Button {
-                        text: "重置"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            color: root.focusSubArea === 3 && root.focusButtonIndex === 4 ? "#3498db" : "#2980b9"
-                            radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 4 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: triggerButton(4)
-                    }
-                }
+                // 旧：第二行：保存、删除、重置  // 2026-03-18 [Phase 7.48.55] 删除，不需要
             }
         }
     }
