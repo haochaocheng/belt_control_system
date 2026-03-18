@@ -292,7 +292,9 @@ Rectangle {
             if (failureVoiceField.text.length > 0 && typeof alarmPlayback !== "undefined") {
                 var beltNum = typeof systemConfig !== "undefined" ? systemConfig.machineNumber : 1
                 var audioPath = buildAudioPath(beltNum, failureVoiceField.text)
-                var ttsText = beltNum + "号皮带张紧运行失败"
+                // 旧：var ttsText = beltNum + "号皮带张紧运行失败"  // 缺少张紧装置编号
+                // ✅ 2026-03-18 [Phase 7.48.53]: 修复TTS回退文本包含皮带号和张紧编号
+                var ttsText = beltNum + "号皮带" + root.controlIndex + "号张紧运行失败"
                 console.log("🗣️ [TensionControlConfigPanel] 播放失败语音:", audioPath)
                 alarmPlayback.playAlarm(failureVoiceField.text, ttsText, audioPath, true, "count", 3, 5)
             }

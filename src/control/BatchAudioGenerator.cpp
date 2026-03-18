@@ -608,10 +608,12 @@ void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
             }
 
             // 张紧运行失败：每台张紧1个
+            // 旧：task.text = QString("%1号张紧运行失败").arg(tensionNum);  // 缺少皮带号
+            // ✅ 2026-03-18 [Phase 7.48.53]: 修复TTS文本包含皮带号，如"1号皮带1号张紧运行失败"
             {
                 FileTask task;
                 task.category = "tension";
-                task.text = QString("%1号张紧运行失败").arg(tensionNum);
+                task.text = QString("%1号皮带%2号张紧运行失败").arg(beltNum).arg(tensionNum);
                 task.outputPath = QString("%1%2号张紧运行失败.wav").arg(outputDir).arg(tensionNum);
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
