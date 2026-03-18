@@ -1649,6 +1649,19 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移023已执行过，跳过";
     }
+
+    // ✅ 2026-03-18 [Phase 7.48.54]: 迁移024 - 删除模拟量保护中的张力项（已移至张紧控制TensionSensorConfigPanel）
+    query.exec("SELECT version FROM schema_migrations WHERE version = '024_remove_analog_tension'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移024: 删除模拟量保护中的张力项...";
+        QSqlQuery fix(m_database);
+        fix.exec("DELETE FROM device_analog_protections WHERE protection_name = '张力'");
+        int deleted = fix.numRowsAffected();
+        qDebug() << "  ✅ 迁移024: 删除" << deleted << "条张力保护记录";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('024_remove_analog_tension')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移024已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -1783,7 +1796,8 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
     // 旧映射（Phase 7.48.21）：甲烷/一氧化碳/二氧化碳在模块2，温度/煤流/煤仓高度在模块1，通道号不连续
     // ✅ 2026-03-09 [Phase 7.48.26]: 新增 sprinklerEnabled 字段（烟雾/温度一/温度二/温度=1, 其余=0）
     // ✅ 2026-03-18 [Phase 7.48.53]: 只保留速度/张力/温度一/温度二/电压通道，其余设为未分配(-1)
-    //   顺序调整为分组显示：运行参数→温度保护→张力监测→环境监测
+    //   顺序调整为分组显示：运行参数→温度保护→环境监测
+    // ✅ 2026-03-18 [Phase 7.48.54]: 删除张力监测分组（张力已在张紧控制大类的TensionSensorConfigPanel中管理）
     QList<AnalogProtection> protections = {
         // ── 运行参数 ──
         {"速度",       "m/s",   "模拟量模块1", 0, 3.0,    0.5,   5.0,    2.5,   0},  // 模块1 CH0
@@ -1791,8 +1805,7 @@ bool DeviceConfigManager::initDefaultAnalogProtections(int deviceId)
         // ── 温度保护 ──
         {"温度一",     "℃",    "模拟量模块1", 2, 42.0,   0.0,   100.0,  0.0,   1},  // 模块1 CH2 | 洒水使能
         {"温度二",     "℃",    "模拟量模块1", 3, 42.0,   0.0,   100.0,  0.0,   1},  // 模块1 CH3 | 洒水使能
-        // ── 张力监测 ──
-        {"张力",       "T",     "模拟量模块1", 1, 8.0,    3.0,   20.0,   0.0,   0},  // 模块1 CH1
+        // 旧：{"张力", "T", "模拟量模块1", 1, ...}  // 2026-03-18 删除：张力已在张紧控制TensionSensorConfigPanel管理
         // ── 环境监测（默认未分配，按需启用）──
         {"甲烷",       "%CH₄",  "未分配", -1, 1.0,    0.0,   4.0,    0.0,   0},  // 规程≥1.0%
         {"一氧化碳",   "ppm",   "未分配", -1, 24.0,   0.0,   1000.0, 0.0,   0},  // 规程≥24ppm

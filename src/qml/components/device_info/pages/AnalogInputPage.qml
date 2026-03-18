@@ -127,8 +127,9 @@ Rectangle {
         // ── 温度保护 ──
         ListElement { name: "温度一"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 2; enabled: true; group: "温度保护" }
         ListElement { name: "温度二"; active: false; currentValue: 0.0; unit: "℃"; moduleType: "模拟量模块1"; registerAddress: 3; enabled: true; group: "温度保护" }
-        // ── 张力监测 ──
-        ListElement { name: "张力"; active: false; currentValue: 0.0; unit: "T"; moduleType: "模拟量模块1"; registerAddress: 1; enabled: true; group: "张力监测" }
+        // ✅ 2026-03-18 [Phase 7.48.54]: 删除张力监测分组
+        // 旧：ListElement { name: "张力"; ... group: "张力监测" }
+        // 原因：张力已在张紧控制大类的TensionSensorConfigPanel中管理，模拟量保护中的张力冗余
         // ── 环境监测 ──
         ListElement { name: "甲烷"; active: false; currentValue: 0.0; unit: "%CH₄"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }
         ListElement { name: "一氧化碳"; active: false; currentValue: 0.0; unit: "ppm"; moduleType: "未分配"; registerAddress: -1; enabled: true; group: "环境监测" }

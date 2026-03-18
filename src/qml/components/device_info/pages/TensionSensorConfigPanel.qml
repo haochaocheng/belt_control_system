@@ -175,39 +175,64 @@ Rectangle {
         // ========== 分隔线 ==========
         Rectangle { Layout.fillWidth: true; height: 1; color: "#3d4556" }
 
-        // ========== 语音配置区 ==========
-        RowLayout {
+        // ========== 语音配置区（4列GridLayout，与上方参数区对齐） ==========
+        // ✅ 2026-03-18 [Phase 7.48.54]: 改为GridLayout，播放方式与保护级别列对齐
+        // 旧：RowLayout 一行排列，播放方式与保护级别不对齐
+        GridLayout {
             Layout.fillWidth: true
-            spacing: 16
-            Text { text: "音频来源:"; font.pixelSize: root.lblFs; color: root.lblC }
-            ButtonGroup { id: audioSourceGroup }
-            RadioButton { id: audioDefaultRadio; text: "默认"; checked: true; ButtonGroup.group: audioSourceGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
-            RadioButton { id: audioTtsRadio; text: "TTS"; ButtonGroup.group: audioSourceGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
-            Item { width: 20 }
-            Text { text: "播放方式:"; font.pixelSize: root.lblFs; color: root.lblC }
-            ButtonGroup { id: playModeGroup }
-            RadioButton { id: playCountRadio; text: "按次数"; checked: true; ButtonGroup.group: playModeGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
-            RadioButton { id: playDurationRadio; text: "按时长"; ButtonGroup.group: playModeGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
-        }
+            columns: 4
+            columnSpacing: 10
+            rowSpacing: 12
 
-        // ========== TTS文本(12) / 音频文件(13) ==========
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-            Text { text: audioTtsRadio.checked ? "TTS文本:" : "音频文件:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
-            DeviceInfo.CustomTextField {
-                id: ttsTextField; text: "张力传感器报警"
-                Layout.fillWidth: true; visible: audioTtsRadio.checked
-                keyboardManager: root.keyboardManager
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 12 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            // ===== Row 0: 音频来源 | 播放方式 =====
+            Text { text: "音频来源:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: audioDefaultRadio.implicitHeight
+                ButtonGroup { id: audioSourceGroup }
+                Row {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+                    // 旧：RadioButton { id: audioDefaultRadio; text: "默认"; checked: true; ... }  // 默认选中"默认"
+                    // ✅ 2026-03-18 [Phase 7.48.54]: 音频来源初始值改为TTS（因为没有预录音频文件）
+                    RadioButton { id: audioDefaultRadio; text: "默认"; ButtonGroup.group: audioSourceGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
+                    RadioButton { id: audioTtsRadio; text: "TTS"; checked: true; ButtonGroup.group: audioSourceGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
+                }
             }
-            DeviceInfo.CustomTextField {
-                id: audioFileField; text: ""
-                Layout.fillWidth: true; readOnly: true; visible: audioDefaultRadio.checked; placeholderText: "自动生成"
-                keyboardManager: root.keyboardManager
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 13 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            Text { text: "播放方式:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: playCountRadio.implicitHeight
+                ButtonGroup { id: playModeGroup }
+                Row {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+                    RadioButton { id: playCountRadio; text: "按次数"; checked: true; ButtonGroup.group: playModeGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
+                    RadioButton { id: playDurationRadio; text: "按时长"; ButtonGroup.group: playModeGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
+                }
             }
-        }
+
+            // ===== Row 1: TTS文本(12) / 音频文件(13) =====
+            Text { text: audioTtsRadio.checked ? "TTS文本:" : "音频文件:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 1; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 1; Layout.columnSpan: 3; Layout.fillWidth: true
+                implicitHeight: ttsTextField.implicitHeight
+                DeviceInfo.CustomTextField {
+                    id: ttsTextField; text: "张力传感器报警"
+                    anchors.fill: parent; visible: audioTtsRadio.checked
+                    keyboardManager: root.keyboardManager
+                    Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 12 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                }
+                DeviceInfo.CustomTextField {
+                    id: audioFileField; text: ""
+                    // 旧：placeholderText: "自动生成"
+                    // ✅ 2026-03-18 [Phase 7.48.54]: 改为"张力保护"（更准确描述功能）
+                    anchors.fill: parent; readOnly: true; visible: audioDefaultRadio.checked; placeholderText: "张力保护"
+                    keyboardManager: root.keyboardManager
+                    Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 13 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                }
+            }
+        } // 语音配置GridLayout end
 
         // ========== 分隔线2 ==========
         Rectangle { Layout.fillWidth: true; height: 1; color: "#3d4556" }
@@ -227,29 +252,148 @@ Rectangle {
             Rectangle { anchors.fill: sprinklerIndexSpin; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 14 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
         }
 
+        // ========== 分隔线3 ==========
+        Rectangle { Layout.fillWidth: true; height: 1; color: "#3d4556" }
+
+        // ========== 状态监控（参照BasicConfigTab传感器实时数据显示） ==========
+        // ✅ 2026-03-18 [Phase 7.48.54]: 新增张力实际值状态显示
+        Text {
+            text: "状态监控"
+            font.pixelSize: 19; font.bold: true; color: "#7dd3fc"
+            Layout.alignment: Qt.AlignHCenter
+        }
+
+        Item {
+            id: tensionStatusPanel
+            Layout.fillWidth: true
+            Layout.preferredHeight: 60
+            Layout.leftMargin: 8; Layout.rightMargin: 8
+
+            // 张力实时数据
+            property double tensionAdValue: 0
+            property double tensionEngValue: 0.0
+            property bool isExceeded: false
+
+            // 监听AI数据变化
+            Connections {
+                target: typeof aiDataManager !== 'undefined' ? aiDataManager : null
+                ignoreUnknownSignals: true
+                function onChannelChanged(modIndex, channelIndex, data) {
+                    // 模块匹配：模拟量模块1→AI模块索引2，模拟量模块2→AI模块索引3
+                    var expectedModIndex = (moduleTypeCombo.currentText === "模拟量模块1") ? 2 : 3
+                    if (modIndex !== expectedModIndex) return
+                    if (channelIndex !== channelSpin.value) return
+                    if (channelSpin.value < 0) return  // 未分配跳过
+
+                    var chData = aiDataManager.getChannel(modIndex, channelIndex)
+                    if (!chData) return
+
+                    var adVal = chData.adValue || 0
+                    tensionStatusPanel.tensionAdValue = adVal
+
+                    // 工程量计算：下限 + (AD值 / 65535) × 量程
+                    var lower = lowerLimitSpin.value || 0
+                    var range = rangeSpin.value || 200
+                    tensionStatusPanel.tensionEngValue = lower + (adVal / 65535.0) * range
+
+                    // 超限判断
+                    tensionStatusPanel.isExceeded = (tensionStatusPanel.tensionEngValue > upperLimitSpin.value || tensionStatusPanel.tensionEngValue < lowerLimitSpin.value)
+                }
+            }
+
+            // 张力值卡片
+            Rectangle {
+                anchors.centerIn: parent
+                width: Math.min(parent.width * 0.6, 300)
+                height: 50
+                radius: 4
+                color: "#0d1b2a"
+                border.width: 1
+                border.color: tensionStatusPanel.isExceeded ? "#ef4444" : "#1e3a5f"
+
+                // 超限脉冲发光
+                Rectangle {
+                    anchors.fill: parent; radius: parent.radius
+                    color: "transparent"
+                    border.width: 2
+                    border.color: tensionStatusPanel.isExceeded ? "#ef4444" : "transparent"
+                    visible: tensionStatusPanel.isExceeded
+                    opacity: 0.6
+                    SequentialAnimation on opacity {
+                        running: tensionStatusPanel.isExceeded
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 0.6; to: 0.15; duration: 800 }
+                        NumberAnimation { from: 0.15; to: 0.6; duration: 800 }
+                    }
+                }
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 4
+                    spacing: 1
+
+                    Row {
+                        width: parent.width
+                        spacing: 4
+                        Rectangle {
+                            width: 6; height: 6; radius: 3
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: tensionStatusPanel.isExceeded ? "#ef4444" :
+                                   (tensionStatusPanel.tensionEngValue !== 0.0 ? "#22c55e" : "#475569")
+                        }
+                        Text {
+                            text: nameField.text || "张力传感器"
+                            font.pixelSize: 13; color: "#94a3b8"
+                        }
+                    }
+
+                    Row {
+                        width: parent.width
+                        spacing: 2
+                        anchors.horizontalCenter: parent.horizontalCenter
+
+                        Text {
+                            text: tensionStatusPanel.tensionEngValue.toFixed(1)
+                            font.pixelSize: 22
+                            font.family: "Consolas"
+                            font.bold: true
+                            color: tensionStatusPanel.isExceeded ? "#ef4444" :
+                                   (tensionStatusPanel.tensionEngValue !== 0.0 ? "#00d4ff" : "#475569")
+                        }
+                        Text {
+                            text: unitCombo.currentText || "kN"
+                            font.pixelSize: 12; color: "#64748b"
+                            anchors.bottom: parent.children[0].bottom
+                            anchors.bottomMargin: 2
+                        }
+                    }
+                }
+            }
+        }
+
         // ========== 弹性空间 ==========
         Item { Layout.fillHeight: true }
 
-        // ========== 底部按钮行 ==========
-        RowLayout {
-            Layout.fillWidth: true; Layout.preferredHeight: 40; spacing: 16
-            Item { Layout.fillWidth: true }
-            Button {
-                id: saveBtn; text: "保存"; Layout.preferredWidth: 100; Layout.preferredHeight: 36
-                background: Rectangle { color: saveBtn.pressed ? "#1e8449" : "#27ae60"; radius: 4 }
-                contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: saveTensionSensorConfig()
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#FFFFFF" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-            Button {
-                id: resetBtn; text: "重置"; Layout.preferredWidth: 100; Layout.preferredHeight: 36
-                background: Rectangle { color: resetBtn.pressed ? "#5d6d7e" : "#7f8c8d"; radius: 4 }
-                contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: loadTensionSensorConfig()
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 1 ? "#FFFFFF" : "transparent"; border.width: 2; radius: 4; z: 100 }
-            }
-            Item { Layout.fillWidth: true }
-        }
+        // // ========== 底部按钮行 ==========
+        // RowLayout {
+        //     Layout.fillWidth: true; Layout.preferredHeight: 40; spacing: 16
+        //     Item { Layout.fillWidth: true }
+        //     Button {
+        //         id: saveBtn; text: "保存"; Layout.preferredWidth: 100; Layout.preferredHeight: 36
+        //         background: Rectangle { color: saveBtn.pressed ? "#1e8449" : "#27ae60"; radius: 4 }
+        //         contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+        //         onClicked: saveTensionSensorConfig()
+        //         Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#FFFFFF" : "transparent"; border.width: 2; radius: 4; z: 100 }
+        //     }
+        //     Button {
+        //         id: resetBtn; text: "重置"; Layout.preferredWidth: 100; Layout.preferredHeight: 36
+        //         background: Rectangle { color: resetBtn.pressed ? "#5d6d7e" : "#7f8c8d"; radius: 4 }
+        //         contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+        //         onClicked: loadTensionSensorConfig()
+        //         Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 1 ? "#FFFFFF" : "transparent"; border.width: 2; radius: 4; z: 100 }
+        //     }
+        //     Item { Layout.fillWidth: true }
+        // }
     } // ColumnLayout end
 
     // ========== 函数 ==========
