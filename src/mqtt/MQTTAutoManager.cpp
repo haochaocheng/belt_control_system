@@ -276,9 +276,11 @@ void MQTTAutoManager::connectAllModules()
     // 旧：连接前4个模块：开关量×2 + 模拟量×2
     // ✅ 2026-03-10 [Phase 7.48.36]: 连接前5个模块（DI×2 + AI×2 + DO×1）
     // 原因：模块4用于DO模块状态订阅，获取继电器输出反馈和急停状态
-    qDebug() << "🔌 [MQTTAutoManager] 连接所有模块（前5个：DI×2 + AI×2 + DO×1）";
+    // ✅ 2026-03-19 [Phase 7.48.56]: 连接前7个模块（DI×2 + AI×2 + DO×1 + CS×2）
+    // 原因：CS模块(moduleIndex 5,6)未连接，导致沿线点位保护数据收不到，无法触发报警
+    qDebug() << "🔌 [MQTTAutoManager] 连接所有模块（前7个：DI×2 + AI×2 + DO×1 + CS×2）";
 
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 7; ++i) {
         connectModule(i);
     }
 }
@@ -602,7 +604,8 @@ void MQTTAutoManager::onReconnectTimerTimeout()
     // ✅ 2026-02-12 [Phase 7.45.33]: 只在连接状态变化时输出调试信息
     // 旧：检查前4个模块的连接状态，断线自动重连
     // ✅ 2026-03-10 [Phase 7.48.36]: 检查前5个模块（含DO模块）
-    for (int i = 0; i < 5; ++i) {
+    // ✅ 2026-03-19 [Phase 7.48.56]: 检查前7个模块（含CS模块）
+    for (int i = 0; i < 7; ++i) {
         bool isConnected = m_mqttController->isModuleConnected(i);
 
         // 只在状态变化时输出
@@ -638,7 +641,7 @@ void MQTTAutoManager::onHealthCheckTimerTimeout()
 {
     // 旧：检查前4个模块的健康状态（硬件数据超时）
     // ✅ 2026-03-10 [Phase 7.48.36]: 检查前5个模块（含DO模块）
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 7; ++i) {
         checkModuleHealth(i);
     }
     // ✅ 2026-03-02 [Phase 7.47.68]: 检查全部8个模块的 broker 连接超时
