@@ -937,11 +937,19 @@ void MqttProtectionMonitor::onCSBitChanged(int protType, int pointIndex, bool va
             }
         }
 
-        // 如果没有从DB获取到路径，使用默认命名
+        // ✅ 2026-03-19 [Phase 7.48.56]: 修复音频路径，参照DI保护逻辑
+        // 原因：useTTS时应使用paddlespeech子目录路径，而非默认路径
+        // 旧代码直接用baseDirectory()拼接，导致文件不存在回退到实时TTS合成
         if (audioPath.isEmpty()) {
             int beltNumber = m_beltMapping.value(0, 1);
-            QString audioBaseDir = m_audioPathMapper->baseDirectory();
-            audioPath = QString("%1/%2#PD/%3.wav").arg(audioBaseDir).arg(beltNumber).arg(protectionName);
+            if (useTTS) {
+                // TTS合成路径：{baseDir}/paddlespeech-{model}-spk{id}/{belt}#PD/{name}.wav
+                audioPath = m_audioPathMapper->getAudioPath(beltNumber, protectionName);
+            } else {
+                // 默认音频路径：{baseDir}/{belt}#PD/{name}.wav
+                QString audioBaseDir = m_audioPathMapper->baseDirectory();
+                audioPath = QString("%1/%2#PD/%3.wav").arg(audioBaseDir).arg(beltNumber).arg(protectionName);
+            }
         }
 
         // 播放报警音频
