@@ -115,32 +115,49 @@ Rectangle {
                     spacing: 0
                     currentIndex: root.currentItemIndex
 
+                    // ✅ 2026-03-19 [Phase 7.48.56]: 判断是否为分组第一项（参照AnalogInputPage）
+                    function isGroupFirst(index) {
+                        if (index <= 0) return true
+                        var curr = linePositionModel.get(index)
+                        var prev = linePositionModel.get(index - 1)
+                        return curr.groupIndex !== prev.groupIndex
+                    }
+
                     delegate: Column {
                         width: listView.width
 
-                        // 分组标题（每64个一组）
-                        Loader {
-                            active: index % 64 === 0
+                        // ✅ 2026-03-19 [Phase 7.48.56]: 分组标题（参照AnalogInputPage样式）
+                        Rectangle {
+                            visible: listView.isGroupFirst(index)
                             width: parent.width
-                            sourceComponent: Rectangle {
-                                height: 35
-                                width: parent ? parent.width : 0
-                                color: "#1a2332"
+                            height: visible ? 28 : 0
+                            color: "transparent"
 
+                            Row {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.leftMargin: 8
+                                anchors.right: parent.right
+                                anchors.rightMargin: 8
+                                spacing: 6
+
+                                Rectangle { width: 3; height: 14; color: "#2196F3"; radius: 1; anchors.verticalCenter: parent.verticalCenter }
                                 Text {
-                                    anchors.centerIn: parent
                                     text: model.groupName
-                                    font.pixelSize: 14
-                                    font.bold: true
-                                    color: "#4FC3F7"
+                                    font.pixelSize: 11
+                                    font.weight: Font.Bold
+                                    color: "#7788AA"
+                                    anchors.verticalCenter: parent.verticalCenter
                                 }
+                                Rectangle { height: 1; color: "#333355"; anchors.verticalCenter: parent.verticalCenter; width: 80 }
                             }
                         }
 
-                        // 点位行
+                        // ✅ 2026-03-19 [Phase 7.48.56]: 点位行（参照AnalogInputPage样式）
                         Rectangle {
+                            id: itemRect
                             width: listView.width
-                            height: 40
+                            height: 45
                             color: "transparent"
 
                             readonly property bool isSelected: (root.currentItemIndex === index)
@@ -153,68 +170,73 @@ Rectangle {
                             }
 
                             // 焦点边框
-                            border.color: isFocused ? "#2196F3" : "transparent"
-                            border.width: isFocused ? 3 : 0
+                            border.color: itemRect.isFocused ? "#2196F3" : "transparent"
+                            border.width: itemRect.isFocused ? 3 : 0
 
-                            // 背景图片
-                            Image {
-                                anchors.fill: parent
-                                fillMode: Image.Stretch
-                                z: -1
-                                source: isSelected ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
+                        // 背景图片
+                        Image {
+                            anchors.fill: parent
+                            fillMode: Image.Stretch
+                            z: -1
+                            source: itemRect.isSelected ? "../../../images/bhNameBK1.png" : "../../../images/bhNameBK.png"
+                        }
+
+                        // 左侧激活指示条
+                        Rectangle {
+                            visible: itemRect.isSelected
+                            width: 4
+                            height: parent.height
+                            color: "#2196F3"
+                            anchors.left: parent.left
+                            z: 1
+                        }
+
+                        // ✅ 2026-03-19: RowLayout 排列名称和状态（参照AnalogInputPage）
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 6
+                            spacing: 4
+
+                            // 点位名称
+                            Text {
+                                text: model.name
+                                font.pixelSize: 14
+                                font.weight: itemRect.isFocused ? Font.Bold : Font.Normal
+                                color: itemRect.isFocused ? "#E0E0E0" : "#9E9E9E"
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideRight
                             }
 
-                            // 焦点激活指示条
+                            // 状态指示方块
                             Rectangle {
-                                visible: isFocused
-                                width: 4
-                                height: parent.height
-                                color: "#2196F3"
-                                anchors.left: parent.left
+                                width: 8; height: 8; radius: 2
+                                color: itemRect.isActive ? "#F44336" : "#4CAF50"
+                                Layout.alignment: Qt.AlignVCenter
                             }
 
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 15
-                                anchors.rightMargin: 10
-                                spacing: 8
-
-                                Text {
-                                    text: model.pointNumber + "号"
-                                    font.pixelSize: 14
-                                    font.weight: isFocused ? Font.Bold : Font.Normal
-                                    color: isFocused ? "#E0E0E0" : "#9E9E9E"
-                                    Layout.preferredWidth: 40
-                                }
-
-                                // 状态指示灯
-                                Rectangle {
-                                    width: 8
-                                    height: 8
-                                    radius: 2
-                                    color: isActive ? "#F44336" : "#4CAF50"
-                                    Layout.alignment: Qt.AlignVCenter
-                                }
-
-                                Text {
-                                    text: isActive ? "故障" : "正常"
-                                    font.pixelSize: 12
-                                    color: isActive ? "#F44336" : "#4CAF50"
-                                    Layout.fillWidth: true
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    root.currentItemIndex = index
-                                    root.focusItemIndex = index
-                                    root.focusSubArea = 0
-                                    loadPointConfig(index)
-                                }
+                            // 状态文字
+                            Text {
+                                text: itemRect.isActive ? "故障" : "正常"
+                                font.pixelSize: 11
+                                color: "#9E9E9E"
+                                Layout.alignment: Qt.AlignVCenter
                             }
                         }
-                    }
+
+                        // 鼠标点击
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                root.currentItemIndex = index
+                                root.focusItemIndex = index
+                                root.focusSubArea = 0
+                                loadPointConfig(index)
+                            }
+                        }
+                    } // Rectangle (点位行) end
+                    } // Column delegate end
                 }
             }
         }
