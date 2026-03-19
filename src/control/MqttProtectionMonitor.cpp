@@ -920,13 +920,22 @@ void MqttProtectionMonitor::onCSBitChanged(int protType, int pointIndex, bool va
                 playCount = protection.value("play_count", 3).toInt();
                 playDuration = protection.value("play_duration", 5.0).toDouble();
                 ttsText = protection.value("tts_text", "").toString();
-                // 优先使用数据库中的音频文件路径
+                // ✅ 2026-03-19 [Phase 7.48.56]: 修复DB音频路径构建
+                // 原因：useTTS时应使用paddlespeech子目录，旧代码直接用baseDirectory()拼接默认路径
                 QString dbAudioFile = protection.value("audio_file", "").toString();
                 if (!dbAudioFile.isEmpty()) {
-                    // 构建完整路径：{audioBaseDir}/{beltNumber}#PD/{audioFile}
-                    int beltNumber = m_beltMapping.value(0, 1);  // CS模块使用默认皮带映射
-                    QString audioBaseDir = m_audioPathMapper->baseDirectory();
-                    audioPath = QString("%1/%2#PD/%3").arg(audioBaseDir).arg(beltNumber).arg(dbAudioFile);
+                    int beltNumber = m_beltMapping.value(0, 1);
+                    if (useTTS) {
+                        // TTS路径：{baseDir}/paddlespeech-{model}-spk{id}/{belt}#PD/{audioFile}
+                        // 使用getAudioPath获取带paddlespeech子目录的路径
+                        QString nameWithoutExt = dbAudioFile;
+                        if (nameWithoutExt.endsWith(".wav")) nameWithoutExt.chop(4);
+                        audioPath = m_audioPathMapper->getAudioPath(beltNumber, nameWithoutExt);
+                    } else {
+                        // 默认路径：{baseDir}/{belt}#PD/{audioFile}
+                        QString audioBaseDir = m_audioPathMapper->baseDirectory();
+                        audioPath = QString("%1/%2#PD/%3").arg(audioBaseDir).arg(beltNumber).arg(dbAudioFile);
+                    }
                 }
                 qDebug() << "📋 [CS保护] " << protectionName
                          << "音频来源:" << (useTTS ? "TTS" : "默认")
