@@ -3489,6 +3489,9 @@ Item {
                 // ✅ 2026-03-18 [Phase 7.48.56]: 12: 沿线点位保护
                 Loader {
                     id: linePositionPageLoader
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    active: root.currentCategory === 12  // 仅在选中时加载
                     source: "pages/LinePositionPage.qml"
 
                     onLoaded: {
