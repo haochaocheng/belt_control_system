@@ -203,7 +203,10 @@ Rectangle {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
 
-                source: "qrc:/qt/qml/BeltControlQml/components/parameter_settings/BasicParametersSection.qml"
+                // ❌ 2026-03-20 [Phase 7.48.60]: QRC绝对路径在QDS预览中Loader静默失败
+                // source: "qrc:/qt/qml/BeltControlQml/components/parameter_settings/BasicParametersSection.qml"
+                // ✅ 2026-03-20 [Phase 7.48.60]: 改用相对路径，QDS和部署环境均可解析
+                source: "../../parameter_settings/BasicParametersSection.qml"
 
                 onLoaded: {
                     console.log("✅ [BasicConfigPage] BasicParametersSection 加载成功")
@@ -228,7 +231,10 @@ Rectangle {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
 
-                source: "qrc:/qt/qml/BeltControlQml/components/parameter_settings/NetworkParametersSection.qml"
+                // ❌ 2026-03-20 [Phase 7.48.60]: 同上，QRC绝对路径在QDS预览中失败
+                // source: "qrc:/qt/qml/BeltControlQml/components/parameter_settings/NetworkParametersSection.qml"
+                // ✅ 2026-03-20 [Phase 7.48.60]: 改用相对路径
+                source: "../../parameter_settings/NetworkParametersSection.qml"
 
                 onLoaded: {
                     console.log("✅ [BasicConfigPage] NetworkParametersSection 加载成功")
