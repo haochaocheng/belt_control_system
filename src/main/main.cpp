@@ -283,7 +283,13 @@ int main(int argc, char *argv[]) {
         logMessage("BatchAudioGenerator created");
 
         MaintenanceControl maintenanceControl(hal);
+        // ✅ 2026-03-20 [Phase 7.48.58]: 修复R/S键无法启动/停止 - 缺少CommonControl和SystemConfig连接
+        maintenanceControl.setCommonControl(&commonControl);
+        maintenanceControl.setSystemConfig(&systemConfig);
         LocalControl localControl(hal);
+        // ✅ 2026-03-20 [Phase 7.48.58]: 修复R/S键无法启动/停止 - 缺少CommonControl和SystemConfig连接
+        localControl.setCommonControl(&commonControl);
+        localControl.setSystemConfig(&systemConfig);
 
         ProtectionMonitorService protectionMonitor;
         protectionMonitor.setProtectionConfigManager(&protectionConfigMgr);

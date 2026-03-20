@@ -757,40 +757,55 @@ void CommonControl::startWarningPlayback(int beltNumber)
 
 void CommonControl::playWarningOnce()
 {
-    // ✅ 2026-01-23 00:10 [TTS网络传输] 使用 TTS 替代音频文件播放
-    // ✅ 2026-01-23 01:45 [TTS发音优化] 改用中文数字 + 友好文本格式
-    // 原因：
-    //   - 用户反馈："'1'没有播放出来，直接号皮带启动"
-    //   - TTS 模型对阿拉伯数字发音不清晰
-    // 解决方案：
-    //   - 旧格式："1号皮带启动"
-    //   - 新格式："一号皮带准备启动，请注意。"
-    // 优势：
-    //   - 中文数字发音清晰准确
-    //   - 增加"准备启动"和"请注意"使语音更友好自然
-    //   - 无需为每个皮带预录音频文件
-    //   - 支持网络传输到上位机（TCP 模式）
+    // ✅ 2026-03-20 [Phase 7.48.58]: 重写起车预警播放逻辑
+    // 旧逻辑：TTS代码已注释 + 音频文件路径错误 → 无法播放 → onPlaybackFinished永不触发 → 设备序列永不启动
+    // 新逻辑：优先预制音频文件 → TTS合成 → 直接启动（保证设备序列一定执行）
 
-    // 构造 TTS 文本（如 "一号皮带准备启动，请注意"、"二号皮带准备启动，请注意"）
-    QString chineseNumber = numberToChinese(m_currentBeltNumber);
-    QString warningText = QString("%1号皮带准备启动，请注意").arg(chineseNumber);
-
-    // ❌ 2026-02-15 20:30: 注释旧的 TTS 调用（使用 m_tts，已废弃）
-    // TODO: 使用 m_ttsEngineManager 替代
-    /*
-    // 优先使用 TTS 网络传输（TCP 模式）
-    if (m_tts && m_tts->state() == SherpaOnnxTTS::Ready) {
-        qDebug() << "🗣️ CommonControl: 使用 TTS 播放预警:" << warningText;
-        m_tts->sayToNetwork(warningText, true);  // true = TCP 模式发送到上位机
-    } else
-    */
-    if (!m_currentAudioPath.isEmpty()) {
-        // 备选方案：TTS 不可用时使用音频文件
-        qDebug() << "🔊 CommonControl: 使用音频文件:" << m_currentAudioPath;
-        playAudio(m_currentAudioPath);
+    // 构造 TTS 预警文字：使用本机名称（例如 "1号皮带准备启动，注意安全"）
+    QString warningText;
+    if (m_systemConfig && !m_systemConfig->localDeviceName().isEmpty()) {
+        // ✅ 用本机名称（基本参数设置中配置）
+        warningText = m_systemConfig->localDeviceName() + "准备启动，注意安全";
     } else {
-        qWarning() << "❌ CommonControl: 音频文件不可用，无法播放预警";
+        // 备选：用皮带编号中文
+        QString chineseNumber = numberToChinese(m_currentBeltNumber);
+        warningText = QString("%1号皮带准备启动，注意安全").arg(chineseNumber);
     }
+
+    // ① 优先：使用预制音频文件（批量生成的）
+    if (!m_currentAudioPath.isEmpty() && QFile::exists(m_currentAudioPath)) {
+        qDebug() << "🔊 CommonControl: 使用预制音频文件播放起车预警:" << m_currentAudioPath;
+        playAudio(m_currentAudioPath);
+        return;
+    }
+
+    // ② 次选：TTS实时合成
+    if (m_ttsEngineManager) {
+        TTSParameters params;
+        params.speakerId = 0;
+        params.rate = 0.9;
+        params.volume = 1.0;
+
+        // 使用固定临时文件路径（同一次预警复用，避免重复合成）
+        QString tempFile = QString("/tmp/startup_warning_%1.wav").arg(m_currentBeltNumber);
+
+        qDebug() << "🗣️ CommonControl: TTS合成起车预警:" << warningText;
+        if (m_ttsEngineManager->synthesize(warningText, tempFile, params)) {
+            qDebug() << "✅ CommonControl: TTS合成成功，播放:" << tempFile;
+            m_currentAudioPath = tempFile;  // 缓存路径，本次预警重复播放时直接复用
+            playAudio(m_currentAudioPath);
+            return;
+        } else {
+            qWarning() << "⚠️ CommonControl: TTS合成失败，跳过预警直接启动设备序列";
+        }
+    } else {
+        qWarning() << "⚠️ CommonControl: TTS引擎不可用，跳过预警直接启动设备序列";
+    }
+
+    // ③ 最后备选：无音频可用，直接触发设备序列（不能因为没有音频就永远卡住）
+    qWarning() << "❌ CommonControl: 起车预警无可用音频，直接执行启动序列";
+    m_isWarningPlaying = false;
+    startDeviceSequence();
 }
 
 void CommonControl::stopWarningPlayback()
@@ -1028,11 +1043,14 @@ void CommonControl::setDeviceFeedbackConfig(const QString &deviceName, bool useF
 // ❌ 2026-02-15 20:30: 删除旧的 TTS 实现（使用 m_tts，已废弃）
 // 新的实现在文件末尾，使用 m_ttsEngineManager
 
-// 临时函数：根据设备名获取通道号（后续应从设备数据库读取）
+// ✅ 2026-03-20 [Phase 7.48.58]: 根据设备名获取通道号
+// 支持逻辑控制面板的新名称和旧名称（兼容已有配置）
 int CommonControl::getDeviceChannel(const QString &deviceName)
 {
     // 设备名到通道号的映射（0-15）
+    // ✅ 2026-03-20 [Phase 7.48.58]: 新增逻辑控制面板设备池名称别名
     static const QMap<QString, int> deviceChannelMap = {
+        // 旧名称（DeviceDatabase默认名）
         {"张紧", 0},
         {"抱闸", 1},
         {"洒水", 2},
@@ -1048,7 +1066,10 @@ int CommonControl::getDeviceChannel(const QString &deviceName)
         {"4号乳化液泵", 12},
         {"1号喷雾泵", 13},
         {"2号喷雾泵", 14},
-        {"3号喷雾泵", 15}
+        {"3号喷雾泵", 15},
+        // ✅ 新名称别名（逻辑控制面板设备池使用）
+        {"张紧控制", 0},    // = 张紧
+        {"1号制动器", 1}    // = 抱闸
     };
 
     return deviceChannelMap.value(deviceName, -1);
