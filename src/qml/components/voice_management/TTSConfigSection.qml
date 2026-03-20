@@ -826,8 +826,11 @@ ColumnLayout {
                 initProgressBar.value = percent
             }
 
-            // 如果初始化完成，隐藏进度条
-            if (message.includes("初始化完成") || message.includes("初始化成功")) {
+            // 如果初始化完成或失败，隐藏进度条
+            // ✅ 2026-03-20 [Phase 7.48.59]: 新增"失败"/"已退出"/"已停止"关键字
+            // 旧代码：只检测"初始化完成/成功"，服务崩溃时 UI 永远显示"正在加载..."
+            if (message.includes("初始化完成") || message.includes("初始化成功") ||
+                message.includes("初始化失败") || message.includes("已退出") || message.includes("已停止")) {
                 // 延迟 2 秒后隐藏进度条
                 hideProgressTimer.start()
             }

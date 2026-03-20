@@ -486,5 +486,10 @@ void PaddleSpeechAdapter::onProcessFinished(int exitCode, QProcess::ExitStatus e
         emit errorOccurred("服务进程崩溃");
     }
 
+    // ✅ 2026-03-20 [Phase 7.48.59]: 进程退出时通知 QML 更新 UI 状态
+    // 旧代码：只设 m_isInitialized=false，QML 不知道失败，一直显示"正在加载 PaddleSpeech 模型..."
+    // 修复：发送包含"失败"关键字的进度消息，QML onTtsInitializationProgress 会检测到并隐藏进度条
+    emit initializationProgress("PaddleSpeech 初始化失败（服务已退出，退出码: " + QString::number(exitCode) + "）");
+
     m_isInitialized = false;
 }
