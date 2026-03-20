@@ -38,13 +38,37 @@ Rectangle {
 
     Component.onCompleted: loadFromConfig()
 
+    // ✅ 2026-03-20 修复：systemConfig由Loader.onLoaded设置，晚于Component.onCompleted
+    // 需要在systemConfig变化时重新加载配置
+    onSystemConfigChanged: {
+        if (systemConfig) loadFromConfig()
+    }
+
+    // 旧名称→新名称映射（设备上已有旧配置需要迁移）
+    readonly property var nameMapping: ({
+        "张紧": "张紧控制",
+        "抱闸": "1号制动器"
+    })
+
+    function migrateOldNames(seq) {
+        var migrated = []
+        for (var i = 0; i < seq.length; i++) {
+            var name = seq[i]
+            migrated.push(nameMapping[name] !== undefined ? nameMapping[name] : name)
+        }
+        return migrated
+    }
+
     function loadFromConfig() {
         if (!systemConfig) return
         // ✅ 2026-03-20 修复：默认序列使用设备池中的实际名称
         // startupSeq = systemConfig.startupSequence ? systemConfig.startupSequence.slice() : ["张紧", "抱闸", "1号电机", "2号电机"]
         // stopSeq = systemConfig.stopSequence ? systemConfig.stopSequence.slice() : ["2号电机", "1号电机", "抱闸", "张紧"]
-        startupSeq = systemConfig.startupSequence && systemConfig.startupSequence.length > 0 ? systemConfig.startupSequence.slice() : ["张紧控制", "1号制动器", "1号电机", "2号电机"]
-        stopSeq = systemConfig.stopSequence && systemConfig.stopSequence.length > 0 ? systemConfig.stopSequence.slice() : ["2号电机", "1号电机", "1号制动器", "张紧控制"]
+        var loadedStartup = systemConfig.startupSequence && systemConfig.startupSequence.length > 0 ? systemConfig.startupSequence.slice() : []
+        var loadedStop = systemConfig.stopSequence && systemConfig.stopSequence.length > 0 ? systemConfig.stopSequence.slice() : []
+        // ✅ 2026-03-20 修复：迁移旧名称（"张紧"→"张紧控制"，"抱闸"→"1号制动器"）
+        startupSeq = loadedStartup.length > 0 ? migrateOldNames(loadedStartup) : ["张紧控制", "1号制动器", "1号电机", "2号电机"]
+        stopSeq = loadedStop.length > 0 ? migrateOldNames(loadedStop) : ["2号电机", "1号电机", "1号制动器", "张紧控制"]
 
         var sDelays = systemConfig.startupDelays
         startupDelays = []
