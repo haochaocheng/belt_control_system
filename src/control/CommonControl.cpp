@@ -740,7 +740,10 @@ void CommonControl::startWarningPlayback(int beltNumber)
         int warningTime = m_systemConfig->warningTimeSeconds();
         qDebug() << "⏰ CommonControl: 启动预警播放（按时间）- " << warningTime << "秒";
 
-        // 启动定时器
+        // ✅ 2026-03-20 [Phase 7.48.59]: 设为单次定时器（singleShot），防止重复触发
+        // 旧代码未设 singleShot，QTimer 默认重复，每 N 秒触发一次 startDeviceSequence()，
+        // 与故障停止逻辑叠加形成无限启动循环。
+        m_warningTimer->setSingleShot(true);
         m_warningTimer->start(warningTime * 1000);
 
         // 开始播放
@@ -804,6 +807,11 @@ void CommonControl::playWarningOnce()
 
     // ③ 最后备选：无音频可用，直接触发设备序列（不能因为没有音频就永远卡住）
     qWarning() << "❌ CommonControl: 起车预警无可用音频，直接执行启动序列";
+    // ✅ 2026-03-20 [Phase 7.48.59]: 必须先停止 warningTimer！
+    // 原因：m_warningTimer 在 startWarningPlayback() 中已 start(N秒)，若此处不停止，
+    //       N秒后 onWarningTimerTimeout() 仍会触发 startDeviceSequence()，
+    //       导致设备故障停止后自动重启，形成无限循环。
+    m_warningTimer->stop();
     m_isWarningPlaying = false;
     startDeviceSequence();
 }
@@ -866,6 +874,19 @@ void CommonControl::stopDeviceSequence()
         qDebug() << "⏸️  CommonControl: 中断当前序列";
         m_isSequenceRunning = false;
         m_deviceSequenceTimer->stop();
+    }
+
+    // ✅ 2026-03-20 [Phase 7.48.59]: 取消所有正在运行的反馈检测定时器
+    // 原因：启动序列激活多个设备时，每个设备都有独立的反馈超时定时器。
+    //       当第一个设备失败触发 stopDeviceSequence() 时，其他设备的定时器仍在运行。
+    //       这些定时器逐个超时后又各自触发 stopDeviceSequence()，
+    //       导致同时有多个停止序列并发运行（日志中可见 [1/4] 2号电机 连续打印3次）。
+    if (!m_feedbackChecks.isEmpty()) {
+        QList<QString> activeDevices = m_feedbackChecks.keys();
+        qDebug() << "⏹️  CommonControl: 取消" << activeDevices.size() << "个反馈检测定时器:" << activeDevices.join(", ");
+        for (const QString &device : activeDevices) {
+            stopFeedbackCheck(device);
+        }
     }
 
     m_currentSequence = m_systemConfig->stopSequence();
