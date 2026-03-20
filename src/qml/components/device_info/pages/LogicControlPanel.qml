@@ -411,33 +411,37 @@ Rectangle {
                                     model: root.deviceGroups.length
 
                                     ColumnLayout {
+                                        // ✅ 2026-03-20 [Phase 7.48.57]: 保存外层组索引，防止被内层Repeater的index覆盖
+                                        property int groupIndex: index
                                         Layout.fillWidth: true
                                         spacing: 3
 
                                         Text {
-                                            text: root.deviceGroups[index].name
+                                            text: root.deviceGroups[parent.groupIndex].name
                                             font.pixelSize: 12
                                             font.bold: true
-                                            color: root.deviceGroups[index].color
+                                            color: root.deviceGroups[parent.groupIndex].color
                                         }
 
                                         Flow {
                                             Layout.fillWidth: true
                                             spacing: 4
+                                            property int gIdx: parent.groupIndex
 
                                             Repeater {
-                                                model: root.deviceGroups[index].devices.length
+                                                model: root.deviceGroups[parent.gIdx].devices
 
                                                 Rectangle {
-                                                    property string devName: root.deviceGroups[index].devices[modelData] || ""
+                                                    property string devName: modelData
                                                     property bool inSeq: root.isDeviceInCurrentSeq(devName)
+                                                    property color groupColor: root.deviceGroups[parent.gIdx].color
 
                                                     width: 72
                                                     height: 28
                                                     radius: 4
-                                                    color: inSeq ? "#1a1a2e" : (poolItemMa.containsMouse ? root.deviceGroups[index].color : "#1e3a5f")
+                                                    color: inSeq ? "#1a1a2e" : (poolItemMa.containsMouse ? groupColor : "#1e3a5f")
                                                     opacity: inSeq ? 0.4 : 1.0
-                                                    border.color: root.deviceGroups[index].color
+                                                    border.color: groupColor
                                                     border.width: 1
 
                                                     Text {
