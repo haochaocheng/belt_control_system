@@ -3,6 +3,7 @@ import QtQuick.Controls 6.5
 import QtQuick.Layouts 6.5
 
 // ✅ 2026-03-20 [Phase 7.48.57]: 逻辑控制面板 - 水平时间轴流程图
+// ✅ 2026-03-20 修复4项问题：默认序列/字体1.5倍/调整顺序/保存确认
 Rectangle {
     id: root
     color: "transparent"
@@ -24,10 +25,13 @@ Rectangle {
     property var currentDelays: currentTab === 0 ? startupDelays : stopDelays
     property color themeColor: currentTab === 0 ? "#00ff88" : "#ff4757"
 
+    // ✅ 2026-03-20 修复：保存提示状态
+    property bool saveSuccess: false
+
     // 设备池分组定义
     readonly property var deviceGroups: [
         { name: "电机", color: "#5dade2", devices: ["1号电机", "2号电机", "3号电机", "4号电机", "5号电机", "6号电机", "7号电机", "8号电机"] },
-        { name: "制动器", color: "#f39c12", devices: ["1号制动器", "2号制动器", "3号制动器", "4号制动器", "5号制动器", "6号制动器", "7号制动器", "8号制动器"] },
+        { name: "制动器", color: "#f39c12", devices: ["1号制动器", "2号制动器", "3号制动器", "4号制动器", "5号制动器", "6号制动器", "7号制动器", "8号制动��"] },
         { name: "张紧", color: "#00ff88", devices: ["张紧控制"] },
         { name: "洒水", color: "#00d4ff", devices: ["洒水1", "洒水2", "洒水3", "洒水4", "洒水5", "洒水6", "洒水7", "洒水8"] }
     ]
@@ -36,8 +40,11 @@ Rectangle {
 
     function loadFromConfig() {
         if (!systemConfig) return
-        startupSeq = systemConfig.startupSequence ? systemConfig.startupSequence.slice() : ["张紧", "抱闸", "1号电机", "2号电机"]
-        stopSeq = systemConfig.stopSequence ? systemConfig.stopSequence.slice() : ["2号电机", "1号电机", "抱闸", "张紧"]
+        // ✅ 2026-03-20 修复：默认序列使用设备池中的实际名称
+        // startupSeq = systemConfig.startupSequence ? systemConfig.startupSequence.slice() : ["张紧", "抱闸", "1号电机", "2号电机"]
+        // stopSeq = systemConfig.stopSequence ? systemConfig.stopSequence.slice() : ["2号电机", "1号电机", "抱闸", "张紧"]
+        startupSeq = systemConfig.startupSequence && systemConfig.startupSequence.length > 0 ? systemConfig.startupSequence.slice() : ["张紧控制", "1号制动器", "1号电机", "2号电机"]
+        stopSeq = systemConfig.stopSequence && systemConfig.stopSequence.length > 0 ? systemConfig.stopSequence.slice() : ["2号电机", "1号电机", "1号制动器", "张紧控制"]
 
         var sDelays = systemConfig.startupDelays
         startupDelays = []
@@ -70,6 +77,16 @@ Rectangle {
         systemConfig.defaultDelay = defaultDelay
         systemConfig.saveConfig()
         console.log("✅ 逻辑控制配置已保存")
+        // ✅ 2026-03-20 修复：显示保存成功提示
+        saveSuccess = true
+        saveSuccessTimer.restart()
+    }
+
+    // ✅ 2026-03-20 保存成功提示自动隐藏定时器
+    Timer {
+        id: saveSuccessTimer
+        interval: 2000
+        onTriggered: root.saveSuccess = false
     }
 
     function addDevice(deviceName) {
@@ -144,8 +161,9 @@ Rectangle {
                     { text: "⚙ 全局设置", color: "#00d4ff" }
                 ]
                 Rectangle {
-                    width: 130
-                    height: 36
+                    // ✅ 2026-03-20 修复：Tab按钮尺寸配合1.5倍字体
+                    width: 170
+                    height: 44
                     radius: 6
                     color: root.currentTab === index ? modelData.color : "#1e3a5f"
                     opacity: root.currentTab === index ? 1.0 : 0.6
@@ -155,7 +173,7 @@ Rectangle {
                     Text {
                         anchors.centerIn: parent
                         text: modelData.text
-                        font.pixelSize: 14
+                        font.pixelSize: 21
                         font.bold: root.currentTab === index
                         color: root.currentTab === index ? "#1a2332" : modelData.color
                     }
@@ -184,7 +202,7 @@ Rectangle {
                 // 标题
                 Text {
                     text: root.currentTab === 0 ? "启动流程时间轴" : "停止流程时间轴"
-                    font.pixelSize: 16
+                    font.pixelSize: 24
                     font.bold: true
                     color: root.themeColor
                 }
@@ -192,7 +210,7 @@ Rectangle {
                 // ========== 水平时间轴 ==========
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 140
+                    Layout.preferredHeight: 180
                     color: "#0d1520"
                     radius: 8
                     border.color: root.themeColor
@@ -221,12 +239,27 @@ Rectangle {
                                     // 设备节点卡片
                                     Rectangle {
                                         id: nodeCard
-                                        width: 90
-                                        height: 100
+                                        width: 120
+                                        height: 140
                                         radius: 8
+                                        // ✅ 2026-03-20 修复：nodeMouseArea移到最前声明，z值最低，不会遮挡按钮
                                         color: nodeMouseArea.containsMouse ? "#2a5080" : "#1e3a5f"
                                         border.color: root.themeColor
                                         border.width: 2
+
+                                        // 背景点击区域 - 声明在最前，z值最低，按钮可以正常接收事件
+                                        MouseArea {
+                                            id: nodeMouseArea
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            z: 0
+                                            // 点击弹出编辑
+                                            onClicked: {
+                                                editPopup.editIndex = index
+                                                editPopup.editDelay = root.currentDelays[index] || 1.0
+                                                editPopup.open()
+                                            }
+                                        }
 
                                         // 顶部指示条
                                         Rectangle {
@@ -237,69 +270,59 @@ Rectangle {
                                             anchors.horizontalCenter: parent.horizontalCenter
                                             radius: 2
                                             color: root.themeColor
+                                            z: 1
                                         }
 
                                         Column {
                                             anchors.centerIn: parent
-                                            spacing: 4
+                                            spacing: 6
+                                            z: 2
 
                                             Text {
                                                 anchors.horizontalCenter: parent.horizontalCenter
                                                 text: "(" + (index + 1) + ")"
-                                                font.pixelSize: 11
+                                                font.pixelSize: 16
                                                 color: "#aaaaaa"
                                             }
                                             Text {
                                                 anchors.horizontalCenter: parent.horizontalCenter
                                                 text: root.currentSeq[index] || ""
-                                                font.pixelSize: 14
+                                                font.pixelSize: 21
                                                 font.bold: true
                                                 color: "white"
                                             }
-                                            // 上下移动按钮
+                                            // ✅ 2026-03-20 修复：◀×▶按钮z值高于nodeMouseArea，可正常点击
                                             Row {
                                                 anchors.horizontalCenter: parent.horizontalCenter
                                                 spacing: 8
                                                 Rectangle {
-                                                    width: 24; height: 20; radius: 3
+                                                    width: 32; height: 28; radius: 3
                                                     color: leftBtn.containsMouse ? "#3498db" : "#2c3e50"
                                                     visible: index > 0
-                                                    Text { anchors.centerIn: parent; text: "◀"; color: "white"; font.pixelSize: 12 }
+                                                    Text { anchors.centerIn: parent; text: "◀"; color: "white"; font.pixelSize: 18 }
                                                     MouseArea { id: leftBtn; anchors.fill: parent; hoverEnabled: true; onClicked: root.swapDevices(index, index - 1) }
                                                 }
                                                 Rectangle {
-                                                    width: 24; height: 20; radius: 3
+                                                    width: 32; height: 28; radius: 3
                                                     color: delBtn.containsMouse ? "#e74c3c" : "#2c3e50"
-                                                    Text { anchors.centerIn: parent; text: "×"; color: "white"; font.pixelSize: 14; font.bold: true }
+                                                    Text { anchors.centerIn: parent; text: "×"; color: "white"; font.pixelSize: 21; font.bold: true }
                                                     MouseArea { id: delBtn; anchors.fill: parent; hoverEnabled: true; onClicked: root.removeDevice(index) }
                                                 }
                                                 Rectangle {
-                                                    width: 24; height: 20; radius: 3
+                                                    width: 32; height: 28; radius: 3
                                                     color: rightBtn.containsMouse ? "#3498db" : "#2c3e50"
                                                     visible: index < root.currentSeq.length - 1
-                                                    Text { anchors.centerIn: parent; text: "▶"; color: "white"; font.pixelSize: 12 }
+                                                    Text { anchors.centerIn: parent; text: "▶"; color: "white"; font.pixelSize: 18 }
                                                     MouseArea { id: rightBtn; anchors.fill: parent; hoverEnabled: true; onClicked: root.swapDevices(index, index + 1) }
                                                 }
-                                            }
-                                        }
-
-                                        MouseArea {
-                                            id: nodeMouseArea
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            // 点击弹出编辑
-                                            onClicked: {
-                                                editPopup.editIndex = index
-                                                editPopup.editDelay = root.currentDelays[index] || 1.0
-                                                editPopup.open()
                                             }
                                         }
                                     }
 
                                     // 连接箭头 + 延时标签（最后一个不显示）
                                     Item {
-                                        width: 70
-                                        height: 100
+                                        width: 80
+                                        height: 140
                                         visible: index < root.currentSeq.length - 1
 
                                         // 箭头线
@@ -319,7 +342,7 @@ Rectangle {
                                             anchors.rightMargin: 2
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: "▶"
-                                            font.pixelSize: 10
+                                            font.pixelSize: 15
                                             color: {
                                                 var d = root.currentDelays[index] || 1.0
                                                 return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
@@ -330,9 +353,9 @@ Rectangle {
                                             anchors.horizontalCenter: parent.horizontalCenter
                                             anchors.bottom: parent.verticalCenter
                                             anchors.bottomMargin: 4
-                                            width: 40
-                                            height: 20
-                                            radius: 10
+                                            width: 52
+                                            height: 26
+                                            radius: 13
                                             color: "#1a2332"
                                             border.color: "#5dade2"
                                             border.width: 1
@@ -340,7 +363,7 @@ Rectangle {
                                             Text {
                                                 anchors.centerIn: parent
                                                 text: (root.currentDelays[index] || 1.0).toFixed(1) + "s"
-                                                font.pixelSize: 11
+                                                font.pixelSize: 16
                                                 color: "#5dade2"
                                             }
 
@@ -363,7 +386,7 @@ Rectangle {
                     Text {
                         anchors.centerIn: parent
                         text: "暂无设备，请从下方设备池添加"
-                        font.pixelSize: 14
+                        font.pixelSize: 21
                         color: "#666666"
                         visible: root.currentSeq.length === 0
                     }
@@ -372,7 +395,7 @@ Rectangle {
                 // ========== 提示栏 ==========
                 Text {
                     text: "点击节点编辑延时 │ ◀▶ 调整顺序 │ × 删除设备 │ 点击连线延时标签修改"
-                    font.pixelSize: 11
+                    font.pixelSize: 16
                     color: "#666666"
                 }
 
@@ -392,7 +415,7 @@ Rectangle {
 
                         Text {
                             text: "设备池（点击添加到流程，已添加设备灰显）"
-                            font.pixelSize: 12
+                            font.pixelSize: 18
                             color: "#888888"
                         }
 
@@ -418,7 +441,7 @@ Rectangle {
 
                                         Text {
                                             text: root.deviceGroups[parent.groupIndex].name
-                                            font.pixelSize: 12
+                                            font.pixelSize: 18
                                             font.bold: true
                                             color: root.deviceGroups[parent.groupIndex].color
                                         }
@@ -436,8 +459,8 @@ Rectangle {
                                                     property bool inSeq: root.isDeviceInCurrentSeq(devName)
                                                     property color groupColor: root.deviceGroups[parent.gIdx].color
 
-                                                    width: 72
-                                                    height: 28
+                                                    width: 96
+                                                    height: 36
                                                     radius: 4
                                                     color: inSeq ? "#1a1a2e" : (poolItemMa.containsMouse ? groupColor : "#1e3a5f")
                                                     opacity: inSeq ? 0.4 : 1.0
@@ -447,7 +470,7 @@ Rectangle {
                                                     Text {
                                                         anchors.centerIn: parent
                                                         text: parent.devName
-                                                        font.pixelSize: 11
+                                                        font.pixelSize: 16
                                                         color: parent.inSeq ? "#555555" : "white"
                                                     }
 
@@ -475,21 +498,30 @@ Rectangle {
 
                     Text {
                         text: "设备: " + root.currentSeq.length + "/10"
-                        font.pixelSize: 13
+                        font.pixelSize: 20
                         color: "#aaaaaa"
                     }
                     Text {
                         text: "总耗时: " + root.getTotalTime() + "s"
-                        font.pixelSize: 13
+                        font.pixelSize: 20
                         color: "#aaaaaa"
+                    }
+
+                    // ✅ 2026-03-20 修复：保存成功提示
+                    Text {
+                        text: "已保存"
+                        font.pixelSize: 20
+                        font.bold: true
+                        color: "#00ff88"
+                        visible: root.saveSuccess
                     }
 
                     Item { Layout.fillWidth: true }
 
                     // 一键反转按钮（仅启动Tab显示）
                     Rectangle {
-                        width: 140
-                        height: 32
+                        width: 170
+                        height: 38
                         radius: 6
                         color: reverseBtn.containsMouse ? "#f39c12" : "#2c3e50"
                         border.color: "#f39c12"
@@ -498,7 +530,7 @@ Rectangle {
                         Text {
                             anchors.centerIn: parent
                             text: "一键反转→停止"
-                            font.pixelSize: 13
+                            font.pixelSize: 20
                             color: "white"
                         }
                         MouseArea {
@@ -511,8 +543,8 @@ Rectangle {
 
                     // 保存按钮
                     Rectangle {
-                        width: 80
-                        height: 32
+                        width: 100
+                        height: 38
                         radius: 6
                         color: saveBtn.containsMouse ? "#27ae60" : "#1e8449"
                         border.color: "#00ff88"
@@ -520,7 +552,7 @@ Rectangle {
                         Text {
                             anchors.centerIn: parent
                             text: "保存"
-                            font.pixelSize: 14
+                            font.pixelSize: 21
                             font.bold: true
                             color: "white"
                         }
@@ -528,7 +560,8 @@ Rectangle {
                             id: saveBtn
                             anchors.fill: parent
                             hoverEnabled: true
-                            onClicked: root.saveToConfig()
+                            // ✅ 2026-03-20 修复：点击保存弹出确认对话框
+                            onClicked: saveConfirmPopup.open()
                         }
                     }
                 }
@@ -543,7 +576,7 @@ Rectangle {
 
                 Text {
                     text: "全局设置"
-                    font.pixelSize: 16
+                    font.pixelSize: 24
                     font.bold: true
                     color: "#00d4ff"
                 }
@@ -553,7 +586,7 @@ Rectangle {
                     columnSpacing: 16
                     rowSpacing: 12
 
-                    Text { text: "默认延时（秒）:"; font.pixelSize: 14; color: "#cccccc" }
+                    Text { text: "默认延时（秒）:"; font.pixelSize: 21; color: "#cccccc" }
                     RowLayout {
                         spacing: 8
                         Slider {
@@ -565,22 +598,22 @@ Rectangle {
                         }
                         Text {
                             text: defaultDelaySlider.value.toFixed(1) + "s"
-                            font.pixelSize: 14
+                            font.pixelSize: 21
                             color: "#5dade2"
                         }
                     }
 
-                    Text { text: "预警时间（秒）:"; font.pixelSize: 14; color: "#cccccc" }
+                    Text { text: "预警时间（秒）:"; font.pixelSize: 21; color: "#cccccc" }
                     Text {
                         text: root.systemConfig ? root.systemConfig.warningTimeSeconds + "s" : "N/A"
-                        font.pixelSize: 14
+                        font.pixelSize: 21
                         color: "#5dade2"
                     }
 
-                    Text { text: "预警模式:"; font.pixelSize: 14; color: "#cccccc" }
+                    Text { text: "预警模式:"; font.pixelSize: 21; color: "#cccccc" }
                     Text {
                         text: root.systemConfig ? (root.systemConfig.warningMode === 0 ? "按时间" : "按次数") : "N/A"
-                        font.pixelSize: 14
+                        font.pixelSize: 21
                         color: "#5dade2"
                     }
                 }
@@ -592,23 +625,35 @@ Rectangle {
                     Layout.fillWidth: true
                     spacing: 12
 
+                    // ✅ 2026-03-20 修复：保存成功提示
+                    Text {
+                        text: "已保存"
+                        font.pixelSize: 20
+                        font.bold: true
+                        color: "#00ff88"
+                        visible: root.saveSuccess
+                    }
+
                     Item { Layout.fillWidth: true }
 
                     Rectangle {
-                        width: 100
-                        height: 32
+                        width: 120
+                        height: 38
                         radius: 6
                         color: resetBtn.containsMouse ? "#c0392b" : "#2c3e50"
                         border.color: "#ff4757"
 
-                        Text { anchors.centerIn: parent; text: "恢复默认"; font.pixelSize: 13; color: "white" }
+                        Text { anchors.centerIn: parent; text: "恢复默认"; font.pixelSize: 20; color: "white" }
                         MouseArea {
                             id: resetBtn
                             anchors.fill: parent
                             hoverEnabled: true
                             onClicked: {
-                                root.startupSeq = ["张紧", "抱闸", "1号电机", "2号电机"]
-                                root.stopSeq = ["2号电机", "1号电机", "抱闸", "张紧"]
+                                // ✅ 2026-03-20 修复：恢复默认使用设备池中的实际名称
+                                // root.startupSeq = ["张紧", "抱闸", "1号电机", "2号电机"]
+                                // root.stopSeq = ["2号电机", "1号电机", "抱闸", "张紧"]
+                                root.startupSeq = ["张紧控制", "1号制动器", "1号电机", "2号电机"]
+                                root.stopSeq = ["2号电机", "1号电机", "1号制动器", "张紧控制"]
                                 root.startupDelays = [1.0, 1.0, 1.0, 1.0]
                                 root.stopDelays = [1.0, 1.0, 1.0, 1.0]
                                 root.defaultDelay = 1.0
@@ -617,18 +662,90 @@ Rectangle {
                     }
 
                     Rectangle {
-                        width: 80
-                        height: 32
+                        width: 100
+                        height: 38
                         radius: 6
                         color: saveBtn2.containsMouse ? "#27ae60" : "#1e8449"
                         border.color: "#00ff88"
 
-                        Text { anchors.centerIn: parent; text: "保存"; font.pixelSize: 14; font.bold: true; color: "white" }
+                        Text { anchors.centerIn: parent; text: "保存"; font.pixelSize: 21; font.bold: true; color: "white" }
                         MouseArea {
                             id: saveBtn2
                             anchors.fill: parent
                             hoverEnabled: true
-                            onClicked: root.saveToConfig()
+                            // ✅ 2026-03-20 修复：点击保存弹出确认对话框
+                            onClicked: saveConfirmPopup.open()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ========== 保存确认弹窗 ==========
+    Popup {
+        id: saveConfirmPopup
+        anchors.centerIn: parent
+        width: 320
+        height: 180
+        modal: true
+
+        background: Rectangle {
+            color: "#1a2332"
+            radius: 10
+            border.color: "#00d4ff"
+            border.width: 2
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 20
+            spacing: 20
+
+            Text {
+                text: "确认保存当前配置？"
+                font.pixelSize: 21
+                font.bold: true
+                color: "#00d4ff"
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Text {
+                text: "启动: " + root.startupSeq.length + "个设备 │ 停止: " + root.stopSeq.length + "个设备"
+                font.pixelSize: 16
+                color: "#aaaaaa"
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            RowLayout {
+                spacing: 20
+                Layout.alignment: Qt.AlignHCenter
+
+                Rectangle {
+                    width: 100; height: 36; radius: 6
+                    color: cancelSaveBtn.containsMouse ? "#555555" : "#2c3e50"
+                    border.color: "#666666"
+                    Text { anchors.centerIn: parent; text: "取消"; font.pixelSize: 18; color: "white" }
+                    MouseArea {
+                        id: cancelSaveBtn
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: saveConfirmPopup.close()
+                    }
+                }
+
+                Rectangle {
+                    width: 100; height: 36; radius: 6
+                    color: doSaveBtn.containsMouse ? "#27ae60" : "#1e8449"
+                    border.color: "#00ff88"
+                    Text { anchors.centerIn: parent; text: "确认保存"; font.pixelSize: 18; font.bold: true; color: "white" }
+                    MouseArea {
+                        id: doSaveBtn
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: {
+                            root.saveToConfig()
+                            saveConfirmPopup.close()
                         }
                     }
                 }
@@ -640,8 +757,8 @@ Rectangle {
     Popup {
         id: editPopup
         anchors.centerIn: parent
-        width: 260
-        height: 180
+        width: 320
+        height: 220
         modal: true
 
         property int editIndex: -1
@@ -661,14 +778,14 @@ Rectangle {
 
             Text {
                 text: "编辑设备 - (" + (editPopup.editIndex + 1) + ") " + (root.currentSeq[editPopup.editIndex] || "")
-                font.pixelSize: 14
+                font.pixelSize: 21
                 font.bold: true
                 color: "#00d4ff"
             }
 
             RowLayout {
                 spacing: 8
-                Text { text: "延时:"; font.pixelSize: 13; color: "#cccccc" }
+                Text { text: "延时:"; font.pixelSize: 20; color: "#cccccc" }
                 Slider {
                     id: editDelaySlider
                     from: 0.5; to: 30.0; stepSize: 0.5
@@ -677,9 +794,9 @@ Rectangle {
                 }
                 Text {
                     text: editDelaySlider.value.toFixed(1) + "s"
-                    font.pixelSize: 13
+                    font.pixelSize: 20
                     color: "#5dade2"
-                    Layout.preferredWidth: 40
+                    Layout.preferredWidth: 50
                 }
             }
 
@@ -688,9 +805,9 @@ Rectangle {
                 Layout.alignment: Qt.AlignRight
 
                 Rectangle {
-                    width: 80; height: 30; radius: 6
+                    width: 100; height: 36; radius: 6
                     color: delDevBtn.containsMouse ? "#e74c3c" : "#c0392b"
-                    Text { anchors.centerIn: parent; text: "删除设备"; font.pixelSize: 12; color: "white" }
+                    Text { anchors.centerIn: parent; text: "删除设备"; font.pixelSize: 18; color: "white" }
                     MouseArea {
                         id: delDevBtn
                         anchors.fill: parent
@@ -700,9 +817,9 @@ Rectangle {
                 }
 
                 Rectangle {
-                    width: 60; height: 30; radius: 6
+                    width: 80; height: 36; radius: 6
                     color: confirmBtn.containsMouse ? "#27ae60" : "#1e8449"
-                    Text { anchors.centerIn: parent; text: "确定"; font.pixelSize: 12; font.bold: true; color: "white" }
+                    Text { anchors.centerIn: parent; text: "确定"; font.pixelSize: 18; font.bold: true; color: "white" }
                     MouseArea {
                         id: confirmBtn
                         anchors.fill: parent
