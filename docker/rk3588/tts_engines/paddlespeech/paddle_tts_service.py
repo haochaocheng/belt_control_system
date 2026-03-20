@@ -82,6 +82,39 @@ current_model = None
 # 解决：提前设置 NLTK 离线模式，预置数据目录
 try:
     import nltk
+    import zipfile as _zipfile  # ✅ 2026-03-20 [Phase 7.48.59]: 用于检测损坏 zip
+
+    # ✅ 2026-03-20 [Phase 7.48.59]: 检测并删除损坏的 NLTK zip 文件
+    # 原因：设备上 /root/nltk_data/taggers/averaged_perceptron_tagger.zip 可能因中断下载而损坏
+    #       g2p_en 在 paddlespeech.t2s.frontend.phonectic 导入时调用 nltk.data.find()，
+    #       遇到损坏 zip 会 raise BadZipFile，导致 PaddleSpeech 初始化失败
+    # 解决：初始化前扫描所有已知 NLTK 数据路径，发现损坏 zip 立即删除
+    #       NLTK 找不到文件时会尝试下载（离线环境则跳过）—— 比用损坏文件崩溃要好
+    def _remove_corrupt_nltk_zips(search_paths):
+        subdirs = ['taggers', 'corpora', 'tokenizers', 'chunkers', 'misc', 'models',
+                   'sentiment', 'stemmers', 'stopwords']
+        for base in search_paths:
+            for subdir in subdirs:
+                subdir_path = os.path.join(base, subdir)
+                if not os.path.exists(subdir_path):
+                    continue
+                try:
+                    for fname in os.listdir(subdir_path):
+                        if not fname.endswith('.zip'):
+                            continue
+                        fpath = os.path.join(subdir_path, fname)
+                        try:
+                            with _zipfile.ZipFile(fpath, 'r') as zf:
+                                zf.namelist()   # 读取目录表，损坏时抛 BadZipFile
+                        except Exception as ze:
+                            logger.warning(f"⚠️ NLTK 数据文件损坏，删除: {fpath}  原因: {ze}")
+                            try:
+                                os.remove(fpath)
+                            except Exception as re:
+                                logger.warning(f"⚠️ 删除失败（忽略）: {re}")
+                except Exception:
+                    pass  # 目录不可读，跳过
+
     # 设置 NLTK 数据路径（容器内预置路径）
     nltk_data_dir = '/app/tts_models/nltk_data'
     if os.path.exists(nltk_data_dir):
@@ -94,6 +127,10 @@ try:
         os.makedirs('/root/nltk_data', exist_ok=True)
         nltk.data.path.insert(0, '/root/nltk_data')
         logger.warning("⚠️ NLTK 数据未预置，跳过下载（中文TTS不受影响）")
+
+    # ✅ 2026-03-20 [Phase 7.48.59]: 扫描并清理损坏 zip（必须在路径设置完成后执行）
+    _remove_corrupt_nltk_zips(nltk.data.path)
+
 except ImportError:
     logger.info("ℹ️ NLTK 未安装，跳过数据初始化")
 
