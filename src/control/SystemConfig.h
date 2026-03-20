@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QSettings>
+#include <QVariantList>
 
 /**
  * @brief 系统配置管理类 - 管理所有系统参数的保存和加载
@@ -22,6 +23,10 @@ class SystemConfig : public QObject
     Q_PROPERTY(WarningMode warningMode READ warningMode WRITE setWarningMode NOTIFY warningModeChanged)
     Q_PROPERTY(QStringList startupSequence READ startupSequence WRITE setStartupSequence NOTIFY startupSequenceChanged)
     Q_PROPERTY(QStringList stopSequence READ stopSequence WRITE setStopSequence NOTIFY stopSequenceChanged)
+    // ✅ 2026-03-20 [Phase 7.48.57]: 逻辑控制-每个设备的延时时间（秒），与序列一一对应
+    Q_PROPERTY(QVariantList startupDelays READ startupDelays WRITE setStartupDelays NOTIFY startupDelaysChanged)
+    Q_PROPERTY(QVariantList stopDelays READ stopDelays WRITE setStopDelays NOTIFY stopDelaysChanged)
+    Q_PROPERTY(double defaultDelay READ defaultDelay WRITE setDefaultDelay NOTIFY defaultDelayChanged)
     Q_PROPERTY(QString modbusServerIp READ modbusServerIp WRITE setModbusServerIp NOTIFY modbusServerIpChanged)
     Q_PROPERTY(QString modbusGateway READ modbusGateway WRITE setModbusGateway NOTIFY modbusGatewayChanged)
     Q_PROPERTY(QString modbusSubnetMask READ modbusSubnetMask WRITE setModbusSubnetMask NOTIFY modbusSubnetMaskChanged)
@@ -84,6 +89,10 @@ public:
     WarningMode warningMode() const { return m_warningMode; }
     QStringList startupSequence() const { return m_startupSequence; }
     QStringList stopSequence() const { return m_stopSequence; }
+    // ✅ 2026-03-20 [Phase 7.48.57]: 逻辑控制延时 Getters
+    QVariantList startupDelays() const { return m_startupDelays; }
+    QVariantList stopDelays() const { return m_stopDelays; }
+    double defaultDelay() const { return m_defaultDelay; }
     QString modbusServerIp() const { return m_modbusServerIp; }
     QString modbusGateway() const { return m_modbusGateway; }
     QString modbusSubnetMask() const { return m_modbusSubnetMask; }
@@ -128,6 +137,10 @@ public:
     void setWarningMode(WarningMode mode);
     void setStartupSequence(const QStringList &sequence);
     void setStopSequence(const QStringList &sequence);
+    // ✅ 2026-03-20 [Phase 7.48.57]: 逻辑控制延时 Setters
+    void setStartupDelays(const QVariantList &delays);
+    void setStopDelays(const QVariantList &delays);
+    void setDefaultDelay(double delay);
     void setModbusServerIp(const QString &ip);
     void setModbusGateway(const QString &gateway);
     void setModbusSubnetMask(const QString &subnetMask);
@@ -152,6 +165,10 @@ signals:
     void warningModeChanged();
     void startupSequenceChanged();
     void stopSequenceChanged();
+    // ✅ 2026-03-20 [Phase 7.48.57]: 逻辑控制延时信号
+    void startupDelaysChanged();
+    void stopDelaysChanged();
+    void defaultDelayChanged();
     void modbusServerIpChanged();
     void modbusGatewayChanged();
     void modbusSubnetMaskChanged();
@@ -201,6 +218,10 @@ private:
     WarningMode m_warningMode;   // 播放模式
     QStringList m_startupSequence;  // 启动顺序列表
     QStringList m_stopSequence;     // 停止顺序列表
+    // ✅ 2026-03-20 [Phase 7.48.57]: 逻辑控制-每个设备的延时（秒）
+    QVariantList m_startupDelays;   // 启动延时列表（与startupSequence一一对应）
+    QVariantList m_stopDelays;      // 停止延时列表（与stopSequence一一对应）
+    double m_defaultDelay;          // 新设备默认延时（秒）
     QString m_modbusServerIp;       // Modbus服务器IP地址
     QString m_modbusGateway;        // 网关地址
     QString m_modbusSubnetMask;     // 子网掩码
@@ -248,6 +269,10 @@ private:
     // 默认设备顺序
     static QStringList getDefaultStartupSequence();
     static QStringList getDefaultStopSequence();
+    // ✅ 2026-03-20 [Phase 7.48.57]: 默认延时列表
+    static QVariantList getDefaultStartupDelays();
+    static QVariantList getDefaultStopDelays();
+    static constexpr double DEFAULT_DELAY = 1.0;  // 默认延时1秒
 };
 
 #endif // SYSTEMCONFIG_H

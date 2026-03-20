@@ -137,6 +137,7 @@
         <file>components/device_info/pages/FrontBearingTempTab.qml</file>
         <file>components/device_info/pages/LinePositionConfigPanel.qml</file>
         <file>components/device_info/pages/LinePositionPage.qml</file>
+        <file>components/device_info/pages/LogicControlPanel.qml</file>
         <file>components/device_info/pages/ModbusRegisterTab.qml</file>
         <file>components/device_info/pages/ModbusTCPMasterTab.qml</file>
         <file>components/device_info/pages/ModbusTCPSlaveTab.qml</file>

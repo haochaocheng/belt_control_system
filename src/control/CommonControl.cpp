@@ -899,8 +899,21 @@ void CommonControl::executeNextDeviceInSequence()
 
     // 如果还有下一个设备，使用延时定时器
     if (m_currentSequenceIndex < m_currentSequence.size()) {
-        // 默认延时1秒（后续可以从设备配置读取）
-        m_deviceSequenceTimer->start(1000);
+        // ✅ 2026-03-20 [Phase 7.48.57]: 使用可配置延时（替代固定1000ms）
+        // 旧代码：m_deviceSequenceTimer->start(1000);
+        int delayMs = 1000;  // 默认1秒
+        if (m_systemConfig) {
+            QVariantList delays = m_isStartupSequence ?
+                m_systemConfig->startupDelays() : m_systemConfig->stopDelays();
+            int delayIndex = m_currentSequenceIndex - 1;  // 上一个设备的延时
+            if (delayIndex >= 0 && delayIndex < delays.size()) {
+                delayMs = static_cast<int>(delays[delayIndex].toDouble() * 1000);
+                if (delayMs < 500) delayMs = 500;    // 最小0.5秒
+                if (delayMs > 30000) delayMs = 30000; // 最大30秒
+            }
+        }
+        qDebug() << "  ⏱️ 延时" << delayMs << "ms 后执行下一个设备";
+        m_deviceSequenceTimer->start(delayMs);
     } else {
         // 序列执行完成
         m_isSequenceRunning = false;

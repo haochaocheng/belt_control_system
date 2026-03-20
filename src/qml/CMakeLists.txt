@@ -113,6 +113,8 @@ qt_add_qml_module(qml_module
         # ✅ 2026-03-19 [Phase 7.48.56]: 沿线点位保护页面组件
         components/device_info/pages/LinePositionPage.qml
         components/device_info/pages/LinePositionConfigPanel.qml
+        # ✅ 2026-03-20 [Phase 7.48.57]: 逻辑控制面板
+        components/device_info/pages/LogicControlPanel.qml
         # ✅ 2026-02-07 [Phase 7.39.21]: CAN 控制页面组件
         components/device_info/pages/CANControlPage.qml
         components/device_info/pages/CANListPanel.qml

@@ -3474,15 +3474,20 @@ Item {
                     }
                 }
 
-                // 10: 逻辑控制
-                Rectangle {
-                    color: "transparent"
-                    Text {
-                        anchors.centerIn: parent
-                        text: "逻辑控制\n（待实现）"
-                        font.pixelSize: 18
-                        color: "#CCCCCC"
-                        horizontalAlignment: Text.AlignHCenter
+                // ✅ 2026-03-20 [Phase 7.48.57]: 10: 逻辑控制 - 水平时间轴流程图
+                // 旧代码：占位文字"逻辑控制（待实现）"
+                Loader {
+                    id: logicControlPageLoader
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    active: root.currentCategory === 11  // 仅在选中时加载
+                    source: "pages/LogicControlPanel.qml"
+
+                    onLoaded: {
+                        console.log("✅ [DeviceSettingsDialog] LogicControlPanel 加载成功")
+                        if (item) {
+                            item.systemConfig = systemConfig
+                        }
                     }
                 }
 

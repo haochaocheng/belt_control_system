@@ -4,7 +4,7 @@
 #include <QCoreApplication>
 
 SystemConfig::SystemConfig(QObject *parent)
-    : QObject(parent), m_machineNumber(DEFAULT_MACHINE_NUMBER), m_warningTimeSeconds(DEFAULT_WARNING_TIME), m_warningPlayCount(DEFAULT_WARNING_COUNT), m_warningMode(DEFAULT_WARNING_MODE), m_startupSequence(getDefaultStartupSequence()), m_stopSequence(getDefaultStopSequence()), m_modbusServerIp("192.168.10.243"), m_modbusGateway("192.168.10.1"), m_modbusSubnetMask("255.255.255.0"), m_modbusPollInterval(100), m_workMode(DEFAULT_WORK_MODE), m_localDeviceName("1号皮带")
+    : QObject(parent), m_machineNumber(DEFAULT_MACHINE_NUMBER), m_warningTimeSeconds(DEFAULT_WARNING_TIME), m_warningPlayCount(DEFAULT_WARNING_COUNT), m_warningMode(DEFAULT_WARNING_MODE), m_startupSequence(getDefaultStartupSequence()), m_stopSequence(getDefaultStopSequence()), m_startupDelays(getDefaultStartupDelays()), m_stopDelays(getDefaultStopDelays()), m_defaultDelay(DEFAULT_DELAY), m_modbusServerIp("192.168.10.243"), m_modbusGateway("192.168.10.1"), m_modbusSubnetMask("255.255.255.0"), m_modbusPollInterval(100), m_workMode(DEFAULT_WORK_MODE), m_localDeviceName("1号皮带")
 {
     // 使用统一数据目录配置
     QString configPath = DataPathConfig::getConfigFilePath();
@@ -91,6 +91,37 @@ void SystemConfig::setStopSequence(const QStringList &sequence)
         m_stopSequence = sequence;
         emit stopSequenceChanged();
         qDebug() << "📝 SystemConfig: 停止顺序已设置为:" << sequence.join(" -> ");
+    }
+}
+
+// ✅ 2026-03-20 [Phase 7.48.57]: 逻辑控制延时 Setters
+void SystemConfig::setStartupDelays(const QVariantList &delays)
+{
+    if (m_startupDelays != delays)
+    {
+        m_startupDelays = delays;
+        emit startupDelaysChanged();
+        qDebug() << "📝 SystemConfig: 启动延时已设置，共" << delays.size() << "项";
+    }
+}
+
+void SystemConfig::setStopDelays(const QVariantList &delays)
+{
+    if (m_stopDelays != delays)
+    {
+        m_stopDelays = delays;
+        emit stopDelaysChanged();
+        qDebug() << "📝 SystemConfig: 停止延时已设置，共" << delays.size() << "项";
+    }
+}
+
+void SystemConfig::setDefaultDelay(double delay)
+{
+    if (!qFuzzyCompare(m_defaultDelay, delay) && delay >= 0.5 && delay <= 30.0)
+    {
+        m_defaultDelay = delay;
+        emit defaultDelayChanged();
+        qDebug() << "📝 SystemConfig: 默认延时已设置为:" << delay << "秒";
     }
 }
 
@@ -181,6 +212,14 @@ void SystemConfig::saveConfig()
     m_settings->setValue("localDeviceName", m_localDeviceName);
     m_settings->setValue("startupSequence", m_startupSequence);
     m_settings->setValue("stopSequence", m_stopSequence);
+    // ✅ 2026-03-20 [Phase 7.48.57]: 保存延时配置
+    // QVariantList需要转为QStringList存储
+    QStringList startupDelayStrs, stopDelayStrs;
+    for (const QVariant &v : m_startupDelays) startupDelayStrs << QString::number(v.toDouble());
+    for (const QVariant &v : m_stopDelays) stopDelayStrs << QString::number(v.toDouble());
+    m_settings->setValue("startupDelays", startupDelayStrs);
+    m_settings->setValue("stopDelays", stopDelayStrs);
+    m_settings->setValue("defaultDelay", m_defaultDelay);
     m_settings->endGroup();
 
     m_settings->beginGroup("NetworkSettings");
@@ -237,6 +276,30 @@ void SystemConfig::loadConfig()
     m_localDeviceName = m_settings->value("localDeviceName", "1号皮带").toString();
     m_startupSequence = m_settings->value("startupSequence", getDefaultStartupSequence()).toStringList();
     m_stopSequence = m_settings->value("stopSequence", getDefaultStopSequence()).toStringList();
+
+    // ✅ 2026-03-20 [Phase 7.48.57]: 加载延时配置
+    QStringList startupDelayStrs = m_settings->value("startupDelays").toStringList();
+    QStringList stopDelayStrs = m_settings->value("stopDelays").toStringList();
+    m_defaultDelay = m_settings->value("defaultDelay", DEFAULT_DELAY).toDouble();
+
+    m_startupDelays.clear();
+    if (startupDelayStrs.isEmpty()) {
+        m_startupDelays = getDefaultStartupDelays();
+    } else {
+        for (const QString &s : startupDelayStrs) m_startupDelays << s.toDouble();
+    }
+    // 确保延时列表与序列长度一致
+    while (m_startupDelays.size() < m_startupSequence.size()) m_startupDelays << m_defaultDelay;
+    while (m_startupDelays.size() > m_startupSequence.size()) m_startupDelays.removeLast();
+
+    m_stopDelays.clear();
+    if (stopDelayStrs.isEmpty()) {
+        m_stopDelays = getDefaultStopDelays();
+    } else {
+        for (const QString &s : stopDelayStrs) m_stopDelays << s.toDouble();
+    }
+    while (m_stopDelays.size() < m_stopSequence.size()) m_stopDelays << m_defaultDelay;
+    while (m_stopDelays.size() > m_stopSequence.size()) m_stopDelays.removeLast();
 
     m_settings->endGroup();
 
@@ -301,6 +364,10 @@ void SystemConfig::resetToDefaults()
     setLocalDeviceName("1号皮带");
     setStartupSequence(getDefaultStartupSequence());
     setStopSequence(getDefaultStopSequence());
+    // ✅ 2026-03-20 [Phase 7.48.57]: 重置延时
+    setStartupDelays(getDefaultStartupDelays());
+    setStopDelays(getDefaultStopDelays());
+    setDefaultDelay(DEFAULT_DELAY);
     setModbusServerIp("192.168.10.243");
     setModbusGateway("192.168.10.1");
     setModbusSubnetMask("255.255.255.0");
@@ -319,4 +386,15 @@ QStringList SystemConfig::getDefaultStartupSequence()
 QStringList SystemConfig::getDefaultStopSequence()
 {
     return {"2号电机", "1号电机", "抱闸", "张紧"};
+}
+
+// ✅ 2026-03-20 [Phase 7.48.57]: 默认延时列表（每个设备1秒）
+QVariantList SystemConfig::getDefaultStartupDelays()
+{
+    return {1.0, 1.0, 1.0, 1.0};
+}
+
+QVariantList SystemConfig::getDefaultStopDelays()
+{
+    return {1.0, 1.0, 1.0, 1.0};
 }
