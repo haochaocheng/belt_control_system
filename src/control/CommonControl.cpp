@@ -3,6 +3,7 @@
 #include "OperationLogDatabase.h"
 #include "DeviceRuntimeTracker.h"
 #include "TTSConfigManager.h"  // ✅ 2026-02-26 [Phase 7.47.19]: 采样率配置
+#include "DataPathConfig.h"    // ✅ 2026-03-20 [Phase 7.48.60]: TTS音频基础路径
 #include <QDebug>
 #include <QCoreApplication>
 #include <QDir>
@@ -563,26 +564,48 @@ void CommonControl::stopBelt(int beltNumber)
 
 QString CommonControl::getAudioPath(int beltNumber, const QString &actionType)
 {
-    // 获取应用程序根目录
-    QString appDir = QCoreApplication::applicationDirPath();
-
-    // 构建音频文件路径: AUDIO/<编号>#PD/<文件名>
-    QString folderName = QString("%1#PD").arg(beltNumber);
-
     // 尝试多种文件名格式
     QStringList possibleNames;
-
     // 格式1: "1号皮带启动.mp3" - 完整格式
     possibleNames << QString("%1号皮带%2.mp3").arg(beltNumber).arg(actionType);
     possibleNames << QString("%1号皮带%2.wav").arg(beltNumber).arg(actionType);
-
     // 格式2: "带启动.mp3" - 简化格式
     possibleNames << QString("带%1.mp3").arg(actionType);
     possibleNames << QString("带%1.wav").arg(actionType);
-
     // 格式3: "启动.mp3" - 最简格式
     possibleNames << QString("%1.mp3").arg(actionType);
     possibleNames << QString("%1.wav").arg(actionType);
+
+    // ✅ 2026-03-20 [Phase 7.48.60]: TTS合成路径优先
+    if (m_systemConfig && m_systemConfig->beltAudioSource() == 1) {
+        // 使用TTS引擎音频路径：{audioBase}/{engine}-{model}-spk{id}/{N}#PD/
+        TTSConfigManager *ttsConfig = TTSConfigManager::instance();
+        int modelIndex = ttsConfig->modelIndex(TTSConfigManager::Test);
+        QString engineName = "paddlespeech";
+        QString modelName = ttsConfig->modelName(modelIndex);
+        int speakerId = ttsConfig->speakerId(TTSConfigManager::Test);
+        QString ttsFolder = QString("%1/%2-%3-spk%4/%5#PD")
+                                .arg(DataPathConfig::getAudioBaseDirectory())
+                                .arg(engineName)
+                                .arg(modelName)
+                                .arg(speakerId)
+                                .arg(beltNumber);
+        for (const QString &fileName : possibleNames) {
+            QString audioPath = QString("%1/%2").arg(ttsFolder, fileName);
+            if (QFile::exists(audioPath)) {
+                qDebug() << "✅ CommonControl: 使用TTS音频:" << audioPath;
+                return audioPath;
+            }
+        }
+        qDebug() << "⚠️ CommonControl: TTS路径未找到音频，回退到默认路径";
+        qDebug() << "   TTS文件夹:" << ttsFolder;
+    }
+
+    // 默认路径：{appDir}/AUDIO/{N}#PD/
+    // ❌ 2026-03-20 [Phase 7.48.60]: 原代码直接在此处定义folderName和appDir，现改为先尝试TTS路径
+    QString appDir = QCoreApplication::applicationDirPath();
+    // 构建音频文件路径: AUDIO/<编号>#PD/<文件名>
+    QString folderName = QString("%1#PD").arg(beltNumber);
 
     // 按顺序尝试所有可能的文件名
     for (const QString &fileName : possibleNames) {

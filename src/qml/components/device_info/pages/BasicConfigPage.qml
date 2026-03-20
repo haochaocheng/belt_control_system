@@ -28,7 +28,9 @@ Rectangle {
         frontInterlock: 0,
         rearInterlock: 0,
         terminalType: 0,
-        terminalEnabled: 0
+        terminalEnabled: 0,
+        // ✅ 2026-03-20 [Phase 7.48.60]: 皮带音频来源
+        beltAudioSource: 0
     })
 
     // ✅ 2026-02-06 [参数持久化]: 网络参数配置对象
@@ -271,6 +273,13 @@ Rectangle {
         success = success && deviceConfigMgr.saveBasicConfig(root.deviceId, "rearInterlock", basicParams.rearInterlock)
         success = success && deviceConfigMgr.saveBasicConfig(root.deviceId, "terminalType", basicParams.terminalType)
         success = success && deviceConfigMgr.saveBasicConfig(root.deviceId, "terminalEnabled", basicParams.terminalEnabled)
+        // ✅ 2026-03-20 [Phase 7.48.60]: 保存皮带音频来源（SQLite + C++ systemConfig + config.ini）
+        success = success && deviceConfigMgr.saveBasicConfig(root.deviceId, "beltAudioSource", basicParams.beltAudioSource)
+        if (typeof systemConfig !== "undefined" && systemConfig !== null && typeof systemConfig.setBeltAudioSource === "function") {
+            // systemConfig 在此处为全局 C++ context property（BasicConfigPage无同名局部属性）
+            systemConfig.beltAudioSource = basicParams.beltAudioSource
+            systemConfig.saveConfig()
+        }
 
         if (success) {
             console.log("✅ [BasicConfigPage] 基本参数保存成功")
@@ -364,6 +373,14 @@ Rectangle {
         }
         if (config.hasOwnProperty("terminalEnabled")) {
             basicParams.terminalEnabled = config["terminalEnabled"]
+        }
+        // ✅ 2026-03-20 [Phase 7.48.60]: 加载皮带音频来源
+        if (config.hasOwnProperty("beltAudioSource")) {
+            basicParams.beltAudioSource = config["beltAudioSource"]
+            // 同步到 C++ systemConfig（全局 context property）
+            if (typeof systemConfig !== "undefined" && systemConfig !== null) {
+                systemConfig.beltAudioSource = config["beltAudioSource"]
+            }
         }
 
         console.log("✅ [BasicConfigPage] 基本参数加载成功")

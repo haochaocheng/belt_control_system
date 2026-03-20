@@ -737,10 +737,21 @@ void BatchAudioGenerator::generateBeltOperationTasks(const EngineConfig &engine)
         QStringList beltOps = {
             "皮带启动", "皮带停车", "皮带运行失败", "皮带通讯失败", "皮带启动请注意"
         };
+        // ✅ 2026-03-20 [Phase 7.48.60]: 中文数字映射（用于TTS自然语音）
+        static const QStringList chineseNums = {
+            "", "一", "二", "三", "四", "五", "六", "七", "八"
+        };
         for (const QString &op : beltOps) {
             FileTask task;
             task.category = "beltOperation";
-            task.text = QString("%1号%2").arg(beltNum).arg(op);
+            // ✅ 2026-03-20 [Phase 7.48.60]: 启动语音使用自然语言TTS文字，文件名不变
+            // ❌ 原来: task.text = QString("%1号%2").arg(beltNum).arg(op)
+            if (op == "皮带启动") {
+                QString chNum = (beltNum >= 1 && beltNum <= 8) ? chineseNums.at(beltNum) : QString::number(beltNum);
+                task.text = QString("%1号皮带准备启动，注意安全").arg(chNum);
+            } else {
+                task.text = QString("%1号%2").arg(beltNum).arg(op);
+            }
             task.outputPath = QString("%1%2号%3.wav").arg(outputDir).arg(beltNum).arg(op);
             task.engineName = engine.engineName;
             task.modelName = engine.modelName;

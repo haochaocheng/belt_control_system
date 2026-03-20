@@ -201,6 +201,17 @@ void SystemConfig::setLocalDeviceName(const QString &name)
     }
 }
 
+// ✅ 2026-03-20 [Phase 7.48.60]: 皮带音频来源 Setter
+void SystemConfig::setBeltAudioSource(int source)
+{
+    if (m_beltAudioSource != source && (source == 0 || source == 1))
+    {
+        m_beltAudioSource = source;
+        emit beltAudioSourceChanged();
+        qDebug() << "📝 SystemConfig: 皮带音频来源已设置为:" << (source == 0 ? "默认(/app/AUDIO/)" : "TTS合成");
+    }
+}
+
 void SystemConfig::saveConfig()
 {
     m_settings->beginGroup("SystemSettings");
@@ -210,6 +221,8 @@ void SystemConfig::saveConfig()
     m_settings->setValue("warningMode", static_cast<int>(m_warningMode));
     m_settings->setValue("workMode", static_cast<int>(m_workMode));
     m_settings->setValue("localDeviceName", m_localDeviceName);
+    // ✅ 2026-03-20 [Phase 7.48.60]: 保存皮带音频来源
+    m_settings->setValue("beltAudioSource", m_beltAudioSource);
     m_settings->setValue("startupSequence", m_startupSequence);
     m_settings->setValue("stopSequence", m_stopSequence);
     // ✅ 2026-03-20 [Phase 7.48.57]: 保存延时配置
@@ -274,6 +287,8 @@ void SystemConfig::loadConfig()
     m_warningMode = static_cast<WarningMode>(m_settings->value("warningMode", static_cast<int>(DEFAULT_WARNING_MODE)).toInt());
     m_workMode = static_cast<WorkMode>(m_settings->value("workMode", static_cast<int>(DEFAULT_WORK_MODE)).toInt());
     m_localDeviceName = m_settings->value("localDeviceName", "1号皮带").toString();
+    // ✅ 2026-03-20 [Phase 7.48.60]: 加载皮带音频来源
+    m_beltAudioSource = m_settings->value("beltAudioSource", 0).toInt();
     m_startupSequence = m_settings->value("startupSequence", getDefaultStartupSequence()).toStringList();
     m_stopSequence = m_settings->value("stopSequence", getDefaultStopSequence()).toStringList();
 
@@ -351,6 +366,8 @@ void SystemConfig::loadConfig()
     emit modbusGatewayChanged();
     emit modbusSubnetMaskChanged();
     emit modbusPollIntervalChanged();
+    // ✅ 2026-03-20 [Phase 7.48.60]: 通知皮带音频来源
+    emit beltAudioSourceChanged();
     emit configLoaded();
 }
 

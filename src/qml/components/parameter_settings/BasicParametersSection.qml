@@ -165,6 +165,19 @@ Rectangle {
                 comboModel: ["投入", "取消"]
                 comboCurrentIndex: 0
             }
+
+            // ✅ 2026-03-20 [Phase 7.48.60]: 皮带音频来源配置
+            ParameterRow {
+                label: "音频来源"
+                isComboBox: true
+                comboModel: ["默认(/app/AUDIO/)", "TTS合成"]
+                comboCurrentIndex: systemConfig ? (systemConfig.beltAudioSource || 0) : 0
+                onFieldComboChanged: function(newIndex) {
+                    if (systemConfig) {
+                        systemConfig.beltAudioSource = newIndex
+                    }
+                }
+            }
         }
     }
 

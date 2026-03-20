@@ -33,6 +33,8 @@ class SystemConfig : public QObject
     Q_PROPERTY(int modbusPollInterval READ modbusPollInterval WRITE setModbusPollInterval NOTIFY modbusPollIntervalChanged)
     Q_PROPERTY(WorkMode workMode READ workMode WRITE setWorkMode NOTIFY workModeChanged)
     Q_PROPERTY(QString localDeviceName READ localDeviceName WRITE setLocalDeviceName NOTIFY localDeviceNameChanged)
+    // ✅ 2026-03-20 [Phase 7.48.60]: 皮带起/停车音频来源 0=默认(/app/AUDIO/) 1=TTS合成(audioBaseDir/engineFolder/)
+    Q_PROPERTY(int beltAudioSource READ beltAudioSource WRITE setBeltAudioSource NOTIFY beltAudioSourceChanged)
 
     // 开关量保护状态
     Q_PROPERTY(bool emergencyStopActive READ emergencyStopActive NOTIFY emergencyStopActiveChanged)
@@ -99,6 +101,8 @@ public:
     int modbusPollInterval() const { return m_modbusPollInterval; }
     WorkMode workMode() const { return m_workMode; }
     QString localDeviceName() const { return m_localDeviceName; }
+    // ✅ 2026-03-20 [Phase 7.48.60]: 皮带音频来源 Getter
+    int beltAudioSource() const { return m_beltAudioSource; }
 
     // 开关量保护状态 Getters
     bool emergencyStopActive() const { return m_emergencyStopActive; }
@@ -147,6 +151,8 @@ public:
     void setModbusPollInterval(int interval);
     void setWorkMode(WorkMode mode);
     void setLocalDeviceName(const QString &name);
+    // ✅ 2026-03-20 [Phase 7.48.60]: 皮带音频来源 Setter
+    void setBeltAudioSource(int source);
 
 public slots:
     // 保存所有配置
@@ -175,6 +181,8 @@ signals:
     void modbusPollIntervalChanged();
     void workModeChanged();
     void localDeviceNameChanged();
+    // ✅ 2026-03-20 [Phase 7.48.60]: 皮带音频来源信号
+    void beltAudioSourceChanged();
     void configSaved();
     void configLoaded();
 
@@ -228,6 +236,8 @@ private:
     int m_modbusPollInterval;       // Modbus轮询间隔(毫秒)
     WorkMode m_workMode;            // 工作模式
     QString m_localDeviceName;      // 本机名称
+    // ✅ 2026-03-20 [Phase 7.48.60]: 皮带音频来源 0=默认 1=TTS合成
+    int m_beltAudioSource = 0;      // 皮带起/停车音频来源
 
     // 开关量保护状态
     bool m_emergencyStopActive = false;      // 急停
