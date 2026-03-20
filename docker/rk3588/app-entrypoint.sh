@@ -169,6 +169,31 @@ else
 fi
 echo ""
 
+# ✅ 2026-03-16 [Phase 7.48.47]: 预置 NLTK 数据，防止 PaddleSpeech 初始化时联网下载超时
+# 原因：PaddleSpeech 内部依赖 NLTK 的 averaged_perceptron_tagger 和 cmudict
+#       设备无外网时，NLTK 等待网络超时需要 1-2 分钟，导致界面长时间显示"正在加载"
+# 解决：预置数据到 /app/tts_models/nltk_data 或 /root/nltk_data
+echo "========================================="
+echo "Setting up NLTK data for offline use..."
+echo "========================================="
+
+NLTK_DATA_DIR="/app/tts_models/nltk_data"
+if [ -d "$NLTK_DATA_DIR" ]; then
+    export NLTK_DATA="$NLTK_DATA_DIR"
+    echo "✅ NLTK 数据已预置: $NLTK_DATA_DIR"
+elif [ -d "/root/nltk_data" ]; then
+    export NLTK_DATA="/root/nltk_data"
+    echo "✅ 使用已有 NLTK 数据: /root/nltk_data"
+else
+    # ✅ 2026-03-20 [Phase 7.48.57]: 不再尝试联网下载，直接跳过
+    # 原因：即使设了5秒超时，nltk.download()内部有多次重试+DNS解析，仍会卡住很久
+    # 旧代码：python3 -c "nltk.download(...)" 尝试联网下载
+    echo "⚠️ NLTK 数据未预置，跳过下载（中文TTS不受影响）"
+    mkdir -p /root/nltk_data
+    export NLTK_DATA="/root/nltk_data"
+fi
+echo ""
+
 echo "========================================="
 echo "Launching application..."
 echo "========================================="

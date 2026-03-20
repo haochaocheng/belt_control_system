@@ -76,6 +76,27 @@ else:
 tts_executor = None
 current_model = None
 
+# ✅ 2026-03-16 [Phase 7.48.47]: 预下载 NLTK 数据，防止 PaddleSpeech 初始化时联网下载超时
+# 原因：PaddleSpeech 内部依赖 NLTK 的 averaged_perceptron_tagger 和 cmudict
+#       设备无外网时，NLTK 会等待网络超时（60-120秒），导致界面长时间显示"正在加载"
+# 解决：提前设置 NLTK 离线模式，预置数据目录
+try:
+    import nltk
+    # 设置 NLTK 数据路径（容器内预置路径）
+    nltk_data_dir = '/app/tts_models/nltk_data'
+    if os.path.exists(nltk_data_dir):
+        nltk.data.path.insert(0, nltk_data_dir)
+        logger.info(f"✅ NLTK 数据路径已设置: {nltk_data_dir}")
+    else:
+        # ✅ 2026-03-20 [Phase 7.48.57]: 不再尝试联网下载，直接跳过
+        # 原因：设备无外网时 nltk.download() 会阻塞60-120秒
+        # 旧代码：nltk.download('averaged_perceptron_tagger', ...) 和 nltk.download('cmudict', ...)
+        os.makedirs('/root/nltk_data', exist_ok=True)
+        nltk.data.path.insert(0, '/root/nltk_data')
+        logger.warning("⚠️ NLTK 数据未预置，跳过下载（中文TTS不受影响）")
+except ImportError:
+    logger.info("ℹ️ NLTK 未安装，跳过数据初始化")
+
 
 def initialize_paddlespeech(model_name):
     """
