@@ -601,6 +601,20 @@ QString CommonControl::getAudioPath(int beltNumber, const QString &actionType)
         qDebug() << "   TTS文件夹:" << ttsFolder;
     }
 
+    // ✅ 2026-03-20 [Phase 7.48.62]: 数据目录路径（容器挂载卷）
+    // /home/linaro/belt-control-data/audio 通过容器卷挂载，在容器内可直接访问
+    // SSH确认文件实际存储位置：/home/linaro/belt-control-data/audio/1#PD/
+    QString dataBaseDir = DataPathConfig::getAudioBaseDirectory();
+    QString dataFolder = QString("%1/%2#PD").arg(dataBaseDir).arg(beltNumber);
+    for (const QString &fileName : possibleNames) {
+        QString audioPath = QString("%1/%2").arg(dataFolder, fileName);
+        if (QFile::exists(audioPath)) {
+            qDebug() << "✅ CommonControl: 使用数据目录音频:" << audioPath;
+            return audioPath;
+        }
+    }
+    qDebug() << "⚠️ CommonControl: 数据目录未找到音频:" << dataFolder;
+
     // 默认路径：{appDir}/AUDIO/{N}#PD/
     // ❌ 2026-03-20 [Phase 7.48.60]: 原代码直接在此处定义folderName和appDir，现改为先尝试TTS路径
     QString appDir = QCoreApplication::applicationDirPath();
@@ -616,6 +630,7 @@ QString CommonControl::getAudioPath(int beltNumber, const QString &actionType)
     }
 
     qDebug() << "⚠️ CommonControl: 在以下位置未找到音频文件:";
+    qDebug() << "   " << dataFolder << "/";
     qDebug() << "   " << QString("%1/AUDIO/%2/").arg(appDir, folderName);
     qDebug() << "   尝试的文件名:" << possibleNames.join(", ");
 
@@ -820,6 +835,14 @@ void CommonControl::playWarningOnce()
             qDebug() << "✅ CommonControl: TTS合成成功，播放:" << tempFile;
             m_currentAudioPath = tempFile;  // 缓存路径，本次预警重复播放时直接复用
             playAudio(m_currentAudioPath);
+            // ✅ 2026-03-20 [Phase 7.48.62]: TTS合成（同步约10秒）后重置计时器
+            // 原因：m_warningTimer 在 startWarningPlayback() 中已 start(N秒)，
+            //       TTS合成耗时≈9.7秒，合成完成时计时器仅剩0.3秒就触发timeout，
+            //       导致音频只播放0.24秒就结束。重置计时器保证音频完整播放完整预警时长。
+            if (m_warningTimer->isActive() && m_systemConfig) {
+                m_warningTimer->start(m_systemConfig->warningTimeSeconds() * 1000);
+                qDebug() << "🔄 CommonControl: TTS合成后重置预警计时器:" << m_systemConfig->warningTimeSeconds() << "秒";
+            }
             return;
         } else {
             qWarning() << "⚠️ CommonControl: TTS合成失败，跳过预警直接启动设备序列";

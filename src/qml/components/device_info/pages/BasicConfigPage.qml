@@ -340,6 +340,12 @@ Rectangle {
 
         if (!config || Object.keys(config).length === 0) {
             console.log("⚠️ [BasicConfigPage] 没有找到基本参数配置，使用默认值")
+            // ✅ 2026-03-20 [Phase 7.48.62]: SQLite无记录时，从C++ systemConfig读取运行时值作为fallback
+            // 原因：systemConfig（config.ini）可能已保存用户配置，但SQLite尚未写入时UI会显示默认值0
+            if (typeof systemConfig !== "undefined" && systemConfig !== null) {
+                basicParams.beltAudioSource = systemConfig.beltAudioSource || 0
+                console.log("📋 [BasicConfigPage] fallback beltAudioSource from systemConfig:", basicParams.beltAudioSource)
+            }
             return false
         }
 
