@@ -30,7 +30,9 @@ Rectangle {
         terminalType: 0,
         terminalEnabled: 0,
         // ✅ 2026-03-20 [Phase 7.48.60]: 皮带音频来源
-        beltAudioSource: 0
+        // ✅ 2026-03-21 [Phase 7.48.65]: 默认值改为1（TTS合成），原为0（默认预录音频）
+        // 原因：用户期望系统默认使用TTS合成路径，而非pre-recorded默认音频
+        beltAudioSource: 1
     })
 
     // ✅ 2026-02-06 [参数持久化]: 网络参数配置对象
@@ -343,7 +345,8 @@ Rectangle {
             // ✅ 2026-03-20 [Phase 7.48.62]: SQLite无记录时，从C++ systemConfig读取运行时值作为fallback
             // 原因：systemConfig（config.ini）可能已保存用户配置，但SQLite尚未写入时UI会显示默认值0
             if (typeof systemConfig !== "undefined" && systemConfig !== null) {
-                basicParams.beltAudioSource = systemConfig.beltAudioSource || 0
+                // ✅ 2026-03-21 [Phase 7.48.65]: fallback 默认值改为1（TTS），原为 || 0
+                basicParams.beltAudioSource = systemConfig.beltAudioSource !== undefined ? systemConfig.beltAudioSource : 1
                 console.log("📋 [BasicConfigPage] fallback beltAudioSource from systemConfig:", basicParams.beltAudioSource)
             }
             return false

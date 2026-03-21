@@ -31,23 +31,76 @@ Item {
     }
 
     // 同步所有设备的反馈配置
+    // ✅ 2026-03-21 [Phase 7.48.65]: 从数据库加载张紧/制动器/电机的反馈通道和延时
+    // 原因：OutputDevicePanel.qml 的 ListElement 硬编码值（channel=0-15, delay=3）与
+    //       device_tension_config / device_brake_config / device_motor_config 数据库表中
+    //       用户配置的反馈通道不一致，统一改为从DB读取
     function syncDeviceFeedbackConfigs() {
         if (!commonControl) {
             console.warn("⚠️ ParameterSettings: commonControl 未初始化")
             return
         }
 
+        var deviceId = 1  // 主设备ID（当前系统固定为1）
         var devices = outputDevicePanel.getAllDevices()
+        var dbLoaded = 0
+
         for (var i = 0; i < devices.length; i++) {
             var device = devices[i]
-            commonControl.setDeviceFeedbackConfig(
-                device.name,
-                device.useFeedback,
-                device.feedbackChannel,
-                device.feedbackDelay
-            )
+            var name = device.name
+            var useFeedback = device.useFeedback
+            var feedbackChannel = device.feedbackChannel
+            var feedbackDelay = device.feedbackDelay
+
+            // ——— 张紧控制 ———
+            if (name === "张紧控制" || name === "张紧") {
+                if (typeof deviceConfigMgr !== "undefined" && deviceConfigMgr !== null) {
+                    var tensionCfg = deviceConfigMgr.loadTensionConfig(deviceId, 0)
+                    if (tensionCfg && tensionCfg["feedback_channel"] !== undefined) {
+                        useFeedback    = (tensionCfg["use_feedback"] === 1 || tensionCfg["use_feedback"] === true)
+                        feedbackChannel = tensionCfg["feedback_channel"]
+                        feedbackDelay   = tensionCfg["feedback_timeout"] || 10
+                        dbLoaded++
+                        console.log("📋 ParameterSettings: 张紧反馈参数来自DB - 通道:", feedbackChannel, "延时:", feedbackDelay)
+                    }
+                }
+            }
+            // ——— N号制动器 ———
+            else if (name.indexOf("制动器") >= 0) {
+                if (typeof deviceConfigMgr !== "undefined" && deviceConfigMgr !== null) {
+                    var brakeNumMatch = name.match(/(\d+)/)
+                    var brakeIdx = brakeNumMatch ? parseInt(brakeNumMatch[1]) - 1 : 0
+                    var brakeCfg = deviceConfigMgr.loadBrakeConfig(deviceId, brakeIdx)
+                    if (brakeCfg && brakeCfg["release_feedback_channel"] !== undefined) {
+                        useFeedback    = (brakeCfg["use_release_feedback"] === 1 || brakeCfg["use_release_feedback"] === true)
+                        feedbackChannel = brakeCfg["release_feedback_channel"]
+                        feedbackDelay   = brakeCfg["release_feedback_timeout"] || 10
+                        dbLoaded++
+                        console.log("📋 ParameterSettings:", name, "反馈参数来自DB - 通道:", feedbackChannel, "延时:", feedbackDelay)
+                    }
+                }
+            }
+            // ——— N号电机 ———
+            else if (name.indexOf("电机") >= 0) {
+                if (typeof deviceConfigMgr !== "undefined" && deviceConfigMgr !== null) {
+                    var motorNumMatch = name.match(/(\d+)/)
+                    var motorIdx = motorNumMatch ? parseInt(motorNumMatch[1]) - 1 : 0
+                    var motorCfg = deviceConfigMgr.loadMotorConfig(deviceId, motorIdx, 0)
+                    if (motorCfg && motorCfg["feedback_channel"] !== undefined && motorCfg["feedback_channel"] >= 0) {
+                        // motor_config 只有 feedback_channel（无 use_feedback / feedback_timeout）
+                        useFeedback    = true
+                        feedbackChannel = motorCfg["feedback_channel"]
+                        // feedbackDelay 沿用 OutputDevicePanel 默认值（3秒）
+                        dbLoaded++
+                        console.log("📋 ParameterSettings:", name, "反馈通道来自DB - 通道:", feedbackChannel)
+                    }
+                }
+            }
+            // 其余设备（洒水、破碎机等）保留 OutputDevicePanel 硬编码默认值
+
+            commonControl.setDeviceFeedbackConfig(name, useFeedback, feedbackChannel, feedbackDelay)
         }
-        console.log("✅ ParameterSettings: 已同步", devices.length, "个设备的反馈配置")
+        console.log("✅ ParameterSettings: 已同步", devices.length, "个设备的反馈配置（其中", dbLoaded, "个来自DB）")
     }
 
     // ✅ 2026-01-20 [FIX 100.271]: 使用 Back 组件作为背景（与模块状态页面一致）

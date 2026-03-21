@@ -189,6 +189,10 @@ Rectangle {
     // ✅ 2026-03-21 [Phase 7.48.64]: 模拟播放控制
     function startSimulation() {
         if (root.currentSeq.length === 0) return
+        // ✅ 2026-03-21 [Phase 7.48.65]: 先重置再开始（支持重复点击"▶模拟"重启）
+        simTimer.stop()
+        root.simTime = 0.0
+        root.simActivatedCount = 0
         var delays = root.currentDelays
         var times = [0.0]     // 设备0在t=0激活
         var cumulative = 0.0
@@ -313,11 +317,12 @@ Rectangle {
                         color: root.themeColor
                     }
 
-                    // ✅ 2026-03-21 [Phase 7.48.64]: 模拟播放按钮
+                    // ✅ 2026-03-21 [Phase 7.48.65]: 模拟按钮 - 始终重新开始（无停止功能）
+                    // 原为双态切换（▶模拟/⏹停止），改为单一"▶ 模拟"按钮，点击即重启模拟
                     Rectangle {
-                        width: 120; height: 34; radius: 17
-                        color: root.isSimulating ? "#c0392b" : "#1a4a72"
-                        border.color: root.isSimulating ? "#ff4757" : "#00aaff"
+                        width: 100; height: 34; radius: 17
+                        color: root.isSimulating ? "#1a4a30" : "#1a4a72"
+                        border.color: root.isSimulating ? "#00ff88" : "#00aaff"
                         border.width: 2
                         visible: root.currentSeq.length > 0
 
@@ -325,19 +330,20 @@ Rectangle {
                             anchors.centerIn: parent
                             spacing: 6
                             Text {
-                                text: root.isSimulating ? "⏹" : "▶"
-                                font.pixelSize: 16; color: "white"
+                                text: "▶"
+                                font.pixelSize: 16; color: root.isSimulating ? "#00ff88" : "white"
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
-                                text: root.isSimulating ? "停止" : "模拟"
+                                text: "模拟"
                                 font.pixelSize: 18; color: "white"
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: root.isSimulating ? root.stopSimulation() : root.startSimulation()
+                            // 点击始终重启模拟（停止旧的再开始新的）
+                            onClicked: root.startSimulation()
                         }
                     }
 
