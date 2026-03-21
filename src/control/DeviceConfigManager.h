@@ -307,6 +307,15 @@ public:
      */
     Q_INVOKABLE QVariantList loadAllBrakeConfigs(int deviceId);
 
+    // ✅ 2026-03-21 [Phase 7.48.68]: 设备逻辑控制配置
+    Q_INVOKABLE QVariantMap loadDeviceLogicConfig(int deviceId);
+    Q_INVOKABLE bool saveDeviceLogicConfig(int deviceId, const QVariantMap &config);
+
+    // ✅ 2026-03-21 [Phase 7.48.68]: 启动延时快捷更新（逻辑控制↔设备配置双向同步）
+    Q_INVOKABLE bool updateMotorStartupDelay(int deviceId, int motorIndex, double delay);
+    Q_INVOKABLE bool updateBrakeStartupDelay(int deviceId, int brakeIndex, double delay, const QString &type = "release");
+    Q_INVOKABLE bool updateTensionStartupDelay(int deviceId, int tensionIndex, double delay);
+
     // ========== 张紧控制配置 ==========
     // ✅ 2026-02-02 [参数持久化]: 添加张紧控制配置管理方法
 

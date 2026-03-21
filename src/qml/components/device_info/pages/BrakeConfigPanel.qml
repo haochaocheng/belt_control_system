@@ -3,10 +3,10 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import ".." as DeviceInfo
 
-// 2026-03-14 [Phase 7.48.45]: v3 GridLayout统一对齐版
+// 2026-03-14 [Phase 7.48.45]: v4 完整重写-统一字号21px匹配开关量输入页面
 Rectangle {
     id: root
-    implicitWidth: 1400; height: 600; color: "transparent"
+    implicitWidth: 1400; implicitHeight: 600; color: "transparent"
 
     property int deviceId: 1
     property int brakeIndex: 0
@@ -19,13 +19,15 @@ Rectangle {
     property bool waitingForRelease: false
     property bool waitingForBrake: false
 
-    // 统一尺寸常量
-    readonly property int lblW: 110    // 标签宽度
-    readonly property int fldW: 80     // 输入框宽度
-    readonly property int lblFs: 15    // 标签字号
+    // 统一尺寸常量（匹配SwitchInputPage样式）
+    readonly property int lblFs: 21       // 标签字号（与开关量输入一致）
     readonly property string lblC: "#9E9E9E"  // 标签颜色
+    readonly property int fldW: 120       // 输入框统一宽度
+    readonly property int lblW: 130       // 标签统一宽度
 
     focus: true; activeFocusOnTab: true
+
+    signal requestFocusParamIndex(int paramIndex)
 
     // ========== 标题栏 ==========
     Rectangle {
@@ -33,240 +35,340 @@ Rectangle {
         anchors { top: parent.top; left: parent.left; right: parent.right }
         height: 40; color: "transparent"
         Image { anchors.fill: parent; source: "../images/059.png"; fillMode: Image.Stretch; z: -1 }
-        Text { anchors.centerIn: parent; text: (root.brakeIndex + 1) + "号制动器配置"
-            font.pixelSize: 16; font.weight: Font.Bold; color: "#E0E0E0" }
+        Text {
+            anchors.centerIn: parent
+            text: (root.brakeIndex + 1) + "号制动器配置"
+            font.pixelSize: 16; font.weight: Font.Bold; color: "#E0E0E0"
+        }
     }
 
     // ========== 内容区域 ==========
     ColumnLayout {
-        anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom; margins: 8 }
-        spacing: 4
+        id: contentArea
+        anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom; margins: 10 }
+        spacing: 6
 
-        // ========== 行0：使用状态 + 输出通道 ==========
+        // ========== 统一8列GridLayout：行0-5全部对齐 ==========
         GridLayout {
-            Layout.fillWidth: true; columns: 6; columnSpacing: 8; rowSpacing: 0
-            RadioButton { id: statusEnabled; text: "投入"; checked: true; font.pixelSize: 14
-                contentItem: Text { text: statusEnabled.text; font: statusEnabled.font; color: "#E0E0E0"
-                    leftPadding: statusEnabled.indicator.width + statusEnabled.spacing; verticalAlignment: Text.AlignVCenter } }
-            RadioButton { id: statusDisabled; text: "禁用"; font.pixelSize: 14
-                contentItem: Text { text: statusDisabled.text; font: statusDisabled.font; color: "#E0E0E0"
-                    leftPadding: statusDisabled.indicator.width + statusDisabled.spacing; verticalAlignment: Text.AlignVCenter } }
-            Item { Layout.fillWidth: true }
-            Text { text: "松闸输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomSpinBox { id: releaseOutputChannelSpin; Layout.preferredWidth: root.fldW; from: 0; to: 15; value: 0 }
-            Row { spacing: 8
-                Text { text: "抱闸输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomSpinBox { id: brakeOutputChannelSpin; width: root.fldW; from: -1; to: 15; value: 0 }
-            }
-        }
+            Layout.fillWidth: true
+            columns: 8
+            columnSpacing: 8
+            rowSpacing: 8
 
-        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
+            // ---- 行0：使用状态(Switch) + 输出通道（与行1反馈通道对齐） ----
+            Text { text: "制动器启用:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Switch { id: enabledSwitch; checked: true }
+            Text { text: "松闸输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
+                opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomSpinBox { id: releaseOutputChannelSpin; Layout.preferredWidth: root.fldW; from: 0; to: 15; value: 0
+                enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "抱闸输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
+                opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomSpinBox { id: brakeOutputChannelSpin; Layout.preferredWidth: root.fldW; from: -1; to: 15; value: 0
+                enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
 
-        // ========== 行1-2：反馈配置（6列GridLayout对齐） ==========
-        GridLayout {
-            Layout.fillWidth: true; columns: 6; columnSpacing: 8; rowSpacing: 6
-            // 行1：松闸反馈
-            Text { text: "使用松闸反馈:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            Switch { id: useReleaseFeedbackSwitch; checked: false }
-            Text { text: "反馈通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.alignment: Qt.AlignRight
-                opacity: useReleaseFeedbackSwitch.checked ? 1.0 : 0.4 }
+            // ---- 分隔线 ----
+            Rectangle { Layout.columnSpan: 8; Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
+
+            // ---- 行1：松闸反馈 ----
+            Text { text: "使用松闸反馈:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
+                opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Switch { id: useReleaseFeedbackSwitch; checked: false; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "反馈通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
+                opacity: (enabledSwitch.checked && useReleaseFeedbackSwitch.checked) ? 1.0 : 0.4 }
             DeviceInfo.CustomSpinBox { id: releasePositionChannelSpin; Layout.preferredWidth: root.fldW; from: 0; to: 15; value: 0
-                enabled: useReleaseFeedbackSwitch.checked; opacity: useReleaseFeedbackSwitch.checked ? 1.0 : 0.4 }
-            Text { text: "超时(秒):"; font.pixelSize: root.lblFs; color: root.lblC; Layout.alignment: Qt.AlignRight
-                opacity: useReleaseFeedbackSwitch.checked ? 1.0 : 0.4 }
+                enabled: enabledSwitch.checked && useReleaseFeedbackSwitch.checked; opacity: (enabledSwitch.checked && useReleaseFeedbackSwitch.checked) ? 1.0 : 0.4 }
+            Text { text: "超时(秒):"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
+                opacity: (enabledSwitch.checked && useReleaseFeedbackSwitch.checked) ? 1.0 : 0.4 }
             DeviceInfo.CustomSpinBox { id: releaseTimeoutSpin; Layout.preferredWidth: root.fldW; from: 1; to: 60; value: 10
-                enabled: useReleaseFeedbackSwitch.checked; opacity: useReleaseFeedbackSwitch.checked ? 1.0 : 0.4 }
-            // 行2：抱闸反馈
-            Text { text: "使用抱闸反馈:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; Layout.alignment: Qt.AlignRight }
-            Switch { id: useBrakeFeedbackSwitch; checked: false }
-            Text { text: "反馈通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.alignment: Qt.AlignRight
-                opacity: useBrakeFeedbackSwitch.checked ? 1.0 : 0.4 }
+                enabled: enabledSwitch.checked && useReleaseFeedbackSwitch.checked; opacity: (enabledSwitch.checked && useReleaseFeedbackSwitch.checked) ? 1.0 : 0.4 }
+            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
+
+            // ---- 行2：抱闸反馈 ----
+            Text { text: "使用抱闸反馈:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
+                opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Switch { id: useBrakeFeedbackSwitch; checked: false; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "反馈通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
+                opacity: (enabledSwitch.checked && useBrakeFeedbackSwitch.checked) ? 1.0 : 0.4 }
             DeviceInfo.CustomSpinBox { id: brakePositionChannelSpin; Layout.preferredWidth: root.fldW; from: 0; to: 15; value: 0
-                enabled: useBrakeFeedbackSwitch.checked; opacity: useBrakeFeedbackSwitch.checked ? 1.0 : 0.4 }
-            Text { text: "超时(秒):"; font.pixelSize: root.lblFs; color: root.lblC; Layout.alignment: Qt.AlignRight
-                opacity: useBrakeFeedbackSwitch.checked ? 1.0 : 0.4 }
+                enabled: enabledSwitch.checked && useBrakeFeedbackSwitch.checked; opacity: (enabledSwitch.checked && useBrakeFeedbackSwitch.checked) ? 1.0 : 0.4 }
+            Text { text: "超时(秒):"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
+                opacity: (enabledSwitch.checked && useBrakeFeedbackSwitch.checked) ? 1.0 : 0.4 }
             DeviceInfo.CustomSpinBox { id: brakeTimeoutSpin; Layout.preferredWidth: root.fldW; from: 1; to: 60; value: 10
-                enabled: useBrakeFeedbackSwitch.checked; opacity: useBrakeFeedbackSwitch.checked ? 1.0 : 0.4 }
+                enabled: enabledSwitch.checked && useBrakeFeedbackSwitch.checked; opacity: (enabledSwitch.checked && useBrakeFeedbackSwitch.checked) ? 1.0 : 0.4 }
+            Item { Layout.columnSpan: 2; Layout.fillWidth: true }
+
+            // ---- 分隔线 ----
+            Rectangle { Layout.columnSpan: 8; Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
+
+            // ---- 行3：抱闸保持 | 松闸保持 | 抱闸动作延时 | 抱闸释放延时 ----
+            Text { text: "抱闸保持:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: holdTimeField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "松闸保持:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseTimeField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "抱闸动作延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: brakeDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "抱闸释放延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+
+            // ---- 行4：抱闸检测延时 | 抱闸故障延时 | 抱闸动作电流 | 抱闸释放电流 ----
+            Text { text: "抱闸检测延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: detectDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "抱闸故障延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: faultDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "抱闸动作电流:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: brakeCurrentField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "抱闸释放电流:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseCurrentField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+
+            // ---- 行5：抱闸动作电压 | 抱闸释放电压 | 松闸启动延时 | 抱闸启动延时 ----
+            Text { text: "抱闸动作电压:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: brakeVoltageField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "抱闸释放电压:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseVoltageField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            // ✅ 2026-03-21 [Phase 7.48.68]: 新增松闸启动延时和抱闸启动延时
+            // 原因：逻辑控制需要读取制动器的启动延时参数
+            Text { text: "松闸启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseStartupDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "抱闸启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: brakeStartupDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
         }
 
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
 
-        // ========== 行3-5：原有参数（4列GridLayout，每列=Row(标签+输入框)） ==========
-        GridLayout {
-            Layout.fillWidth: true; columns: 4; columnSpacing: 4; rowSpacing: 6
-            // 行3
-            Row { spacing: 2; Layout.fillWidth: true
-                Text { text: "抱闸保持:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomTextField { id: holdTimeField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
-            Row { spacing: 2; Layout.fillWidth: true
-                Text { text: "松闸保持:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomTextField { id: releaseTimeField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
-            Row { spacing: 2; Layout.fillWidth: true
-                Text { text: "抱闸动作延时:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomTextField { id: brakeDelayField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
-            Row { spacing: 2; Layout.fillWidth: true
-                Text { text: "抱闸释放延时:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomTextField { id: releaseDelayField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
-            // 行4
-            Row { spacing: 2; Layout.fillWidth: true
-                Text { text: "抱闸检测延时:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomTextField { id: detectDelayField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
-            Row { spacing: 2; Layout.fillWidth: true
-                Text { text: "抱闸故障延时:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomTextField { id: faultDelayField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
-            Row { spacing: 2; Layout.fillWidth: true
-                Text { text: "抱闸动作电流:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomTextField { id: brakeCurrentField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
-            Row { spacing: 2; Layout.fillWidth: true
-                Text { text: "抱闸释放电流:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomTextField { id: releaseCurrentField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
-            // 行5
-            Row { spacing: 2; Layout.fillWidth: true
-                Text { text: "抱闸动作电压:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomTextField { id: brakeVoltageField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
-            Row { spacing: 2; Layout.fillWidth: true
-                Text { text: "抱闸释放电压:"; font.pixelSize: root.lblFs; color: root.lblC; width: root.lblW; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter }
-                DeviceInfo.CustomTextField { id: releaseVoltageField; width: root.fldW; text: "0"; keyboardManager: root.keyboardManager } }
-            Item { Layout.fillWidth: true }
-            Item { Layout.fillWidth: true }
-        }
-
-        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
-
-        // ========== 行6：语音配置（6列GridLayout对齐） ==========
-        GridLayout {
-            Layout.fillWidth: true; columns: 6; columnSpacing: 4; rowSpacing: 0
-            Text { text: "松闸预警:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: releaseWarningVoiceField; Layout.fillWidth: true
-                text: "制动器" + (root.brakeIndex + 1) + "松闸"; keyboardManager: root.keyboardManager }
-            Text { text: "松闸失败:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: releaseFailureVoiceField; Layout.fillWidth: true
-                text: "制动器" + (root.brakeIndex + 1) + "松闸失败"; keyboardManager: root.keyboardManager }
-            Text { text: "抱闸失败:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.alignment: Qt.AlignRight }
-            DeviceInfo.CustomTextField { id: brakeFailureVoiceField; Layout.fillWidth: true
-                text: "制动器" + (root.brakeIndex + 1) + "抱闸失败"; keyboardManager: root.keyboardManager }
-        }
-
-        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
-
-        // ========== 行7：LED + 按钮 ==========
+        // ========== 行6：语音配置（3组：标签+输入框） ==========
         RowLayout {
-            Layout.fillWidth: true; spacing: 15
-            Row { spacing: 6
-                Rectangle { id: releasePositionLed; width: 14; height: 14; radius: 7; color: "#475569"; border.width: 1; border.color: "#1e3a5f"; anchors.verticalCenter: parent.verticalCenter }
-                Text { text: "松闸到位"; font.pixelSize: 14; color: "#7dd3fc"; anchors.verticalCenter: parent.verticalCenter }
-            }
-            Row { spacing: 6
-                Rectangle { id: brakePositionLed; width: 14; height: 14; radius: 7; color: "#475569"; border.width: 1; border.color: "#1e3a5f"; anchors.verticalCenter: parent.verticalCenter }
-                Text { text: "抱闸到位"; font.pixelSize: 14; color: "#7dd3fc"; anchors.verticalCenter: parent.verticalCenter }
+            Layout.fillWidth: true; spacing: 8; opacity: enabledSwitch.checked ? 1.0 : 0.4
+            Text { text: "松闸预警:"; font.pixelSize: root.lblFs; color: root.lblC }
+            DeviceInfo.CustomTextField { id: releaseWarningVoiceField; Layout.fillWidth: true; text: "制动器" + (root.brakeIndex + 1) + "松闸"; readOnly: true; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked }
+            Text { text: "松闸失败:"; font.pixelSize: root.lblFs; color: root.lblC }
+            DeviceInfo.CustomTextField { id: releaseFailureVoiceField; Layout.fillWidth: true; text: "制动器" + (root.brakeIndex + 1) + "松闸失败"; readOnly: true; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked }
+            Text { text: "抱闸失败:"; font.pixelSize: root.lblFs; color: root.lblC }
+            DeviceInfo.CustomTextField { id: brakeFailureVoiceField; Layout.fillWidth: true; text: "制动器" + (root.brakeIndex + 1) + "抱闸失败"; readOnly: true; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked }
+        }
+
+        // ========== 行7：LED指示 + 操作按钮 ==========
+        RowLayout {
+            Layout.fillWidth: true; spacing: 15; opacity: enabledSwitch.checked ? 1.0 : 0.4
+            // LED指示灯
+            Row {
+                spacing: 20
+                Row {
+                    spacing: 6
+                    Rectangle { id: releaseLed; width: 16; height: 16; radius: 8; color: "#555"; anchors.verticalCenter: parent.verticalCenter
+                        border.width: 1; border.color: "#333" }
+                    Text { text: "松闸到位"; font.pixelSize: root.lblFs; color: root.lblC; anchors.verticalCenter: parent.verticalCenter }
+                }
+                Row {
+                    spacing: 6
+                    Rectangle { id: brakeLed; width: 16; height: 16; radius: 8; color: "#555"; anchors.verticalCenter: parent.verticalCenter
+                        border.width: 1; border.color: "#333" }
+                    Text { text: "抱闸到位"; font.pixelSize: root.lblFs; color: root.lblC; anchors.verticalCenter: parent.verticalCenter }
+                }
             }
             Item { Layout.fillWidth: true }
-            Button { Layout.preferredWidth: 100; Layout.preferredHeight: 38; text: "松 闸"; font.pixelSize: 15; font.bold: true
-                background: Rectangle { color: parent.pressed ? "#166534" : parent.hovered ? "#15803d" : "#16a34a"; radius: 4 }
-                contentItem: Text { text: parent.text; font: parent.font; color: "#fff"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: { doRelease() } }
-            Button { Layout.preferredWidth: 100; Layout.preferredHeight: 38; text: "抱 闸"; font.pixelSize: 15; font.bold: true
-                background: Rectangle { color: parent.pressed ? "#9a3412" : parent.hovered ? "#c2410c" : "#ea580c"; radius: 4 }
-                contentItem: Text { text: parent.text; font: parent.font; color: "#fff"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: { doBrake() } }
-            Button { Layout.preferredWidth: 100; Layout.preferredHeight: 38; text: "停 止"; font.pixelSize: 15; font.bold: true
-                background: Rectangle { color: parent.pressed ? "#7f1d1d" : parent.hovered ? "#991b1b" : "#dc2626"; radius: 4 }
-                contentItem: Text { text: parent.text; font: parent.font; color: "#fff"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: { doStop() } }
+            // 操作按钮
+            Button {
+                id: releaseBtn; text: "松闸"; Layout.preferredWidth: 100; Layout.preferredHeight: 40
+                font.pixelSize: 16; font.weight: Font.Bold
+                background: Rectangle {
+                    color: releaseBtn.pressed ? "#1a7a3a" : (releaseBtn.hovered ? "#2ecc71" : "#27ae60"); radius: 6
+                    border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? "#FFFFFF" : "transparent"
+                    border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 0) ? 3 : 0
+                }
+                contentItem: Text { text: releaseBtn.text; font: releaseBtn.font; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: {
+                    if (!enabledSwitch.checked) return
+                    // 播放松闸预警语音
+                    if (typeof alarmPlayback !== "undefined") {
+                        var audioPath = buildAudioPath(releaseWarningVoiceField.text)
+                        alarmPlayback.playAlarm(releaseWarningVoiceField.text, releaseWarningVoiceField.text, audioPath, false, "count", 1, 0)
+                    }
+                    // 发送松闸MQTT命令：松闸通道=1
+                    var relCh = releaseOutputChannelSpin.value
+                    var topic = "belt_control/do/module1/cmd"
+                    var cmd = JSON.stringify({"action": "set", "channel": relCh, "value": 1})
+                    console.log("[BrakeConfigPanel] 松闸命令 通道:", relCh)
+                    if (typeof mqttController !== "undefined") {
+                        mqttController.publish(topic, cmd, 1, false)
+                    }
+                    if (useReleaseFeedbackSwitch.checked) { root.waitingForRelease = true; releaseTimeoutTimer.start() }
+                }
+            }
+            Button {
+                id: brakeBtn; text: "抱闸"; Layout.preferredWidth: 100; Layout.preferredHeight: 40
+                font.pixelSize: 16; font.weight: Font.Bold
+                background: Rectangle {
+                    color: brakeBtn.pressed ? "#1a5276" : (brakeBtn.hovered ? "#3498db" : "#2980b9"); radius: 6
+                    border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? "#FFFFFF" : "transparent"
+                    border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 1) ? 3 : 0
+                }
+                contentItem: Text { text: brakeBtn.text; font: brakeBtn.font; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: {
+                    if (!enabledSwitch.checked) return
+                    // 发送抱闸MQTT命令：先关松闸通道，再开抱闸通道
+                    var topic = "belt_control/do/module1/cmd"
+                    var relCh = releaseOutputChannelSpin.value
+                    var brkCh = brakeOutputChannelSpin.value
+                    console.log("[BrakeConfigPanel] 抱闸命令 松闸通道:", relCh, "抱闸通道:", brkCh)
+                    if (typeof mqttController !== "undefined") {
+                        // 先关闭松闸
+                        mqttController.publish(topic, JSON.stringify({"action": "set", "channel": relCh, "value": 0}), 1, false)
+                        // 再开启抱闸（如果有独立通道）
+                        if (brkCh >= 0) {
+                            mqttController.publish(topic, JSON.stringify({"action": "set", "channel": brkCh, "value": 1}), 1, false)
+                        }
+                    }
+                    if (useBrakeFeedbackSwitch.checked) { root.waitingForBrake = true; brakeTimeoutTimer.start() }
+                }
+            }
+            Button {
+                id: stopBtn; text: "停止"; Layout.preferredWidth: 100; Layout.preferredHeight: 40
+                font.pixelSize: 16; font.weight: Font.Bold
+                background: Rectangle {
+                    color: stopBtn.pressed ? "#922b21" : (stopBtn.hovered ? "#e74c3c" : "#c0392b"); radius: 6
+                    border.color: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? "#FFFFFF" : "transparent"
+                    border.width: (root.focusSubArea === 3 && root.focusButtonIndex === 2) ? 3 : 0
+                }
+                contentItem: Text { text: stopBtn.text; font: stopBtn.font; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: {
+                    releaseTimeoutTimer.stop(); brakeTimeoutTimer.stop()
+                    root.waitingForRelease = false; root.waitingForBrake = false
+                    // 停止：关闭所有通道
+                    var topic = "belt_control/do/module1/cmd"
+                    var relCh = releaseOutputChannelSpin.value
+                    var brkCh = brakeOutputChannelSpin.value
+                    console.log("[BrakeConfigPanel] 停止命令 松闸通道:", relCh, "抱闸通道:", brkCh)
+                    if (typeof mqttController !== "undefined") {
+                        mqttController.publish(topic, JSON.stringify({"action": "set", "channel": relCh, "value": 0}), 1, false)
+                        if (brkCh >= 0) {
+                            mqttController.publish(topic, JSON.stringify({"action": "set", "channel": brkCh, "value": 0}), 1, false)
+                        }
+                    }
+                }
+            }
         }
 
-        Item { Layout.fillHeight: true }
+        // 填充剩余空间（防止底部空白把内容撑开）
+        Item { Layout.fillHeight: true; Layout.maximumHeight: 10 }
     }
 
-    // ========== Timer ==========
-    Timer { id: releaseTimeoutTimer; interval: releaseTimeoutSpin.value * 1000; repeat: false
+    // ========== 定时器 ==========
+    Timer {
+        id: releaseTimeoutTimer; interval: releaseTimeoutSpin.value * 1000; repeat: false
         onTriggered: {
-            console.log("[BrakeConfigPanel] 制动器", root.brakeIndex + 1, "松闸反馈超时")
             root.waitingForRelease = false
-            mqttPublish(releaseOutputChannelSpin.value, 0)
-            playVoice(releaseFailureVoiceField.text, "松闸失败")
+            console.log("[BrakeConfigPanel] 松闸反馈超时，自动停止")
+            // 播放松闸失败语音
+            if (typeof alarmPlayback !== "undefined") {
+                var audioPath = buildAudioPath(releaseFailureVoiceField.text)
+                alarmPlayback.playAlarm(releaseFailureVoiceField.text, releaseFailureVoiceField.text, audioPath, false, "count", 1, 0)
+            }
+            // 停止：关闭松闸通道
+            var topic = "belt_control/do/module1/cmd"
+            if (typeof mqttController !== "undefined") {
+                mqttController.publish(topic, JSON.stringify({"action": "set", "channel": releaseOutputChannelSpin.value, "value": 0}), 1, false)
+            }
         }
     }
-    Timer { id: brakeTimeoutTimer; interval: brakeTimeoutSpin.value * 1000; repeat: false
+    Timer {
+        id: brakeTimeoutTimer; interval: brakeTimeoutSpin.value * 1000; repeat: false
         onTriggered: {
-            console.log("[BrakeConfigPanel] 制动器", root.brakeIndex + 1, "抱闸反馈超时")
             root.waitingForBrake = false
-            if (brakeOutputChannelSpin.value >= 0) mqttPublish(brakeOutputChannelSpin.value, 0)
-            playVoice(brakeFailureVoiceField.text, "抱闸失败")
+            console.log("[BrakeConfigPanel] 抱闸反馈超时，自动停止")
+            // 播放抱闸失败语音
+            if (typeof alarmPlayback !== "undefined") {
+                var audioPath = buildAudioPath(brakeFailureVoiceField.text)
+                alarmPlayback.playAlarm(brakeFailureVoiceField.text, brakeFailureVoiceField.text, audioPath, false, "count", 1, 0)
+            }
+            // 停止：关闭所有通道
+            var topic = "belt_control/do/module1/cmd"
+            var brkCh = brakeOutputChannelSpin.value
+            if (typeof mqttController !== "undefined") {
+                mqttController.publish(topic, JSON.stringify({"action": "set", "channel": releaseOutputChannelSpin.value, "value": 0}), 1, false)
+                if (brkCh >= 0) {
+                    mqttController.publish(topic, JSON.stringify({"action": "set", "channel": brkCh, "value": 0}), 1, false)
+                }
+            }
         }
     }
 
-    // ========== DI反馈监听 ==========
+    // ========== DI反馈连接 ==========
     Connections {
         target: typeof mqttController !== "undefined" ? mqttController : null
-        function onBitChanged(moduleType, channel, value) {
-            if (moduleType !== "di") return
-            if (useReleaseFeedbackSwitch.checked && channel === releasePositionChannelSpin.value) {
-                releasePositionLed.color = (value === 1) ? "#22c55e" : "#475569"
-                if (value === 1 && root.waitingForRelease) { root.waitingForRelease = false; releaseTimeoutTimer.stop() }
+        function onBitChanged(reg, bit, val) {
+            if (useReleaseFeedbackSwitch.checked && reg === 2 && bit === releasePositionChannelSpin.value) {
+                releaseLed.color = val ? "#4CAF50" : "#555"
+                if (val && root.waitingForRelease) { root.waitingForRelease = false; releaseTimeoutTimer.stop() }
             }
-            if (useBrakeFeedbackSwitch.checked && channel === brakePositionChannelSpin.value) {
-                brakePositionLed.color = (value === 1) ? "#22c55e" : "#475569"
-                if (value === 1 && root.waitingForBrake) { root.waitingForBrake = false; brakeTimeoutTimer.stop() }
+            if (useBrakeFeedbackSwitch.checked && reg === 2 && bit === brakePositionChannelSpin.value) {
+                brakeLed.color = val ? "#4CAF50" : "#555"
+                if (val && root.waitingForBrake) { root.waitingForBrake = false; brakeTimeoutTimer.stop() }
             }
         }
     }
 
-    // ========== 操作函数 ==========
-    function mqttPublish(ch, val) {
-        var topic = "belt_control/do/module1/cmd"
-        var cmd = JSON.stringify({"action": "set", "channel": ch, "value": val})
-        if (typeof mqttController !== "undefined") mqttController.publish(topic, cmd, 1, false)
-    }
-    function playVoice(fileName, desc) {
-        if (typeof alarmPlayback === "undefined") return
-        var beltNum = 1
-        var audioPath = buildAudioPath(beltNum, fileName)
-        var ttsText = beltNum + "号皮带" + (root.brakeIndex + 1) + "号制动器" + desc
-        alarmPlayback.playAlarm(fileName, ttsText, audioPath, true, "count", 3, 5)
-    }
-    function doRelease() {
-        console.log("[BrakeConfigPanel] 松闸 制动器", root.brakeIndex + 1)
-        playVoice(releaseWarningVoiceField.text, "准备松闸，请注意安全")
-        mqttPublish(releaseOutputChannelSpin.value, 1)
-        if (useReleaseFeedbackSwitch.checked) { root.waitingForRelease = true; releaseTimeoutTimer.restart() }
-    }
-    function doBrake() {
-        console.log("[BrakeConfigPanel] 抱闸 制动器", root.brakeIndex + 1)
-        mqttPublish(releaseOutputChannelSpin.value, 0)
-        if (brakeOutputChannelSpin.value >= 0) mqttPublish(brakeOutputChannelSpin.value, 1)
-        if (useBrakeFeedbackSwitch.checked) { root.waitingForBrake = true; brakeTimeoutTimer.restart() }
-    }
-    function doStop() {
-        console.log("[BrakeConfigPanel] 停止 制动器", root.brakeIndex + 1)
-        releaseTimeoutTimer.stop(); brakeTimeoutTimer.stop()
-        root.waitingForRelease = false; root.waitingForBrake = false
-        mqttPublish(releaseOutputChannelSpin.value, 0)
-        if (brakeOutputChannelSpin.value >= 0) mqttPublish(brakeOutputChannelSpin.value, 0)
+    // ========== 导航焦点指示器（浮动矩形） ==========
+    Rectangle {
+        id: navFocusRect
+        visible: root.focusSubArea === 2 && root.focusParamIndex >= 0
+        color: "transparent"; border.color: "#FFFFFF"; border.width: 3; radius: 4; z: 100
+        function updatePosition() {
+            var fields = _paramFields()
+            var idx = root.focusParamIndex
+            if (idx >= 0 && idx < fields.length && fields[idx]) {
+                var field = fields[idx]
+                var pos = field.mapToItem(root, 0, 0)
+                x = pos.x - 2; y = pos.y - 2; width = field.width + 4; height = field.height + 4
+            }
+        }
+        Connections { target: root
+            function onFocusParamIndexChanged() { navFocusRect.updatePosition() }
+            function onFocusSubAreaChanged() { navFocusRect.updatePosition() }
+        }
+        Timer { id: focusUpdateTimer; interval: 50; onTriggered: navFocusRect.updatePosition() }
+        Component.onCompleted: focusUpdateTimer.start()
     }
 
-    // ========== 导航 ==========
-    function getParamFieldCount() { return 13 }
-    function triggerParamInput(idx) {
-        var fields = [holdTimeField, releaseTimeField, brakeDelayField, releaseDelayField,
-                      detectDelayField, faultDelayField, brakeCurrentField, releaseCurrentField,
-                      brakeVoltageField, releaseVoltageField,
-                      releaseWarningVoiceField, releaseFailureVoiceField, brakeFailureVoiceField]
-        if (idx < fields.length && virtualKeyboard && fields[idx]) {
-            virtualKeyboard.openForField(fields[idx], function(v) {}, idx >= 10 ? "text" : "numeric", root)
+    // ========== 导航函数 ==========
+    function _paramFields() {
+        return [enabledSwitch, releaseOutputChannelSpin, brakeOutputChannelSpin,
+                useReleaseFeedbackSwitch, releasePositionChannelSpin, releaseTimeoutSpin,
+                useBrakeFeedbackSwitch, brakePositionChannelSpin, brakeTimeoutSpin,
+                holdTimeField, releaseTimeField, brakeDelayField, releaseDelayField,
+                detectDelayField, faultDelayField, brakeCurrentField, releaseCurrentField,
+                brakeVoltageField, releaseVoltageField,
+                releaseStartupDelayField, brakeStartupDelayField]
+    }
+    function getParamFieldCount() { return 21 }
+    function triggerParamInput(paramIndex) {
+        var fields = _paramFields()
+        if (paramIndex >= 0 && paramIndex < fields.length) {
+            var field = fields[paramIndex]
+            // Switch控件用toggle而不是forceActiveFocus
+            if (paramIndex === 0 || paramIndex === 3 || paramIndex === 6) {
+                field.checked = !field.checked
+            } else {
+                field.forceActiveFocus()
+            }
         }
     }
-    function toggleUsageStatus() { if (statusEnabled.checked) statusDisabled.checked = true; else statusEnabled.checked = true }
-    function triggerButton(idx) { if (idx===0) doRelease(); else if (idx===1) doBrake(); else if (idx===2) doStop() }
-    function buildAudioPath(beltNum, fileName) {
-        if (typeof audioPathMapper !== "undefined") return audioPathMapper.getAudioPath(beltNum, fileName)
-        return "/home/linaro/belt-control-data/audio/paddlespeech-fastspeech2_csmsc-spk0/" + beltNum + "#PD/" + fileName + ".wav"
+    function toggleUsageStatus() { enabledSwitch.checked = !enabledSwitch.checked }
+    function triggerButton(btnIndex) {
+        if (btnIndex === 0) releaseBtn.clicked()
+        else if (btnIndex === 1) brakeBtn.clicked()
+        else if (btnIndex === 2) stopBtn.clicked()
+    }
+    function buildAudioPath(voiceText) {
+        return "/home/linaro/belt-control-data/audio/paddlespeech-fastspeech2_csmsc-spk0/" +
+               systemConfig.machineNumber + "#PD/" + voiceText + ".wav"
     }
 
-    // ========== 持久化 ==========
+    // ========== 数据持久化 ==========
     function collectConfig() {
         return {
-            "enabled": statusEnabled.checked,
+            "enabled": enabledSwitch.checked,
             "release_output_channel": releaseOutputChannelSpin.value,
             "brake_output_channel": brakeOutputChannelSpin.value,
             "use_release_feedback": useReleaseFeedbackSwitch.checked ? 1 : 0,
@@ -287,7 +389,10 @@ Rectangle {
             "release_voltage": parseFloat(releaseVoltageField.text) || 0,
             "release_warning_voice": releaseWarningVoiceField.text,
             "release_failure_voice": releaseFailureVoiceField.text,
-            "brake_failure_voice": brakeFailureVoiceField.text
+            "brake_failure_voice": brakeFailureVoiceField.text,
+            // ✅ 2026-03-21 [Phase 7.48.68]: 新增启动延时字段
+            "release_startup_delay": parseFloat(releaseStartupDelayField.text) || 1.0,
+            "brake_startup_delay": parseFloat(brakeStartupDelayField.text) || 1.0
         }
     }
     function saveBrakeConfig() {
@@ -297,9 +402,32 @@ Rectangle {
         return success
     }
     function loadBrakeConfig() {
+        // 先重置所有UI到默认值，防止上一个制动器的值残留
+        enabledSwitch.checked = true
+        releaseOutputChannelSpin.value = 0
+        brakeOutputChannelSpin.value = 0
+        useReleaseFeedbackSwitch.checked = false
+        releasePositionChannelSpin.value = 0
+        releaseTimeoutSpin.value = 10
+        useBrakeFeedbackSwitch.checked = false
+        brakePositionChannelSpin.value = 0
+        brakeTimeoutSpin.value = 10
+        holdTimeField.text = "0"
+        releaseTimeField.text = "0"
+        brakeDelayField.text = "0"
+        releaseDelayField.text = "0"
+        detectDelayField.text = "0"
+        faultDelayField.text = "0"
+        brakeCurrentField.text = "0"
+        releaseCurrentField.text = "0"
+        brakeVoltageField.text = "0"
+        releaseVoltageField.text = "0"
+        // ✅ 2026-03-21 [Phase 7.48.68]: 新增启动延时默认值
+        releaseStartupDelayField.text = "1.0"
+        brakeStartupDelayField.text = "1.0"
+
         var config = deviceConfigMgr.loadBrakeConfig(root.deviceId, root.brakeIndex)
         if (!config || Object.keys(config).length === 0) return false
-        if (config.hasOwnProperty("enabled")) { statusEnabled.checked = config["enabled"]; statusDisabled.checked = !config["enabled"] }
         if (config.hasOwnProperty("release_output_channel")) releaseOutputChannelSpin.value = config["release_output_channel"]
         if (config.hasOwnProperty("brake_output_channel")) brakeOutputChannelSpin.value = config["brake_output_channel"]
         if (config.hasOwnProperty("use_release_feedback")) useReleaseFeedbackSwitch.checked = (config["use_release_feedback"] === 1)
@@ -321,8 +449,21 @@ Rectangle {
         if (config.hasOwnProperty("release_warning_voice")) releaseWarningVoiceField.text = config["release_warning_voice"]
         if (config.hasOwnProperty("release_failure_voice")) releaseFailureVoiceField.text = config["release_failure_voice"]
         if (config.hasOwnProperty("brake_failure_voice")) brakeFailureVoiceField.text = config["brake_failure_voice"]
+        // ✅ 2026-03-21 [Phase 7.48.68]: 加载启动延时
+        if (config.hasOwnProperty("release_startup_delay")) releaseStartupDelayField.text = config["release_startup_delay"].toString()
+        if (config.hasOwnProperty("brake_startup_delay")) brakeStartupDelayField.text = config["brake_startup_delay"].toString()
         return true
     }
     Component.onCompleted: { loadBrakeConfig() }
-    onBrakeIndexChanged: { loadBrakeConfig() }
+    // 2026-03-14: 切换制动器时先保存当前配置再加载新配置
+    property int _previousBrakeIndex: -1
+    onBrakeIndexChanged: {
+        if (_previousBrakeIndex >= 0) {
+            // 保存上一个制动器的配置
+            var prevConfig = collectConfig()
+            deviceConfigMgr.saveBrakeConfig(root.deviceId, _previousBrakeIndex, prevConfig)
+        }
+        _previousBrakeIndex = brakeIndex
+        loadBrakeConfig()
+    }
 }

@@ -8,7 +8,9 @@ Rectangle {
     id: root
     color: "transparent"
 
-    property var systemConfig: null
+    // ✅ 2026-03-21 [Phase 7.48.68]: 改为per-device配置，不再使用systemConfig
+    // 旧代码：property var systemConfig: null
+    property int deviceId: 1              // 从DeviceSettingsDialog传入的设备ID
 
     // 当前Tab: 0=启动顺序, 1=停止顺序, 2=全局设置
     property int currentTab: 0
@@ -38,6 +40,10 @@ Rectangle {
     property var  rtDeviceStartTimes: []        // 各设备激活时间戳列表(ms)
     property double rtElapsed: 0                // 当前阶段已经过的时间(秒)，由刷新定时器更新
 
+    // ✅ 2026-03-21 [Phase 7.48.68]: 故障状态跟踪
+    // 原因：设备故障后时间轴仍显示运行中，需要监听runtimeTracker故障信号
+    property string rtFaultDevice: ""            // 故障设备名（空=无故障）
+
     // 设备池分组定义
     readonly property var deviceGroups: [
         { name: "电机", color: "#5dade2", devices: ["1号电机", "2号电机", "3号电机", "4号电机", "5号电机", "6号电机", "7号电机", "8号电机"] },
@@ -48,10 +54,10 @@ Rectangle {
 
     Component.onCompleted: loadFromConfig()
 
-    // ✅ 2026-03-20 修复：systemConfig由Loader.onLoaded设置，晚于Component.onCompleted
-    // 需要在systemConfig变化时重新加载配置
-    onSystemConfigChanged: {
-        if (systemConfig) loadFromConfig()
+    // ✅ 2026-03-21 [Phase 7.48.68]: deviceId由Loader.onLoaded设置，变化时重新加载
+    // 旧代码：onSystemConfigChanged: { if (systemConfig) loadFromConfig() }
+    onDeviceIdChanged: {
+        if (deviceId > 0) loadFromConfig()
     }
 
     // 旧名称→新名称映射（设备上已有旧配置需要迁移）
@@ -70,48 +76,95 @@ Rectangle {
     }
 
     function loadFromConfig() {
-        if (!systemConfig) return
-        // ✅ 2026-03-20 修复：默认序列使用设备池中的实际名称
-        // startupSeq = systemConfig.startupSequence ? systemConfig.startupSequence.slice() : ["张紧", "抱闸", "1号电机", "2号电机"]
-        // stopSeq = systemConfig.stopSequence ? systemConfig.stopSequence.slice() : ["2号电机", "1号电机", "抱闸", "张紧"]
-        var loadedStartup = systemConfig.startupSequence && systemConfig.startupSequence.length > 0 ? systemConfig.startupSequence.slice() : []
-        var loadedStop = systemConfig.stopSequence && systemConfig.stopSequence.length > 0 ? systemConfig.stopSequence.slice() : []
-        // ✅ 2026-03-20 修复：迁移旧名称（"张紧"→"张紧控制"，"抱闸"→"1号制动器"）
+        // ✅ 2026-03-21 [Phase 7.48.68]: 从 device_logic_configs 表读取per-device配置
+        // 旧代码：从 systemConfig 读取全局配置
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) {
+            console.warn("⚠️ LogicControlPanel: deviceConfigMgr 未初始化")
+            return
+        }
+        var config = deviceConfigMgr.loadDeviceLogicConfig(root.deviceId)
+        var startupStr = config["startup_sequence"] || "[]"
+        var stopStr = config["stop_sequence"] || "[]"
+        var loadedStartup = JSON.parse(startupStr)
+        var loadedStop = JSON.parse(stopStr)
+        // 迁移旧名称
         startupSeq = loadedStartup.length > 0 ? migrateOldNames(loadedStartup) : ["张紧控制", "1号制动器", "1号电机", "2号电机"]
         stopSeq = loadedStop.length > 0 ? migrateOldNames(loadedStop) : ["2号电机", "1号电机", "1号制动器", "张紧控制"]
 
-        var sDelays = systemConfig.startupDelays
+        defaultDelay = config["default_delay"] || 1.0
+        // ✅ 延时从各子设备配置表读取
         startupDelays = []
-        if (sDelays && sDelays.length > 0) {
-            for (var i = 0; i < sDelays.length; i++) startupDelays.push(sDelays[i])
-        } else {
-            for (var j = 0; j < startupSeq.length; j++) startupDelays.push(1.0)
+        for (var i = 0; i < startupSeq.length; i++) {
+            startupDelays.push(readDeviceStartupDelay(startupSeq[i]))
         }
-
-        var tDelays = systemConfig.stopDelays
         stopDelays = []
-        if (tDelays && tDelays.length > 0) {
-            for (var k = 0; k < tDelays.length; k++) stopDelays.push(tDelays[k])
-        } else {
-            for (var l = 0; l < stopSeq.length; l++) stopDelays.push(1.0)
+        for (var j = 0; j < stopSeq.length; j++) {
+            stopDelays.push(readDeviceStartupDelay(stopSeq[j]))
         }
 
-        defaultDelay = systemConfig.defaultDelay > 0 ? systemConfig.defaultDelay : 1.0
-        // 确保长度一致
-        while (startupDelays.length < startupSeq.length) startupDelays.push(defaultDelay)
-        while (stopDelays.length < stopSeq.length) stopDelays.push(defaultDelay)
+        console.log("✅ 逻辑控制配置已加载 - 设备ID:", root.deviceId, "启动:", startupSeq.length, "停止:", stopSeq.length)
+    }
+
+    // ✅ 2026-03-21 [Phase 7.48.68]: 根据设备名读取其启动延时
+    function readDeviceStartupDelay(deviceName) {
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return defaultDelay
+        // 电机：从 device_motor_config 读取 startup_delay
+        var motorMatch = deviceName.match(/(\d+)号电机/)
+        if (motorMatch) {
+            var motorIdx = parseInt(motorMatch[1]) - 1
+            var motorCfg = deviceConfigMgr.loadMotorConfig(root.deviceId, motorIdx, 0)
+            if (motorCfg && motorCfg["startup_delay"] !== undefined) return Number(motorCfg["startup_delay"])
+            return 8  // 电机默认8秒
+        }
+        // 制动器：从 device_brake_config 读取 release_startup_delay
+        var brakeMatch = deviceName.match(/(\d+)号制动器/)
+        if (brakeMatch) {
+            var brakeIdx = parseInt(brakeMatch[1]) - 1
+            var brakeCfg = deviceConfigMgr.loadBrakeConfig(root.deviceId, brakeIdx)
+            if (brakeCfg && brakeCfg["release_startup_delay"] !== undefined) return Number(brakeCfg["release_startup_delay"])
+            return 1.0  // 制动器默认1秒
+        }
+        // 张紧控制：从 device_tension_config 读取 startup_delay
+        if (deviceName === "张紧控制" || deviceName === "张紧") {
+            var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, 0)
+            if (tensionCfg && tensionCfg["startup_delay"] !== undefined) return Number(tensionCfg["startup_delay"])
+            return 5  // 张紧默认5秒
+        }
+        return defaultDelay
+    }
+
+    // ✅ 2026-03-21 [Phase 7.48.68]: 写回设备启动延时
+    function writeDeviceStartupDelay(deviceName, value) {
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
+        var motorMatch = deviceName.match(/(\d+)号电机/)
+        if (motorMatch) {
+            deviceConfigMgr.updateMotorStartupDelay(root.deviceId, parseInt(motorMatch[1]) - 1, value)
+            return
+        }
+        var brakeMatch = deviceName.match(/(\d+)号制动器/)
+        if (brakeMatch) {
+            deviceConfigMgr.updateBrakeStartupDelay(root.deviceId, parseInt(brakeMatch[1]) - 1, value, "release")
+            return
+        }
+        if (deviceName === "张紧控制" || deviceName === "张紧") {
+            deviceConfigMgr.updateTensionStartupDelay(root.deviceId, 0, value)
+            return
+        }
     }
 
     function saveToConfig() {
-        if (!systemConfig) return
-        systemConfig.startupSequence = startupSeq.slice()
-        systemConfig.stopSequence = stopSeq.slice()
-        systemConfig.startupDelays = startupDelays.slice()
-        systemConfig.stopDelays = stopDelays.slice()
-        systemConfig.defaultDelay = defaultDelay
-        systemConfig.saveConfig()
-        console.log("✅ 逻辑控制配置已保存")
-        // ✅ 2026-03-20 修复：显示保存成功提示
+        // ✅ 2026-03-21 [Phase 7.48.68]: 保存到 device_logic_configs 表
+        // 旧代码：保存到 systemConfig
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
+        var config = {
+            "startup_sequence": JSON.stringify(startupSeq),
+            "stop_sequence": JSON.stringify(stopSeq),
+            "warning_time": 10.0,
+            "default_delay": defaultDelay
+        }
+        deviceConfigMgr.saveDeviceLogicConfig(root.deviceId, config)
+        console.log("✅ 逻辑控制配置已保存 - 设备ID:", root.deviceId)
+        // 显示保存成功提示
         saveSuccess = true
         saveSuccessTimer.restart()
     }
@@ -209,6 +262,27 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-03-21 [Phase 7.48.68]: 监听 runtimeTracker 故障信号
+    // 原因：设备故障后时间轴仍显示"运行中"，需要在故障时停止跟踪并显示红色
+    Connections {
+        target: typeof runtimeTracker !== "undefined" ? runtimeTracker : null
+
+        function onIsFaultChanged() {
+            if (runtimeTracker.isFault && root.isRealtimeActive) {
+                console.log("❌ LogicControlPanel: 检测到设备故障，停止时间轴跟踪")
+                rtRefreshTimer.stop()
+                rtStopTimer.stop()
+                root.rtPhase = 3  // 3=故障状态
+                // 获取故障设备名
+                var faultList = runtimeTracker.faultDevices
+                if (faultList && faultList.length > 0) {
+                    root.rtFaultDevice = faultList[0]
+                    console.log("❌ LogicControlPanel: 故障设备:", root.rtFaultDevice)
+                }
+            }
+        }
+    }
+
     function addDevice(deviceName) {
         var seq = currentTab === 0 ? startupSeq : stopSeq
         var delays = currentTab === 0 ? startupDelays : stopDelays
@@ -235,6 +309,9 @@ Rectangle {
         delays[index] = value
         if (currentTab === 0) startupDelays = delays.slice()
         else stopDelays = delays.slice()
+        // ✅ 2026-03-21 [Phase 7.48.68]: 同步写回设备配置表
+        var seq = currentTab === 0 ? startupSeq : stopSeq
+        if (index < seq.length) writeDeviceStartupDelay(seq[index], value)
     }
 
     function swapDevices(fromIndex, toIndex) {
@@ -381,12 +458,15 @@ Rectangle {
                     }
                     Text {
                         visible: root.isRealtimeActive && root.currentTab === 0
-                        text: root.rtPhase === 1
-                            ? "预警中 " + root.rtElapsed.toFixed(1) + "s / " + root.getWarningTime() + "s"
-                            : "运行中 " + root.rtElapsed.toFixed(1) + "s  设备 " + root.rtActivatedCount + "/" + root.startupSeq.length
+                        // ✅ 2026-03-21 [Phase 7.48.68]: 故障状态显示红色错误文字
+                        text: root.rtPhase === 3
+                            ? "❌ 运行失败 - " + root.rtFaultDevice
+                            : (root.rtPhase === 1
+                                ? "预警中 " + root.rtElapsed.toFixed(1) + "s / " + root.getWarningTime() + "s"
+                                : "运行中 " + root.rtElapsed.toFixed(1) + "s  设备 " + root.rtActivatedCount + "/" + root.startupSeq.length)
                         font.pixelSize: 20
                         font.bold: true
-                        color: root.rtPhase === 1 ? "#f39c12" : "#00ff88"
+                        color: root.rtPhase === 3 ? "#ff4757" : (root.rtPhase === 1 ? "#f39c12" : "#00ff88")
                     }
 
                     Item { Layout.fillWidth: true }
@@ -420,7 +500,8 @@ Rectangle {
                             Rectangle {
                                 width: 100; height: 140; radius: 8
                                 visible: root.currentTab === 0
-                                color: root.isRealtimeActive && root.rtPhase >= 1 ? "#004d22" : "#1e3a5f"
+                                // ✅ 2026-03-21 [Phase 7.48.68]: 调亮激活绿色，从#004d22→#006633
+                                color: root.isRealtimeActive && root.rtPhase >= 1 ? "#006633" : "#1e3a5f"
                                 border.color: root.isRealtimeActive && root.rtPhase >= 1 ? "#00ff88" : "#f39c12"
                                 border.width: root.isRealtimeActive && root.rtPhase === 1 ? 3 : 2
 
@@ -438,46 +519,71 @@ Rectangle {
                                 }
                             }
 
-                            // 前缀箭头1：运行键→启车预警（显示预警时间）
+                            // ✅ 2026-03-21 [Phase 7.48.67]: 前缀进度条1：运行键→启车预警（预警进度条）
+                            // 原箭头改为进度条样式
                             Item {
-                                width: 80; height: 140
+                                width: 90; height: 140
                                 visible: root.currentTab === 0
-                                clip: true
 
+                                // 进度条轨道（背景）
                                 Rectangle {
+                                    id: warnTrack
                                     anchors.verticalCenter: parent.verticalCenter
-                                    width: parent.width - 10; height: 2; x: 5
-                                    color: "#f39c12"
-                                }
-                                Text {
-                                    anchors.right: parent.right; anchors.rightMargin: 2
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: "▶"; font.pixelSize: 15; color: "#f39c12"
-                                }
-                                // 预警时间实时流动子弹
-                                Rectangle {
-                                    width: 14; height: 6; radius: 3
-                                    color: "#ffffff"
-                                    opacity: root.isRealtimeActive && root.rtPhase === 1 ? 0.9 : 0.0
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    x: {
-                                        var _e = root.rtElapsed  // 强制绑定刷新
-                                        if (root.rtPhase !== 1) return 5
-                                        var warnTime = root.getWarningTime()
-                                        var progress = warnTime > 0 ? Math.min(1.0, root.rtElapsed / warnTime) : 1.0
-                                        return 5 + progress * 56
+                                    anchors.verticalCenterOffset: 6
+                                    width: parent.width - 14; height: 8; x: 4
+                                    radius: 4
+                                    color: "#1a2332"
+                                    border.color: "#2c3e50"; border.width: 1
+
+                                    // 进度条填充（实时预警进度）
+                                    Rectangle {
+                                        anchors.left: parent.left; anchors.leftMargin: 1
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        height: parent.height - 2; radius: 3
+                                        width: {
+                                            var _e = root.rtElapsed
+                                            if (!root.isRealtimeActive || root.rtPhase < 1) return 0
+                                            if (root.rtPhase >= 2) return parent.width - 2
+                                            var warnTime = root.getWarningTime()
+                                            var progress = warnTime > 0 ? Math.min(1.0, root.rtElapsed / warnTime) : 1.0
+                                            return progress * (parent.width - 2)
+                                        }
+                                        color: root.rtPhase >= 2 ? "#f39c12" : "#f39c12"
+                                        opacity: root.isRealtimeActive && root.rtPhase >= 1 ? 0.9 : 0.0
+
+                                        Behavior on width { NumberAnimation { duration: 100 } }
+                                    }
+
+                                    // 进度条发光效果（实时激活时）
+                                    Rectangle {
+                                        anchors.fill: parent; radius: parent.radius
+                                        color: "transparent"
+                                        border.color: "#f39c12"
+                                        border.width: root.isRealtimeActive && root.rtPhase === 1 ? 1 : 0
+                                        opacity: 0.6
                                     }
                                 }
-                                // 预警时间标签
+
+                                // 右端方向指示三角
+                                Text {
+                                    anchors.right: parent.right; anchors.rightMargin: 0
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.verticalCenterOffset: 6
+                                    text: "▸"; font.pixelSize: 14; color: "#f39c12"
+                                }
+
+                                // 延时标签（悬浮在进度条上方）
                                 Rectangle {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.bottom: parent.verticalCenter; anchors.bottomMargin: 4
-                                    width: 52; height: 26; radius: 13
-                                    color: "#1a2332"; border.color: "#f39c12"; border.width: 1
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.verticalCenterOffset: -14
+                                    width: 56; height: 24; radius: 12
+                                    color: "#0d1520"
+                                    border.color: "#f39c12"; border.width: 1
                                     Text {
                                         anchors.centerIn: parent
                                         text: root.getWarningTime() + "s"
-                                        font.pixelSize: 16; color: "#f39c12"
+                                        font.pixelSize: 14; font.bold: true; color: "#f39c12"
                                     }
                                 }
                             }
@@ -486,7 +592,8 @@ Rectangle {
                             Rectangle {
                                 width: 100; height: 140; radius: 8
                                 visible: root.currentTab === 0
-                                color: root.isRealtimeActive && root.rtPhase >= 2 ? "#004d22" : "#1e3a5f"
+                                // ✅ 2026-03-21 [Phase 7.48.68]: 调亮激活绿色
+                                color: root.isRealtimeActive && root.rtPhase >= 2 ? "#006633" : "#1e3a5f"
                                 border.color: root.isRealtimeActive && root.rtPhase >= 2 ? "#00ff88" : "#f39c12"
                                 border.width: root.isRealtimeActive && root.rtPhase === 2 && root.rtActivatedCount === 0 ? 3 : 2
 
@@ -508,21 +615,38 @@ Rectangle {
                                 }
                             }
 
-                            // 前缀箭头2：启车预警→第一个设备
+                            // ✅ 2026-03-21 [Phase 7.48.67]: 前缀进度条2：启车预警→第一个设备
                             Item {
-                                width: 80; height: 140
+                                width: 90; height: 140
                                 visible: root.currentTab === 0 && root.currentSeq.length > 0
-                                clip: true
 
+                                // 进度条轨道
                                 Rectangle {
                                     anchors.verticalCenter: parent.verticalCenter
-                                    width: parent.width - 10; height: 2; x: 5
-                                    color: root.themeColor
+                                    anchors.verticalCenterOffset: 6
+                                    width: parent.width - 14; height: 8; x: 4
+                                    radius: 4
+                                    color: "#1a2332"
+                                    border.color: "#2c3e50"; border.width: 1
+
+                                    // 填充（预警完成后立即填满）
+                                    Rectangle {
+                                        anchors.left: parent.left; anchors.leftMargin: 1
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        height: parent.height - 2; radius: 3
+                                        width: root.isRealtimeActive && root.rtPhase >= 2 ? parent.width - 2 : 0
+                                        color: root.themeColor
+                                        opacity: 0.9
+                                        Behavior on width { NumberAnimation { duration: 300 } }
+                                    }
                                 }
+
+                                // 右端方向指示三角
                                 Text {
-                                    anchors.right: parent.right; anchors.rightMargin: 2
+                                    anchors.right: parent.right; anchors.rightMargin: 0
                                     anchors.verticalCenter: parent.verticalCenter
-                                    text: "▶"; font.pixelSize: 15; color: root.themeColor
+                                    anchors.verticalCenterOffset: 6
+                                    text: "▸"; font.pixelSize: 14; color: root.themeColor
                                 }
                             }
 
@@ -542,17 +666,33 @@ Rectangle {
                                         radius: 8
                                         // ✅ 2026-03-20 修复：nodeMouseArea移到最前声明，z值最低，不会遮挡按钮
                                         // ✅ 2026-03-21 [Phase 7.48.66]: 实时激活状态颜色（替代原模拟状态）
+                                        // ✅ 2026-03-21 [Phase 7.48.68]: 调亮绿色填充 + 故障红色显示
                                         color: {
+                                            // 故障状态：故障设备显示红色
+                                            if (root.rtPhase === 3 && root.rtFaultDevice !== "") {
+                                                var deviceName = root.currentSeq[index] || ""
+                                                if (deviceName === root.rtFaultDevice) return "#4a0000"  // 故障设备红色背景
+                                            }
                                             if (root.isRealtimeActive && root.currentTab === 0 && index < root.rtActivatedCount) {
                                                 return index === root.rtActivatedCount - 1
-                                                    ? "#004d22"  // 刚激活（当前设备）
-                                                    : "#002211"  // 已激活（前序设备）
+                                                    ? "#006633"  // 刚激活（当前设备）- 从#004d22调亮
+                                                    : "#004422"  // 已激活（前序设备）- 从#002211调亮
                                             }
                                             return nodeMouseArea.containsMouse ? "#2a5080" : "#1e3a5f"
                                         }
-                                        border.color: root.isRealtimeActive && root.currentTab === 0 && index < root.rtActivatedCount
-                                            ? "#00ff88" : root.themeColor
-                                        border.width: root.isRealtimeActive && root.currentTab === 0 && index === root.rtActivatedCount - 1 ? 3 : 2
+                                        border.color: {
+                                            // ✅ 2026-03-21 [Phase 7.48.68]: 故障设备红色边框
+                                            if (root.rtPhase === 3 && root.rtFaultDevice !== "") {
+                                                var dn = root.currentSeq[index] || ""
+                                                if (dn === root.rtFaultDevice) return "#ff4757"
+                                            }
+                                            return root.isRealtimeActive && root.currentTab === 0 && index < root.rtActivatedCount
+                                                ? "#00ff88" : root.themeColor
+                                        }
+                                        border.width: {
+                                            if (root.rtPhase === 3 && root.rtFaultDevice === (root.currentSeq[index] || "")) return 3
+                                            return root.isRealtimeActive && root.currentTab === 0 && index === root.rtActivatedCount - 1 ? 3 : 2
+                                        }
 
                                         // 背景点击区域 - 声明在最前，z值最低，按钮可以正常接收事件
                                         MouseArea {
@@ -626,75 +766,89 @@ Rectangle {
                                         }
                                     }
 
-                                    // 连接箭头 + 延时标签（最后一个不显示）
+                                    // ✅ 2026-03-21 [Phase 7.48.67]: 连接进度条 + 延时标签（最后一个不显示）
+                                    // 原箭头改为进度条样式，实时进度可视化更直观
                                     Item {
                                         id: arrowItem
-                                        width: 80
+                                        width: 90
                                         height: 140
                                         visible: index < root.currentSeq.length - 1
-                                        clip: true
 
-                                        // 箭头线
-                                        Rectangle {
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            width: parent.width - 10
-                                            height: 2
-                                            x: 5
-                                            color: {
-                                                var d = root.currentDelays[index] || 1.0
-                                                return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
-                                            }
+                                        // 延时颜色计算函数
+                                        property color delayColor: {
+                                            var d = root.currentDelays[index] || 1.0
+                                            return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
                                         }
-                                        // 箭头头
-                                        Text {
-                                            anchors.right: parent.right
-                                            anchors.rightMargin: 2
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            text: "▶"
-                                            font.pixelSize: 15
-                                            color: {
-                                                var d = root.currentDelays[index] || 1.0
-                                                return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
-                                            }
-                                        }
-                                        // ✅ 2026-03-21 [Phase 7.48.66]: 时间流子弹（实时版，根据设备激活信号驱动）
+
+                                        // 进度条轨道（背景）
                                         Rectangle {
-                                            id: timeBullet
-                                            width: 14; height: 6; radius: 3
-                                            color: "#ffffff"
-                                            opacity: {
-                                                // 仅在该箭头对应的设备已激活、但下一设备未激活时显示
-                                                var _e = root.rtElapsed  // 强制绑定刷新
-                                                return root.isRealtimeActive && root.currentTab === 0
+                                            id: progressTrack
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.verticalCenterOffset: 6
+                                            width: parent.width - 14; height: 8; x: 4
+                                            radius: 4
+                                            color: "#1a2332"
+                                            border.color: "#2c3e50"; border.width: 1
+
+                                            // 进度条填充（实时设备激活进度）
+                                            Rectangle {
+                                                id: progressFill
+                                                anchors.left: parent.left; anchors.leftMargin: 1
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                height: parent.height - 2; radius: 3
+                                                width: {
+                                                    var _e = root.rtElapsed  // 强制绑定刷新
+                                                    if (!root.isRealtimeActive || root.currentTab !== 0) return 0
+                                                    // 设备已通过此箭头（下一设备已激活）
+                                                    if (index + 1 < root.rtActivatedCount) return parent.width - 2
+                                                    // 当前设备已激活，等待下一设备
+                                                    if (index < root.rtActivatedCount) {
+                                                        var progress = root.getArrowProgress(index)
+                                                        return progress * (parent.width - 2)
+                                                    }
+                                                    return 0
+                                                }
+                                                color: arrowItem.delayColor
+                                                opacity: 0.9
+
+                                                Behavior on width { NumberAnimation { duration: 100 } }
+                                            }
+
+                                            // 进度条发光边框（进行中时）
+                                            Rectangle {
+                                                anchors.fill: parent; radius: parent.radius
+                                                color: "transparent"
+                                                border.color: arrowItem.delayColor
+                                                border.width: root.isRealtimeActive && root.currentTab === 0
                                                     && root.rtActivatedCount === index + 1
-                                                    && root.rtActivatedCount < root.startupSeq.length
-                                                    ? 0.9 : 0.0
-                                            }
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            x: {
-                                                var _e = root.rtElapsed  // 强制绑定刷新
-                                                var lineWidth = arrowItem.width - 10  // 70px
-                                                var progress = root.getArrowProgress(index)
-                                                return 5 + progress * (lineWidth - timeBullet.width)
+                                                    && root.rtActivatedCount < root.startupSeq.length ? 1 : 0
+                                                opacity: 0.6
                                             }
                                         }
-                                        // 延时标签
+
+                                        // 右端方向指示三角
+                                        Text {
+                                            anchors.right: parent.right; anchors.rightMargin: 0
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.verticalCenterOffset: 6
+                                            text: "▸"; font.pixelSize: 14
+                                            color: arrowItem.delayColor
+                                        }
+
+                                        // 延时标签（悬浮在进度条上方）
                                         Rectangle {
                                             anchors.horizontalCenter: parent.horizontalCenter
-                                            anchors.bottom: parent.verticalCenter
-                                            anchors.bottomMargin: 4
-                                            width: 52
-                                            height: 26
-                                            radius: 13
-                                            color: "#1a2332"
-                                            border.color: "#5dade2"
-                                            border.width: 1
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.verticalCenterOffset: -14
+                                            width: 56; height: 24; radius: 12
+                                            color: "#0d1520"
+                                            border.color: arrowItem.delayColor; border.width: 1
 
                                             Text {
                                                 anchors.centerIn: parent
                                                 text: (root.currentDelays[index] || 1.0).toFixed(1) + "s"
-                                                font.pixelSize: 16
-                                                color: "#5dade2"
+                                                font.pixelSize: 14; font.bold: true
+                                                color: arrowItem.delayColor
                                             }
 
                                             MouseArea {

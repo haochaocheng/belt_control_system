@@ -1746,6 +1746,47 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移028已执行过，跳过";
     }
+
+    // ✅ 2026-03-21 [Phase 7.48.68]: 迁移029 - 制动器新增启动延时字段
+    // 原因：制动器缺少松闸启动延时和抱闸启动延时参数，逻辑控制需要读取这些延时
+    query.exec("SELECT version FROM schema_migrations WHERE version = '029_brake_startup_delay'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移029: 制动器新增启动延时字段...";
+        QSqlQuery alter(m_database);
+        alter.exec("ALTER TABLE device_brake_config ADD COLUMN release_startup_delay REAL DEFAULT 1.0");
+        alter.exec("ALTER TABLE device_brake_config ADD COLUMN brake_startup_delay REAL DEFAULT 1.0");
+        qDebug() << "  ✅ 迁移029: 新增 release_startup_delay, brake_startup_delay 列";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('029_brake_startup_delay')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移029已执行过，跳过";
+    }
+
+    // ✅ 2026-03-21 [Phase 7.48.68]: 迁移030 - 创建设备逻辑控制配置表
+    // 原因：每个设备（12个设备卡片）需要独立的启停逻辑控制配置
+    query.exec("SELECT version FROM schema_migrations WHERE version = '030_device_logic_configs'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移030: 创建设备逻辑控制配置表...";
+        QSqlQuery create(m_database);
+        create.exec("CREATE TABLE IF NOT EXISTS device_logic_configs ("
+                     "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                     "device_id INTEGER NOT NULL, "
+                     "startup_sequence TEXT DEFAULT '[]', "
+                     "stop_sequence TEXT DEFAULT '[]', "
+                     "warning_time REAL DEFAULT 10.0, "
+                     "default_delay REAL DEFAULT 1.0, "
+                     "UNIQUE(device_id))");
+        // 初始化12条设备默认记录
+        // device_id=1（1号皮带）预设默认启停序列
+        create.exec("INSERT OR IGNORE INTO device_logic_configs (device_id, startup_sequence, stop_sequence) VALUES "
+                     "(1, '[\"张紧控制\",\"1号制动器\",\"1号电机\",\"2号电机\"]', '[\"2号电机\",\"1号电机\",\"1号制动器\",\"张紧控制\"]')");
+        for (int i = 2; i <= 12; i++) {
+            create.exec(QString("INSERT OR IGNORE INTO device_logic_configs (device_id) VALUES (%1)").arg(i));
+        }
+        qDebug() << "  ✅ 迁移030: 创建 device_logic_configs 表并初始化12条记录";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('030_device_logic_configs')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移030已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2850,9 +2891,11 @@ bool DeviceConfigManager::saveBrakeConfig(int deviceId, int brakeIndex, const QV
          hold_time, release_time, brake_delay_time, release_delay,
          detect_delay, fault_delay, brake_current, release_current,
          brake_voltage, release_voltage,
-         release_warning_voice, release_failure_voice, brake_failure_voice)
+         release_warning_voice, release_failure_voice, brake_failure_voice,
+         release_startup_delay, brake_startup_delay)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -2894,6 +2937,9 @@ bool DeviceConfigManager::saveBrakeConfig(int deviceId, int brakeIndex, const QV
     query.addBindValue(config.value("release_warning_voice", "").toString());
     query.addBindValue(config.value("release_failure_voice", "").toString());
     query.addBindValue(config.value("brake_failure_voice", "").toString());
+    // ✅ 2026-03-21 [Phase 7.48.68]: 新增制动器启动延时字段
+    query.addBindValue(config.value("release_startup_delay", 1.0).toDouble());
+    query.addBindValue(config.value("brake_startup_delay", 1.0).toDouble());
 
     if (!query.exec()) {
         QString error = QString("保存设备%1制动器%2配置失败: %3")
@@ -2935,6 +2981,101 @@ QVariantList DeviceConfigManager::loadAllBrakeConfigs(int deviceId)
     }
 
     return queryToList(query);
+}
+
+// ✅ 2026-03-21 [Phase 7.48.68]: 设备逻辑控制配置 CRUD
+// 原因：每个设备（12个设备卡片）需要独立的启停逻辑控制配置
+
+QVariantMap DeviceConfigManager::loadDeviceLogicConfig(int deviceId)
+{
+    QSqlQuery query(m_database);
+    query.prepare("SELECT * FROM device_logic_configs WHERE device_id = ?");
+    query.addBindValue(deviceId);
+
+    if (!query.exec() || !query.next()) {
+        qWarning() << "加载设备" << deviceId << "逻辑控制配置失败，返回默认值";
+        QVariantMap defaults;
+        defaults["device_id"] = deviceId;
+        defaults["startup_sequence"] = "[]";
+        defaults["stop_sequence"] = "[]";
+        defaults["warning_time"] = 10.0;
+        defaults["default_delay"] = 1.0;
+        return defaults;
+    }
+
+    return queryToMap(query);
+}
+
+bool DeviceConfigManager::saveDeviceLogicConfig(int deviceId, const QVariantMap &config)
+{
+    QSqlQuery query(m_database);
+    query.prepare(R"(
+        INSERT OR REPLACE INTO device_logic_configs
+        (device_id, startup_sequence, stop_sequence, warning_time, default_delay)
+        VALUES (?, ?, ?, ?, ?)
+    )");
+    query.addBindValue(deviceId);
+    query.addBindValue(config.value("startup_sequence", "[]").toString());
+    query.addBindValue(config.value("stop_sequence", "[]").toString());
+    query.addBindValue(config.value("warning_time", 10.0).toDouble());
+    query.addBindValue(config.value("default_delay", 1.0).toDouble());
+
+    if (!query.exec()) {
+        QString error = QString("保存设备%1逻辑控制配置失败: %2")
+            .arg(deviceId).arg(query.lastError().text());
+        qCritical() << error;
+        emit databaseError(error);
+        return false;
+    }
+
+    qDebug() << "✅ [DeviceConfigManager] 保存设备逻辑控制配置:" << deviceId;
+    return true;
+}
+
+// ✅ 2026-03-21 [Phase 7.48.68]: 启动延时快捷更新方法
+// 原因：逻辑控制面板修改延时时需要同步写回设备配置表
+
+bool DeviceConfigManager::updateMotorStartupDelay(int deviceId, int motorIndex, double delay)
+{
+    QSqlQuery query(m_database);
+    query.prepare("UPDATE device_motor_config SET startup_delay = ? WHERE device_id = ? AND motor_index = ? AND tab_index = 0");
+    query.addBindValue(delay);
+    query.addBindValue(deviceId);
+    query.addBindValue(motorIndex);
+    bool ok = query.exec();
+    if (ok) qDebug() << "✅ 更新电机启动延时:" << deviceId << motorIndex << delay;
+    else qWarning() << "❌ 更新电机启动延时失败:" << query.lastError().text();
+    return ok;
+}
+
+bool DeviceConfigManager::updateBrakeStartupDelay(int deviceId, int brakeIndex, double delay, const QString &type)
+{
+    QSqlQuery query(m_database);
+    if (type == "release") {
+        query.prepare("UPDATE device_brake_config SET release_startup_delay = ? WHERE device_id = ? AND brake_index = ?");
+    } else {
+        query.prepare("UPDATE device_brake_config SET brake_startup_delay = ? WHERE device_id = ? AND brake_index = ?");
+    }
+    query.addBindValue(delay);
+    query.addBindValue(deviceId);
+    query.addBindValue(brakeIndex);
+    bool ok = query.exec();
+    if (ok) qDebug() << "✅ 更新制动器启动延时:" << deviceId << brakeIndex << type << delay;
+    else qWarning() << "❌ 更新制动器启动延时失败:" << query.lastError().text();
+    return ok;
+}
+
+bool DeviceConfigManager::updateTensionStartupDelay(int deviceId, int tensionIndex, double delay)
+{
+    QSqlQuery query(m_database);
+    query.prepare("UPDATE device_tension_config SET startup_delay = ? WHERE device_id = ? AND tension_index = ?");
+    query.addBindValue(delay);
+    query.addBindValue(deviceId);
+    query.addBindValue(tensionIndex);
+    bool ok = query.exec();
+    if (ok) qDebug() << "✅ 更新张紧启动延时:" << deviceId << tensionIndex << delay;
+    else qWarning() << "❌ 更新张紧启动延时失败:" << query.lastError().text();
+    return ok;
 }
 
 bool DeviceConfigManager::initDefaultBrakeConfigs(int deviceId)

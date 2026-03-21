@@ -37,6 +37,7 @@
 class SystemConfig;
 class NetworkTask;
 class DeviceRuntimeTracker;
+class DeviceConfigManager;  // ✅ 2026-03-21 [Phase 7.48.68]: 逻辑控制配置读取
 
 /**
  * @brief 公共控制类 - 处理所有的控制逻辑
@@ -73,7 +74,8 @@ public:
     // 设置系统配置（用于读取预警参数）
     void setSystemConfig(SystemConfig *config);
 
-    // 设置网络任务（用于Modbus设备控制）
+    // ✅ 2026-03-21 [Phase 7.48.68]: 设置设备配置管理器
+    void setDeviceConfigManager(DeviceConfigManager *mgr);
     void setNetworkTask(NetworkTask *task);
 
     // 设置运行日志数据库（用于记录操作）
@@ -252,6 +254,7 @@ private:
     // QSoundEffect *m_soundEffect;       // 低延迟本地播放（QAudioSink → ALSA direct）
     // bool m_usingSoundEffect;           // 当前是否正在用 QSoundEffect 播放
     SystemConfig *m_systemConfig;  // 系统配置
+    DeviceConfigManager *m_deviceConfigMgr = nullptr;  // ✅ 2026-03-21 [Phase 7.48.68]
     NetworkTask *m_networkTask;    // 网络任务（Modbus控制）
     class OperationLogDatabase *m_operationLogDB;  // 运行日志数据库
     DeviceRuntimeTracker *m_runtimeTracker;  // 设备运行时间跟踪器

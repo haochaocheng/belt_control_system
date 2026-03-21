@@ -64,6 +64,11 @@ Item {
                         feedbackDelay   = tensionCfg["feedback_timeout"] || 10
                         dbLoaded++
                         console.log("📋 ParameterSettings: 张紧反馈参数来自DB - 通道:", feedbackChannel, "延时:", feedbackDelay)
+                    } else {
+                        // ✅ 2026-03-21 [Phase 7.48.68]: DB加载失败时保守默认关闭反馈
+                        // 原因：OutputDevicePanel硬编码useFeedback:true会导致未配置的设备误检反馈
+                        useFeedback = false
+                        console.warn("⚠️ ParameterSettings:", name, "DB加载失败，默认关闭反馈检测")
                     }
                 }
             }
@@ -83,6 +88,10 @@ Item {
                         feedbackDelay   = brakeCfg["release_feedback_timeout"] || 10
                         dbLoaded++
                         console.log("📋 ParameterSettings:", name, "反馈参数来自DB - 通道:", feedbackChannel, "延时:", feedbackDelay)
+                    } else {
+                        // ✅ 2026-03-21 [Phase 7.48.68]: DB加载失败时保守默认关闭反馈
+                        useFeedback = false
+                        console.warn("⚠️ ParameterSettings:", name, "DB加载失败，默认关闭反馈检测")
                     }
                 }
             }
@@ -93,12 +102,18 @@ Item {
                     var motorIdx = motorNumMatch ? parseInt(motorNumMatch[1]) - 1 : 0
                     var motorCfg = deviceConfigMgr.loadMotorConfig(deviceId, motorIdx, 0)
                     if (motorCfg && motorCfg["feedback_channel"] !== undefined && motorCfg["feedback_channel"] >= 0) {
-                        // motor_config 只有 feedback_channel（无 use_feedback / feedback_timeout）
-                        useFeedback    = true
+                        // ✅ 2026-03-21 [Phase 7.48.68]: 从DB读取use_feedback，不再硬编码true
+                        // 原因：电机反馈关闭时仍被检查，因为此处硬编码 useFeedback = true
+                        // 旧代码：useFeedback = true
+                        useFeedback    = motorCfg["use_feedback"] !== undefined ? (Number(motorCfg["use_feedback"]) === 1) : true
                         feedbackChannel = motorCfg["feedback_channel"]
                         // feedbackDelay 沿用 OutputDevicePanel 默认值（3秒）
                         dbLoaded++
-                        console.log("📋 ParameterSettings:", name, "反馈通道来自DB - 通道:", feedbackChannel)
+                        console.log("📋 ParameterSettings:", name, "反馈通道来自DB - 通道:", feedbackChannel, "useFeedback:", useFeedback)
+                    } else {
+                        // ✅ 2026-03-21 [Phase 7.48.68]: DB加载失败时保守默认关闭反馈
+                        useFeedback = false
+                        console.warn("⚠️ ParameterSettings:", name, "DB加载失败，默认关闭反馈检测")
                     }
                 }
             }

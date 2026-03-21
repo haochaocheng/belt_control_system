@@ -3486,7 +3486,9 @@ Item {
                     onLoaded: {
                         console.log("✅ [DeviceSettingsDialog] LogicControlPanel 加载成功")
                         if (item) {
-                            item.systemConfig = systemConfig
+                            // ✅ 2026-03-21 [Phase 7.48.68]: 传入deviceId，不再使用systemConfig
+                            // 旧代码：item.systemConfig = systemConfig
+                            item.deviceId = root.deviceId
                         }
                     }
                 }

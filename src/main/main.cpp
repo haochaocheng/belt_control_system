@@ -276,6 +276,7 @@ int main(int argc, char *argv[]) {
         commonControl.setNetworkTask(&networkTask);
         commonControl.setOperationLogDB(&operationLogDB);
         commonControl.setRuntimeTracker(&runtimeTracker);
+        commonControl.setDeviceConfigManager(&deviceConfigMgr);  // ✅ 2026-03-21 [Phase 7.48.68]
 
         // ✅ 2026-02-26 08:40 [Phase 7.47.3]: 创建批量音频生成器
         // 注意：需要传入 CommonControl 的 TTS 引擎管理器

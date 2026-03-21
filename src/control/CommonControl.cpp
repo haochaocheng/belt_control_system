@@ -1,8 +1,12 @@
 #include "CommonControl.h"
 #include "SystemConfig.h"
+#include "DeviceConfigManager.h"  // ✅ 2026-03-21 [Phase 7.48.68]: 逻辑控制配置读取
 #include "OperationLogDatabase.h"
 #include "DeviceRuntimeTracker.h"
 #include "TTSConfigManager.h"  // ✅ 2026-02-26 [Phase 7.47.19]: 采样率配置
+#include <QJsonDocument>  // ✅ 2026-03-21 [Phase 7.48.68]: JSON解析启停序列
+#include <QJsonArray>
+#include <QRegularExpression>  // ✅ 2026-03-21 [Phase 7.48.68]: 设备名称匹配
 #include "DataPathConfig.h"    // ✅ 2026-03-20 [Phase 7.48.60]: TTS音频基础路径
 #include <QDebug>
 #include <QCoreApplication>
@@ -302,6 +306,13 @@ void CommonControl::setSystemConfig(SystemConfig *config)
 {
     m_systemConfig = config;
     qDebug() << "🔗 CommonControl: SystemConfig已连接";
+}
+
+// ✅ 2026-03-21 [Phase 7.48.68]: 设置设备配置管理器
+void CommonControl::setDeviceConfigManager(DeviceConfigManager *mgr)
+{
+    m_deviceConfigMgr = mgr;
+    qDebug() << "🔗 CommonControl: DeviceConfigManager已连接";
 }
 
 void CommonControl::setNetworkTask(NetworkTask *task)
@@ -896,7 +907,20 @@ void CommonControl::startDeviceSequence()
         return;
     }
 
-    m_currentSequence = m_systemConfig->startupSequence();
+    // ✅ 2026-03-21 [Phase 7.48.68]: 从 device_logic_configs 读取per-device启动序列
+    // 旧代码：m_currentSequence = m_systemConfig->startupSequence();
+    if (m_deviceConfigMgr) {
+        // 默认设备ID=1（后续可通过参数传入指定设备ID）
+        QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(1);
+        QString seqStr = logicConfig.value("startup_sequence", "[]").toString();
+        QJsonArray seqArray = QJsonDocument::fromJson(seqStr.toUtf8()).array();
+        m_currentSequence.clear();
+        for (const QJsonValue &val : seqArray) {
+            m_currentSequence.append(val.toString());
+        }
+    } else {
+        m_currentSequence = m_systemConfig->startupSequence();
+    }
     if (m_currentSequence.isEmpty()) {
         qDebug() << "⚠️  CommonControl: 启动顺序为空，无需执行";
         return;
@@ -943,7 +967,19 @@ void CommonControl::stopDeviceSequence()
         }
     }
 
-    m_currentSequence = m_systemConfig->stopSequence();
+    // ✅ 2026-03-21 [Phase 7.48.68]: 从 device_logic_configs 读取per-device停止序列
+    // 旧代码：m_currentSequence = m_systemConfig->stopSequence();
+    if (m_deviceConfigMgr) {
+        QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(1);
+        QString seqStr = logicConfig.value("stop_sequence", "[]").toString();
+        QJsonArray seqArray = QJsonDocument::fromJson(seqStr.toUtf8()).array();
+        m_currentSequence.clear();
+        for (const QJsonValue &val : seqArray) {
+            m_currentSequence.append(val.toString());
+        }
+    } else {
+        m_currentSequence = m_systemConfig->stopSequence();
+    }
     if (m_currentSequence.isEmpty()) {
         qDebug() << "⚠️  CommonControl: 停止顺序为空，无需执行";
         m_isFaultStop = false;  // 重置故障停止标志
@@ -990,18 +1026,40 @@ void CommonControl::executeNextDeviceInSequence()
     // 如果还有下一个设备，使用延时定时器
     if (m_currentSequenceIndex < m_currentSequence.size()) {
         // ✅ 2026-03-20 [Phase 7.48.57]: 使用可配置延时（替代固定1000ms）
+        // ✅ 2026-03-21 [Phase 7.48.68]: 从设备配置表读取启动延时
         // 旧代码：m_deviceSequenceTimer->start(1000);
         int delayMs = 1000;  // 默认1秒
-        if (m_systemConfig) {
+        int delayIndex = m_currentSequenceIndex - 1;  // 上一个设备（刚激活的设备）
+        if (m_deviceConfigMgr && delayIndex >= 0 && delayIndex < m_currentSequence.size()) {
+            // 从设备配置表读取延时
+            QString prevDevice = m_currentSequence[delayIndex];
+            double delaySec = 1.0;
+            QRegularExpression motorRe("(\\d+)号电机");
+            QRegularExpression brakeRe("(\\d+)号制动器");
+            auto motorMatch = motorRe.match(prevDevice);
+            auto brakeMatch = brakeRe.match(prevDevice);
+            if (motorMatch.hasMatch()) {
+                int idx = motorMatch.captured(1).toInt() - 1;
+                QVariantMap cfg = m_deviceConfigMgr->loadMotorConfig(1, idx, 0);
+                delaySec = cfg.value("startup_delay", 8).toDouble();
+            } else if (brakeMatch.hasMatch()) {
+                int idx = brakeMatch.captured(1).toInt() - 1;
+                QVariantMap cfg = m_deviceConfigMgr->loadBrakeConfig(1, idx);
+                delaySec = cfg.value("release_startup_delay", 1.0).toDouble();
+            } else if (prevDevice == "张紧控制" || prevDevice == "张紧") {
+                QVariantMap cfg = m_deviceConfigMgr->loadTensionConfig(1, 0);
+                delaySec = cfg.value("startup_delay", 5).toDouble();
+            }
+            delayMs = static_cast<int>(delaySec * 1000);
+        } else if (m_systemConfig) {
             QVariantList delays = m_isStartupSequence ?
                 m_systemConfig->startupDelays() : m_systemConfig->stopDelays();
-            int delayIndex = m_currentSequenceIndex - 1;  // 上一个设备的延时
             if (delayIndex >= 0 && delayIndex < delays.size()) {
                 delayMs = static_cast<int>(delays[delayIndex].toDouble() * 1000);
-                if (delayMs < 500) delayMs = 500;    // 最小0.5秒
-                if (delayMs > 30000) delayMs = 30000; // 最大30秒
             }
         }
+        if (delayMs < 500) delayMs = 500;    // 最小0.5秒
+        if (delayMs > 30000) delayMs = 30000; // 最大30秒
         qDebug() << "  ⏱️ 延时" << delayMs << "ms 后执行下一个设备";
         m_deviceSequenceTimer->start(delayMs);
     } else {
