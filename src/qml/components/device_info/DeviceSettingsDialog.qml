@@ -3476,11 +3476,14 @@ Item {
 
                 // ✅ 2026-03-20 [Phase 7.48.57]: 10: 逻辑控制 - 水平时间轴流程图
                 // 旧代码：占位文字"逻辑控制（待实现）"
+                // ✅ 2026-03-21 [Phase 7.48.72]: 加载后保持存活，避免切换面板时丢失实时跟踪状态
                 Loader {
                     id: logicControlPageLoader
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    active: root.currentCategory === 11  // 仅在选中时加载
+                    // 旧代码：active: root.currentCategory === 11  // 仅在选中时加载
+                    // 修复问题1：切换到MQTT等面板再切回时，LogicControlPanel被销毁重建导致状态丢失
+                    active: root.currentCategory === 11 || logicControlPageLoader.status === Loader.Ready
                     source: "pages/LogicControlPanel.qml"
 
                     onLoaded: {

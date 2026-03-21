@@ -548,6 +548,10 @@ void CommonControl::stopBelt(int beltNumber)
         m_runtimeTracker->onStopWarning();
     }
 
+    // ✅ 2026-03-21 [Phase 7.48.72]: 发出停车预警开始信号（S键��下时立即发出）
+    // 原因：QML需要立即切换到停止Tab，不能等到停车音频播完后的stopSequenceStarted
+    emit stopWarningStarted();
+
     // 记录停止操作到数据库
     if (m_operationLogDB && m_systemConfig) {
         QString workModeName = getWorkModeName();
@@ -1018,12 +1022,83 @@ void CommonControl::stopDeviceSequence()
     executeNextDeviceInSequence();
 }
 
+// ✅ 2026-03-21 [Phase 7.48.72]: 重构为"前等待"语义
+// 含义："张紧控制启动延时=5s"表示预警结束后等5秒才激活张紧
+// 旧代码（后等待）：先激活设备，再用该设备的延时等待下一设备
+// 新代码（前等待）：先用当前设备的延时等待，再激活当前设备
 void CommonControl::executeNextDeviceInSequence()
 {
     if (!m_isSequenceRunning || m_currentSequenceIndex >= m_currentSequence.size()) {
         // 序列执行完成
         m_isSequenceRunning = false;
         qDebug() << "✅ CommonControl: 设备序列执行完成";
+
+        // 更新RuntimeTracker：序列完成后的状态
+        if (m_runtimeTracker) {
+            if (m_isStartupSequence) {
+                m_runtimeTracker->onRunning();
+            } else {
+                m_runtimeTracker->onBrakeEngaging();
+                QTimer::singleShot(500, this, [this]() {
+                    if (m_runtimeTracker) {
+                        m_runtimeTracker->onStopped();
+                    }
+                });
+            }
+        }
+        return;
+    }
+
+    // 读取即将激活的设备的延时（前等待）
+    const QString deviceName = m_currentSequence[m_currentSequenceIndex];
+    int delayMs = 1000;  // 默认1秒
+
+    if (m_deviceConfigMgr) {
+        double delaySec = 1.0;
+        QRegularExpression motorRe("(\\d+)号电机");
+        QRegularExpression brakeRe("(\\d+)号制动器");
+        auto motorMatch = motorRe.match(deviceName);
+        auto brakeMatch = brakeRe.match(deviceName);
+        if (motorMatch.hasMatch()) {
+            int idx = motorMatch.captured(1).toInt() - 1;
+            QVariantMap cfg = m_deviceConfigMgr->loadMotorConfig(1, idx, 0);
+            delaySec = cfg.value("startup_delay", 8).toDouble();
+        } else if (brakeMatch.hasMatch()) {
+            int idx = brakeMatch.captured(1).toInt() - 1;
+            QVariantMap cfg = m_deviceConfigMgr->loadBrakeConfig(1, idx);
+            if (m_isStartupSequence) {
+                delaySec = cfg.value("release_startup_delay", 1.0).toDouble();
+            } else {
+                delaySec = cfg.value("brake_startup_delay", 1.0).toDouble();
+            }
+        } else if (deviceName == "张紧控制" || deviceName == "张紧") {
+            QVariantMap cfg = m_deviceConfigMgr->loadTensionConfig(1, 0);
+            delaySec = cfg.value("startup_delay", 5).toDouble();
+        }
+        delayMs = static_cast<int>(delaySec * 1000);
+    } else if (m_systemConfig) {
+        QVariantList delays = m_isStartupSequence ?
+            m_systemConfig->startupDelays() : m_systemConfig->stopDelays();
+        if (m_currentSequenceIndex < delays.size()) {
+            delayMs = static_cast<int>(delays[m_currentSequenceIndex].toDouble() * 1000);
+        }
+    }
+
+    if (delayMs < 500) delayMs = 500;
+    if (delayMs > 30000) delayMs = 30000;
+    qDebug() << QString("  [%1/%2] 等待 %3ms 后%4设备: %5")
+                    .arg(m_currentSequenceIndex + 1)
+                    .arg(m_currentSequence.size())
+                    .arg(delayMs)
+                    .arg(m_isStartupSequence ? "启动" : "停止")
+                    .arg(deviceName);
+    m_deviceSequenceTimer->start(delayMs);
+}
+
+void CommonControl::onDeviceSequenceTimer()
+{
+    // ✅ 2026-03-21 [Phase 7.48.72]: 定时器到期，激活当前设备（前等待语义）
+    if (!m_isSequenceRunning || m_currentSequenceIndex >= m_currentSequence.size()) {
         return;
     }
 
@@ -1036,83 +1111,9 @@ void CommonControl::executeNextDeviceInSequence()
 
     // 激活/停用设备
     activateDevice(deviceName, m_isStartupSequence);
-
-    // 移动到下一个设备
     m_currentSequenceIndex++;
 
-    // 如果还有下一个设备，使用延时定时器
-    if (m_currentSequenceIndex < m_currentSequence.size()) {
-        // ✅ 2026-03-20 [Phase 7.48.57]: 使用可配置延时（替代固定1000ms）
-        // ✅ 2026-03-21 [Phase 7.48.68]: 从设备配置表读取启动延时
-        // ✅ 2026-03-21 [Phase 7.48.71]: 恢复为"后等待"语义
-        // 含义："张紧控制启动延时=5s"表示张紧激活后等待5秒再启动下一个设备
-        // Phase 7.48.70 的"前等待"导致张紧的5秒延时未被使用（读了制动器的1秒）
-        int delayIndex = m_currentSequenceIndex - 1;  // 当前刚激活的设备
-        int delayMs = 1000;  // 默认1秒
-        if (m_deviceConfigMgr && delayIndex >= 0 && delayIndex < m_currentSequence.size()) {
-            // 从设备配置表读取延时
-            QString curDevice = m_currentSequence[delayIndex];
-            double delaySec = 1.0;
-            QRegularExpression motorRe("(\\d+)号电机");
-            QRegularExpression brakeRe("(\\d+)号制动器");
-            auto motorMatch = motorRe.match(curDevice);
-            auto brakeMatch = brakeRe.match(curDevice);
-            if (motorMatch.hasMatch()) {
-                int idx = motorMatch.captured(1).toInt() - 1;
-                QVariantMap cfg = m_deviceConfigMgr->loadMotorConfig(1, idx, 0);
-                delaySec = cfg.value("startup_delay", 8).toDouble();
-            } else if (brakeMatch.hasMatch()) {
-                int idx = brakeMatch.captured(1).toInt() - 1;
-                QVariantMap cfg = m_deviceConfigMgr->loadBrakeConfig(1, idx);
-                // ✅ 2026-03-21 [Phase 7.48.70]: 启动读松闸延时，停止读抱闸延时
-                if (m_isStartupSequence) {
-                    delaySec = cfg.value("release_startup_delay", 1.0).toDouble();
-                } else {
-                    delaySec = cfg.value("brake_startup_delay", 1.0).toDouble();
-                }
-            } else if (curDevice == "张紧控制" || curDevice == "张紧") {
-                QVariantMap cfg = m_deviceConfigMgr->loadTensionConfig(1, 0);
-                delaySec = cfg.value("startup_delay", 5).toDouble();
-            }
-            delayMs = static_cast<int>(delaySec * 1000);
-        } else if (m_systemConfig) {
-            QVariantList delays = m_isStartupSequence ?
-                m_systemConfig->startupDelays() : m_systemConfig->stopDelays();
-            if (delayIndex >= 0 && delayIndex < delays.size()) {
-                delayMs = static_cast<int>(delays[delayIndex].toDouble() * 1000);
-            }
-        }
-        if (delayMs < 500) delayMs = 500;    // 最小0.5秒
-        if (delayMs > 30000) delayMs = 30000; // 最大30秒
-        qDebug() << "  ⏱️ 延时" << delayMs << "ms 后执行下一个设备";
-        m_deviceSequenceTimer->start(delayMs);
-    } else {
-        // 序列执行完成
-        m_isSequenceRunning = false;
-        qDebug() << "✅ CommonControl: 设备序列执行完成";
-
-        // 更新RuntimeTracker：序列完成后的状态
-        if (m_runtimeTracker) {
-            if (m_isStartupSequence) {
-                // 启动序列完成，进入运行状态
-                m_runtimeTracker->onRunning();
-            } else {
-                // 停止序列完成，先抱闸，然后停止
-                m_runtimeTracker->onBrakeEngaging();
-                // 延时后更新为停止状态
-                QTimer::singleShot(500, this, [this]() {
-                    if (m_runtimeTracker) {
-                        m_runtimeTracker->onStopped();
-                    }
-                });
-            }
-        }
-    }
-}
-
-void CommonControl::onDeviceSequenceTimer()
-{
-    // 定时器超时，执行下一个设备
+    // 继续执行下一个
     executeNextDeviceInSequence();
 }
 

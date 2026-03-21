@@ -220,8 +220,8 @@ Rectangle {
         interval: 100
         repeat: true
         onTriggered: {
-            if (root.rtPhase === 1) {
-                // 预警阶段：计算预警已过时间
+            if (root.rtPhase === 1 || root.rtPhase === 5) {
+                // 预警阶段（启动预警或停车预警）：计算预警已过时间
                 root.rtElapsed = (Date.now() - root.rtWarningStart) / 1000.0
             } else if (root.rtPhase === 2 || root.rtPhase === 4) {
                 // 设备序列阶段（启动or停止）：计算序列已过时间
@@ -237,7 +237,6 @@ Rectangle {
         function onWarningStarted() {
             console.log("📡 LogicControlPanel: 收到预警开始信号")
             // ✅ 2026-03-21 [Phase 7.48.71]: 自动切换到启动顺序Tab
-            // 修复问题2：按R键不能切换到启动顺序
             root.currentTab = 0
             root.rtWarningStart = Date.now()
             root.rtSequenceStart = 0
@@ -257,11 +256,28 @@ Rectangle {
             root.rtElapsed = 0
         }
 
+        // ✅ 2026-03-21 [Phase 7.48.72]: 监听停车预警开始信号（S键按下时立即触发）
+        // 修复问题3：按S立即切换到停止顺序Tab
+        // 修复问题4：停止顺序进度条含停车预警进度
+        function onStopWarningStarted() {
+            console.log("📡 LogicControlPanel: 收到停车预警开始信号")
+            root.currentTab = 1      // 立即切换到停止顺序Tab
+            root.rtPhase = 5         // 5=停车预警中（新增状态）
+            root.rtWarningStart = Date.now()
+            root.rtSequenceStart = 0
+            root.rtDeviceStartTimes = []
+            root.rtActivatedCount = 0
+            root.rtElapsed = 0
+            root.rtFaultDevice = ""
+            root.isRealtimeActive = true
+            rtRefreshTimer.start()
+        }
+
         // ✅ 2026-03-21 [Phase 7.48.70]: 监听停止序列开始信号
-        // 原因：停车顺序需要像启动顺序一样有时间轴可视化
+        // 停车音频播完后触发，从rtPhase=5切换到rtPhase=4
         function onStopSequenceStarted() {
             console.log("📡 LogicControlPanel: 收到停止序列开始信号")
-            root.currentTab = 1  // 切换到停止顺序Tab
+            // 旧代码：root.currentTab = 1  // 已在onStopWarningStarted中切换
             root.rtPhase = 4     // 4=停止序列运行中
             root.rtActivatedCount = 0
             root.rtSequenceStart = Date.now()
@@ -451,9 +467,9 @@ Rectangle {
         var startT = root.rtDeviceStartTimes.length > deviceIndex ? root.rtDeviceStartTimes[deviceIndex] : 0
         if (startT <= 0) return 0.0
         var elapsed = (Date.now() - startT) / 1000.0
-        // ✅ 2026-03-21 [Phase 7.48.71]: 恢复为"后等待"语义
-        // 箭头在设备deviceIndex和deviceIndex+1之间，延时属于刚激活的设备deviceIndex
-        var delay = root.currentDelays[deviceIndex] || 1.0
+        // ✅ 2026-03-21 [Phase 7.48.72]: "前等待"语义
+        // 箭头在设备deviceIndex和deviceIndex+1之间，延时属于即将激活的设备deviceIndex+1
+        var delay = root.currentDelays[deviceIndex + 1] || 1.0
         return Math.min(1.0, elapsed / delay)
     }
 
@@ -567,9 +583,12 @@ Rectangle {
                         color: root.rtPhase === 3 ? "#ff4757" : (root.rtPhase === 1 ? "#f39c12" : "#00ff88")
                     }
                     // ✅ 2026-03-21 [Phase 7.48.71]: 停止序列状态文字
+                    // ✅ 2026-03-21 [Phase 7.48.72]: 增加停车预警状态（rtPhase=5）
                     Text {
-                        visible: root.isRealtimeActive && root.currentTab === 1 && root.rtPhase === 4
-                        text: "停止中 " + root.rtElapsed.toFixed(1) + "s  设备 " + root.rtActivatedCount + "/" + root.stopSeq.length
+                        visible: root.isRealtimeActive && root.currentTab === 1 && (root.rtPhase === 4 || root.rtPhase === 5)
+                        text: root.rtPhase === 5
+                            ? "停车预警 " + root.rtElapsed.toFixed(1) + "s"
+                            : "停止中 " + root.rtElapsed.toFixed(1) + "s  设备 " + root.rtActivatedCount + "/" + root.stopSeq.length
                         font.pixelSize: 20
                         font.bold: true
                         color: "#ff4757"
@@ -722,10 +741,16 @@ Rectangle {
                             }
 
                             // ✅ 2026-03-21 [Phase 7.48.67]: 前缀进度条2：启车预警→第一个设备
-                            // ✅ 2026-03-21 [Phase 7.48.71]: 移除延时标签（"后等待"语义下，第一个设备在预警后立即启动，无等待时间）
+                            // ✅ 2026-03-21 [Phase 7.48.72]: "前等待"语义 - 显示第一个设备的延时和进度
+                            // 含义：预警结束后，等待第一个设备的延时，再激活第一个设备
                             Item {
                                 width: 90; height: 140
                                 visible: root.currentTab === 0 && root.currentSeq.length > 0
+
+                                property color prefixDelayColor: {
+                                    var d = root.currentDelays[0] || 1.0
+                                    return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
+                                }
 
                                 // 进度条轨道
                                 Rectangle {
@@ -736,12 +761,24 @@ Rectangle {
                                     color: "#1a2332"
                                     border.color: "#2c3e50"; border.width: 1
 
-                                    // 填充（预警完成后立即填满）
+                                    // 填充：等待第一个设备的延时进度
                                     Rectangle {
                                         anchors.left: parent.left; anchors.leftMargin: 1
                                         anchors.verticalCenter: parent.verticalCenter
                                         height: parent.height - 2; radius: 3
-                                        width: root.isRealtimeActive && root.rtPhase >= 2 ? parent.width - 2 : 0
+                                        width: {
+                                            var _e = root.rtElapsed  // 强制绑定刷新
+                                            if (!root.isRealtimeActive || root.rtPhase < 2) return 0
+                                            // 第一个设备已激活，填满
+                                            if (root.rtActivatedCount > 0) return parent.width - 2
+                                            // 正在等待第一个设备的延时
+                                            if (root.rtPhase === 2) {
+                                                var firstDelay = root.currentDelays[0] || 1.0
+                                                var progress = firstDelay > 0 ? Math.min(1.0, root.rtElapsed / firstDelay) : 1.0
+                                                return progress * (parent.width - 2)
+                                            }
+                                            return 0
+                                        }
                                         color: root.themeColor
                                         opacity: 0.9
                                         Behavior on width { NumberAnimation { duration: 300 } }
@@ -755,16 +792,33 @@ Rectangle {
                                     anchors.verticalCenterOffset: 6
                                     text: "▸"; font.pixelSize: 14; color: root.themeColor
                                 }
+
+                                // 延时标签（第一个设备的延时 - 前等待语义）
+                                Rectangle {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.verticalCenterOffset: -14
+                                    width: 56; height: 24; radius: 12
+                                    color: "#0d1520"
+                                    border.color: parent.prefixDelayColor; border.width: 1
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: (root.currentDelays[0] || 1.0).toFixed(1) + "s"
+                                        font.pixelSize: 14; font.bold: true
+                                        color: parent.parent.prefixDelayColor
+                                    }
+                                }
                             }
 
                             // ✅ 2026-03-21 [Phase 7.48.71]: 停止顺序前缀节点 - "停止键开始"
-                            // 修复问题5：停止顺序缺少停止键开始和停车预警方框
+                            // ✅ 2026-03-21 [Phase 7.48.72]: 支持rtPhase=5（停车预警）实时状态
                             Rectangle {
                                 width: 100; height: 140; radius: 8
                                 visible: root.currentTab === 1
-                                color: root.isRealtimeActive && root.rtPhase === 4 ? "#006633" : "#1e3a5f"
-                                border.color: root.isRealtimeActive && root.rtPhase === 4 ? "#00ff88" : "#ff4757"
-                                border.width: 2
+                                color: root.isRealtimeActive && (root.rtPhase === 5 || root.rtPhase === 4) ? "#006633" : "#1e3a5f"
+                                border.color: root.isRealtimeActive && (root.rtPhase === 5 || root.rtPhase === 4) ? "#00ff88" : "#ff4757"
+                                border.width: root.isRealtimeActive && root.rtPhase === 5 ? 3 : 2
 
                                 Rectangle {
                                     width: parent.width - 4; height: 4; radius: 2
@@ -781,12 +835,14 @@ Rectangle {
                             }
 
                             // ✅ 2026-03-21 [Phase 7.48.71]: 停止顺序前缀进度条1：停止键→停车预警
+                            // ✅ 2026-03-21 [Phase 7.48.72]: 实时停车预警进度（rtPhase=5时显示进度）
                             Item {
                                 width: 90; height: 140
                                 visible: root.currentTab === 1
 
                                 // 进度条轨道
                                 Rectangle {
+                                    id: stopWarnTrack
                                     anchors.verticalCenter: parent.verticalCenter
                                     anchors.verticalCenterOffset: 6
                                     width: parent.width - 14; height: 8; x: 4
@@ -794,30 +850,34 @@ Rectangle {
                                     color: "#1a2332"
                                     border.color: "#2c3e50"; border.width: 1
 
-                                    // 填充（停止序列开始后填满，因为停车音频已播放完成）
+                                    // 填充：停车预警进度（rtPhase=5时实时更新，rtPhase=4时填满）
                                     Rectangle {
                                         anchors.left: parent.left; anchors.leftMargin: 1
                                         anchors.verticalCenter: parent.verticalCenter
                                         height: parent.height - 2; radius: 3
-                                        width: root.isRealtimeActive && root.rtPhase === 4 ? parent.width - 2 : 0
+                                        width: {
+                                            var _e = root.rtElapsed  // 强制绑定刷新
+                                            if (!root.isRealtimeActive) return 0
+                                            if (root.rtPhase === 4) return parent.width - 2  // 停车音频已播完
+                                            if (root.rtPhase === 5) {
+                                                // 停车预警进度（停车音频通常很短，用5秒估计）
+                                                var progress = Math.min(1.0, root.rtElapsed / 5.0)
+                                                return progress * (parent.width - 2)
+                                            }
+                                            return 0
+                                        }
                                         color: "#ff4757"
                                         opacity: 0.9
-                                        Behavior on width { NumberAnimation { duration: 300 } }
+                                        Behavior on width { NumberAnimation { duration: 100 } }
                                     }
-                                }
 
-                                // 延时标签（停车预警时间）
-                                Rectangle {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.verticalCenterOffset: -14
-                                    width: 56; height: 24; radius: 12
-                                    color: "#0d1520"
-                                    border.color: "#ff4757"; border.width: 1
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: root.getWarningTime() + "s"
-                                        font.pixelSize: 14; font.bold: true; color: "#ff4757"
+                                    // 发光边框（停车预警进行中）
+                                    Rectangle {
+                                        anchors.fill: parent; radius: parent.radius
+                                        color: "transparent"
+                                        border.color: "#ff4757"
+                                        border.width: root.isRealtimeActive && root.rtPhase === 5 ? 1 : 0
+                                        opacity: 0.6
                                     }
                                 }
 
@@ -831,6 +891,7 @@ Rectangle {
                             }
 
                             // ✅ 2026-03-21 [Phase 7.48.71]: 停止顺序前缀节点 - "停车预警"
+                            // ✅ 2026-03-21 [Phase 7.48.72]: 支持rtPhase=5实时状态
                             Rectangle {
                                 width: 100; height: 140; radius: 8
                                 visible: root.currentTab === 1
@@ -857,9 +918,15 @@ Rectangle {
                             }
 
                             // ✅ 2026-03-21 [Phase 7.48.71]: 停止顺序前缀进度条2：停车预警→第一个停止设备
+                            // ✅ 2026-03-21 [Phase 7.48.72]: "前等待"语义 - 显示第一个停止设备的延时
                             Item {
                                 width: 90; height: 140
                                 visible: root.currentTab === 1 && root.currentSeq.length > 0
+
+                                property color stopPrefixDelayColor: {
+                                    var d = root.currentDelays[0] || 1.0
+                                    return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
+                                }
 
                                 // 进度条轨道
                                 Rectangle {
@@ -870,15 +937,39 @@ Rectangle {
                                     color: "#1a2332"
                                     border.color: "#2c3e50"; border.width: 1
 
-                                    // 填充（停止序列已开始，立即填满）
+                                    // 填充：等待第一个停止设备的延时进度
                                     Rectangle {
                                         anchors.left: parent.left; anchors.leftMargin: 1
                                         anchors.verticalCenter: parent.verticalCenter
                                         height: parent.height - 2; radius: 3
-                                        width: root.isRealtimeActive && root.rtPhase === 4 ? parent.width - 2 : 0
+                                        width: {
+                                            var _e = root.rtElapsed
+                                            if (!root.isRealtimeActive || root.rtPhase !== 4) return 0
+                                            if (root.rtActivatedCount > 0) return parent.width - 2
+                                            var firstDelay = root.currentDelays[0] || 1.0
+                                            var progress = firstDelay > 0 ? Math.min(1.0, root.rtElapsed / firstDelay) : 1.0
+                                            return progress * (parent.width - 2)
+                                        }
                                         color: root.themeColor
                                         opacity: 0.9
-                                        Behavior on width { NumberAnimation { duration: 300 } }
+                                        Behavior on width { NumberAnimation { duration: 100 } }
+                                    }
+                                }
+
+                                // 延时标签（第一个停止设备的延时）
+                                Rectangle {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.verticalCenterOffset: -14
+                                    width: 56; height: 24; radius: 12
+                                    color: "#0d1520"
+                                    border.color: parent.stopPrefixDelayColor; border.width: 1
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: (root.currentDelays[0] || 1.0).toFixed(1) + "s"
+                                        font.pixelSize: 14; font.bold: true
+                                        color: parent.parent.stopPrefixDelayColor
                                     }
                                 }
 
@@ -1046,10 +1137,10 @@ Rectangle {
                                         visible: index < root.currentSeq.length - 1
 
                                         // 延时颜色计算函数
-                                        // ✅ 2026-03-21 [Phase 7.48.71]: 恢复为"后等待"语义
-                                        // 箭头在设备index和index+1之间，延时属于刚激活的设备index（需要等多久）
+                                        // ✅ 2026-03-21 [Phase 7.48.72]: "前等待"语义
+                                        // 箭头在设备index和index+1之间，延时属于即将激活的设备index+1（等多久才激活下一个）
                                         property color delayColor: {
-                                            var d = root.currentDelays[index] || 1.0
+                                            var d = root.currentDelays[index + 1] || 1.0
                                             return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
                                         }
 
@@ -1128,8 +1219,8 @@ Rectangle {
 
                                             Text {
                                                 anchors.centerIn: parent
-                                                // ✅ 2026-03-21 [Phase 7.48.71]: 恢复为"后等待"语义
-                                                text: (root.currentDelays[index] || 1.0).toFixed(1) + "s"
+                                                // ✅ 2026-03-21 [Phase 7.48.72]: "前等待"语义 - 显示下一个设备的延时
+                                                text: (root.currentDelays[index + 1] || 1.0).toFixed(1) + "s"
                                                 font.pixelSize: 14; font.bold: true
                                                 color: arrowItem.delayColor
                                             }
@@ -1137,9 +1228,9 @@ Rectangle {
                                             MouseArea {
                                                 anchors.fill: parent
                                                 onClicked: {
-                                                    // ✅ 2026-03-21 [Phase 7.48.71]: 编辑当前设备的延时
-                                                    editPopup.editIndex = index
-                                                    editPopup.editDelay = root.currentDelays[index] || 1.0
+                                                    // ✅ 2026-03-21 [Phase 7.48.72]: 编辑下一个设备的延时（前等待语义）
+                                                    editPopup.editIndex = index + 1
+                                                    editPopup.editDelay = root.currentDelays[index + 1] || 1.0
                                                     editPopup.open()
                                                 }
                                             }
