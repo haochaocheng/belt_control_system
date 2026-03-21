@@ -1787,6 +1787,20 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移030已执行过，跳过";
     }
+
+    // ✅ 2026-03-21 [Phase 7.48.69]: 迁移031 - 电机配置新增use_feedback列
+    // 原因：device_motor_config 表没有 use_feedback 列，loadMotorConfig() 返回 undefined，
+    //       ParameterSettings.qml 默认 true，导致用户关闭反馈后仍被检查
+    if (!query.exec("SELECT 1 FROM schema_migrations WHERE version = '031_motor_use_feedback'") || !query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移031: 电机配置新增use_feedback列...";
+        QSqlQuery fix(m_database);
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN use_feedback INTEGER DEFAULT 0");
+        // 默认0（关闭反馈），用户需要在设备设置中手动开启
+        qDebug() << "  ✅ 迁移031: 新增 use_feedback 列(默认0=关闭)";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('031_motor_use_feedback')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移031已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2639,7 +2653,8 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
     // ✅ 2026-03-10 [Phase 7.48.31]: 扩展为31列（原27列 + 新增4列：running_state, motor_module_address, output_channel, feedback_channel）
     // ✅ 2026-03-10 [Phase 7.48.37]: 扩展为35列（新增4列：startup_delay, warning_voice, failure_voice, startup_key）
     // ✅ 2026-03-12: 扩展为36列（新增1列：audio_source）
-    // 旧：35列 INSERT OR REPLACE（Phase 7.48.37）
+    // ✅ 2026-03-21 [Phase 7.48.69]: 扩展为37列（新增1列：use_feedback）
+    // 旧：36列 INSERT OR REPLACE
     query.prepare(R"(
         INSERT OR REPLACE INTO device_motor_config
         (device_id, motor_index, tab_index, tab_name, protection_name, protection_delay,
@@ -2651,8 +2666,9 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
          running_state, motor_module_address, output_channel, feedback_channel,
          startup_delay, warning_voice, failure_voice, startup_key,
          audio_source,
+         use_feedback,
          updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -2694,6 +2710,9 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
     query.addBindValue(config.value("startup_key", "无").toString());
     // ✅ 2026-03-12: 新增音频来源
     query.addBindValue(config.value("audio_source", "tts").toString());
+    // ✅ 2026-03-21 [Phase 7.48.69]: 新增use_feedback
+    // 原因：INSERT OR REPLACE 会删除旧行再插入，缺少此列导致use_feedback被重置为DEFAULT 0
+    query.addBindValue(config.value("use_feedback", false).toBool() ? 1 : 0);
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {

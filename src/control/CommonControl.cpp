@@ -1433,6 +1433,32 @@ QString CommonControl::getDeviceFailureAudioPath(const QString &deviceName)
         possibleNames << QString("%1运行失败.wav").arg(deviceName);
     }
 
+    // ✅ 2026-03-21 [Phase 7.48.69]: TTS合成路径优先（与getAudioPath()对齐）
+    // 原因：getAudioPath()在Phase 7.48.60中已添加TTS路径支持，但getDeviceFailureAudioPath()
+    //       遗漏了这一步，导致音频来源为TTS时播放的是默认路径而非TTS合成路径
+    if (m_systemConfig && m_systemConfig->beltAudioSource() == 1) {
+        TTSConfigManager *ttsConfig = TTSConfigManager::instance();
+        int modelIndex = ttsConfig->modelIndex(TTSConfigManager::Test);
+        QString engineName = "paddlespeech";
+        QString modelName = ttsConfig->modelName(modelIndex);
+        int speakerId = ttsConfig->speakerId(TTSConfigManager::Test);
+        QString ttsFolder = QString("%1/%2-%3-spk%4/%5")
+                                .arg(DataPathConfig::getAudioBaseDirectory())
+                                .arg(engineName)
+                                .arg(modelName)
+                                .arg(speakerId)
+                                .arg(folderName);
+        for (const QString &fileName : possibleNames) {
+            QString audioPath = QString("%1/%2").arg(ttsFolder, fileName);
+            if (QFile::exists(audioPath)) {
+                qDebug() << "✅ CommonControl: 使用TTS运行失败音频:" << audioPath;
+                return audioPath;
+            }
+        }
+        qDebug() << "⚠️ CommonControl: TTS路径未找到运行失败音频，回退到默认路径";
+        qDebug() << "   TTS文件夹:" << ttsFolder;
+    }
+
     // ✅ 2026-03-21 [Phase 7.48.64]: 先在数据目录（容器挂载卷）中查找运行失败音频
     // 原因：getAudioPath()已在Phase 7.48.62中添加了数据目录支持，但getDeviceFailureAudioPath()
     //       遗漏了这一步，导致/home/linaro/belt-control-data/audio/中的音频无法被找到

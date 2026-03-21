@@ -92,15 +92,21 @@ Rectangle {
         stopSeq = loadedStop.length > 0 ? migrateOldNames(loadedStop) : ["2号电机", "1号电机", "1号制动器", "张紧控制"]
 
         defaultDelay = config["default_delay"] || 1.0
-        // ✅ 延时从各子设备配置表读取
-        startupDelays = []
+        // ✅ 2026-03-21 [Phase 7.48.69]: 修复延时显示1.0s问题
+        // 根因：startupDelays = [] 然后 push() 不会触发 QML property binding 重新求值
+        //       Text 绑定在 startupDelays=[] 时求值，读到 undefined → 默认1.0
+        // 修复：先构建临时数组，再一次性赋值给 property（触发 binding 更新）
+        var tmpStartup = []
         for (var i = 0; i < startupSeq.length; i++) {
-            startupDelays.push(readDeviceStartupDelay(startupSeq[i]))
+            tmpStartup.push(readDeviceStartupDelay(startupSeq[i]))
         }
-        stopDelays = []
+        startupDelays = tmpStartup
+
+        var tmpStop = []
         for (var j = 0; j < stopSeq.length; j++) {
-            stopDelays.push(readDeviceStartupDelay(stopSeq[j]))
+            tmpStop.push(readDeviceStartupDelay(stopSeq[j]))
         }
+        stopDelays = tmpStop
 
         console.log("✅ 逻辑控制配置已加载 - 设备ID:", root.deviceId, "启动:", startupSeq.length, "停止:", stopSeq.length)
     }
@@ -667,11 +673,15 @@ Rectangle {
                                         // ✅ 2026-03-20 修复：nodeMouseArea移到最前声明，z值最低，不会遮挡按钮
                                         // ✅ 2026-03-21 [Phase 7.48.66]: 实时激活状态颜色（替代原模拟状态）
                                         // ✅ 2026-03-21 [Phase 7.48.68]: 调亮绿色填充 + 故障红色显示
+                                        // ✅ 2026-03-21 [Phase 7.48.69]: 故障时所有设备恢复为停止颜色（不保留绿色）
                                         color: {
-                                            // 故障状态：故障设备显示红色
-                                            if (root.rtPhase === 3 && root.rtFaultDevice !== "") {
+                                            // 故障状态：故障设备显示红色，其余已激活设备恢复默认（非绿色）
+                                            if (root.rtPhase === 3) {
                                                 var deviceName = root.currentSeq[index] || ""
-                                                if (deviceName === root.rtFaultDevice) return "#4a0000"  // 故障设备红色背景
+                                                if (root.rtFaultDevice !== "" && deviceName === root.rtFaultDevice)
+                                                    return "#4a0000"  // 故障设备红色背景
+                                                // 故障后所有设备恢复默认颜色，不再显示绿色
+                                                return nodeMouseArea.containsMouse ? "#2a5080" : "#1e3a5f"
                                             }
                                             if (root.isRealtimeActive && root.currentTab === 0 && index < root.rtActivatedCount) {
                                                 return index === root.rtActivatedCount - 1
@@ -681,16 +691,20 @@ Rectangle {
                                             return nodeMouseArea.containsMouse ? "#2a5080" : "#1e3a5f"
                                         }
                                         border.color: {
-                                            // ✅ 2026-03-21 [Phase 7.48.68]: 故障设备红色边框
-                                            if (root.rtPhase === 3 && root.rtFaultDevice !== "") {
+                                            // ✅ 2026-03-21 [Phase 7.48.69]: 故障时所有设备恢复为默认边框
+                                            if (root.rtPhase === 3) {
                                                 var dn = root.currentSeq[index] || ""
-                                                if (dn === root.rtFaultDevice) return "#ff4757"
+                                                if (root.rtFaultDevice !== "" && dn === root.rtFaultDevice)
+                                                    return "#ff4757"
+                                                return root.themeColor
                                             }
                                             return root.isRealtimeActive && root.currentTab === 0 && index < root.rtActivatedCount
                                                 ? "#00ff88" : root.themeColor
                                         }
                                         border.width: {
+                                            // ✅ 2026-03-21 [Phase 7.48.69]: 故障时只有故障设备加粗边框
                                             if (root.rtPhase === 3 && root.rtFaultDevice === (root.currentSeq[index] || "")) return 3
+                                            if (root.rtPhase === 3) return 2  // 非故障设备恢复正常边框
                                             return root.isRealtimeActive && root.currentTab === 0 && index === root.rtActivatedCount - 1 ? 3 : 2
                                         }
 
@@ -722,7 +736,7 @@ Rectangle {
 
                                         Column {
                                             anchors.centerIn: parent
-                                            spacing: 6
+                                            spacing: 4
                                             z: 2
 
                                             Text {
@@ -737,6 +751,17 @@ Rectangle {
                                                 font.pixelSize: 21
                                                 font.bold: true
                                                 color: "white"
+                                            }
+                                            // ✅ 2026-03-21 [Phase 7.48.69]: 每个设备卡片显示其启动延时
+                                            // 原因：用户反馈张紧控制前面没有显示启动延时
+                                            Text {
+                                                anchors.horizontalCenter: parent.horizontalCenter
+                                                text: "延时 " + (root.currentDelays[index] || 1.0).toFixed(1) + "s"
+                                                font.pixelSize: 14
+                                                color: {
+                                                    var d = root.currentDelays[index] || 1.0
+                                                    return d <= 2.0 ? "#66ccff" : (d <= 5.0 ? "#f39c12" : "#ff6b6b")
+                                                }
                                             }
                                             // ✅ 2026-03-20 修复：◀×▶按钮z值高于nodeMouseArea，可正常点击
                                             Row {
