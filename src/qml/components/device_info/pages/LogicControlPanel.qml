@@ -236,6 +236,10 @@ Rectangle {
 
         function onWarningStarted() {
             console.log("📡 LogicControlPanel: 收到预警开始信号")
+            // ✅ 2026-03-21 [Phase 7.48.73]: 取消之前序列的延迟重置定时器
+            // 修复：第二次启动后进度条在1.6s停住，原因是之前停止序列的rtStopTimer
+            // 在新启动预警期间触发了rtRefreshTimer.stop()
+            rtStopTimer.stop()
             // ✅ 2026-03-21 [Phase 7.48.71]: 自动切换到启动顺序Tab
             root.currentTab = 0
             root.rtWarningStart = Date.now()
@@ -261,6 +265,8 @@ Rectangle {
         // 修复问题4：停止顺序进度条含停车预警进度
         function onStopWarningStarted() {
             console.log("📡 LogicControlPanel: 收到停车预警开始信号")
+            // ✅ 2026-03-21 [Phase 7.48.73]: 取消之前序列的延迟重置定时器
+            rtStopTimer.stop()
             root.currentTab = 1      // 立即切换到停止顺序Tab
             root.rtPhase = 5         // 5=停车预警中（新增状态）
             root.rtWarningStart = Date.now()
@@ -277,6 +283,7 @@ Rectangle {
         // 停车音频播完后触发，从rtPhase=5切换到rtPhase=4
         function onStopSequenceStarted() {
             console.log("📡 LogicControlPanel: 收到停止序列开始信号")
+            rtStopTimer.stop()  // 取消之前可能残留的延迟重置
             // 旧代码：root.currentTab = 1  // 已在onStopWarningStarted中切换
             root.rtPhase = 4     // 4=停止序列运行中
             root.rtActivatedCount = 0
