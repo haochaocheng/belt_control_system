@@ -868,6 +868,12 @@ void CommonControl::stopWarningPlayback()
         qDebug() << "⏹️ CommonControl: 停止预警播放";
         m_isWarningPlaying = false;
         m_warningTimer->stop();
+        // ✅ 2026-03-21 [Phase 7.48.63]: 清空音频队列，防止残留项目占用位置导致新预警排队播不上
+        // 原因：stopWarningPlayback()之前只 stop() 了 mediaPlayer，但 m_audioQueue 里的旧音频
+        //       仍然保留。下次 startWarningPlayback() 时新音频只能排到队列末尾，10秒计时器到了
+        //       仍在等队列前面的旧音频播完，导致起车预警永远播不出来。
+        m_isPlayingFromQueue = false;
+        m_audioQueue.clear();
         m_mediaPlayer->stop();
         m_currentPlayCount = 0;
         m_currentAudioPath.clear();
