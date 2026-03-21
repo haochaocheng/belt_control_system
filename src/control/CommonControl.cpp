@@ -1044,19 +1044,19 @@ void CommonControl::executeNextDeviceInSequence()
     if (m_currentSequenceIndex < m_currentSequence.size()) {
         // ✅ 2026-03-20 [Phase 7.48.57]: 使用可配置延时（替代固定1000ms）
         // ✅ 2026-03-21 [Phase 7.48.68]: 从设备配置表读取启动延时
-        // ✅ 2026-03-21 [Phase 7.48.70]: 修正延时语义为"前等待"
-        // 旧代码：int delayIndex = m_currentSequenceIndex - 1;  // 上一个设备（刚激活的设备）
-        // 含义：延时属于即将启动的下一个设备，例如"1号制动器启动延时1s"=上一设备完成后等1s再启动制动器
-        int delayIndex = m_currentSequenceIndex;  // 下一个设备（即将激活的设备）
+        // ✅ 2026-03-21 [Phase 7.48.71]: 恢复为"后等待"语义
+        // 含义："张紧控制启动延时=5s"表示张紧激活后等待5秒再启动下一个设备
+        // Phase 7.48.70 的"前等待"导致张紧的5秒延时未被使用（读了制动器的1秒）
+        int delayIndex = m_currentSequenceIndex - 1;  // 当前刚激活的设备
         int delayMs = 1000;  // 默认1秒
         if (m_deviceConfigMgr && delayIndex >= 0 && delayIndex < m_currentSequence.size()) {
             // 从设备配置表读取延时
-            QString nextDevice = m_currentSequence[delayIndex];
+            QString curDevice = m_currentSequence[delayIndex];
             double delaySec = 1.0;
             QRegularExpression motorRe("(\\d+)号电机");
             QRegularExpression brakeRe("(\\d+)号制动器");
-            auto motorMatch = motorRe.match(nextDevice);
-            auto brakeMatch = brakeRe.match(nextDevice);
+            auto motorMatch = motorRe.match(curDevice);
+            auto brakeMatch = brakeRe.match(curDevice);
             if (motorMatch.hasMatch()) {
                 int idx = motorMatch.captured(1).toInt() - 1;
                 QVariantMap cfg = m_deviceConfigMgr->loadMotorConfig(1, idx, 0);
@@ -1065,13 +1065,12 @@ void CommonControl::executeNextDeviceInSequence()
                 int idx = brakeMatch.captured(1).toInt() - 1;
                 QVariantMap cfg = m_deviceConfigMgr->loadBrakeConfig(1, idx);
                 // ✅ 2026-03-21 [Phase 7.48.70]: 启动读松闸延时，停止读抱闸延时
-                // 旧代码：delaySec = cfg.value("release_startup_delay", 1.0).toDouble();
                 if (m_isStartupSequence) {
                     delaySec = cfg.value("release_startup_delay", 1.0).toDouble();
                 } else {
                     delaySec = cfg.value("brake_startup_delay", 1.0).toDouble();
                 }
-            } else if (nextDevice == "张紧控制" || nextDevice == "张紧") {
+            } else if (curDevice == "张紧控制" || curDevice == "张紧") {
                 QVariantMap cfg = m_deviceConfigMgr->loadTensionConfig(1, 0);
                 delaySec = cfg.value("startup_delay", 5).toDouble();
             }
