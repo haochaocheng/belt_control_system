@@ -28,6 +28,13 @@ Rectangle {
     // ✅ 2026-03-20 修复：保存提示状态
     property bool saveSuccess: false
 
+    // ✅ 2026-03-21 [Phase 7.48.64]: 时间轴动态模拟属性
+    property bool isSimulating: false           // 是否正在模拟播放
+    property real simTime: 0.0                  // 当前模拟时间（秒）
+    property real simTotalTime: 1.0             // 总模拟时长（秒）
+    property int  simActivatedCount: 0          // 已激活设备数
+    property var  simActivationTimes: []        // 各设备激活时刻（累计秒数）
+
     // 设备池分组定义
     readonly property var deviceGroups: [
         { name: "电机", color: "#5dade2", devices: ["1号电机", "2号电机", "3号电机", "4号电机", "5号电机", "6号电机", "7号电机", "8号电机"] },
@@ -113,6 +120,29 @@ Rectangle {
         onTriggered: root.saveSuccess = false
     }
 
+    // ✅ 2026-03-21 [Phase 7.48.64]: 模拟播放定时器（100ms = 0.1秒精度）
+    Timer {
+        id: simTimer
+        interval: 100
+        repeat: true
+        onTriggered: {
+            root.simTime = Math.round((root.simTime + 0.1) * 10) / 10
+
+            // 检查需要激活的设备
+            var times = root.simActivationTimes
+            for (var i = 0; i < times.length; i++) {
+                if (root.simTime >= times[i] && root.simActivatedCount <= i) {
+                    root.simActivatedCount = i + 1
+                }
+            }
+
+            // 模拟结束（总时间+最后设备留存1秒）
+            if (root.simTime >= root.simTotalTime + 1.0) {
+                root.stopSimulation()
+            }
+        }
+    }
+
     function addDevice(deviceName) {
         var seq = currentTab === 0 ? startupSeq : stopSeq
         var delays = currentTab === 0 ? startupDelays : stopDelays
@@ -154,6 +184,51 @@ Rectangle {
     function reverseToStop() {
         stopSeq = startupSeq.slice().reverse()
         stopDelays = startupDelays.slice().reverse()
+    }
+
+    // ✅ 2026-03-21 [Phase 7.48.64]: 模拟播放控制
+    function startSimulation() {
+        if (root.currentSeq.length === 0) return
+        var delays = root.currentDelays
+        var times = [0.0]     // 设备0在t=0激活
+        var cumulative = 0.0
+        for (var i = 0; i < delays.length - 1; i++) {
+            cumulative += delays[i]
+            times.push(cumulative)
+        }
+        // 总时长 = 最后一个激活时刻 + 该设备的延时
+        var lastDelay = delays.length > 0 ? (delays[delays.length - 1] || 1.0) : 1.0
+        root.simActivationTimes = times
+        root.simTotalTime = cumulative + lastDelay
+        root.simTime = 0.0
+        root.simActivatedCount = 0
+        root.isSimulating = true
+        simTimer.restart()
+    }
+
+    function stopSimulation() {
+        simTimer.stop()
+        root.isSimulating = false
+        root.simTime = 0.0
+        root.simActivatedCount = 0
+    }
+
+    // 计算游标在 timelineRow 内的 X 坐标（设备i中心 = i*200+60）
+    function getCursorX() {
+        var n = root.currentSeq.length
+        if (n === 0) return -10
+        if (n === 1) return 60
+        var times = root.simActivationTimes
+        if (times.length === 0) return 60
+        for (var i = 0; i < n - 1; i++) {
+            var t0 = times[i]
+            var t1 = times[i + 1]
+            if (root.simTime <= t1) {
+                var progress = t1 > t0 ? Math.min(1.0, (root.simTime - t0) / (t1 - t0)) : 1.0
+                return (i * 200 + 60) + progress * 200
+            }
+        }
+        return (n - 1) * 200 + 60
     }
 
     function isDeviceInCurrentSeq(deviceName) {
@@ -204,7 +279,10 @@ Rectangle {
 
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: root.currentTab = index
+                        onClicked: {
+                            root.stopSimulation()  // 切换Tab时停止模拟
+                            root.currentTab = index
+                        }
                     }
                 }
             }
@@ -223,12 +301,56 @@ Rectangle {
                 spacing: 8
                 visible: root.currentTab < 2
 
-                // 标题
-                Text {
-                    text: root.currentTab === 0 ? "启动流程时间轴" : "停止流程时间轴"
-                    font.pixelSize: 24
-                    font.bold: true
-                    color: root.themeColor
+                // 标题 + 模拟播放控制
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Text {
+                        text: root.currentTab === 0 ? "启动流程时间轴" : "停止流程时间轴"
+                        font.pixelSize: 24
+                        font.bold: true
+                        color: root.themeColor
+                    }
+
+                    // ✅ 2026-03-21 [Phase 7.48.64]: 模拟播放按钮
+                    Rectangle {
+                        width: 120; height: 34; radius: 17
+                        color: root.isSimulating ? "#c0392b" : "#1a4a72"
+                        border.color: root.isSimulating ? "#ff4757" : "#00aaff"
+                        border.width: 2
+                        visible: root.currentSeq.length > 0
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Text {
+                                text: root.isSimulating ? "⏹" : "▶"
+                                font.pixelSize: 16; color: "white"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: root.isSimulating ? "停止" : "模拟"
+                                font.pixelSize: 18; color: "white"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: root.isSimulating ? root.stopSimulation() : root.startSimulation()
+                        }
+                    }
+
+                    // 时间显示
+                    Text {
+                        visible: root.isSimulating
+                        text: "⏱ " + root.simTime.toFixed(1) + "s / " + root.simTotalTime.toFixed(1) + "s"
+                        font.pixelSize: 20
+                        font.bold: true
+                        color: "#ffdd00"
+                    }
+
+                    Item { Layout.fillWidth: true }
                 }
 
                 // ========== 水平时间轴 ==========
@@ -267,9 +389,18 @@ Rectangle {
                                         height: 140
                                         radius: 8
                                         // ✅ 2026-03-20 修复：nodeMouseArea移到最前声明，z值最低，不会遮挡按钮
-                                        color: nodeMouseArea.containsMouse ? "#2a5080" : "#1e3a5f"
-                                        border.color: root.themeColor
-                                        border.width: 2
+                                        // ✅ 2026-03-21 [Phase 7.48.64]: 模拟激活状态颜色
+                                        color: {
+                                            if (root.isSimulating && index < root.simActivatedCount) {
+                                                return index === root.simActivatedCount - 1
+                                                    ? "#004d22"  // 刚激活（当前设备）
+                                                    : "#002211"  // 已激活（前序设备）
+                                            }
+                                            return nodeMouseArea.containsMouse ? "#2a5080" : "#1e3a5f"
+                                        }
+                                        border.color: root.isSimulating && index < root.simActivatedCount
+                                            ? "#00ff88" : root.themeColor
+                                        border.width: root.isSimulating && index === root.simActivatedCount - 1 ? 3 : 2
 
                                         // 背景点击区域 - 声明在最前，z值最低，按钮可以正常接收事件
                                         MouseArea {
@@ -345,9 +476,11 @@ Rectangle {
 
                                     // 连接箭头 + 延时标签（最后一个不显示）
                                     Item {
+                                        id: arrowItem
                                         width: 80
                                         height: 140
                                         visible: index < root.currentSeq.length - 1
+                                        clip: true
 
                                         // 箭头线
                                         Rectangle {
@@ -370,6 +503,26 @@ Rectangle {
                                             color: {
                                                 var d = root.currentDelays[index] || 1.0
                                                 return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
+                                            }
+                                        }
+                                        // ✅ 2026-03-21 [Phase 7.48.64]: 时间流子弹（沿箭头移动的亮块）
+                                        Rectangle {
+                                            id: timeBullet
+                                            width: 14; height: 6; radius: 3
+                                            color: "#ffffff"
+                                            opacity: {
+                                                // 仅在该箭头的"流动时间段"内显示（设备i已激活但i+1未激活）
+                                                return root.isSimulating && root.simActivatedCount === index + 1 ? 0.9 : 0.0
+                                            }
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            x: {
+                                                var lineWidth = arrowItem.width - 10  // 70px
+                                                var t0 = root.simActivationTimes.length > index ? root.simActivationTimes[index] : 0
+                                                var delay = root.currentDelays[index] || 1.0
+                                                var progress = delay > 0
+                                                    ? Math.min(1.0, Math.max(0.0, (root.simTime - t0) / delay))
+                                                    : 1.0
+                                                return 5 + progress * (lineWidth - timeBullet.width)
                                             }
                                         }
                                         // 延时标签
@@ -404,9 +557,68 @@ Rectangle {
                                 }
                             }
                         }
+
+                        // ✅ 2026-03-21 [Phase 7.48.64]: 时间游标（跟随模拟时间移动的垂直指示线）
+                        Item {
+                            id: timeCursor
+                            y: 0
+                            width: 2
+                            // 游标高度 = Flickable可见高度（减去margin）
+                            height: timelineFlickable.height
+                            // x = 该时刻设备节点的中心位置（节点i中心 = i*200+60，行offset=0）
+                            // 注意：必须在绑定中直接引用 root.simTime，才能触发重新求值
+                            x: { var _t = root.simTime; var _n = root.simActivatedCount; return root.getCursorX() - 1 }
+                            z: 20
+                            visible: root.isSimulating
+
+                            // 主竖线
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "#ffdd00"
+                                opacity: 0.85
+                            }
+
+                            // 顶部菱形指示器
+                            Rectangle {
+                                width: 12; height: 12
+                                rotation: 45
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.top: parent.top
+                                anchors.topMargin: 2
+                                color: "#ffdd00"
+                            }
+
+                            // 底部菱形
+                            Rectangle {
+                                width: 8; height: 8
+                                rotation: 45
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.bottom: parent.bottom
+                                anchors.bottomMargin: 2
+                                color: "#ffdd00"
+                            }
+                        }
                     }
 
-                    // 空状态提示
+                    // 自动跟随游标滚动
+                    Connections {
+                        target: root
+                        function onSimTimeChanged() {
+                            if (root.isSimulating) {
+                                var cx = root.getCursorX()
+                                var visibleLeft = timelineFlickable.contentX
+                                var visibleRight = visibleLeft + timelineFlickable.width
+                                // 若游标超出右侧可见区，自动滚动
+                                if (cx > visibleRight - 40) {
+                                    timelineFlickable.contentX = Math.min(
+                                        cx - timelineFlickable.width / 2,
+                                        timelineFlickable.contentWidth - timelineFlickable.width
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Text {
                         anchors.centerIn: parent
                         text: "暂无设备，请从下方设备池添加"

@@ -1373,17 +1373,32 @@ QString CommonControl::getDeviceFailureAudioPath(const QString &deviceName)
         possibleNames << QString("%1运行失败.wav").arg(deviceName);
     }
 
-    // 在 AUDIO/<皮带号>#PD 目录下查找音频文件
+    // ✅ 2026-03-21 [Phase 7.48.64]: 先在数据目录（容器挂载卷）中查找运行失败音频
+    // 原因：getAudioPath()已在Phase 7.48.62中添加了数据目录支持，但getDeviceFailureAudioPath()
+    //       遗漏了这一步，导致/home/linaro/belt-control-data/audio/中的音频无法被找到
+    QString dataBaseDir = DataPathConfig::getAudioBaseDirectory();
+    QString dataFolder = QString("%1/%2").arg(dataBaseDir, folderName);
+    for (const QString &fileName : possibleNames) {
+        QString audioPath = QString("%1/%2").arg(dataFolder, fileName);
+        if (QFile::exists(audioPath)) {
+            qDebug() << "✅ CommonControl: 找到运行失败音频（数据目录）:" << audioPath;
+            return audioPath;
+        }
+    }
+    qDebug() << "⚠️  CommonControl: 数据目录未找到运行失败音频:" << dataFolder;
+
+    // 在 AUDIO/<皮带号>#PD 目录下查找音频文件（兜底）
     for (const QString &fileName : possibleNames) {
         QString audioPath = QString("%1/AUDIO/%2/%3").arg(appDir, folderName, fileName);
         if (QFile::exists(audioPath)) {
-            qDebug() << "✅ CommonControl: 找到运行失败音频:" << audioPath;
+            qDebug() << "✅ CommonControl: 找到运行失败音频（应用目录）:" << audioPath;
             return audioPath;
         }
     }
 
-    qDebug() << "⚠️  CommonControl: 在以下位置未找到运行失败音频:";
-    qDebug() << "   目录:" << QString("%1/AUDIO/%2/").arg(appDir, folderName);
+    qDebug() << "⚠️  CommonControl: 在以下位置均未找到运行失败音频:";
+    qDebug() << "   数据目录:" << dataFolder << "/";
+    qDebug() << "   应用目录:" << QString("%1/AUDIO/%2/").arg(appDir, folderName);
     qDebug() << "   尝试的文件名:" << possibleNames.join(", ");
 
     return QString();
