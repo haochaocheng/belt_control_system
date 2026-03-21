@@ -662,6 +662,11 @@ void CommonControl::onPlaybackFinished()
         // 停车音频播放完成
         qDebug() << "✅ CommonControl: 停车音频播放完成";
         m_isStopAudioPlaying = false;
+        // ✅ 2026-03-21 [Phase 7.48.70]: 重置音频队列状态，防止后续playAudio()入队后无法启动播放
+        // 原因：stop音频播放完成后 m_isPlayingFromQueue 仍为 true，
+        //       下次按R键 playAudio() 只入队不播放，导致第2/3次R键无声音
+        m_isPlayingFromQueue = false;
+        m_audioQueue.clear();
 
         // 自动停止设备序列
         qDebug() << "🔄 CommonControl: 停车音频结束，自动停止设备序列";
@@ -684,6 +689,8 @@ void CommonControl::onPlaybackFinished()
 
             if (m_currentPlayCount < m_systemConfig->warningPlayCount()) {
                 // 继续播放 - 添加300ms延迟确保媒体播放器准备好
+                // ✅ 2026-03-21 [Phase 7.48.70]: 重置队列状态后再排队下一次
+                m_isPlayingFromQueue = false;
                 QTimer::singleShot(300, this, &CommonControl::playWarningOnce);
             } else {
                 // 播放完成
@@ -700,10 +707,17 @@ void CommonControl::onPlaybackFinished()
             // 按时间模式：检查定时器是否还在运行，继续播放
             if (m_warningTimer->isActive()) {
                 qDebug() << "🔁 CommonControl: 定时器仍在运行，继续播放预警";
+                // ✅ 2026-03-21 [Phase 7.48.70]: 重置队列状态后再排队下一次播放
+                // 原因：ByTime模式下每轮播完一次后 m_isPlayingFromQueue 仍为 true，
+                //       playWarningOnce→playAudio 只入队不启动，导致定时器期间只播一次
+                m_isPlayingFromQueue = false;
                 // 添加300ms延迟确保媒体播放器准备好
                 QTimer::singleShot(300, this, &CommonControl::playWarningOnce);
             } else {
                 qDebug() << "⏸️ CommonControl: 定时器已停止，不再播放";
+                // ✅ 2026-03-21 [Phase 7.48.70]: 定时器停止时也需要重置队列状态
+                m_isPlayingFromQueue = false;
+                m_audioQueue.clear();
             }
         }
     } else {
@@ -997,6 +1011,9 @@ void CommonControl::stopDeviceSequence()
     m_isSequenceRunning = true;
     m_currentSequenceIndex = 0;
 
+    // ✅ 2026-03-21 [Phase 7.48.70]: 发出停止序列开始信号（用于QML时间轴可视化停车过程）
+    emit stopSequenceStarted();
+
     // 立即执行第一个设备
     executeNextDeviceInSequence();
 }
@@ -1027,17 +1044,19 @@ void CommonControl::executeNextDeviceInSequence()
     if (m_currentSequenceIndex < m_currentSequence.size()) {
         // ✅ 2026-03-20 [Phase 7.48.57]: 使用可配置延时（替代固定1000ms）
         // ✅ 2026-03-21 [Phase 7.48.68]: 从设备配置表读取启动延时
-        // 旧代码：m_deviceSequenceTimer->start(1000);
+        // ✅ 2026-03-21 [Phase 7.48.70]: 修正延时语义为"前等待"
+        // 旧代码：int delayIndex = m_currentSequenceIndex - 1;  // 上一个设备（刚激活的设备）
+        // 含义：延时属于即将启动的下一个设备，例如"1号制动器启动延时1s"=上一设备完成后等1s再启动制动器
+        int delayIndex = m_currentSequenceIndex;  // 下一个设备（即将激活的设备）
         int delayMs = 1000;  // 默认1秒
-        int delayIndex = m_currentSequenceIndex - 1;  // 上一个设备（刚激活的设备）
         if (m_deviceConfigMgr && delayIndex >= 0 && delayIndex < m_currentSequence.size()) {
             // 从设备配置表读取延时
-            QString prevDevice = m_currentSequence[delayIndex];
+            QString nextDevice = m_currentSequence[delayIndex];
             double delaySec = 1.0;
             QRegularExpression motorRe("(\\d+)号电机");
             QRegularExpression brakeRe("(\\d+)号制动器");
-            auto motorMatch = motorRe.match(prevDevice);
-            auto brakeMatch = brakeRe.match(prevDevice);
+            auto motorMatch = motorRe.match(nextDevice);
+            auto brakeMatch = brakeRe.match(nextDevice);
             if (motorMatch.hasMatch()) {
                 int idx = motorMatch.captured(1).toInt() - 1;
                 QVariantMap cfg = m_deviceConfigMgr->loadMotorConfig(1, idx, 0);
@@ -1045,8 +1064,14 @@ void CommonControl::executeNextDeviceInSequence()
             } else if (brakeMatch.hasMatch()) {
                 int idx = brakeMatch.captured(1).toInt() - 1;
                 QVariantMap cfg = m_deviceConfigMgr->loadBrakeConfig(1, idx);
-                delaySec = cfg.value("release_startup_delay", 1.0).toDouble();
-            } else if (prevDevice == "张紧控制" || prevDevice == "张紧") {
+                // ✅ 2026-03-21 [Phase 7.48.70]: 启动读松闸延时，停止读抱闸延时
+                // 旧代码：delaySec = cfg.value("release_startup_delay", 1.0).toDouble();
+                if (m_isStartupSequence) {
+                    delaySec = cfg.value("release_startup_delay", 1.0).toDouble();
+                } else {
+                    delaySec = cfg.value("brake_startup_delay", 1.0).toDouble();
+                }
+            } else if (nextDevice == "张紧控制" || nextDevice == "张紧") {
                 QVariantMap cfg = m_deviceConfigMgr->loadTensionConfig(1, 0);
                 delaySec = cfg.value("startup_delay", 5).toDouble();
             }

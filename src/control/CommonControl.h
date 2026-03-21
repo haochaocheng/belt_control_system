@@ -205,6 +205,8 @@ signals:
     // ✅ 2026-03-21 [Phase 7.48.66]: 预警开始信号（用于时间轴实时可视化）
     void warningStarted();                    // 预警播放开始（运行键按下后立即发出）
     void deviceStatusChanged(const QString &deviceName, bool isRunning);  // 设备状态改变
+    // ✅ 2026-03-21 [Phase 7.48.70]: 停止序列开始信号（用于时间轴实时可视化停车过程）
+    void stopSequenceStarted();   // 停止序列开始执行
 
     // ✅ 2026-02-21 22:45: 添加 TTS 初始化进度信号
     // 原因：PaddleSpeech 初始化需要 5-10 分钟，QML 需要显示进度

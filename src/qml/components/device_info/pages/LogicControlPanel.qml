@@ -33,7 +33,8 @@ Rectangle {
     // ✅ 2026-03-21 [Phase 7.48.66]: 实时时间轴跟踪属性（替代原模拟播放）
     // 原因：用户要求时间轴根据实际设备启动信号实时显示，不是模拟播放
     property bool isRealtimeActive: false       // 是否正在实时跟踪
-    property int  rtPhase: 0                    // 0=空闲, 1=预警中, 2=设备序列运行中
+    // ✅ 2026-03-21 [Phase 7.48.70]: 新增 rtPhase=4 停止序列运行中
+    property int  rtPhase: 0                    // 0=空闲, 1=预警中, 2=启动序列运行中, 3=故障, 4=停止序列运行中
     property int  rtActivatedCount: 0           // 已激活设备数
     property double rtWarningStart: 0           // 预警开始时间戳(ms)
     property double rtSequenceStart: 0          // 设备序列开始时间戳(ms)
@@ -104,7 +105,9 @@ Rectangle {
 
         var tmpStop = []
         for (var j = 0; j < stopSeq.length; j++) {
-            tmpStop.push(readDeviceStartupDelay(stopSeq[j]))
+            // ✅ 2026-03-21 [Phase 7.48.70]: 停止延时独立读取（制动器用brake_startup_delay）
+            // 旧代码：tmpStop.push(readDeviceStartupDelay(stopSeq[j]))
+            tmpStop.push(readDeviceStopDelay(stopSeq[j]))
         }
         stopDelays = tmpStop
 
@@ -135,6 +138,35 @@ Rectangle {
             var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, 0)
             if (tensionCfg && tensionCfg["startup_delay"] !== undefined) return Number(tensionCfg["startup_delay"])
             return 5  // 张紧默认5秒
+        }
+        return defaultDelay
+    }
+
+    // ✅ 2026-03-21 [Phase 7.48.70]: 根据设备名读取其停止延时（与启动延时独立）
+    // 区别：制动器启动=松闸(release_startup_delay)，停止=抱闸(brake_startup_delay)
+    function readDeviceStopDelay(deviceName) {
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return defaultDelay
+        // 电机：停止延时与启动延时相同
+        var motorMatch = deviceName.match(/(\d+)号电机/)
+        if (motorMatch) {
+            var motorIdx = parseInt(motorMatch[1]) - 1
+            var motorCfg = deviceConfigMgr.loadMotorConfig(root.deviceId, motorIdx, 0)
+            if (motorCfg && motorCfg["startup_delay"] !== undefined) return Number(motorCfg["startup_delay"])
+            return 8
+        }
+        // 制动器：停止时读 brake_startup_delay（抱闸延时）
+        var brakeMatch = deviceName.match(/(\d+)号制动器/)
+        if (brakeMatch) {
+            var brakeIdx = parseInt(brakeMatch[1]) - 1
+            var brakeCfg = deviceConfigMgr.loadBrakeConfig(root.deviceId, brakeIdx)
+            if (brakeCfg && brakeCfg["brake_startup_delay"] !== undefined) return Number(brakeCfg["brake_startup_delay"])
+            return 1.0
+        }
+        // 张紧控制：停止延时与启动延时相同
+        if (deviceName === "张紧控制" || deviceName === "张紧") {
+            var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, 0)
+            if (tensionCfg && tensionCfg["startup_delay"] !== undefined) return Number(tensionCfg["startup_delay"])
+            return 5
         }
         return defaultDelay
     }
@@ -191,8 +223,8 @@ Rectangle {
             if (root.rtPhase === 1) {
                 // 预警阶段：计算预警已过时间
                 root.rtElapsed = (Date.now() - root.rtWarningStart) / 1000.0
-            } else if (root.rtPhase === 2) {
-                // 设备序列阶段：计算序列已过时间
+            } else if (root.rtPhase === 2 || root.rtPhase === 4) {
+                // 设备序列阶段（启动or停止）：计算序列已过时间
                 root.rtElapsed = (Date.now() - root.rtSequenceStart) / 1000.0
             }
         }
@@ -221,11 +253,49 @@ Rectangle {
             root.rtElapsed = 0
         }
 
+        // ✅ 2026-03-21 [Phase 7.48.70]: 监听停止序列开始信号
+        // 原因：停车顺序需要像启动顺序一样有时间轴可视化
+        function onStopSequenceStarted() {
+            console.log("📡 LogicControlPanel: 收到停止序列开始信号")
+            root.currentTab = 1  // 切换到停止顺序Tab
+            root.rtPhase = 4     // 4=停止序列运行中
+            root.rtActivatedCount = 0
+            root.rtSequenceStart = Date.now()
+            root.rtDeviceStartTimes = []
+            root.rtElapsed = 0
+            root.isRealtimeActive = true
+            rtRefreshTimer.start()
+        }
+
         function onDeviceStatusChanged(deviceName, isRunning) {
             if (!root.isRealtimeActive || root.rtPhase < 2) return
             if (!isRunning) {
-                // 设备停止时（停止序列或故障停止），结束实时跟踪
-                // 仅在所有设备都停止时才结束
+                // ✅ 2026-03-21 [Phase 7.48.70]: 处理停止序列设备停用事件
+                // 旧代码：直接 return，导致停车顺序无可视化
+                if (root.rtPhase !== 4) return  // 4=停止序列运行中
+                // 在停止序列中查找设备
+                var stopIdx = root.stopSeq.indexOf(deviceName)
+                if (stopIdx < 0) {
+                    var reverseMap2 = { "张紧": "张紧控制", "抱闸": "1号制动器" }
+                    var mappedName2 = reverseMap2[deviceName]
+                    if (mappedName2) stopIdx = root.stopSeq.indexOf(mappedName2)
+                    var forwardMap2 = { "张紧控制": "张紧", "1号制动器": "抱闸" }
+                    var fwName2 = forwardMap2[deviceName]
+                    if (stopIdx < 0 && fwName2) stopIdx = root.stopSeq.indexOf(fwName2)
+                }
+                if (stopIdx < 0) return
+
+                var times2 = root.rtDeviceStartTimes.slice()
+                while (times2.length <= stopIdx) times2.push(0)
+                times2[stopIdx] = Date.now()
+                root.rtDeviceStartTimes = times2
+                root.rtActivatedCount = stopIdx + 1
+                console.log("📡 LogicControlPanel: 设备停用 -", deviceName, "序号:", stopIdx + 1)
+
+                // 最后一个设备停用后，3秒后结束跟踪并重置
+                if (stopIdx === root.stopSeq.length - 1) {
+                    rtStopTimer.restart()
+                }
                 return
             }
             // 检查设备是否在当前启动序列中
@@ -258,13 +328,27 @@ Rectangle {
         }
     }
 
-    // 延迟停止实时跟踪（最后设备激活后3秒）
+    // 延迟停止实时跟踪（最后设备激活/停用后3秒）
     Timer {
         id: rtStopTimer
         interval: 3000
         onTriggered: {
             rtRefreshTimer.stop()
-            // 保持最终状态显示，不重置（用户切换Tab时重置）
+            // ✅ 2026-03-21 [Phase 7.48.70]: 停止序列完成后重置所有颜色
+            // 旧代码：保持最终状态显示，不重置（用户切换Tab时重置）
+            // 修复问题3：停止后设备方框还是浅蓝/绿色填充
+            if (root.rtPhase === 4) {
+                // 停止序列完成，完全重置
+                root.isRealtimeActive = false
+                root.rtPhase = 0
+                root.rtActivatedCount = 0
+                root.rtDeviceStartTimes = []
+                root.rtElapsed = 0
+                root.rtFaultDevice = ""
+                root.currentTab = 0  // 切回启动顺序Tab
+                console.log("📡 LogicControlPanel: 停止序列完成，已重置所有状态")
+            }
+            // 启动序列完成后保持显示（用户切换Tab时重置）
         }
     }
 
@@ -363,7 +447,10 @@ Rectangle {
         var startT = root.rtDeviceStartTimes.length > deviceIndex ? root.rtDeviceStartTimes[deviceIndex] : 0
         if (startT <= 0) return 0.0
         var elapsed = (Date.now() - startT) / 1000.0
-        var delay = root.currentDelays[deviceIndex] || 1.0
+        // ✅ 2026-03-21 [Phase 7.48.70]: 修正延时语义为"前等待"
+        // 箭头在设备deviceIndex和deviceIndex+1之间，延时属于下一个设备(deviceIndex+1)
+        // 旧代码：var delay = root.currentDelays[deviceIndex] || 1.0
+        var delay = root.currentDelays[deviceIndex + 1] || 1.0
         return Math.min(1.0, elapsed / delay)
     }
 
@@ -626,6 +713,12 @@ Rectangle {
                                 width: 90; height: 140
                                 visible: root.currentTab === 0 && root.currentSeq.length > 0
 
+                                // ✅ 2026-03-21 [Phase 7.48.70]: 延时颜色（第一个设备的延时）
+                                property color prefixDelayColor: {
+                                    var d = root.currentDelays[0] || 1.0
+                                    return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
+                                }
+
                                 // 进度条轨道
                                 Rectangle {
                                     anchors.verticalCenter: parent.verticalCenter
@@ -644,6 +737,24 @@ Rectangle {
                                         color: root.themeColor
                                         opacity: 0.9
                                         Behavior on width { NumberAnimation { duration: 300 } }
+                                    }
+                                }
+
+                                // ✅ 2026-03-21 [Phase 7.48.70]: 延时标签（第一个设备的延时）
+                                // 修复问题4：张紧控制进度条上没有延时时间
+                                Rectangle {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.verticalCenterOffset: -14
+                                    width: 56; height: 24; radius: 12
+                                    color: "#0d1520"
+                                    border.color: parent.prefixDelayColor; border.width: 1
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: (root.currentDelays[0] || 1.0).toFixed(1) + "s"
+                                        font.pixelSize: 14; font.bold: true
+                                        color: parent.parent.prefixDelayColor
                                     }
                                 }
 
@@ -683,6 +794,12 @@ Rectangle {
                                                 // 故障后所有设备恢复默认颜色，不再显示绿色
                                                 return nodeMouseArea.containsMouse ? "#2a5080" : "#1e3a5f"
                                             }
+                                            // ✅ 2026-03-21 [Phase 7.48.70]: 停止序列用红色调，启动序列用绿色调
+                                            if (root.isRealtimeActive && root.rtPhase === 4 && root.currentTab === 1 && index < root.rtActivatedCount) {
+                                                return index === root.rtActivatedCount - 1
+                                                    ? "#663300"  // 刚停用（当前设备）- 暗橙色
+                                                    : "#442200"  // 已停用（前序设备）- 更暗
+                                            }
                                             if (root.isRealtimeActive && root.currentTab === 0 && index < root.rtActivatedCount) {
                                                 return index === root.rtActivatedCount - 1
                                                     ? "#006633"  // 刚激活（当前设备）- 从#004d22调亮
@@ -698,6 +815,9 @@ Rectangle {
                                                     return "#ff4757"
                                                 return root.themeColor
                                             }
+                                            // ✅ 2026-03-21 [Phase 7.48.70]: 停止序列边框也要高亮
+                                            if (root.isRealtimeActive && root.rtPhase === 4 && root.currentTab === 1 && index < root.rtActivatedCount)
+                                                return "#ff4757"  // 红色边框表示已停用
                                             return root.isRealtimeActive && root.currentTab === 0 && index < root.rtActivatedCount
                                                 ? "#00ff88" : root.themeColor
                                         }
@@ -705,6 +825,8 @@ Rectangle {
                                             // ✅ 2026-03-21 [Phase 7.48.69]: 故障时只有故障设备加粗边框
                                             if (root.rtPhase === 3 && root.rtFaultDevice === (root.currentSeq[index] || "")) return 3
                                             if (root.rtPhase === 3) return 2  // 非故障设备恢复正常边框
+                                            // ✅ 2026-03-21 [Phase 7.48.70]: 停止序列当前设备加粗边框
+                                            if (root.isRealtimeActive && root.rtPhase === 4 && root.currentTab === 1 && index === root.rtActivatedCount - 1) return 3
                                             return root.isRealtimeActive && root.currentTab === 0 && index === root.rtActivatedCount - 1 ? 3 : 2
                                         }
 
@@ -800,8 +922,11 @@ Rectangle {
                                         visible: index < root.currentSeq.length - 1
 
                                         // 延时颜色计算函数
+                                        // ✅ 2026-03-21 [Phase 7.48.70]: 修正延时语义为"前等待"
+                                        // 箭头在设备index和index+1之间，延时属于即将启动的下一个设备(index+1)
+                                        // 旧代码：var d = root.currentDelays[index] || 1.0
                                         property color delayColor: {
-                                            var d = root.currentDelays[index] || 1.0
+                                            var d = root.currentDelays[index + 1] || 1.0
                                             return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
                                         }
 
@@ -815,7 +940,7 @@ Rectangle {
                                             color: "#1a2332"
                                             border.color: "#2c3e50"; border.width: 1
 
-                                            // 进度条填充（实时设备激活进度）
+                                            // 进度条填充（实时设备激活/停用进度）
                                             Rectangle {
                                                 id: progressFill
                                                 anchors.left: parent.left; anchors.leftMargin: 1
@@ -823,10 +948,15 @@ Rectangle {
                                                 height: parent.height - 2; radius: 3
                                                 width: {
                                                     var _e = root.rtElapsed  // 强制绑定刷新
-                                                    if (!root.isRealtimeActive || root.currentTab !== 0) return 0
-                                                    // 设备已通过此箭头（下一设备已激活）
+                                                    // ✅ 2026-03-21 [Phase 7.48.70]: 同时支持启动(tab0)和停止(tab1)序列
+                                                    // 旧代码：if (!root.isRealtimeActive || root.currentTab !== 0) return 0
+                                                    if (!root.isRealtimeActive) return 0
+                                                    var isActiveTab = (root.currentTab === 0 && root.rtPhase === 2) ||
+                                                                      (root.currentTab === 1 && root.rtPhase === 4)
+                                                    if (!isActiveTab) return 0
+                                                    // 设备已通过此箭头（下一设备已激活/停用）
                                                     if (index + 1 < root.rtActivatedCount) return parent.width - 2
-                                                    // 当前设备已激活，等待下一设备
+                                                    // 当前设备已激活/停用，等待下一设备
                                                     if (index < root.rtActivatedCount) {
                                                         var progress = root.getArrowProgress(index)
                                                         return progress * (parent.width - 2)
@@ -844,9 +974,13 @@ Rectangle {
                                                 anchors.fill: parent; radius: parent.radius
                                                 color: "transparent"
                                                 border.color: arrowItem.delayColor
-                                                border.width: root.isRealtimeActive && root.currentTab === 0
-                                                    && root.rtActivatedCount === index + 1
-                                                    && root.rtActivatedCount < root.startupSeq.length ? 1 : 0
+                                                // ✅ 2026-03-21 [Phase 7.48.70]: 同时支持启动和停止序列发光
+                                                border.width: {
+                                                    if (!root.isRealtimeActive || root.rtActivatedCount !== index + 1) return 0
+                                                    if (root.currentTab === 0 && root.rtPhase === 2 && root.rtActivatedCount < root.startupSeq.length) return 1
+                                                    if (root.currentTab === 1 && root.rtPhase === 4 && root.rtActivatedCount < root.stopSeq.length) return 1
+                                                    return 0
+                                                }
                                                 opacity: 0.6
                                             }
                                         }
@@ -871,7 +1005,9 @@ Rectangle {
 
                                             Text {
                                                 anchors.centerIn: parent
-                                                text: (root.currentDelays[index] || 1.0).toFixed(1) + "s"
+                                                // ✅ 2026-03-21 [Phase 7.48.70]: 修正延时语义为"前等待"
+                                                // 旧代码：(root.currentDelays[index] || 1.0).toFixed(1) + "s"
+                                                text: (root.currentDelays[index + 1] || 1.0).toFixed(1) + "s"
                                                 font.pixelSize: 14; font.bold: true
                                                 color: arrowItem.delayColor
                                             }
@@ -879,8 +1015,10 @@ Rectangle {
                                             MouseArea {
                                                 anchors.fill: parent
                                                 onClicked: {
-                                                    editPopup.editIndex = index
-                                                    editPopup.editDelay = root.currentDelays[index] || 1.0
+                                                    // ✅ 2026-03-21 [Phase 7.48.70]: 编辑index+1设备的延时
+                                                    // 旧代码：editPopup.editIndex = index
+                                                    editPopup.editIndex = index + 1
+                                                    editPopup.editDelay = root.currentDelays[index + 1] || 1.0
                                                     editPopup.open()
                                                 }
                                             }
