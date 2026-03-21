@@ -1730,6 +1730,22 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移027已执行过，跳过";
     }
+
+    // ✅ 2026-03-21 [Phase 7.48.66]: 迁移028 - 修复张紧控制反馈默认值
+    // 原因：initDefaultTensionConfigs 创建记录时 use_feedback=0，导致启动序列中
+    //       张紧设备的反馈检测从未启动，运行失败音频无法播放
+    query.exec("SELECT version FROM schema_migrations WHERE version = '028_fix_tension_feedback_default'");
+    if (!query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移028: 修复张紧控制反馈默认值...";
+        QSqlQuery fix(m_database);
+        // 将所有张紧配置的 use_feedback 从 0 改为 1
+        fix.exec("UPDATE device_tension_config SET use_feedback = 1 WHERE use_feedback = 0");
+        int updated = fix.numRowsAffected();
+        qDebug() << "  ✅ 迁移028: 更新" << updated << "条张紧配置的 use_feedback 为1";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('028_fix_tension_feedback_default')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移028已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -3063,8 +3079,9 @@ bool DeviceConfigManager::initDefaultTensionConfigs(int deviceId)
              output_channel, use_feedback, feedback_channel, feedback_timeout,
              use_text_to_speech, tts_text, warning_voice, failure_voice)
             VALUES (?, ?, 1, ?, 'kN', '上限报警', 10.0, '模拟量模块1', 1, -1, 5.0,
-                    0, 100.0, 0.0, 100.0, 50.0, 0, 0, 0, 10, 0, ?, '', '')
+                    0, 100.0, 0.0, 100.0, 50.0, 0, 1, 0, 10, 0, ?, '', '')
         )");
+        // ✅ 2026-03-21 [Phase 7.48.66]: use_feedback 改为 1（原来是0，导致反馈检测不启动）
         query.addBindValue(deviceId);
         query.addBindValue(tensionIndex);
         query.addBindValue(tensionName);

@@ -517,6 +517,8 @@ void CommonControl::startBelt(int beltNumber)
     }
 
     // 使用预警播放模式
+    // ✅ 2026-03-21 [Phase 7.48.66]: 发出预警开始信号（时间轴实时可视化使用）
+    emit warningStarted();
     startWarningPlayback(beltNumber);
 }
 

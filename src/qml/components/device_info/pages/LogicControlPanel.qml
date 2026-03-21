@@ -28,12 +28,15 @@ Rectangle {
     // ✅ 2026-03-20 修复：保存提示状态
     property bool saveSuccess: false
 
-    // ✅ 2026-03-21 [Phase 7.48.64]: 时间轴动态模拟属性
-    property bool isSimulating: false           // 是否正在模拟播放
-    property real simTime: 0.0                  // 当前模拟时间（秒）
-    property real simTotalTime: 1.0             // 总模拟时长（秒）
-    property int  simActivatedCount: 0          // 已激活设备数
-    property var  simActivationTimes: []        // 各设备激活时刻（累计秒数）
+    // ✅ 2026-03-21 [Phase 7.48.66]: 实时时间轴跟踪属性（替代原模拟播放）
+    // 原因：用户要求时间轴根据实际设备启动信号实时显示，不是模拟播放
+    property bool isRealtimeActive: false       // 是否正在实时跟踪
+    property int  rtPhase: 0                    // 0=空闲, 1=预警中, 2=设备序列运行中
+    property int  rtActivatedCount: 0           // 已激活设备数
+    property double rtWarningStart: 0           // 预警开始时间戳(ms)
+    property double rtSequenceStart: 0          // 设备序列开始时间戳(ms)
+    property var  rtDeviceStartTimes: []        // 各设备激活时间戳列表(ms)
+    property double rtElapsed: 0                // 当前阶段已经过的时间(秒)，由刷新定时器更新
 
     // 设备池分组定义
     readonly property var deviceGroups: [
@@ -120,26 +123,89 @@ Rectangle {
         onTriggered: root.saveSuccess = false
     }
 
-    // ✅ 2026-03-21 [Phase 7.48.64]: 模拟播放定时器（100ms = 0.1秒精度）
+    // ✅ 2026-03-21 [Phase 7.48.66]: 实时显示刷新定时器（仅用于更新UI动画，不驱动逻辑）
     Timer {
-        id: simTimer
+        id: rtRefreshTimer
         interval: 100
         repeat: true
         onTriggered: {
-            root.simTime = Math.round((root.simTime + 0.1) * 10) / 10
-
-            // 检查需要激活的设备
-            var times = root.simActivationTimes
-            for (var i = 0; i < times.length; i++) {
-                if (root.simTime >= times[i] && root.simActivatedCount <= i) {
-                    root.simActivatedCount = i + 1
-                }
+            if (root.rtPhase === 1) {
+                // 预警阶段：计算预警已过时间
+                root.rtElapsed = (Date.now() - root.rtWarningStart) / 1000.0
+            } else if (root.rtPhase === 2) {
+                // 设备序列阶段：计算序列已过时间
+                root.rtElapsed = (Date.now() - root.rtSequenceStart) / 1000.0
             }
+        }
+    }
 
-            // 模拟结束（总时间+最后设备留存1秒）
-            if (root.simTime >= root.simTotalTime + 1.0) {
-                root.stopSimulation()
+    // ✅ 2026-03-21 [Phase 7.48.66]: 监听 CommonControl 实时信号
+    Connections {
+        target: typeof commonControl !== "undefined" ? commonControl : null
+
+        function onWarningStarted() {
+            console.log("📡 LogicControlPanel: 收到预警开始信号")
+            root.rtWarningStart = Date.now()
+            root.rtSequenceStart = 0
+            root.rtDeviceStartTimes = []
+            root.rtActivatedCount = 0
+            root.rtPhase = 1
+            root.rtElapsed = 0
+            root.isRealtimeActive = true
+            rtRefreshTimer.start()
+        }
+
+        function onWarningPlaybackFinished() {
+            console.log("📡 LogicControlPanel: 收到预警结束信号")
+            root.rtPhase = 2
+            root.rtSequenceStart = Date.now()
+            root.rtElapsed = 0
+        }
+
+        function onDeviceStatusChanged(deviceName, isRunning) {
+            if (!root.isRealtimeActive || root.rtPhase < 2) return
+            if (!isRunning) {
+                // 设备停止时（停止序列或故障停止），结束实时跟踪
+                // 仅在所有设备都停止时才结束
+                return
             }
+            // 检查设备是否在当前启动序列中
+            var seq = root.startupSeq
+            var idx = seq.indexOf(deviceName)
+            // 名称映射：启动序列可能用旧名称
+            if (idx < 0) {
+                // 尝试反向映射："张紧" → "张紧控制"
+                var reverseMap = { "张紧": "张紧控制", "抱闸": "1号制动器" }
+                var mappedName = reverseMap[deviceName]
+                if (mappedName) idx = seq.indexOf(mappedName)
+                // 也尝试正向映射："张紧控制" → "张紧"
+                var forwardMap = { "张紧控制": "张紧", "1号制动器": "抱闸" }
+                var fwName = forwardMap[deviceName]
+                if (idx < 0 && fwName) idx = seq.indexOf(fwName)
+            }
+            if (idx < 0) return
+
+            var times = root.rtDeviceStartTimes.slice()
+            while (times.length <= idx) times.push(0)
+            times[idx] = Date.now()
+            root.rtDeviceStartTimes = times
+            root.rtActivatedCount = idx + 1
+            console.log("📡 LogicControlPanel: 设备激活 -", deviceName, "序号:", idx + 1)
+
+            // 最后一个设备激活后，3秒后停止实时跟踪
+            if (idx === seq.length - 1) {
+                rtStopTimer.restart()
+            }
+        }
+    }
+
+    // 延迟停止实时跟踪（最后设备激活后3秒）
+    Timer {
+        id: rtStopTimer
+        interval: 3000
+        onTriggered: {
+            rtRefreshTimer.stop()
+            // 保持最终状态显示，不重置（用户切换Tab时重置）
         }
     }
 
@@ -186,53 +252,36 @@ Rectangle {
         stopDelays = startupDelays.slice().reverse()
     }
 
-    // ✅ 2026-03-21 [Phase 7.48.64]: 模拟播放控制
-    function startSimulation() {
-        if (root.currentSeq.length === 0) return
-        // ✅ 2026-03-21 [Phase 7.48.65]: 先重置再开始（支持重复点击"▶模拟"重启）
-        simTimer.stop()
-        root.simTime = 0.0
-        root.simActivatedCount = 0
-        var delays = root.currentDelays
-        var times = [0.0]     // 设备0在t=0激活
-        var cumulative = 0.0
-        for (var i = 0; i < delays.length - 1; i++) {
-            cumulative += delays[i]
-            times.push(cumulative)
-        }
-        // 总时长 = 最后一个激活时刻 + 该设备的延时
-        var lastDelay = delays.length > 0 ? (delays[delays.length - 1] || 1.0) : 1.0
-        root.simActivationTimes = times
-        root.simTotalTime = cumulative + lastDelay
-        root.simTime = 0.0
-        root.simActivatedCount = 0
-        root.isSimulating = true
-        simTimer.restart()
+    // ✅ 2026-03-21 [Phase 7.48.66]: 重置实时跟踪状态
+    function resetRealtimeTracking() {
+        rtRefreshTimer.stop()
+        rtStopTimer.stop()
+        root.isRealtimeActive = false
+        root.rtPhase = 0
+        root.rtActivatedCount = 0
+        root.rtWarningStart = 0
+        root.rtSequenceStart = 0
+        root.rtDeviceStartTimes = []
+        root.rtElapsed = 0
     }
 
-    function stopSimulation() {
-        simTimer.stop()
-        root.isSimulating = false
-        root.simTime = 0.0
-        root.simActivatedCount = 0
+    // 获取预警时间（秒）
+    function getWarningTime() {
+        return root.systemConfig ? (root.systemConfig.warningTimeSeconds || 10) : 10
     }
 
-    // 计算游标在 timelineRow 内的 X 坐标（设备i中心 = i*200+60）
-    function getCursorX() {
-        var n = root.currentSeq.length
-        if (n === 0) return -10
-        if (n === 1) return 60
-        var times = root.simActivationTimes
-        if (times.length === 0) return 60
-        for (var i = 0; i < n - 1; i++) {
-            var t0 = times[i]
-            var t1 = times[i + 1]
-            if (root.simTime <= t1) {
-                var progress = t1 > t0 ? Math.min(1.0, (root.simTime - t0) / (t1 - t0)) : 1.0
-                return (i * 200 + 60) + progress * 200
-            }
-        }
-        return (n - 1) * 200 + 60
+    // 计算设备i的箭头进度（0.0~1.0），用于实时箭头动画
+    function getArrowProgress(deviceIndex) {
+        if (!root.isRealtimeActive || root.rtPhase < 2) return 0.0
+        if (deviceIndex >= root.rtActivatedCount) return 0.0
+        // 如果下一个设备已激活，箭头进度=1.0
+        if (deviceIndex + 1 < root.rtActivatedCount) return 1.0
+        // 当前设备已激活，下一个未激活：计算进度
+        var startT = root.rtDeviceStartTimes.length > deviceIndex ? root.rtDeviceStartTimes[deviceIndex] : 0
+        if (startT <= 0) return 0.0
+        var elapsed = (Date.now() - startT) / 1000.0
+        var delay = root.currentDelays[deviceIndex] || 1.0
+        return Math.min(1.0, elapsed / delay)
     }
 
     function isDeviceInCurrentSeq(deviceName) {
@@ -284,7 +333,7 @@ Rectangle {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
-                            root.stopSimulation()  // 切换Tab时停止模拟
+                            root.resetRealtimeTracking()  // 切换Tab时重置实时跟踪
                             root.currentTab = index
                         }
                     }
@@ -317,43 +366,27 @@ Rectangle {
                         color: root.themeColor
                     }
 
-                    // ✅ 2026-03-21 [Phase 7.48.65]: 模拟按钮 - 始终重新开始（无停止功能）
-                    // 原为双态切换（▶模拟/⏹停止），改为单一"▶ 模拟"按钮，点击即重启模拟
+                    // ✅ 2026-03-21 [Phase 7.48.66]: 实时状态指示灯（替代原模拟按钮）
                     Rectangle {
-                        width: 100; height: 34; radius: 17
-                        color: root.isSimulating ? "#1a4a30" : "#1a4a72"
-                        border.color: root.isSimulating ? "#00ff88" : "#00aaff"
-                        border.width: 2
-                        visible: root.currentSeq.length > 0
-
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 6
-                            Text {
-                                text: "▶"
-                                font.pixelSize: 16; color: root.isSimulating ? "#00ff88" : "white"
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                            Text {
-                                text: "模拟"
-                                font.pixelSize: 18; color: "white"
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            // 点击始终重启模拟（停止旧的再开始新的）
-                            onClicked: root.startSimulation()
+                        width: 14; height: 14; radius: 7
+                        color: root.isRealtimeActive ? (root.rtPhase === 1 ? "#f39c12" : "#00ff88") : "#555555"
+                        visible: root.currentTab === 0
+                        // 预警中闪烁
+                        SequentialAnimation on opacity {
+                            running: root.rtPhase === 1
+                            loops: Animation.Infinite
+                            NumberAnimation { to: 0.3; duration: 500 }
+                            NumberAnimation { to: 1.0; duration: 500 }
                         }
                     }
-
-                    // 时间显示
                     Text {
-                        visible: root.isSimulating
-                        text: "⏱ " + root.simTime.toFixed(1) + "s / " + root.simTotalTime.toFixed(1) + "s"
+                        visible: root.isRealtimeActive && root.currentTab === 0
+                        text: root.rtPhase === 1
+                            ? "预警中 " + root.rtElapsed.toFixed(1) + "s / " + root.getWarningTime() + "s"
+                            : "运行中 " + root.rtElapsed.toFixed(1) + "s  设备 " + root.rtActivatedCount + "/" + root.startupSeq.length
                         font.pixelSize: 20
                         font.bold: true
-                        color: "#ffdd00"
+                        color: root.rtPhase === 1 ? "#f39c12" : "#00ff88"
                     }
 
                     Item { Layout.fillWidth: true }
@@ -382,6 +415,119 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 0
 
+                            // ✅ 2026-03-21 [Phase 7.48.66]: 前缀节点 - "运行键开始"
+                            // 仅在启动流程Tab显示
+                            Rectangle {
+                                width: 100; height: 140; radius: 8
+                                visible: root.currentTab === 0
+                                color: root.isRealtimeActive && root.rtPhase >= 1 ? "#004d22" : "#1e3a5f"
+                                border.color: root.isRealtimeActive && root.rtPhase >= 1 ? "#00ff88" : "#f39c12"
+                                border.width: root.isRealtimeActive && root.rtPhase === 1 ? 3 : 2
+
+                                Rectangle {
+                                    width: parent.width - 4; height: 4; radius: 2
+                                    anchors.top: parent.top; anchors.topMargin: 2
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    color: "#f39c12"; z: 1
+                                }
+                                Column {
+                                    anchors.centerIn: parent; spacing: 6
+                                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: "▶"; font.pixelSize: 24; color: "#f39c12" }
+                                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: "运行键"; font.pixelSize: 20; font.bold: true; color: "white" }
+                                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: "开始"; font.pixelSize: 20; font.bold: true; color: "white" }
+                                }
+                            }
+
+                            // 前缀箭头1：运行键→启车预警（显示预警时间）
+                            Item {
+                                width: 80; height: 140
+                                visible: root.currentTab === 0
+                                clip: true
+
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - 10; height: 2; x: 5
+                                    color: "#f39c12"
+                                }
+                                Text {
+                                    anchors.right: parent.right; anchors.rightMargin: 2
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "▶"; font.pixelSize: 15; color: "#f39c12"
+                                }
+                                // 预警时间实时流动子弹
+                                Rectangle {
+                                    width: 14; height: 6; radius: 3
+                                    color: "#ffffff"
+                                    opacity: root.isRealtimeActive && root.rtPhase === 1 ? 0.9 : 0.0
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    x: {
+                                        var _e = root.rtElapsed  // 强制绑定刷新
+                                        if (root.rtPhase !== 1) return 5
+                                        var warnTime = root.getWarningTime()
+                                        var progress = warnTime > 0 ? Math.min(1.0, root.rtElapsed / warnTime) : 1.0
+                                        return 5 + progress * 56
+                                    }
+                                }
+                                // 预警时间标签
+                                Rectangle {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.bottom: parent.verticalCenter; anchors.bottomMargin: 4
+                                    width: 52; height: 26; radius: 13
+                                    color: "#1a2332"; border.color: "#f39c12"; border.width: 1
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: root.getWarningTime() + "s"
+                                        font.pixelSize: 16; color: "#f39c12"
+                                    }
+                                }
+                            }
+
+                            // 前缀节点 - "启车预警"
+                            Rectangle {
+                                width: 100; height: 140; radius: 8
+                                visible: root.currentTab === 0
+                                color: root.isRealtimeActive && root.rtPhase >= 2 ? "#004d22" : "#1e3a5f"
+                                border.color: root.isRealtimeActive && root.rtPhase >= 2 ? "#00ff88" : "#f39c12"
+                                border.width: root.isRealtimeActive && root.rtPhase === 2 && root.rtActivatedCount === 0 ? 3 : 2
+
+                                Rectangle {
+                                    width: parent.width - 4; height: 4; radius: 2
+                                    anchors.top: parent.top; anchors.topMargin: 2
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    color: "#f39c12"; z: 1
+                                }
+                                Column {
+                                    anchors.centerIn: parent; spacing: 6
+                                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: "⚠"; font.pixelSize: 24; color: "#f39c12" }
+                                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: "启车预警"; font.pixelSize: 20; font.bold: true; color: "white" }
+                                    Text {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        text: root.getWarningTime() + "s"
+                                        font.pixelSize: 18; color: "#f39c12"
+                                    }
+                                }
+                            }
+
+                            // 前缀箭头2：启车预警→第一个设备
+                            Item {
+                                width: 80; height: 140
+                                visible: root.currentTab === 0 && root.currentSeq.length > 0
+                                clip: true
+
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - 10; height: 2; x: 5
+                                    color: root.themeColor
+                                }
+                                Text {
+                                    anchors.right: parent.right; anchors.rightMargin: 2
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "▶"; font.pixelSize: 15; color: root.themeColor
+                                }
+                            }
+
+                            // ========== 设备节点 Repeater ==========
+
                             Repeater {
                                 model: root.currentSeq.length
 
@@ -395,18 +541,18 @@ Rectangle {
                                         height: 140
                                         radius: 8
                                         // ✅ 2026-03-20 修复：nodeMouseArea移到最前声明，z值最低，不会遮挡按钮
-                                        // ✅ 2026-03-21 [Phase 7.48.64]: 模拟激活状态颜色
+                                        // ✅ 2026-03-21 [Phase 7.48.66]: 实时激活状态颜色（替代原模拟状态）
                                         color: {
-                                            if (root.isSimulating && index < root.simActivatedCount) {
-                                                return index === root.simActivatedCount - 1
+                                            if (root.isRealtimeActive && root.currentTab === 0 && index < root.rtActivatedCount) {
+                                                return index === root.rtActivatedCount - 1
                                                     ? "#004d22"  // 刚激活（当前设备）
                                                     : "#002211"  // 已激活（前序设备）
                                             }
                                             return nodeMouseArea.containsMouse ? "#2a5080" : "#1e3a5f"
                                         }
-                                        border.color: root.isSimulating && index < root.simActivatedCount
+                                        border.color: root.isRealtimeActive && root.currentTab === 0 && index < root.rtActivatedCount
                                             ? "#00ff88" : root.themeColor
-                                        border.width: root.isSimulating && index === root.simActivatedCount - 1 ? 3 : 2
+                                        border.width: root.isRealtimeActive && root.currentTab === 0 && index === root.rtActivatedCount - 1 ? 3 : 2
 
                                         // 背景点击区域 - 声明在最前，z值最低，按钮可以正常接收事件
                                         MouseArea {
@@ -511,23 +657,24 @@ Rectangle {
                                                 return d <= 2.0 ? "#00ff88" : (d <= 5.0 ? "#f39c12" : "#ff4757")
                                             }
                                         }
-                                        // ✅ 2026-03-21 [Phase 7.48.64]: 时间流子弹（沿箭头移动的亮块）
+                                        // ✅ 2026-03-21 [Phase 7.48.66]: 时间流子弹（实时版，根据设备激活信号驱动）
                                         Rectangle {
                                             id: timeBullet
                                             width: 14; height: 6; radius: 3
                                             color: "#ffffff"
                                             opacity: {
-                                                // 仅在该箭头的"流动时间段"内显示（设备i已激活但i+1未激活）
-                                                return root.isSimulating && root.simActivatedCount === index + 1 ? 0.9 : 0.0
+                                                // 仅在该箭头对应的设备已激活、但下一设备未激活时显示
+                                                var _e = root.rtElapsed  // 强制绑定刷新
+                                                return root.isRealtimeActive && root.currentTab === 0
+                                                    && root.rtActivatedCount === index + 1
+                                                    && root.rtActivatedCount < root.startupSeq.length
+                                                    ? 0.9 : 0.0
                                             }
                                             anchors.verticalCenter: parent.verticalCenter
                                             x: {
+                                                var _e = root.rtElapsed  // 强制绑定刷新
                                                 var lineWidth = arrowItem.width - 10  // 70px
-                                                var t0 = root.simActivationTimes.length > index ? root.simActivationTimes[index] : 0
-                                                var delay = root.currentDelays[index] || 1.0
-                                                var progress = delay > 0
-                                                    ? Math.min(1.0, Math.max(0.0, (root.simTime - t0) / delay))
-                                                    : 1.0
+                                                var progress = root.getArrowProgress(index)
                                                 return 5 + progress * (lineWidth - timeBullet.width)
                                             }
                                         }
@@ -564,65 +711,8 @@ Rectangle {
                             }
                         }
 
-                        // ✅ 2026-03-21 [Phase 7.48.64]: 时间游标（跟随模拟时间移动的垂直指示线）
-                        Item {
-                            id: timeCursor
-                            y: 0
-                            width: 2
-                            // 游标高度 = Flickable可见高度（减去margin）
-                            height: timelineFlickable.height
-                            // x = 该时刻设备节点的中心位置（节点i中心 = i*200+60，行offset=0）
-                            // 注意：必须在绑定中直接引用 root.simTime，才能触发重新求值
-                            x: { var _t = root.simTime; var _n = root.simActivatedCount; return root.getCursorX() - 1 }
-                            z: 20
-                            visible: root.isSimulating
-
-                            // 主竖线
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "#ffdd00"
-                                opacity: 0.85
-                            }
-
-                            // 顶部菱形指示器
-                            Rectangle {
-                                width: 12; height: 12
-                                rotation: 45
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.top: parent.top
-                                anchors.topMargin: 2
-                                color: "#ffdd00"
-                            }
-
-                            // 底部菱形
-                            Rectangle {
-                                width: 8; height: 8
-                                rotation: 45
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.bottom: parent.bottom
-                                anchors.bottomMargin: 2
-                                color: "#ffdd00"
-                            }
-                        }
-                    }
-
-                    // 自动跟随游标滚动
-                    Connections {
-                        target: root
-                        function onSimTimeChanged() {
-                            if (root.isSimulating) {
-                                var cx = root.getCursorX()
-                                var visibleLeft = timelineFlickable.contentX
-                                var visibleRight = visibleLeft + timelineFlickable.width
-                                // 若游标超出右侧可见区，自动滚动
-                                if (cx > visibleRight - 40) {
-                                    timelineFlickable.contentX = Math.min(
-                                        cx - timelineFlickable.width / 2,
-                                        timelineFlickable.contentWidth - timelineFlickable.width
-                                    )
-                                }
-                            }
-                        }
+                        // ✅ 2026-03-21 [Phase 7.48.66]: 移除旧的模拟时间游标（已改为实时跟踪方式）
+                        // 原模拟游标（黄色竖线+菱形）不再需要，实时可视化通过设备卡片颜色和箭头子弹表示
                     }
 
                     Text {

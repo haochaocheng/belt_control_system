@@ -57,7 +57,9 @@ Item {
                 if (typeof deviceConfigMgr !== "undefined" && deviceConfigMgr !== null) {
                     var tensionCfg = deviceConfigMgr.loadTensionConfig(deviceId, 0)
                     if (tensionCfg && tensionCfg["feedback_channel"] !== undefined) {
-                        useFeedback    = (tensionCfg["use_feedback"] === 1 || tensionCfg["use_feedback"] === true)
+                        // ✅ 2026-03-21 [Phase 7.48.66]: 使用 Number() 确保 QVariant 类型正确转换
+                        // 原因：DB的 use_feedback 为 INTEGER，QVariant 转到 QML 后 === 比较可能失败
+                        useFeedback    = (Number(tensionCfg["use_feedback"]) === 1)
                         feedbackChannel = tensionCfg["feedback_channel"]
                         feedbackDelay   = tensionCfg["feedback_timeout"] || 10
                         dbLoaded++
@@ -65,14 +67,18 @@ Item {
                     }
                 }
             }
-            // ——— N号制动器 ———
-            else if (name.indexOf("制动器") >= 0) {
+            // ——— N号制动器 / 抱闸 ———
+            // ✅ 2026-03-21 [Phase 7.48.66]: 新增 "抱闸" 名称匹配
+            // 原因：启动序列使用 "抱闸" 而非 "N号制动器"，导致制动器配置从未加载
+            else if (name === "抱闸" || name.indexOf("制动器") >= 0) {
                 if (typeof deviceConfigMgr !== "undefined" && deviceConfigMgr !== null) {
+                    // "抱闸" → brakeIdx=0, "1号制动器" → brakeIdx=0, "2号制动器" → brakeIdx=1
                     var brakeNumMatch = name.match(/(\d+)/)
-                    var brakeIdx = brakeNumMatch ? parseInt(brakeNumMatch[1]) - 1 : 0
+                    var brakeIdx = name === "抱闸" ? 0 : (brakeNumMatch ? parseInt(brakeNumMatch[1]) - 1 : 0)
                     var brakeCfg = deviceConfigMgr.loadBrakeConfig(deviceId, brakeIdx)
                     if (brakeCfg && brakeCfg["release_feedback_channel"] !== undefined) {
-                        useFeedback    = (brakeCfg["use_release_feedback"] === 1 || brakeCfg["use_release_feedback"] === true)
+                        // ✅ 2026-03-21 [Phase 7.48.66]: 使用 Number() 确保 QVariant 类型正确转换
+                        useFeedback    = (Number(brakeCfg["use_release_feedback"]) === 1)
                         feedbackChannel = brakeCfg["release_feedback_channel"]
                         feedbackDelay   = brakeCfg["release_feedback_timeout"] || 10
                         dbLoaded++
