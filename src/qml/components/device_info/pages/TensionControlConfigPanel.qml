@@ -195,17 +195,17 @@ Rectangle {
             }
         }
 
-        // ✅ 2026-03-22 [Phase 7.48.80.2]: 启动/停止按钮移��独立行，可导航
+        // ✅ 2026-03-22 [Phase 7.48.80.2]: 启动/停止按钮移到独立行，可导航
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 56
             spacing: 16
+            Layout.alignment: Qt.AlignHCenter
 
             // 启动按钮（工业风格）
             Item {
-                Layout.fillWidth: true
-                Layout.maximumWidth: 460
-                Layout.preferredHeight: 48
+                Layout.preferredWidth: 140
+                Layout.preferredHeight: 44
 
                 Rectangle {
                     id: startBtnBg
@@ -240,9 +240,8 @@ Rectangle {
 
             // 停止按钮（工业风格）
             Item {
-                Layout.fillWidth: true
-                Layout.maximumWidth: 460
-                Layout.preferredHeight: 48
+                Layout.preferredWidth: 140
+                Layout.preferredHeight: 44
 
                 Rectangle {
                     id: stopBtnBg
