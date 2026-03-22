@@ -250,16 +250,12 @@ Item {
             }
         })
 
-        // ✅ 2026-03-22 [Phase 7.48.82]: 只在当前页面可见时获取焦点
-        // 原因：启动时 SwipeView 在 index 0（ControlPanel），Screen01 在 index 5（Input1Page）
-        //       但 forceActiveFocus() 无条件抢夺焦点，导致启动时右键被 Screen01 的4列网格拦截
+        // ✅ 2026-03-22 [Phase 7.48.82.1]: 移除 Component.onCompleted 中的 forceActiveFocus()
+        // 原因：SwipeView 中 visible 判断不可靠（非当前页可能仍为 visible），
+        //       导致启动时 Screen01 抢夺焦点，右键被4列网格拦截需按4次才切页
+        // 焦点由 App.qml onCurrentIndexChanged 在切换到 Input1Page(index 5) 时管理
         // 旧代码：root.forceActiveFocus()
-        if (root.visible) {
-            console.log("[Screen01] 🎯 页面可见，强制获取焦点...")
-            root.forceActiveFocus()
-        } else {
-            console.log("[Screen01] 🎯 页面不可见，跳过焦点获取")
-        }
+        console.log("[Screen01] 🎯 跳过初始焦点获取（由 App.qml SwipeView 管理）")
     }
 
     onSelectedIndexChanged: {
