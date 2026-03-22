@@ -51,10 +51,10 @@ Rectangle {
         anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom; margins: 10 }
         clip: true
         contentWidth: width
-        // ✅ 2026-03-22 [Phase 7.48.74.2 fix2]: 简化contentHeight计算
-        // 旧：遍历children手动累加 + 700缓冲（过大导致滚动过多）
-        // 新：使用implicitHeight + 合理缓冲（仅需覆盖键盘遮挡区域，约300px）
-        contentHeight: contentArea.implicitHeight + 300
+        // ✅ 2026-03-22 [Phase 7.48.74.2 fix4]: contentHeight缓冲改为键盘高度
+        // 旧：+300缓冲 → maxScroll=185，底部字段需309px被截断
+        // 新：+键盘高度(600) → maxScroll=485，所有字段均可滚动到位
+        contentHeight: contentArea.implicitHeight + (Qt.inputMethod.visible ? Qt.inputMethod.keyboardRectangle.height : 0)
         flickableDirection: Flickable.VerticalFlick
         boundsBehavior: Flickable.StopAtBounds
 
@@ -415,7 +415,8 @@ Rectangle {
     // ========== 导航焦点指示器（浮动矩形） ==========
     Rectangle {
         id: navFocusRect
-        visible: root.focusSubArea === 2 && root.focusParamIndex >= 0
+        // ✅ 2026-03-22 [Phase 7.48.74.2 fix4]: 增加可见性裁剪，焦点框不超出Flickable可见区域
+        visible: root.focusSubArea === 2 && root.focusParamIndex >= 0 && y >= header.height && (y + height) <= root.height
         color: "transparent"; border.color: "#FFFFFF"; border.width: 3; radius: 4; z: 100
         function updatePosition() {
             var fields = _paramFields()
@@ -429,6 +430,10 @@ Rectangle {
         Connections { target: root
             function onFocusParamIndexChanged() { navFocusRect.updatePosition() }
             function onFocusSubAreaChanged() { navFocusRect.updatePosition() }
+        }
+        // ✅ 2026-03-22 [Phase 7.48.74.2 fix4]: 滚动时同步更新焦点框位置
+        Connections { target: paramScrollView
+            function onContentYChanged() { navFocusRect.updatePosition() }
         }
         Timer { id: focusUpdateTimer; interval: 50; onTriggered: navFocusRect.updatePosition() }
         Component.onCompleted: focusUpdateTimer.start()
