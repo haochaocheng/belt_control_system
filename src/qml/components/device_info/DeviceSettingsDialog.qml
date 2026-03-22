@@ -359,6 +359,14 @@ Item {
         if (currentCategory === 3 && currentFocusArea === 2) {
             var motorPage = motorControlPageLoader.item
             if (motorPage && typeof motorPage.handleKeyPress === "function") {
+                // ✅ 2026-03-22 [Phase 7.48.74]: 列表第一项上键 → 顶部按钮区域
+                if (motorPage.focusSubArea === 0 && motorPage.focusItemIndex === 0) {
+                    currentFocusArea = 0
+                    currentTopButtonIndex = 0
+                    console.log("✅ [导航] 电机控制列表第一项上键 → 顶部按钮区域")
+                    event.accepted = true
+                    return
+                }
                 motorPage.handleKeyPress("Up")
                 event.accepted = true
                 return
@@ -368,6 +376,14 @@ Item {
         if (currentCategory === 4 && currentFocusArea === 2) {
             var brakePage = brakeControlPageLoader.item
             if (brakePage && typeof brakePage.handleKeyPress === "function") {
+                // ✅ 2026-03-22 [Phase 7.48.74]: 列表第一项上键 → 顶部按钮区域
+                if (brakePage.focusSubArea === 0 && brakePage.focusItemIndex === 0) {
+                    currentFocusArea = 0
+                    currentTopButtonIndex = 0
+                    console.log("✅ [导航] 制动器控制列表第一项上键 → 顶部按钮区域")
+                    event.accepted = true
+                    return
+                }
                 brakePage.handleKeyPress("Up")
                 event.accepted = true
                 return
@@ -377,6 +393,14 @@ Item {
         if (currentCategory === 5 && currentFocusArea === 2) {
             var tensionPage = tensionControlPageLoader.item
             if (tensionPage && typeof tensionPage.handleKeyPress === "function") {
+                // ✅ 2026-03-22 [Phase 7.48.74]: 列表第一项上键 → 顶部按钮区域
+                if (tensionPage.focusSubArea === 0 && tensionPage.focusItemIndex === 0) {
+                    currentFocusArea = 0
+                    currentTopButtonIndex = 0
+                    console.log("✅ [导航] 张紧控制列表第一项上键 → 顶部按钮区域")
+                    event.accepted = true
+                    return
+                }
                 tensionPage.handleKeyPress("Up")
                 event.accepted = true
                 return
@@ -386,6 +410,14 @@ Item {
         if (currentCategory === 6 && currentFocusArea === 2) {
             var sprinklerPage = sprinklerControlPageLoader.item
             if (sprinklerPage && typeof sprinklerPage.handleKeyPress === "function") {
+                // ✅ 2026-03-22 [Phase 7.48.74]: 列表第一项上键 → 顶部按钮区域
+                if (sprinklerPage.focusSubArea === 0 && sprinklerPage.focusItemIndex === 0) {
+                    currentFocusArea = 0
+                    currentTopButtonIndex = 0
+                    console.log("✅ [导航] 洒水控制列表第一项上键 → 顶部按钮区域")
+                    event.accepted = true
+                    return
+                }
                 sprinklerPage.handleKeyPress("Up")
                 event.accepted = true
                 return

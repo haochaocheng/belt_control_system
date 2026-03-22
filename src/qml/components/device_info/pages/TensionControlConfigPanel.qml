@@ -72,60 +72,65 @@ Rectangle {
             // Row 1: 使用反馈(Switch) | 反馈通道(1)
             // Row 2: 反馈超时(2) | 启动延时(3)
 
-            // ===== Row 0: 张紧启用 | 输出通道(0) =====
+            // ===== Row 0: 张紧启用(0) | 输出通道(1) =====
+            // ✅ 2026-03-22 [Phase 7.48.74]: 张紧启用加入导航(paramIndex 0)
             Text { text: "张紧启用:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: tensionEnabledSwitch.implicitHeight
                 Switch { id: tensionEnabledSwitch; checked: true; anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: outputChannelSpin.implicitHeight
                 DeviceInfo.CustomSpinBox { id: outputChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
-            // ===== Row 1: 使用反馈 | 反馈通道(1) =====
+            // ===== Row 1: 使用反馈(2) | 反馈通道(3) =====
+            // ✅ 2026-03-22 [Phase 7.48.74]: 使用反馈加入导航(paramIndex 2)
             Text { text: "使用反馈:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 1; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 1; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: useFeedbackSwitch.implicitHeight
                 Switch { id: useFeedbackSwitch; checked: false; anchors.verticalCenter: parent.verticalCenter; enabled: tensionEnabledSwitch.checked }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "反馈通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 1; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: feedbackChannelSpin.implicitHeight
                 DeviceInfo.CustomSpinBox { id: feedbackChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked; keyboardManager: root.keyboardManager }
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
-            // ===== Row 2: 反馈超时(2) | 启动延时(3) =====
+            // ===== Row 2: 反馈超时(4) | 启动延时(5) =====
             Text { text: "反馈超时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 2; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 1; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: feedbackTimeoutSpin.implicitHeight
                 DeviceInfo.CustomSpinBox { id: feedbackTimeoutSpin; from: 1; to: 60; value: 10; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked; keyboardManager: root.keyboardManager }
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 2; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: startupDelaySpin.implicitHeight
                 DeviceInfo.CustomSpinBox { id: startupDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
             // ✅ 2026-03-22 [Phase 7.48.74]: 新增独立停止延时
-            // ===== Row 3: 停止延时(4) =====
+            // ===== Row 3: 停止延时(6) =====
             Text { text: "停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 3; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 1; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: stopDelaySpin.implicitHeight
                 DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                // 旧：focusParamIndex === 4  // ✅ 2026-03-22 [Phase 7.48.74]: 张紧启用+使用反馈加入导航后，索引4→6
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 6 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         } // GridLayout end
 
@@ -173,8 +178,8 @@ Rectangle {
                 placeholderText: root.controlIndex + "号张紧启动"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
-                // 旧：focusParamIndex === 4  // ✅ 2026-03-22 [Phase 7.48.74]: 停止延时插入后，语音字段索引4→5
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                // 旧：focusParamIndex === 4  // ✅ 2026-03-22 [Phase 7.48.74]: 停止延时插入+开关加入导航后，语音字段索引4→7
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 7 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
 
@@ -195,8 +200,8 @@ Rectangle {
                 placeholderText: root.controlIndex + "号张紧运行失败"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
-                // 旧：focusParamIndex === 5  // ✅ 2026-03-22 [Phase 7.48.74]: 停止延时插入后，语音字段索引5→6
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 6 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                // 旧：focusParamIndex === 5  // ✅ 2026-03-22 [Phase 7.48.74]: 停止延时插入+开关加入导航后，语音字段索引5→8
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 8 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
 
@@ -324,8 +329,9 @@ Rectangle {
     // ========== 函数 ==========
 
     // 旧：function getParamFieldCount() { return 6 }  // 参数索引 0-5
-    // ✅ 2026-03-22 [Phase 7.48.74]: 新增停止延时，参数数量6→7
-    function getParamFieldCount() { return 7 }  // 参数索引 0-6
+    // ✅ 2026-03-22 [Phase 7.48.74]: 新增停止延时+开关加入导航，参数数量6→9
+    // 布局：张紧启用(0), 输出通道(1), 使用反馈(2), 反馈通道(3), 反馈超时(4), 启动延时(5), 停止延时(6), 预警语音(7), 失败语音(8)
+    function getParamFieldCount() { return 9 }  // 参数索引 0-8
 
     // ✅ 2026-03-17 [Phase 7.48.53]: 删除旧playVoice函数
     // 旧：function playVoice(voiceText, label) { ... commonControl.testTTS() ... }
@@ -448,15 +454,18 @@ Rectangle {
     function triggerParamInput(paramIndex) {
         console.log("✅ [TensionControlConfigPanel] triggerParamInput:", paramIndex)
         switch(paramIndex) {
-        case 0: outputChannelSpin.forceActiveFocus(); break
-        case 1: feedbackChannelSpin.forceActiveFocus(); break
-        case 2: feedbackTimeoutSpin.forceActiveFocus(); break
-        // 旧：case 3: startupDelaySpin → case 4: warningVoiceField → case 5: failureVoiceField
-        // ✅ 2026-03-22 [Phase 7.48.74]: 插入停止延时(case 4)，语音字段后移
-        case 3: startupDelaySpin.forceActiveFocus(); break
-        case 4: stopDelaySpin.forceActiveFocus(); break
-        case 5: warningVoiceField.forceActiveFocus(); break
-        case 6: failureVoiceField.forceActiveFocus(); break
+        // ✅ 2026-03-22 [Phase 7.48.74]: 开关加入导航，所有索引重排
+        // 旧：case 0: outputChannelSpin → case 1: feedbackChannelSpin → ...
+        // 新：张紧启用(0), 输出通道(1), 使用反馈(2), 反馈通道(3), 反馈超时(4), 启动延时(5), 停止延时(6), 预警语音(7), 失败语音(8)
+        case 0: tensionEnabledSwitch.toggle(); break
+        case 1: outputChannelSpin.forceActiveFocus(); break
+        case 2: useFeedbackSwitch.toggle(); break
+        case 3: feedbackChannelSpin.forceActiveFocus(); break
+        case 4: feedbackTimeoutSpin.forceActiveFocus(); break
+        case 5: startupDelaySpin.forceActiveFocus(); break
+        case 6: stopDelaySpin.forceActiveFocus(); break
+        case 7: warningVoiceField.forceActiveFocus(); break
+        case 8: failureVoiceField.forceActiveFocus(); break
         }
     }
 
