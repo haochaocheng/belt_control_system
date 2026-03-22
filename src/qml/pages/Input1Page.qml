@@ -91,10 +91,16 @@ Item {
         onLoaded: {
             console.log("✅ Input1 Screen01 加载成功")
 
-            // ✅ 2026-03-22 [Phase 7.48.82.2]: 设备模式下禁止Screen01自动抢焦点
-            // 原因：Screen01在Component.onCompleted中forceActiveFocus()会抢夺SwipeView焦点
-            // 在Input1Page(Loader)加载时设为false，Screen01的Qt.callLater检查此属性
-            screenLoader.item.autoFocusOnLoad = false
+            // ✅ 2026-03-22 [Phase 7.48.82.3]: 只在SwipeView内才禁止Screen01自动抢焦点
+            // QDS独立预览时没有SwipeView父级，SwipeView.view为null，不设置此属性
+            // 设备运行时Input1Page在SwipeView中，SwipeView.view有值，禁止自动焦点
+            // 旧代码：screenLoader.item.autoFocusOnLoad = false  // 无条件禁止，QDS也被禁止了
+            if (input1Page.SwipeView.view) {
+                screenLoader.item.autoFocusOnLoad = false
+                console.log("✅ [Input1Page] SwipeView模式 - 禁止Screen01自动焦点")
+            } else {
+                console.log("✅ [Input1Page] QDS独立模式 - 允许Screen01自动焦点")
+            }
             console.log("   [布局] 屏幕尺寸:", input1Page.width.toFixed(0), "x", input1Page.height.toFixed(0))
             console.log("🔍 [Input1Page] 缩放调试:")
             console.log("   xScale (宽度缩放):", (Math.max(1, Math.min(input1Page.width, 3840)) / 1920).toFixed(3))
