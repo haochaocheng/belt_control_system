@@ -19,6 +19,10 @@ Item {
     property int currentPageIndex: 0
     property int selectedIndex: 0
 
+    // ✅ 2026-03-22 [Phase 7.48.82.2]: 区分QDS独立预览与设备SwipeView运行
+    // QDS独立运行时保持true（需要焦点），通过Input1Page.onLoaded设为false（设备模式）
+    property bool autoFocusOnLoad: true
+
     readonly property int rows: 3
     readonly property int cols: 4
     readonly property int totalItems: 12
@@ -250,12 +254,18 @@ Item {
             }
         })
 
-        // ✅ 2026-03-22 [Phase 7.48.82.1]: 移除 Component.onCompleted 中的 forceActiveFocus()
-        // 原因：SwipeView 中 visible 判断不可靠（非当前页可能仍为 visible），
-        //       导致启动时 Screen01 抢夺焦点，右键被4列网格拦截需按4次才切页
-        // 焦点由 App.qml onCurrentIndexChanged 在切换到 Input1Page(index 5) 时管理
-        // 旧代码：root.forceActiveFocus()
-        console.log("[Screen01] 🎯 跳过初始焦点获取（由 App.qml SwipeView 管理）")
+        // ✅ 2026-03-22 [Phase 7.48.82.2]: 延迟检查焦点模式
+        // QDS独立预览: autoFocusOnLoad保持true → 获取焦点（导航键可用）
+        // 设备SwipeView: Input1Page.onLoaded 已将 autoFocusOnLoad 设为 false → 不抢焦点
+        // 旧代码：root.forceActiveFocus()  // 无条件抢夺导致设备启动时右键被拦截
+        Qt.callLater(function() {
+            if (root.autoFocusOnLoad) {
+                console.log("[Screen01] 🎯 QDS独立模式，获取焦点")
+                root.forceActiveFocus()
+            } else {
+                console.log("[Screen01] 🎯 SwipeView模式，跳过焦点获取（由App.qml管理）")
+            }
+        })
     }
 
     onSelectedIndexChanged: {
