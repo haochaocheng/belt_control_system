@@ -43,17 +43,84 @@ Rectangle {
     }
 
     // ========== 内容区域 ==========
-    // ✅ 2026-03-22 [Phase 7.48.74.2]: 新增ScrollView包裹，解决虚拟键盘遮挡输入框问题
+    // ✅ 2026-03-22 [Phase 7.48.74.2]: 新增Flickable包裹，解决虚拟键盘遮挡输入框问题
     // 旧：ColumnLayout直接anchors到parent.bottom，无滚动能力
-    ScrollView {
+    // ✅ 2026-03-22 [Phase 7.48.74.2 fix]: 改用Flickable替代ScrollView，参照OutputDeviceSettingsPopup
+    Flickable {
         id: paramScrollView
-        anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom }
+        anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom; margins: 10 }
         clip: true
-        ScrollBar.vertical.policy: ScrollBar.AsNeeded
+        contentWidth: width
+        contentHeight: {
+            contentArea.implicitHeight
+            var totalHeight = 0
+            for (var i = 0; i < contentArea.children.length; i++) {
+                var child = contentArea.children[i]
+                if (child && child.visible !== false) {
+                    totalHeight += child.implicitHeight || child.height || 0
+                }
+            }
+            totalHeight += contentArea.spacing * (contentArea.children.length - 1)
+            return Math.max(totalHeight + 700, 1200)
+        }
+        flickableDirection: Flickable.VerticalFlick
+        boundsBehavior: Flickable.StopAtBounds
+
+        ScrollBar.vertical: ScrollBar {
+            policy: ScrollBar.AsNeeded
+        }
+
+        // 监控虚拟键盘隐藏时自动滚回顶部
+        Connections {
+            target: Qt.inputMethod
+            function onVisibleChanged() {
+                if (!Qt.inputMethod.visible) {
+                    scrollAnimation.to = 0
+                    scrollAnimation.start()
+                }
+            }
+        }
+
+        // 平滑滚动动画
+        NumberAnimation {
+            id: scrollAnimation
+            target: paramScrollView
+            property: "contentY"
+            duration: 300
+            easing.type: Easing.OutQuad
+        }
+
+        // 确保输入框在虚拟键盘上方可见
+        function ensureVisible(item) {
+            if (!item) return
+            Qt.callLater(function() {
+                var itemGlobalRect = item.mapToItem(null, 0, 0)
+                var itemGlobalBottom = itemGlobalRect.y + item.height
+
+                var keyboardHeight = Qt.inputMethod.keyboardRectangle.height
+                if (keyboardHeight === 0) keyboardHeight = 400
+
+                var screenHeight = root.parent ? root.parent.height : 1080
+                var keyboardGlobalTop = screenHeight - keyboardHeight
+                var candidateBarHeight = 50
+                var margin = 10
+                var targetGlobalBottom = keyboardGlobalTop - candidateBarHeight - margin
+
+                if (itemGlobalBottom <= targetGlobalBottom) return
+
+                var scrollNeeded = itemGlobalBottom - targetGlobalBottom
+                var targetY = paramScrollView.contentY + scrollNeeded
+                var maxScroll = Math.max(0, paramScrollView.contentHeight - paramScrollView.height)
+                targetY = Math.max(0, Math.min(targetY, maxScroll))
+
+                scrollAnimation.to = targetY
+                scrollAnimation.start()
+            })
+        }
 
         ColumnLayout {
             id: contentArea
-            width: paramScrollView.width * 0.95
+            width: paramScrollView.width
             spacing: 6
 
         // ========== 统一8列GridLayout：行0-5全部对齐 ==========
@@ -277,7 +344,7 @@ Rectangle {
         // 填充剩余空间（防止底部空白把内容撑开）
         Item { Layout.fillHeight: true; Layout.maximumHeight: 10 }
     }
-    }  // ScrollView 结束
+    }  // Flickable 结束
 
     // ========== 定时器 ==========
     Timer {
@@ -346,20 +413,6 @@ Rectangle {
                 var field = fields[idx]
                 var pos = field.mapToItem(root, 0, 0)
                 x = pos.x - 2; y = pos.y - 2; width = field.width + 4; height = field.height + 4
-                // ✅ 2026-03-22 [Phase 7.48.74.2]: 自动滚动确保焦点字段可见
-                var flickable = paramScrollView.contentItem
-                if (flickable) {
-                    var fieldInFlickable = field.mapToItem(flickable, 0, 0)
-                    var viewportTop = flickable.contentY
-                    var viewportBottom = viewportTop + paramScrollView.height
-                    var fieldTop = fieldInFlickable.y - 10
-                    var fieldBottom = fieldInFlickable.y + field.height + 10
-                    if (fieldTop < viewportTop) {
-                        flickable.contentY = fieldTop
-                    } else if (fieldBottom > viewportBottom) {
-                        flickable.contentY = fieldBottom - paramScrollView.height
-                    }
-                }
             }
         }
         Connections { target: root
@@ -391,6 +444,8 @@ Rectangle {
                 field.checked = !field.checked
             } else {
                 field.forceActiveFocus()
+                // ✅ 2026-03-22 [Phase 7.48.74.2]: 虚拟键盘弹出时自动滚动到输入框可见位置
+                paramScrollView.ensureVisible(field)
             }
         }
     }
