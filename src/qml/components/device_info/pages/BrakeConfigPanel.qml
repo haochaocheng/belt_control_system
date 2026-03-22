@@ -133,6 +133,12 @@ Rectangle {
             DeviceInfo.CustomTextField { id: releaseStartupDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomTextField { id: brakeStartupDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            // ✅ 2026-03-22 [Phase 7.48.74]: 新增松闸停止延时和抱闸停止延时
+            // 原因：启动延时和停止延时需要独立配置
+            Text { text: "松闸停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseStopDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Text { text: "抱闸停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: brakeStopDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
         }
 
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
@@ -339,9 +345,10 @@ Rectangle {
                 holdTimeField, releaseTimeField, brakeDelayField, releaseDelayField,
                 detectDelayField, faultDelayField, brakeCurrentField, releaseCurrentField,
                 brakeVoltageField, releaseVoltageField,
-                releaseStartupDelayField, brakeStartupDelayField]
+                releaseStartupDelayField, brakeStartupDelayField,
+                releaseStopDelayField, brakeStopDelayField]
     }
-    function getParamFieldCount() { return 21 }
+    function getParamFieldCount() { return 23 }
     function triggerParamInput(paramIndex) {
         var fields = _paramFields()
         if (paramIndex >= 0 && paramIndex < fields.length) {
@@ -392,7 +399,10 @@ Rectangle {
             "brake_failure_voice": brakeFailureVoiceField.text,
             // ✅ 2026-03-21 [Phase 7.48.68]: 新增启动延时字段
             "release_startup_delay": parseFloat(releaseStartupDelayField.text) || 1.0,
-            "brake_startup_delay": parseFloat(brakeStartupDelayField.text) || 1.0
+            "brake_startup_delay": parseFloat(brakeStartupDelayField.text) || 1.0,
+            // ✅ 2026-03-22 [Phase 7.48.74]: 新增独立停止延时字段
+            "release_stop_delay": parseFloat(releaseStopDelayField.text) || 1.0,
+            "brake_stop_delay": parseFloat(brakeStopDelayField.text) || 1.0
         }
     }
     function saveBrakeConfig() {
@@ -425,6 +435,9 @@ Rectangle {
         // ✅ 2026-03-21 [Phase 7.48.68]: 新增启动延时默认值
         releaseStartupDelayField.text = "1.0"
         brakeStartupDelayField.text = "1.0"
+        // ✅ 2026-03-22 [Phase 7.48.74]: 新增停止延时默认值
+        releaseStopDelayField.text = "1.0"
+        brakeStopDelayField.text = "1.0"
 
         var config = deviceConfigMgr.loadBrakeConfig(root.deviceId, root.brakeIndex)
         if (!config || Object.keys(config).length === 0) return false
@@ -452,6 +465,9 @@ Rectangle {
         // ✅ 2026-03-21 [Phase 7.48.68]: 加载启动延时
         if (config.hasOwnProperty("release_startup_delay")) releaseStartupDelayField.text = config["release_startup_delay"].toString()
         if (config.hasOwnProperty("brake_startup_delay")) brakeStartupDelayField.text = config["brake_startup_delay"].toString()
+        // ✅ 2026-03-22 [Phase 7.48.74]: 加载停止延时
+        if (config.hasOwnProperty("release_stop_delay")) releaseStopDelayField.text = config["release_stop_delay"].toString()
+        if (config.hasOwnProperty("brake_stop_delay")) brakeStopDelayField.text = config["brake_stop_delay"].toString()
         return true
     }
     Component.onCompleted: { loadBrakeConfig() }

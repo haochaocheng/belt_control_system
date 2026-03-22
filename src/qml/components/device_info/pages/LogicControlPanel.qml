@@ -139,34 +139,57 @@ Rectangle {
             if (tensionCfg && tensionCfg["startup_delay"] !== undefined) return Number(tensionCfg["startup_delay"])
             return 5  // 张紧默认5秒
         }
+        // ✅ 2026-03-22 [Phase 7.48.74]: 洒水：从 sprinkler_output_config 读取 startup_delay
+        var sprinklerMatch = deviceName.match(/(\d+)号洒水/)
+        if (sprinklerMatch) {
+            var sprinklerIdx = parseInt(sprinklerMatch[1])
+            var sprinklerCfg = deviceConfigMgr.loadSprinklerConfig(sprinklerIdx)
+            if (sprinklerCfg && sprinklerCfg["startup_delay"] !== undefined) return Number(sprinklerCfg["startup_delay"])
+            return 1  // 洒水默认1秒
+        }
         return defaultDelay
     }
 
     // ✅ 2026-03-21 [Phase 7.48.70]: 根据设备名读取其停止延时（与启动延时独立）
     // 区别：制动器启动=松闸(release_startup_delay)，停止=抱闸(brake_startup_delay)
+    // ✅ 2026-03-22 [Phase 7.48.74]: 改为读取独立stop_delay字段（不再复用startup_delay）
     function readDeviceStopDelay(deviceName) {
         if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return defaultDelay
-        // 电机：停止延时与启动延时相同
+        // 电机：读取独立 stop_delay 字段
         var motorMatch = deviceName.match(/(\d+)号电机/)
         if (motorMatch) {
             var motorIdx = parseInt(motorMatch[1]) - 1
             var motorCfg = deviceConfigMgr.loadMotorConfig(root.deviceId, motorIdx, 0)
-            if (motorCfg && motorCfg["startup_delay"] !== undefined) return Number(motorCfg["startup_delay"])
+            // 旧：读 startup_delay（复用）
+            // 新：读 stop_delay（独立字段）
+            if (motorCfg && motorCfg["stop_delay"] !== undefined) return Number(motorCfg["stop_delay"])
             return 8
         }
-        // 制动器：停止时读 brake_startup_delay（抱闸延时）
+        // 制动器：读取独立 release_stop_delay / brake_stop_delay
         var brakeMatch = deviceName.match(/(\d+)号制动器/)
         if (brakeMatch) {
             var brakeIdx = parseInt(brakeMatch[1]) - 1
             var brakeCfg = deviceConfigMgr.loadBrakeConfig(root.deviceId, brakeIdx)
-            if (brakeCfg && brakeCfg["brake_startup_delay"] !== undefined) return Number(brakeCfg["brake_startup_delay"])
+            // 旧：读 brake_startup_delay（抱闸启动延时复用）
+            // 新：读 release_stop_delay（松闸停止延时，对应停止时需要松闸再抱闸）
+            if (brakeCfg && brakeCfg["release_stop_delay"] !== undefined) return Number(brakeCfg["release_stop_delay"])
             return 1.0
         }
-        // 张紧控制：停止延时与启动延时相同
+        // 张紧控制：读取独立 stop_delay 字段
         if (deviceName === "张紧控制" || deviceName === "张紧") {
             var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, 0)
-            if (tensionCfg && tensionCfg["startup_delay"] !== undefined) return Number(tensionCfg["startup_delay"])
+            // 旧：读 startup_delay（复用）
+            // 新：读 stop_delay（独立字段）
+            if (tensionCfg && tensionCfg["stop_delay"] !== undefined) return Number(tensionCfg["stop_delay"])
             return 5
+        }
+        // ✅ 2026-03-22 [Phase 7.48.74]: 洒水：读取独立 stop_delay 字段
+        var sprinklerMatch = deviceName.match(/(\d+)号洒水/)
+        if (sprinklerMatch) {
+            var sprinklerIdx = parseInt(sprinklerMatch[1])
+            var sprinklerCfg = deviceConfigMgr.loadSprinklerConfig(sprinklerIdx)
+            if (sprinklerCfg && sprinklerCfg["stop_delay"] !== undefined) return Number(sprinklerCfg["stop_delay"])
+            return 1  // 洒水默认1秒
         }
         return defaultDelay
     }
@@ -186,6 +209,36 @@ Rectangle {
         }
         if (deviceName === "张紧控制" || deviceName === "张紧") {
             deviceConfigMgr.updateTensionStartupDelay(root.deviceId, 0, value)
+            return
+        }
+        // ✅ 2026-03-22 [Phase 7.48.74]: 洒水启动延时写回
+        var sprinklerMatch = deviceName.match(/(\d+)号洒水/)
+        if (sprinklerMatch) {
+            deviceConfigMgr.updateSprinklerStartupDelay(parseInt(sprinklerMatch[1]), value)
+            return
+        }
+    }
+
+    // ✅ 2026-03-22 [Phase 7.48.74]: 写回设备停止延时（独立字段）
+    function writeDeviceStopDelay(deviceName, value) {
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
+        var motorMatch = deviceName.match(/(\d+)号电机/)
+        if (motorMatch) {
+            deviceConfigMgr.updateMotorStopDelay(root.deviceId, parseInt(motorMatch[1]) - 1, value)
+            return
+        }
+        var brakeMatch = deviceName.match(/(\d+)号制动器/)
+        if (brakeMatch) {
+            deviceConfigMgr.updateBrakeStopDelay(root.deviceId, parseInt(brakeMatch[1]) - 1, value, "release")
+            return
+        }
+        if (deviceName === "张紧控制" || deviceName === "张紧") {
+            deviceConfigMgr.updateTensionStopDelay(root.deviceId, 0, value)
+            return
+        }
+        var sprinklerMatch2 = deviceName.match(/(\d+)号洒水/)
+        if (sprinklerMatch2) {
+            deviceConfigMgr.updateSprinklerStopDelay(parseInt(sprinklerMatch2[1]), value)
             return
         }
     }
@@ -427,8 +480,12 @@ Rectangle {
         if (currentTab === 0) startupDelays = delays.slice()
         else stopDelays = delays.slice()
         // ✅ 2026-03-21 [Phase 7.48.68]: 同步写回设备配置表
+        // ✅ 2026-03-22 [Phase 7.48.74]: 区分启动/停止延时写回（旧：统一用writeDeviceStartupDelay）
         var seq = currentTab === 0 ? startupSeq : stopSeq
-        if (index < seq.length) writeDeviceStartupDelay(seq[index], value)
+        if (index < seq.length) {
+            if (currentTab === 0) writeDeviceStartupDelay(seq[index], value)
+            else writeDeviceStopDelay(seq[index], value)
+        }
     }
 
     function swapDevices(fromIndex, toIndex) {

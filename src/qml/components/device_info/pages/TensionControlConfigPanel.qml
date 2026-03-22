@@ -117,6 +117,16 @@ Rectangle {
                 DeviceInfo.CustomSpinBox { id: startupDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
+
+            // ✅ 2026-03-22 [Phase 7.48.74]: 新增独立停止延时
+            // ===== Row 3: 停止延时(4) =====
+            Text { text: "停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 3; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: stopDelaySpin.implicitHeight
+                DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
         } // GridLayout end
 
         // ========== 分隔线 ==========
@@ -163,7 +173,8 @@ Rectangle {
                 placeholderText: root.controlIndex + "号张紧启动"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                // 旧：focusParamIndex === 4  // ✅ 2026-03-22 [Phase 7.48.74]: 停止延时插入后，语音字段索引4→5
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
 
@@ -184,7 +195,8 @@ Rectangle {
                 placeholderText: root.controlIndex + "号张紧运行失败"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                // 旧：focusParamIndex === 5  // ✅ 2026-03-22 [Phase 7.48.74]: 停止延时插入后，语音字段索引5→6
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 6 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
 
@@ -311,7 +323,9 @@ Rectangle {
 
     // ========== 函数 ==========
 
-    function getParamFieldCount() { return 6 }  // 参数索引 0-5
+    // 旧：function getParamFieldCount() { return 6 }  // 参数索引 0-5
+    // ✅ 2026-03-22 [Phase 7.48.74]: 新增停止延时，参数数量6→7
+    function getParamFieldCount() { return 7 }  // 参数索引 0-6
 
     // ✅ 2026-03-17 [Phase 7.48.53]: 删除旧playVoice函数
     // 旧：function playVoice(voiceText, label) { ... commonControl.testTTS() ... }
@@ -377,6 +391,8 @@ Rectangle {
             "feedback_channel": feedbackChannelSpin.value,
             "feedback_timeout": feedbackTimeoutSpin.value,
             "startup_delay": startupDelaySpin.value,
+            // ✅ 2026-03-22 [Phase 7.48.74]: 新增独立停止延时
+            "stop_delay": stopDelaySpin.value,
             "audio_source": audioTtsRadio.checked ? "tts" : "default",
             "warning_voice": warningVoiceField.text,
             "failure_voice": failureVoiceField.text
@@ -393,6 +409,8 @@ Rectangle {
         if (config.feedback_channel !== undefined) feedbackChannelSpin.value = config.feedback_channel
         if (config.feedback_timeout !== undefined) feedbackTimeoutSpin.value = config.feedback_timeout
         if (config.startup_delay !== undefined) startupDelaySpin.value = config.startup_delay
+        // ✅ 2026-03-22 [Phase 7.48.74]: 新增独立停止延时
+        if (config.stop_delay !== undefined) stopDelaySpin.value = config.stop_delay
         if (config.audio_source !== undefined) { audioTtsRadio.checked = (config.audio_source === "tts"); audioDefaultRadio.checked = (config.audio_source !== "tts") }
         // ✅ 2026-03-18 [Phase 7.48.54]: 仅在非空时覆盖，避免数据库空值清掉默认文件名
         if (config.warning_voice !== undefined && config.warning_voice !== "") warningVoiceField.text = config.warning_voice
@@ -433,9 +451,12 @@ Rectangle {
         case 0: outputChannelSpin.forceActiveFocus(); break
         case 1: feedbackChannelSpin.forceActiveFocus(); break
         case 2: feedbackTimeoutSpin.forceActiveFocus(); break
+        // 旧：case 3: startupDelaySpin → case 4: warningVoiceField → case 5: failureVoiceField
+        // ✅ 2026-03-22 [Phase 7.48.74]: 插入停止延时(case 4)，语音字段后移
         case 3: startupDelaySpin.forceActiveFocus(); break
-        case 4: warningVoiceField.forceActiveFocus(); break
-        case 5: failureVoiceField.forceActiveFocus(); break
+        case 4: stopDelaySpin.forceActiveFocus(); break
+        case 5: warningVoiceField.forceActiveFocus(); break
+        case 6: failureVoiceField.forceActiveFocus(); break
         }
     }
 

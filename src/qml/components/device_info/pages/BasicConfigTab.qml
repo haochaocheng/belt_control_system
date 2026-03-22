@@ -661,10 +661,10 @@ Rectangle {
                 visible: false  // 启动延时单位由SpinBox右侧显示，此处隐藏避免冲突
             }
 
-            // ========== 第五行：预警语音（左，索引8）、失败语音（右，索引9）==========
-            // ✅ 2026-03-10 [Phase 7.48.37]: 新增预警语音和失败语音参数
+            // ✅ 2026-03-22 [Phase 7.48.74]: 新增停止延时参数（索引8）
+            // 原因：启动延时和停止延时需要独立配置
             Text {
-                text: "预警语音:"
+                text: "停止延时:"
                 font.pixelSize: 21; color: "#9E9E9E"
                 Layout.column: 0; Layout.row: 4
                 Layout.preferredWidth: 160
@@ -673,19 +673,15 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 4
                 Layout.fillWidth: true; Layout.maximumWidth: 300
-                implicitHeight: warningVoiceField.implicitHeight
+                implicitHeight: stopDelaySpin.implicitHeight
 
-                // ✅ 2026-03-12 [Phase 7.48.40]: 从TextField改为CustomTextField（参照AnalogInputPage组件风格）
-                // 旧：普通TextField，无keyboardManager支持
-                DeviceInfo.CustomTextField {
-                    id: warningVoiceField
+                DeviceInfo.CustomSpinBox {
+                    id: stopDelaySpin
                     anchors.fill: parent
-                    // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名（不含扩展名）
-                    // 旧：text: "电机" + (root.motorIndex + 1) + "启动预警"
-                    text: "电机" + (root.motorIndex + 1) + "启动"
-                    placeholderText: "预警音频文件名"
-                    placeholderTextColor: "#6E6E6E"
-                    color: "#E0E0E0"
+                    from: 0
+                    to: 60
+                    value: 8
+                    editable: true
                     keyboardManager: root.keyboardManager
                 }
 
@@ -705,26 +701,30 @@ Rectangle {
                 }
             }
 
+            // ========== 第五行：预警语音（左，索引9）、失败语音（右，索引10）==========
+            // ✅ 2026-03-10 [Phase 7.48.37]: 新增预警语音和失败语音参数
+            // ✅ 2026-03-22 [Phase 7.48.74]: 索引从8/9调整为9/10（新增停止延时占用索引8）
             Text {
-                text: "失败语音:"
+                text: "预警语音:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 2; Layout.row: 4
+                Layout.column: 0; Layout.row: 5
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.column: 3; Layout.row: 4
+                Layout.column: 1; Layout.row: 5
                 Layout.fillWidth: true; Layout.maximumWidth: 300
-                implicitHeight: failureVoiceField.implicitHeight
+                implicitHeight: warningVoiceField.implicitHeight
 
                 // ✅ 2026-03-12 [Phase 7.48.40]: 从TextField改为CustomTextField（参照AnalogInputPage组件风格）
+                // 旧：普通TextField，无keyboardManager支持
                 DeviceInfo.CustomTextField {
-                    id: failureVoiceField
+                    id: warningVoiceField
                     anchors.fill: parent
                     // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名（不含扩展名）
-                    // 旧：text: "电机" + (root.motorIndex + 1) + "运行失败"
-                    text: "电机" + (root.motorIndex + 1) + "失败"
-                    placeholderText: "失败音频文件名"
+                    // 旧：text: "电机" + (root.motorIndex + 1) + "启动预警"
+                    text: "电机" + (root.motorIndex + 1) + "启动"
+                    placeholderText: "预警音频文件名"
                     placeholderTextColor: "#6E6E6E"
                     color: "#E0E0E0"
                     keyboardManager: root.keyboardManager
@@ -746,29 +746,29 @@ Rectangle {
                 }
             }
 
-            // ========== 第六行：启动键（左，索引10）==========
-            // ✅ 2026-03-10 [Phase 7.48.37]: 新增启动键选择（键盘按键）
             Text {
-                text: "启动键:"
+                text: "失败语音:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 0; Layout.row: 5
+                Layout.column: 2; Layout.row: 5
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.column: 1; Layout.row: 5
+                Layout.column: 3; Layout.row: 5
                 Layout.fillWidth: true; Layout.maximumWidth: 300
-                implicitHeight: startupKeyCombo.implicitHeight
+                implicitHeight: failureVoiceField.implicitHeight
 
-                // ✅ 2026-03-12 [Phase 7.48.41]: 从ComboBox改为CustomComboBox（统一组件风格）
-                DeviceInfo.CustomComboBox {
-                    id: startupKeyCombo
+                // ✅ 2026-03-12 [Phase 7.48.40]: 从TextField改为CustomTextField（参照AnalogInputPage组件风格）
+                DeviceInfo.CustomTextField {
+                    id: failureVoiceField
                     anchors.fill: parent
+                    // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名（不含扩展名）
+                    // 旧：text: "电机" + (root.motorIndex + 1) + "运行失败"
+                    text: "电机" + (root.motorIndex + 1) + "失败"
+                    placeholderText: "失败音频文件名"
+                    placeholderTextColor: "#6E6E6E"
+                    color: "#E0E0E0"
                     keyboardManager: root.keyboardManager
-                    model: ["无", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
-                            "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-                            "A", "B", "C", "D", "E", "F", "G", "H"]
-                    currentIndex: 0
                 }
 
                 MouseArea {
@@ -787,16 +787,59 @@ Rectangle {
                 }
             }
 
-            // ✅ 2026-03-12: 音频来源（右侧，索引11）
+            // ========== 第七行：启动键（左，索引11）==========
+            // ✅ 2026-03-10 [Phase 7.48.37]: 新增启���键选择（键盘按键）
+            // ✅ 2026-03-22 [Phase 7.48.74]: 索引从10调整为11
             Text {
-                text: "音频来源:"
+                text: "启动键:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 2; Layout.row: 5
+                Layout.column: 0; Layout.row: 6
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.column: 3; Layout.row: 5
+                Layout.column: 1; Layout.row: 6
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: startupKeyCombo.implicitHeight
+
+                // ✅ 2026-03-12 [Phase 7.48.41]: 从ComboBox改为CustomComboBox（统一组件风格）
+                DeviceInfo.CustomComboBox {
+                    id: startupKeyCombo
+                    anchors.fill: parent
+                    keyboardManager: root.keyboardManager
+                    model: ["无", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+                            "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+                            "A", "B", "C", "D", "E", "F", "G", "H"]
+                    currentIndex: 0
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: function(mouse) {
+                        root.requestFocusParamIndex(12)
+                        mouse.accepted = false
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent; color: "transparent"
+                    border.color: (root.focusParamIndex === 12) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 12) ? 3 : 0
+                    radius: 4; z: 1000; enabled: false
+                }
+            }
+
+            // ✅ 2026-03-12: 音频来源（右侧，索引12）
+            // ✅ 2026-03-22 [Phase 7.48.74]: 索引从11调整为12
+            Text {
+                text: "音频来源:"
+                font.pixelSize: 21; color: "#9E9E9E"
+                Layout.column: 2; Layout.row: 6
+                Layout.preferredWidth: 160
+                horizontalAlignment: Text.AlignRight
+            }
+            Item {
+                Layout.column: 3; Layout.row: 6
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 50
 
@@ -898,7 +941,7 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
-                        root.requestFocusParamIndex(11)
+                        root.requestFocusParamIndex(12)
                         mouse.accepted = false
                     }
                     z: -1
@@ -906,8 +949,8 @@ Rectangle {
 
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 11) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 11) ? 3 : 0
+                    border.color: (root.focusParamIndex === 12) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 12) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -1028,8 +1071,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 12) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 12) ? 3 : 0
+                    border.color: (root.focusParamIndex === 13) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 13) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -1114,8 +1157,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 13) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 13) ? 3 : 0
+                    border.color: (root.focusParamIndex === 14) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 14) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -1416,8 +1459,8 @@ Rectangle {
                 // 焦点指示器
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 14) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 14) ? 3 : 0
+                    border.color: (root.focusParamIndex === 15) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 15) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -1427,10 +1470,10 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
     // 获取参数字段数量
     // ✅ 2026-03-10 [Phase 7.48.34]: 从8扩展到9（新增"是否使用反馈"开关，反馈通道右移）
-    // ✅ 2026-03-12: 从14扩展到15（新增音频来源）
-    // 旧值：return 14
+    // ✅ 2026-03-22 [Phase 7.48.74]: 从15扩展到16（新增停止延时）
+    // 旧值：return 15
     function getParamFieldCount() {
-        return 15  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6反馈延时、7启动延时、8预警语音、9失败语音、10启动键、11音频来源、12运行LED、13反馈LED、14测试按钮
+        return 16  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6反馈延时、7启动延时、8停止延时、9预警语音、10失败语音、11启动键、12音频来源、13运行LED、14反馈LED、15测试按钮
     }
 
     // 触发参数输入
@@ -1476,20 +1519,26 @@ Rectangle {
             console.log("✅ [BasicConfigTab] 启动延时")
             inputField = startupDelaySpin
             break
-        case 8:  // 预警语音
+        // ✅ 2026-03-22 [Phase 7.48.74]: 新增停止延时
+        case 8:  // 停止延时
+            console.log("✅ [BasicConfigTab] 停止延时")
+            inputField = stopDelaySpin
+            break
+        case 9:  // 预警语音
             console.log("✅ [BasicConfigTab] 预警语音")
             warningVoiceField.forceActiveFocus()
             break
-        case 9:  // 失败语音
+        case 10:  // 失败语音
             console.log("✅ [BasicConfigTab] 失败语音")
             failureVoiceField.forceActiveFocus()
             break
-        case 10:  // 启动键
+        case 11:  // 启动键
             console.log("✅ [BasicConfigTab] 启动键")
             startupKeyCombo.popup.open()
             break
         // ✅ 2026-03-12: 音频来源改为ButtonGroup，点击切换选中状态
-        case 11:  // 音频来源
+        // ✅ 2026-03-22 [Phase 7.48.74]: 索引从11调整为12
+        case 12:  // 音频来源
             console.log("✅ [BasicConfigTab] 音频来源切换")
             // 旧：audioSourceCombo.popup.open()
             // 新：切换按钮选中状态
@@ -1503,13 +1552,14 @@ Rectangle {
                 ttsAudioBtn.checked = false
             }
             break
-        case 12:  // 运行LED（只读）
+        // ✅ 2026-03-22 [Phase 7.48.74]: 索引从12/13/14调整为13/14/15
+        case 13:  // 运行LED（只读）
             console.log("✅ [BasicConfigTab] 运行LED（只读）")
             break
-        case 13:  // 反馈LED（只读）
+        case 14:  // 反馈LED（只读）
             console.log("✅ [BasicConfigTab] 反馈LED（只读）")
             break
-        case 14:  // 测试按钮（启动/停止切换）
+        case 15:  // 测试按钮（启动/停止切换）
             console.log("✅ [BasicConfigTab] 测试按钮 - 切换电机状态")
             var ch8 = outputChannelSpin.value
             var topic8 = "belt_control/do/module1/cmd"
@@ -1566,6 +1616,8 @@ Rectangle {
         config["feedback_delay"] = feedbackDelaySpin.value  // ✅ 2026-03-10 [Phase 7.48.36]
         // ✅ 2026-03-10 [Phase 7.48.37]: 新增4个参数
         config["startup_delay"] = startupDelaySpin.value
+        // ✅ 2026-03-22 [Phase 7.48.74]: 新增独立停止延时
+        config["stop_delay"] = stopDelaySpin.value
         config["warning_voice"] = warningVoiceField.text
         config["failure_voice"] = failureVoiceField.text
         config["startup_key"] = startupKeyCombo.currentText
@@ -1610,6 +1662,10 @@ Rectangle {
         // ✅ 2026-03-10 [Phase 7.48.37]: 加载新增4个参数
         if (config["startup_delay"] !== undefined) {
             startupDelaySpin.value = config["startup_delay"]
+        }
+        // ✅ 2026-03-22 [Phase 7.48.74]: 加载独立停止延时
+        if (config["stop_delay"] !== undefined) {
+            stopDelaySpin.value = config["stop_delay"]
         }
         if (config["warning_voice"] !== undefined) {
             warningVoiceField.text = config["warning_voice"]

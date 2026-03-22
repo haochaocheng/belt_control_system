@@ -1801,6 +1801,27 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移031已执行过，跳过";
     }
+
+    // ✅ 2026-03-22 [Phase 7.48.74]: 迁移032 - 所有设备新增独立停止延时字段
+    // 原因：启动延时和停止延时共用一个值不够灵活，需要独立配置
+    if (!query.exec("SELECT 1 FROM schema_migrations WHERE version = '032_add_stop_delay'") || !query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移032: 所有设备新增独立停止延时...";
+        QSqlQuery fix(m_database);
+        // 电机表新增停止延时
+        fix.exec("ALTER TABLE device_motor_config ADD COLUMN stop_delay INTEGER DEFAULT 8");
+        // 制动器表新增停止延时（松闸停止延时 + 抱闸停止延时）
+        fix.exec("ALTER TABLE device_brake_config ADD COLUMN release_stop_delay REAL DEFAULT 1.0");
+        fix.exec("ALTER TABLE device_brake_config ADD COLUMN brake_stop_delay REAL DEFAULT 1.0");
+        // 张紧表新增停止延时
+        fix.exec("ALTER TABLE device_tension_config ADD COLUMN stop_delay INTEGER DEFAULT 5");
+        // 洒水表新增启动延时和停止延时
+        fix.exec("ALTER TABLE sprinkler_output_config ADD COLUMN startup_delay INTEGER DEFAULT 1");
+        fix.exec("ALTER TABLE sprinkler_output_config ADD COLUMN stop_delay INTEGER DEFAULT 1");
+        qDebug() << "  ✅ 迁移032: 电机/制动器/张紧/洒水表均新增停止延时字段";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('032_add_stop_delay')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移032已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
@@ -2484,9 +2505,12 @@ bool DeviceConfigManager::saveSprinklerConfig(int sprinklerIndex, const QVariant
 {
     QSqlQuery query(m_database);
     // 先尝试更新
+    // ✅ 2026-03-22 [Phase 7.48.74]: 新增startup_delay和stop_delay字段
+    // 旧：UPDATE ... SET sprinkler_name = ?, module_type = ?, channel = ?, mqtt_topic = ?, enabled = ?
     query.prepare(R"(
         UPDATE sprinkler_output_config
-        SET sprinkler_name = ?, module_type = ?, channel = ?, mqtt_topic = ?, enabled = ?, updated_at = CURRENT_TIMESTAMP
+        SET sprinkler_name = ?, module_type = ?, channel = ?, mqtt_topic = ?, enabled = ?,
+            startup_delay = ?, stop_delay = ?, updated_at = CURRENT_TIMESTAMP
         WHERE sprinkler_index = ?
     )");
     query.addBindValue(config.value("sprinkler_name", QString("洒水%1").arg(sprinklerIndex)).toString());
@@ -2494,6 +2518,8 @@ bool DeviceConfigManager::saveSprinklerConfig(int sprinklerIndex, const QVariant
     query.addBindValue(config.value("channel", sprinklerIndex - 1).toInt());
     query.addBindValue(config.value("mqtt_topic", "belt_control/relay/module1/control").toString());
     query.addBindValue(config.value("enabled", 1).toInt());
+    query.addBindValue(config.value("startup_delay", 1).toInt());
+    query.addBindValue(config.value("stop_delay", 1).toInt());
     query.addBindValue(sprinklerIndex);
 
     if (!query.exec()) {
@@ -2505,9 +2531,11 @@ bool DeviceConfigManager::saveSprinklerConfig(int sprinklerIndex, const QVariant
 
     if (query.numRowsAffected() == 0) {
         // 不存在，插入新记录
+        // ✅ 2026-03-22 [Phase 7.48.74]: 新增startup_delay和stop_delay字段
+        // 旧：INSERT INTO ... (sprinkler_index, sprinkler_name, module_type, channel, mqtt_topic, enabled)
         query.prepare(R"(
-            INSERT INTO sprinkler_output_config (sprinkler_index, sprinkler_name, module_type, channel, mqtt_topic, enabled)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO sprinkler_output_config (sprinkler_index, sprinkler_name, module_type, channel, mqtt_topic, enabled, startup_delay, stop_delay)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         )");
         query.addBindValue(sprinklerIndex);
         query.addBindValue(config.value("sprinkler_name", QString("洒水%1").arg(sprinklerIndex)).toString());
@@ -2515,6 +2543,8 @@ bool DeviceConfigManager::saveSprinklerConfig(int sprinklerIndex, const QVariant
         query.addBindValue(config.value("channel", sprinklerIndex - 1).toInt());
         query.addBindValue(config.value("mqtt_topic", "belt_control/relay/module1/control").toString());
         query.addBindValue(config.value("enabled", 1).toInt());
+        query.addBindValue(config.value("startup_delay", 1).toInt());
+        query.addBindValue(config.value("stop_delay", 1).toInt());
 
         if (!query.exec()) {
             QString error = QString("插入洒水%1配置失败: %2").arg(sprinklerIndex).arg(query.lastError().text());
@@ -2667,8 +2697,9 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
          startup_delay, warning_voice, failure_voice, startup_key,
          audio_source,
          use_feedback,
+         stop_delay,
          updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -2713,6 +2744,8 @@ bool DeviceConfigManager::saveMotorConfig(int deviceId, int motorIndex, int tabI
     // ✅ 2026-03-21 [Phase 7.48.69]: 新增use_feedback
     // 原因：INSERT OR REPLACE 会删除旧行再插入，缺少此列导致use_feedback被重置为DEFAULT 0
     query.addBindValue(config.value("use_feedback", false).toBool() ? 1 : 0);
+    // ✅ 2026-03-22 [Phase 7.48.74]: 新增独立停止延时
+    query.addBindValue(config.value("stop_delay", 8).toInt());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {
@@ -2911,9 +2944,11 @@ bool DeviceConfigManager::saveBrakeConfig(int deviceId, int brakeIndex, const QV
          detect_delay, fault_delay, brake_current, release_current,
          brake_voltage, release_voltage,
          release_warning_voice, release_failure_voice, brake_failure_voice,
-         release_startup_delay, brake_startup_delay)
+         release_startup_delay, brake_startup_delay,
+         release_stop_delay, brake_stop_delay)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?,
                 ?, ?)
     )");
 
@@ -2959,6 +2994,9 @@ bool DeviceConfigManager::saveBrakeConfig(int deviceId, int brakeIndex, const QV
     // ✅ 2026-03-21 [Phase 7.48.68]: 新增制动器启动延时字段
     query.addBindValue(config.value("release_startup_delay", 1.0).toDouble());
     query.addBindValue(config.value("brake_startup_delay", 1.0).toDouble());
+    // ✅ 2026-03-22 [Phase 7.48.74]: 新增制动器独立停止延时字段
+    query.addBindValue(config.value("release_stop_delay", 1.0).toDouble());
+    query.addBindValue(config.value("brake_stop_delay", 1.0).toDouble());
 
     if (!query.exec()) {
         QString error = QString("保存设备%1制动器%2配置失败: %3")
@@ -3097,6 +3135,76 @@ bool DeviceConfigManager::updateTensionStartupDelay(int deviceId, int tensionInd
     return ok;
 }
 
+// ✅ 2026-03-22 [Phase 7.48.74]: 停止延时快捷更新方法
+// 原因：逻辑控制面板修改停止延时时需要同步写回设备配置表
+
+bool DeviceConfigManager::updateMotorStopDelay(int deviceId, int motorIndex, double delay)
+{
+    QSqlQuery query(m_database);
+    query.prepare("UPDATE device_motor_config SET stop_delay = ? WHERE device_id = ? AND motor_index = ? AND tab_index = 0");
+    query.addBindValue(delay);
+    query.addBindValue(deviceId);
+    query.addBindValue(motorIndex);
+    bool ok = query.exec();
+    if (ok) qDebug() << "✅ 更新电机停止延时:" << deviceId << motorIndex << delay;
+    else qWarning() << "❌ 更新电机停止延时失败:" << query.lastError().text();
+    return ok;
+}
+
+bool DeviceConfigManager::updateBrakeStopDelay(int deviceId, int brakeIndex, double delay, const QString &type)
+{
+    QSqlQuery query(m_database);
+    if (type == "release") {
+        query.prepare("UPDATE device_brake_config SET release_stop_delay = ? WHERE device_id = ? AND brake_index = ?");
+    } else {
+        query.prepare("UPDATE device_brake_config SET brake_stop_delay = ? WHERE device_id = ? AND brake_index = ?");
+    }
+    query.addBindValue(delay);
+    query.addBindValue(deviceId);
+    query.addBindValue(brakeIndex);
+    bool ok = query.exec();
+    if (ok) qDebug() << "✅ 更新制动器停止延时:" << deviceId << brakeIndex << type << delay;
+    else qWarning() << "❌ 更新制动器停止延时失败:" << query.lastError().text();
+    return ok;
+}
+
+bool DeviceConfigManager::updateTensionStopDelay(int deviceId, int tensionIndex, double delay)
+{
+    QSqlQuery query(m_database);
+    query.prepare("UPDATE device_tension_config SET stop_delay = ? WHERE device_id = ? AND tension_index = ?");
+    query.addBindValue(delay);
+    query.addBindValue(deviceId);
+    query.addBindValue(tensionIndex);
+    bool ok = query.exec();
+    if (ok) qDebug() << "✅ 更新张紧停止延时:" << deviceId << tensionIndex << delay;
+    else qWarning() << "❌ 更新张紧停止延时失败:" << query.lastError().text();
+    return ok;
+}
+
+bool DeviceConfigManager::updateSprinklerStartupDelay(int sprinklerIndex, double delay)
+{
+    QSqlQuery query(m_database);
+    query.prepare("UPDATE sprinkler_output_config SET startup_delay = ? WHERE sprinkler_index = ?");
+    query.addBindValue(delay);
+    query.addBindValue(sprinklerIndex);
+    bool ok = query.exec();
+    if (ok) qDebug() << "✅ 更新洒水启动延时:" << sprinklerIndex << delay;
+    else qWarning() << "❌ 更新洒水启动延时失败:" << query.lastError().text();
+    return ok;
+}
+
+bool DeviceConfigManager::updateSprinklerStopDelay(int sprinklerIndex, double delay)
+{
+    QSqlQuery query(m_database);
+    query.prepare("UPDATE sprinkler_output_config SET stop_delay = ? WHERE sprinkler_index = ?");
+    query.addBindValue(delay);
+    query.addBindValue(sprinklerIndex);
+    bool ok = query.exec();
+    if (ok) qDebug() << "✅ 更新洒水停止延时:" << sprinklerIndex << delay;
+    else qWarning() << "❌ 更新洒水停止延时失败:" << query.lastError().text();
+    return ok;
+}
+
 bool DeviceConfigManager::initDefaultBrakeConfigs(int deviceId)
 {
     // 默认4个制动器
@@ -3147,8 +3255,8 @@ bool DeviceConfigManager::saveTensionConfig(int deviceId, int tensionIndex, cons
          upper_limit, lower_limit, range_value, rated_value,
          output_channel, use_feedback, feedback_channel, feedback_timeout,
          use_text_to_speech, tts_text, audio_file, warning_voice, failure_voice,
-         startup_delay, audio_source, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         startup_delay, audio_source, stop_delay, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
@@ -3179,6 +3287,8 @@ bool DeviceConfigManager::saveTensionConfig(int deviceId, int tensionIndex, cons
     // ✅ 2026-03-18 [Phase 7.48.53]: 新增字段
     query.addBindValue(config.value("startup_delay", 5).toInt());
     query.addBindValue(config.value("audio_source", "default").toString());
+    // ✅ 2026-03-22 [Phase 7.48.74]: 新增独立停止延时
+    query.addBindValue(config.value("stop_delay", 5).toInt());
     query.addBindValue(QDateTime::currentDateTime());
 
     if (!query.exec()) {

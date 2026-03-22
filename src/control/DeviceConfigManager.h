@@ -316,6 +316,13 @@ public:
     Q_INVOKABLE bool updateBrakeStartupDelay(int deviceId, int brakeIndex, double delay, const QString &type = "release");
     Q_INVOKABLE bool updateTensionStartupDelay(int deviceId, int tensionIndex, double delay);
 
+    // ✅ 2026-03-22 [Phase 7.48.74]: 停止延时快捷更新
+    Q_INVOKABLE bool updateMotorStopDelay(int deviceId, int motorIndex, double delay);
+    Q_INVOKABLE bool updateBrakeStopDelay(int deviceId, int brakeIndex, double delay, const QString &type = "release");
+    Q_INVOKABLE bool updateTensionStopDelay(int deviceId, int tensionIndex, double delay);
+    Q_INVOKABLE bool updateSprinklerStartupDelay(int sprinklerIndex, double delay);
+    Q_INVOKABLE bool updateSprinklerStopDelay(int sprinklerIndex, double delay);
+
     // ========== 张紧控制配置 ==========
     // ✅ 2026-02-02 [参数持久化]: 添加张紧控制配置管理方法
 

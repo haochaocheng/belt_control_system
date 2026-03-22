@@ -96,6 +96,33 @@ Rectangle {
             }
         }
 
+        // ✅ 2026-03-22 [Phase 7.48.74]: 新增启动延时 + 停止延时
+        // ========== Row 3: 启动延时(3) ==========
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 16
+            Text { text: "启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: startupDelaySpin.implicitHeight
+                DeviceInfo.CustomSpinBox { id: startupDelaySpin; from: 0; to: 60; value: 1; editable: true; anchors.fill: parent; suffix: "秒"; keyboardManager: root.keyboardManager }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
+        }
+
+        // ========== Row 4: 停止延时(4) ==========
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 16
+            Text { text: "停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: stopDelaySpin.implicitHeight
+                DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 1; editable: true; anchors.fill: parent; suffix: "秒"; keyboardManager: root.keyboardManager }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
+        }
+
         // ========== 分隔线 ==========
         // ✅ 2026-03-18 [Phase 7.48.55]: 手动控制区域
         Rectangle {
@@ -153,7 +180,9 @@ Rectangle {
     }
 
     // ========== 函数 ==========
-    function getParamFieldCount() { return 3 }  // 参数索引 0-2
+    // 旧：function getParamFieldCount() { return 3 }  // 参数索引 0-2
+    // ✅ 2026-03-22 [Phase 7.48.74]: 新增启动延时+停止延时，参数数量3→5
+    function getParamFieldCount() { return 5 }  // 参数索引 0-4
 
     // ✅ 2026-03-18 [Phase 7.48.55]: 手动洒水控制 - 发送MQTT命令
     function sendSprinklerCommand(activate) {
@@ -193,6 +222,9 @@ Rectangle {
         enabledSwitch.checked = (config.enabled === 1 || config.enabled === true)
         sprinklerNameField.text = config.sprinkler_name || ("洒水" + (root.sprinklerIndex + 1))
         channelSpin.value = (config.channel !== undefined) ? config.channel : root.sprinklerIndex
+        // ✅ 2026-03-22 [Phase 7.48.74]: 加载启动延时+停止延时
+        startupDelaySpin.value = (config.startup_delay !== undefined) ? config.startup_delay : 1
+        stopDelaySpin.value = (config.stop_delay !== undefined) ? config.stop_delay : 1
     }
 
     function saveSprinklerConfig() {
@@ -207,6 +239,9 @@ Rectangle {
             // 旧："module_type": moduleTypeCombo.currentText,  // 2026-03-18 删除模块类型（固定为继电器模块）
             "channel": channelSpin.value
             // 旧："mqtt_topic": mqttTopicField.text  // 2026-03-18 删除MQTT主题（使用全局配置）
+            // ✅ 2026-03-22 [Phase 7.48.74]: 新增启动延时+停止延时
+            "startup_delay": startupDelaySpin.value,
+            "stop_delay": stopDelaySpin.value
         }
 
         var success = deviceConfigMgr.saveSprinklerConfig(root.sprinklerIndex + 1, config)
@@ -220,9 +255,13 @@ Rectangle {
     function triggerParamInput(paramIndex) {
         console.log("✅ [SprinklerConfigPanel] triggerParamInput:", paramIndex)
         switch(paramIndex) {
+        // 旧：case 2: channelSpin → 结束
+        // ✅ 2026-03-22 [Phase 7.48.74]: 新增启动延时+停止延时导航
         case 0: enabledSwitch.toggle(); break
         case 1: sprinklerNameField.forceActiveFocus(); break
         case 2: channelSpin.forceActiveFocus(); break
+        case 3: startupDelaySpin.forceActiveFocus(); break
+        case 4: stopDelaySpin.forceActiveFocus(); break
         }
     }
 
