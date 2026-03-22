@@ -82,9 +82,9 @@ Rectangle {
             easing.type: Easing.OutQuad
         }
 
-        // ✅ 2026-03-22 [Phase 7.48.74.2 fix2]: 重写ensureVisible，精确计算滚动量
-        // 旧：使用root.parent.height作为屏幕高度（错误，实际是Loader高度~600px）
-        // 新：使用Qt.inputMethod.keyboardRectangle.y获取键盘顶部的窗口坐标
+        // ✅ 2026-03-22 [Phase 7.48.74.2 fix3]: 重写ensureVisible，正确计算键盘顶部位置
+        // 根因：kbRect.y=1080是键盘锚点（屏幕底），不是键盘顶部
+        // 正确计算：键盘顶部 = 屏幕高度 - 键盘高度 = 1080 - 600 = 480
         function ensureVisible(item) {
             if (!item) return
             Qt.callLater(function() {
@@ -95,22 +95,17 @@ Rectangle {
                 var itemGlobal = item.mapToItem(null, 0, 0)
                 var itemGlobalBottom = itemGlobal.y + item.height
 
-                // 键盘顶部的窗口坐标
-                // Qt.inputMethod.keyboardRectangle 在窗口坐标系中
-                var kbTop
-                if (kbRect.y > 100) {
-                    // keyboardRectangle.y 有效值（键盘从屏幕中间某处开始）
-                    kbTop = kbRect.y
-                } else {
-                    // 备用：1080p全屏应用，键盘在底部
-                    kbTop = 1080 - kbRect.height
-                }
+                // 键盘顶部 = 屏幕高度 - 键盘高度
+                // 不使用kbRect.y（在QDS中它返回屏幕底部1080，而非键盘顶部480）
+                // 屏幕高度：优先用kbRect.y（如果≥kbRect.height说明它是屏幕底部），否则1080
+                var screenHeight = (kbRect.y >= kbRect.height) ? kbRect.y : 1080
+                var kbTop = screenHeight - kbRect.height
 
                 // 安全底部 = 键盘顶部 - 候选词栏(50px) - 间距(10px)
                 var safeBottom = kbTop - 60
 
                 console.log("[BrakeConfigPanel] ensureVisible: itemBottom=" + itemGlobalBottom +
-                            " kbRect.y=" + kbRect.y + " kbRect.h=" + kbRect.height +
+                            " screenH=" + screenHeight + " kbH=" + kbRect.height +
                             " kbTop=" + kbTop + " safeBottom=" + safeBottom +
                             " contentY=" + paramScrollView.contentY)
 
