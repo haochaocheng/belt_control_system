@@ -200,6 +200,12 @@ Item {
         console.log("🔍 [Screen01] 打开前 - activeFocus:", activeFocus)
         console.log("🔍 [Screen01] 打开前 - focus:", focus)
 
+        // ✅ 2026-03-22 [Phase 7.48.82.5]: 前8个为1-8号皮带，后4个未定义不可打开
+        if (selectedIndex >= 8) {
+            console.log("⚠️ [Screen01] 设备", selectedIndex + 1, "未定义，跳过打开设置")
+            return
+        }
+
         // 创建并显示 DeviceSettingsDialog
         var component = Qt.createComponent("../../components/device_info/DeviceSettingsDialog.qml")
         if (component.status === Component.Ready) {
