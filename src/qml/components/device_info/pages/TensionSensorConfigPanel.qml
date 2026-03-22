@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtQuick.Window 2.15  // ✅ 2026-03-22 [Phase 7.48.78]: 添加Window导入，ensureVisible需要Window.activeFocusItem
 import "../" as DeviceInfo
 
 // 2026-03-17 [Phase 7.48.51] 张力传感器配置面板
@@ -312,20 +313,35 @@ Rectangle {
         // ========== 分隔线2 ==========
         Rectangle { Layout.fillWidth: true; height: 1; color: "#3d4556" }
 
-        // ========== 洒水启用 + 洒水编号(14) ==========
-        RowLayout {
+        // ========== 洒水启用(15) + 洒水编号(16) ==========
+        // ✅ 2026-03-22 [Phase 7.48.78]: 改为GridLayout对齐（洒水启用对齐TTS文本列，洒水编号对齐播放方式列）
+        // 旧：RowLayout { ... }  // 一行紧凑排列，不对齐
+        GridLayout {
             Layout.fillWidth: true
-            spacing: 16
-            Text { text: "洒水启用:"; font.pixelSize: root.lblFs; color: root.lblC }
-            Switch { id: sprinklerSwitch; checked: false }
-            Item { width: 16 }
-            Text { text: "洒水编号:"; font.pixelSize: root.lblFs; color: root.lblC }
-            DeviceInfo.CustomSpinBox {
-                id: sprinklerIndexSpin; from: 0; to: 7; value: 0; enabled: sprinklerSwitch.checked
-                Layout.preferredWidth: 120; keyboardManager: root.keyboardManager
+            columns: 4
+            columnSpacing: 10
+            rowSpacing: 12
+
+            Text { text: "洒水启用:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: sprinklerSwitch.implicitHeight
+                Switch { id: sprinklerSwitch; checked: false; anchors.verticalCenter: parent.verticalCenter }
+                // ✅ 2026-03-22 [Phase 7.48.78]: 洒水启用焦点高亮（参数索引15）
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 15 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
-            // ✅ 2026-03-22 [Phase 7.48.76]: 参数索引14→15（新增音频来源12、播放方式13后后移）
-            Rectangle { anchors.fill: sprinklerIndexSpin; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 15 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            Text { text: "洒水编号:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: sprinklerIndexSpin.implicitHeight
+                DeviceInfo.CustomSpinBox {
+                    id: sprinklerIndexSpin; from: 0; to: 7; value: 0; enabled: sprinklerSwitch.checked
+                    width: 120; keyboardManager: root.keyboardManager
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                // ✅ 2026-03-22 [Phase 7.48.78]: 洒水编号焦点高亮（参数索引16）
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 16 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
         }
 
         // ========== 分隔线3 ==========
@@ -522,8 +538,8 @@ Rectangle {
     }
 
     // ========== 函数 ==========
-    // ✅ 2026-03-22 [Phase 7.48.76]: 参数数量15→16（新增音频来源12、播放方式13）
-    function getParamFieldCount() { return 16 }  // 参数索引 0-15
+    // ✅ 2026-03-22 [Phase 7.48.78]: 参数数量16→17（新增洒水启用15）
+    function getParamFieldCount() { return 17 }  // 参数索引 0-16
 
     function collectConfig() {
         return {
@@ -592,10 +608,10 @@ Rectangle {
     // 修复1: SpinBox 改用 activateVirtualKeyboard()（弹出虚拟键盘）
     // 修复2: ComboBox 改用循环切换值（与CustomComboBox回车行为一致）
     // 修复3: TextField 加 Qt.inputMethod.show()（弹出虚拟键盘）
-    // 修复4: 新增音频来源(12)、播放方式(13)导航
+    // ✅ 2026-03-22 [Phase 7.48.78]: 修复音频来源/播放方式ButtonGroup切换 + 添加洒水启用导航
     // 新索引: 0=名称, 1=播放次数, 2=模块类型, 3=播放时长, 4=通道号, 5=上限值,
     //         6=下限值, 7=量程, 8=单位, 9=输入类型, 10=保护延时, 11=保护级别,
-    //         12=音频来源, 13=播放方式, 14=TTS文本/音频文件, 15=洒水编号
+    //         12=音频来源, 13=播放方式, 14=TTS文本/音频文件, 15=洒水启用, 16=洒水编号
     function triggerParamInput(paramIndex) {
         console.log("✅ [TensionSensorConfigPanel] triggerParamInput:", paramIndex)
         switch(paramIndex) {
@@ -614,17 +630,29 @@ Rectangle {
         case 9: inputTypeCombo.isUserAction = true; inputTypeCombo.currentIndex = (inputTypeCombo.currentIndex + 1) % inputTypeCombo.count; inputTypeCombo.isUserAction = false; break
         case 10: protectionDelaySpin.activateVirtualKeyboard(); break
         case 11: protectionLevelCombo.isUserAction = true; protectionLevelCombo.currentIndex = (protectionLevelCombo.currentIndex + 1) % protectionLevelCombo.count; protectionLevelCombo.isUserAction = false; break
-        // 音频来源: 切换 默认/TTS
-        case 12: audioDefaultRadio.checked = !audioDefaultRadio.checked; audioTtsRadio.checked = !audioTtsRadio.checked; break
-        // 播放方式: 切换 按次数/按时长
-        case 13: playCountRadio.checked = !playCountRadio.checked; playDurationRadio.checked = !playDurationRadio.checked; break
+        // 音频来源: 切换 默认↔TTS（旧：双!checked被ButtonGroup互斥覆盖）
+        case 12:
+            if (audioDefaultRadio.checked) { audioTtsRadio.checked = true }
+            else { audioDefaultRadio.checked = true }
+            break
+        // 播放方式: 切换 按次数↔按时长（旧：双!checked被ButtonGroup互斥覆盖）
+        case 13:
+            if (playCountRadio.checked) { playDurationRadio.checked = true }
+            else { playCountRadio.checked = true }
+            break
         // TTS文本/音频文件
         case 14:
-            if (audioTtsRadio.checked) { ttsTextField.forceActiveFocus(); Qt.inputMethod.show() }
+            if (audioTtsRadio.checked) {
+                ttsTextField.forceActiveFocus(); Qt.inputMethod.show()
+                // ✅ 2026-03-22 [Phase 7.48.78]: 主动触发ensureVisible，确保输入框不被虚拟键盘遮挡
+                Qt.callLater(function() { ensureVisible(ttsTextField) })
+            }
             else { audioFileField.forceActiveFocus() }
             break
-        // 洒水编号
-        case 15: sprinklerIndexSpin.activateVirtualKeyboard(); break
+        // 洒水启用（新增）
+        case 15: sprinklerSwitch.checked = !sprinklerSwitch.checked; break
+        // 洒水编号（旧索引15→16）
+        case 16: sprinklerIndexSpin.activateVirtualKeyboard(); break
         }
     }
 
