@@ -195,17 +195,17 @@ Rectangle {
             }
         }
 
-        // ✅ 2026-03-22 [Phase 7.48.80.2]: 启动/停止按钮移到独立行，可导航
-        RowLayout {
+        // ✅ 2026-03-22 [Phase 7.48.80.2]: 启动/停止按钮，GridLayout 4列对齐（与参数区列位置一致）
+        GridLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 56
-            spacing: 16
-            Layout.alignment: Qt.AlignHCenter
+            columns: 4; columnSpacing: 10; rowSpacing: 12
 
-            // 启动按钮（工业风格）
+            // col 0: 标签占位（与参数区标签列对齐）
+            Item { Layout.column: 0; Layout.row: 0; Layout.preferredWidth: root.lblW }
+
+            // col 1: 启动按钮（与第一列输入框对齐）
             Item {
-                Layout.preferredWidth: 140
-                Layout.preferredHeight: 44
+                Layout.column: 1; Layout.row: 0; Layout.preferredWidth: 140; Layout.preferredHeight: 44
 
                 Rectangle {
                     id: startBtnBg
@@ -238,10 +238,12 @@ Rectangle {
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 6; z: 100 }
             }
 
-            // 停止按钮（工业风格）
+            // col 2: 标签占位（与参数区标签列对齐）
+            Item { Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW }
+
+            // col 3: 停止按钮（与第二列输入框对齐）
             Item {
-                Layout.preferredWidth: 140
-                Layout.preferredHeight: 44
+                Layout.column: 3; Layout.row: 0; Layout.preferredWidth: 140; Layout.preferredHeight: 44
 
                 Rectangle {
                     id: stopBtnBg
