@@ -513,6 +513,20 @@ Rectangle {
         var config = collectConfig()
         var success = deviceConfigMgr.saveBrakeConfig(root.deviceId, root.brakeIndex, config)
         console.log(success ? "[BrakeConfigPanel] 保存成功" : "[BrakeConfigPanel] 保存失败")
+
+        // ✅ 2026-03-22 [Phase 7.48.82]: 保存成功后同步反馈配置到 CommonControl
+        // 原因：ParameterSettings.syncDeviceFeedbackConfigs() 只在启动时调用一次，
+        //       修改 use_release_feedback 后 CommonControl 内存中仍是旧值
+        if (success && typeof commonControl !== "undefined") {
+            var brakeName = root.brakeIndex === 0 ? "抱闸" : ((root.brakeIndex + 1) + "号制动器")
+            var useFeedback = config["use_release_feedback"] !== undefined ? (Number(config["use_release_feedback"]) === 1) : false
+            var feedbackChannel = config["release_feedback_channel"] !== undefined ? config["release_feedback_channel"] : 0
+            var feedbackDelay = config["release_feedback_timeout"] || 10
+            commonControl.setDeviceFeedbackConfig(brakeName, useFeedback, feedbackChannel, feedbackDelay)
+            console.log("✅ [BrakeConfigPanel] 已同步反馈配置到CommonControl -", brakeName,
+                       "useFeedback:", useFeedback, "channel:", feedbackChannel, "delay:", feedbackDelay)
+        }
+
         return success
     }
     function loadBrakeConfig() {

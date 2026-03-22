@@ -752,6 +752,19 @@ Rectangle {
 
         if (success) {
             console.log("✅ [MotorControlPage] 保存成功")
+
+            // ✅ 2026-03-22 [Phase 7.48.82]: 保存成功后同步反馈配置到 CommonControl
+            // 原因：ParameterSettings.syncDeviceFeedbackConfigs() 只在启动时调用一次，
+            //       修改 use_feedback 后 CommonControl 内存中仍是旧值，导致反馈检测不生效
+            if (root.focusTabIndex === 0 && typeof commonControl !== "undefined") {
+                var motorName = (root.currentMotorIndex + 1) + "号电机"
+                var useFeedback = config["use_feedback"] !== undefined ? (Number(config["use_feedback"]) === 1) : true
+                var feedbackChannel = config["feedback_channel"] !== undefined ? config["feedback_channel"] : root.currentMotorIndex
+                var feedbackDelay = config["feedback_delay"] || 3
+                commonControl.setDeviceFeedbackConfig(motorName, useFeedback, feedbackChannel, feedbackDelay)
+                console.log("✅ [MotorControlPage] 已同步反馈配置到CommonControl -", motorName,
+                           "useFeedback:", useFeedback, "channel:", feedbackChannel, "delay:", feedbackDelay)
+            }
         } else {
             console.log("❌ [MotorControlPage] 保存失败")
         }

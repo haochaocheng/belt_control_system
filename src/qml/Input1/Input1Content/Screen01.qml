@@ -250,8 +250,16 @@ Item {
             }
         })
 
-        console.log("[Screen01] 🎯 强制获取焦点...")
-        root.forceActiveFocus()
+        // ✅ 2026-03-22 [Phase 7.48.82]: 只在当前页面可见时获取焦点
+        // 原因：启动时 SwipeView 在 index 0（ControlPanel），Screen01 在 index 5（Input1Page）
+        //       但 forceActiveFocus() 无条件抢夺焦点，导致启动时右键被 Screen01 的4列网格拦截
+        // 旧代码：root.forceActiveFocus()
+        if (root.visible) {
+            console.log("[Screen01] 🎯 页面可见，强制获取焦点...")
+            root.forceActiveFocus()
+        } else {
+            console.log("[Screen01] 🎯 页面不可见，跳过焦点获取")
+        }
     }
 
     onSelectedIndexChanged: {

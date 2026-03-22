@@ -525,6 +525,18 @@ Rectangle {
             } else {
                 deviceConfigMgr.saveTensionConfig(root.deviceId, root.controlIndex, config)
             }
+
+            // ✅ 2026-03-22 [Phase 7.48.82]: 保存成功后同步反馈配置到 CommonControl
+            // 原因：ParameterSettings.syncDeviceFeedbackConfigs() 只在启动时调用一次，
+            //       修改 use_feedback 后 CommonControl 内存中仍是旧值
+            if (typeof commonControl !== "undefined") {
+                var useFeedback = config["use_feedback"] !== undefined ? (Number(config["use_feedback"]) === 1) : true
+                var feedbackChannel = config["feedback_channel"] !== undefined ? config["feedback_channel"] : 0
+                var feedbackDelay = config["feedback_timeout"] || 10
+                commonControl.setDeviceFeedbackConfig("张紧控制", useFeedback, feedbackChannel, feedbackDelay)
+                console.log("✅ [TensionControlConfigPanel] 已同步反馈配置到CommonControl - 张紧控制",
+                           "useFeedback:", useFeedback, "channel:", feedbackChannel, "delay:", feedbackDelay)
+            }
         }
     }
 
