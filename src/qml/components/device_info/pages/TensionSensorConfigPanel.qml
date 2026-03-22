@@ -46,18 +46,19 @@ Rectangle {
     }
 
     // ========== 内容区域 ==========
-    // ✅ 2026-03-22 [Phase 7.48.75]: 添加ScrollView包裹，支持虚拟键盘弹出时自动滚动
-    ScrollView {
+    // ✅ 2026-03-22 [Phase 7.48.78]: 改用Flickable替代ScrollView（ScrollView的contentY为NaN）
+    // 旧：ScrollView { id: paramScrollView; ... }  // contentY不可动画化
+    Flickable {
         id: paramScrollView
         anchors.top: headerBar.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         clip: true
-        ScrollBar.vertical.policy: ScrollBar.AsNeeded
-        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+        flickableDirection: Flickable.VerticalFlick
+        boundsBehavior: Flickable.StopAtBounds
 
-        // ✅ 2026-03-22 [Phase 7.48.75]: 动态contentHeight，键盘弹出时增加额外空间
+        // ✅ 动态contentHeight，键盘弹出时增加额外空间
         contentHeight: contentArea.implicitHeight + (Qt.inputMethod.visible ? Qt.inputMethod.keyboardRectangle.height : 0)
 
     ColumnLayout {
@@ -488,7 +489,7 @@ Rectangle {
         //     Item { Layout.fillWidth: true }
         // }
     } // ColumnLayout end
-    } // ScrollView end
+    } // Flickable end
 
     // ✅ 2026-03-22 [Phase 7.48.75]: 滚动动画
     NumberAnimation {
