@@ -325,6 +325,26 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-03-22 [Phase 7.48.77]: 添加triggerParamInput转发函数，供DeviceSettingsDialog回车键调用
+    function triggerParamInput(paramIndex) {
+        console.log("✅ [TensionControlPage] 触发参数输入 - 索引:", paramIndex)
+        if (tensionControlConfigPanel.item && typeof tensionControlConfigPanel.item.triggerParamInput === "function") {
+            tensionControlConfigPanel.item.triggerParamInput(paramIndex)
+        } else {
+            console.log("⚠️ [TensionControlPage] ConfigPanel 不支持参数输入")
+        }
+    }
+
+    // ✅ 2026-03-22 [Phase 7.48.77]: 添加triggerButton转发函数，供DeviceSettingsDialog回车键调用
+    function triggerButton(buttonIndex) {
+        console.log("✅ [TensionControlPage] 触发按钮 - 索引:", buttonIndex)
+        if (tensionControlConfigPanel.item && typeof tensionControlConfigPanel.item.triggerButton === "function") {
+            tensionControlConfigPanel.item.triggerButton(buttonIndex)
+        } else {
+            console.log("⚠️ [TensionControlPage] ConfigPanel 不支持按钮触发")
+        }
+    }
+
     // ✅ 2026-01-31 [FIX 100.300.112.8]: 处理键盘事件（供 DeviceSettingsDialog 调用）
     // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 改为3区域模式（移除使用状态区域）
     function handleKeyPress(direction) {

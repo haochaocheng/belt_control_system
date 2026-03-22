@@ -1777,7 +1777,20 @@ Item {
             if (currentPage && typeof currentPage.focusSubArea !== "undefined") {
                 // ✅ 2026-02-02 [FIX 100.300.112.8.23.1]: 修正 focusSubArea 值检查
                 // MotorControlPage 的 focusSubArea 定义：0=列表, 1=Tab, 2=参数, 3=按钮
-                if (currentPage.focusSubArea === 2) {
+                // ✅ 2026-03-22 [Phase 7.48.77]: TensionControlPage 3区域模式：0=列表, 1=参数, 2=按钮
+                // 3区域模式的参数区域: focusSubArea===1, focusParamIndex>=0
+                if (currentPage.focusSubArea === 1 && currentPage.focusParamIndex >= 0
+                    && typeof currentPage.triggerParamInput === "function") {
+                    // ✅ 3区域模式（如张力控制）：focusSubArea 1 = 参数区域
+                    currentPage.triggerParamInput(currentPage.focusParamIndex)
+                    console.log("✅ [导航] 3区域模式触发参数输入 - 索引:", currentPage.focusParamIndex)
+                // 3区域模式的按钮区域: focusSubArea===2, focusButtonIndex>=0, focusParamIndex===-1
+                } else if (currentPage.focusSubArea === 2 && currentPage.focusButtonIndex >= 0
+                    && currentPage.focusParamIndex === -1 && typeof currentPage.triggerButton === "function") {
+                    // ✅ 3区域模式（如张力控制）：focusSubArea 2 = 按钮区域
+                    currentPage.triggerButton(currentPage.focusButtonIndex)
+                    console.log("✅ [导航] 3区域模式触发按钮 - 索引:", currentPage.focusButtonIndex)
+                } else if (currentPage.focusSubArea === 2) {
                     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.11]: 先尝试调用当前Tab的handleEnterKey()
                     // 如果Tab处理了回车键（返回true），则不执行triggerParamInput
                     // 用于支持ComboBox的回车键循环切换选项
