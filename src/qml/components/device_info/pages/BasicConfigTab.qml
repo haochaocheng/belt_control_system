@@ -964,8 +964,9 @@ Rectangle {
             // ✅ 2026-03-10 [Phase 7.48.36]: 行号+1（插入反馈延时行）
 
             // 分隔线
+            // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从6修正为7（停止延时插入后未递增）
             Rectangle {
-                Layout.column: 0; Layout.row: 6
+                Layout.column: 0; Layout.row: 7
                 Layout.columnSpan: 4
                 Layout.fillWidth: true
                 Layout.preferredHeight: 1
@@ -977,7 +978,8 @@ Rectangle {
                 // ✅ 2026-03-13 [Phase 7.48.43]: 合并状态指示和传感器数据为一个区域
                 text: "状态监控"
                 font.pixelSize: 19; font.bold: true; color: "#7dd3fc"
-                Layout.column: 0; Layout.row: 7
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从7修正为8
+                Layout.column: 0; Layout.row: 8
                 Layout.columnSpan: 4
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -986,13 +988,15 @@ Rectangle {
             Text {
                 text: "运行状态:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 0; Layout.row: 8
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从8修正为9
+                Layout.column: 0; Layout.row: 9
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
                 id: motorRunItem
-                Layout.column: 1; Layout.row: 8
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从8修正为9
+                Layout.column: 1; Layout.row: 9
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 40
 
@@ -1080,14 +1084,16 @@ Rectangle {
             Text {
                 text: "反馈状态:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 2; Layout.row: 8
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从8修正为9
+                Layout.column: 2; Layout.row: 9
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
             }
             Item {
                 id: feedbackLedItem
-                Layout.column: 3; Layout.row: 8
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从8修正为9
+                Layout.column: 3; Layout.row: 9
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 40
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
@@ -1163,7 +1169,8 @@ Rectangle {
             // 9个保护参数的实时值网格
             Item {
                 id: sensorDataPanel
-                Layout.column: 0; Layout.row: 9
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从9修正为10
+                Layout.column: 0; Layout.row: 10
                 Layout.columnSpan: 4
                 Layout.fillWidth: true
                 Layout.preferredHeight: motorValueGrid.implicitHeight + 16
@@ -1292,7 +1299,8 @@ Rectangle {
 
             // 分隔线
             Rectangle {
-                Layout.column: 0; Layout.row: 10
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从10修正为11
+                Layout.column: 0; Layout.row: 11
                 Layout.columnSpan: 4
                 Layout.fillWidth: true
                 Layout.preferredHeight: 1
@@ -1303,7 +1311,8 @@ Rectangle {
             Text {
                 text: "测试操作"
                 font.pixelSize: 19; font.bold: true; color: "#fbbf24"
-                Layout.column: 0; Layout.row: 11
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从11修正为12
+                Layout.column: 0; Layout.row: 12
                 Layout.columnSpan: 4
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -1312,12 +1321,14 @@ Rectangle {
             Text {
                 text: "电机控制:"
                 font.pixelSize: 21; color: "#9E9E9E"
-                Layout.column: 0; Layout.row: 12
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从12修正为13
+                Layout.column: 0; Layout.row: 13
                 Layout.preferredWidth: 160
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.column: 1; Layout.row: 12
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 行号从12修正为13
+                Layout.column: 1; Layout.row: 13
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 Layout.columnSpan: 3
                 implicitHeight: 56
