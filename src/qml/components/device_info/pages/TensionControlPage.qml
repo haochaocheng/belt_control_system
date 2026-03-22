@@ -181,10 +181,10 @@ Rectangle {
             } else {
                 // 旧：张紧控制: 6个参数  rows = [[0,1],[1,1],[2,2],[4,1],[5,1]]
                 // ✅ 2026-03-22 [Phase 7.48.74]: 开关加入导航+新增停止延时，共9个参数(0-8)
+                // ✅ 2026-03-22 [Phase 7.48.80]: 预警/失败语音移出导航，音频来源加入GridLayout Row4，共8个参数(0-7)
                 // Row0: 张紧启用(0)+输出通道(1), Row1: 使用反馈(2)+反馈通道(3),
-                // Row2: 反馈超时(4)+启动延时(5), Row3: 停止延时(6),
-                // Row4: 预警语音(7), Row5: 失败语音(8)
-                rows = [[0,2],[2,2],[4,2],[6,1],[7,1],[8,1]]
+                // Row2: 反馈超时(4)+启动延时(5), Row3: 停止延时(6)+音频来源(7)
+                rows = [[0,2],[2,2],[4,2],[6,2]]
             }
 
             var curRow = -1, colInRow = 0
@@ -215,7 +215,9 @@ Rectangle {
                     var nextRow = rows[curRow + 1]
                     var targetCol2 = Math.min(colInRow, nextRow[1] - 1)
                     paramIndex = nextRow[0] + targetCol2
-                } else { switchToArea(areaButtons); buttonIndex = 0; return }
+                }
+                // ✅ 2026-03-22 [Phase 7.48.80.1]: 最后一行按下键保持不动（不进入按钮区）
+                // 用户通过点击或其他方式进入按钮区
                 break
             }
         }
@@ -241,12 +243,11 @@ Rectangle {
                 }
                 break
             case "Up":
-                // 返回参数区域最后一个参数
-                // 2026-03-17 [Phase 7.48.51]: 动态返回，张力传感器14，张紧控制5
+                // 返回参数区域最后一行的第一列（col 0）
+                // ✅ 2026-03-22 [Phase 7.48.80.1]: 上下导航保持同列，Up从按钮区回到最后行首列
+                // 张力传感器: 最后行[15,2]首列=15(洒水启用), 张紧控制: 最后行[6,2]首列=6(音频来源)
                 switchToArea(areaParams)
-                // 旧：paramIndex = (root.currentControlIndex === 0) ? 14 : 5  // ✅ 2026-03-22 [Phase 7.48.75]: 张紧控制参数数量6→9后，最后索引5→8
-                // ✅ 2026-03-22 [Phase 7.48.78]: 张力传感器新增洒水启用后，最后索引15→16
-                paramIndex = (root.currentControlIndex === 0) ? 16 : 8
+                paramIndex = (root.currentControlIndex === 0) ? 15 : 6
                 return
             }
 

@@ -335,10 +335,10 @@ Rectangle {
             Item {
                 Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: sprinklerIndexSpin.implicitHeight
+                // ✅ 2026-03-22 [Phase 7.48.79]: width:120 → anchors.fill:parent，与其他SpinBox宽度一致
                 DeviceInfo.CustomSpinBox {
                     id: sprinklerIndexSpin; from: 0; to: 7; value: 0; enabled: sprinklerSwitch.checked
-                    width: 120; keyboardManager: root.keyboardManager
-                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.fill: parent; keyboardManager: root.keyboardManager
                 }
                 // ✅ 2026-03-22 [Phase 7.48.78]: 洒水编号焦点高亮（参数索引16）
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 16 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
@@ -653,7 +653,11 @@ Rectangle {
         // 洒水启用（新增）
         case 15: sprinklerSwitch.checked = !sprinklerSwitch.checked; break
         // 洒水编号（旧索引15→16）
-        case 16: sprinklerIndexSpin.activateVirtualKeyboard(); break
+        // ✅ 2026-03-22 [Phase 7.48.79]: 洒水开关关闭时先自动启用，再弹出虚拟键盘
+        case 16:
+            if (!sprinklerSwitch.checked) { sprinklerSwitch.checked = true }
+            sprinklerIndexSpin.activateVirtualKeyboard()
+            break
         }
     }
 

@@ -134,42 +134,40 @@ Rectangle {
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
-            // ✅ 2026-03-22 [Phase 7.48.74]: 新增独立停止延时
-            // ===== Row 3: 停止延时(6) =====
-            Text { text: "停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 3; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            // ✅ 2026-03-22 [Phase 7.48.80.1]: 音频来源移到Row3左列，停止延时移到Row3右列（启动延时下方）
+            // ===== Row 3: 音频来源(6) | 停止延时(7) =====
+            Text { text: "音频来源:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 3; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 1; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
-                implicitHeight: stopDelaySpin.implicitHeight
-                DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
-                // 旧：focusParamIndex === 4  // ✅ 2026-03-22 [Phase 7.48.74]: 张紧启用+使用反馈加入导航后，索引4→6
+                implicitHeight: audioSourceRow.implicitHeight
+                RowLayout {
+                    id: audioSourceRow
+                    anchors.fill: parent
+                    spacing: 16
+                    ButtonGroup { id: audioSourceGroup }
+                    RadioButton {
+                        id: audioDefaultRadio; text: "默认"
+                        ButtonGroup.group: audioSourceGroup
+                        enabled: tensionEnabledSwitch.checked
+                        contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
+                    }
+                    RadioButton {
+                        id: audioTtsRadio; text: "TTS"; checked: true
+                        ButtonGroup.group: audioSourceGroup
+                        enabled: tensionEnabledSwitch.checked
+                        contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
+                    }
+                }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 6 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
+            Text { text: "停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 3; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Item {
+                Layout.column: 3; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
+                implicitHeight: stopDelaySpin.implicitHeight
+                DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 7 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            }
         } // GridLayout end
-
-        // ========== 分隔线 ==========
-        Rectangle { Layout.fillWidth: true; height: 1; color: "#3d4556" }
-
-        // ========== 音频来源 ==========
-        // ✅ 2026-03-17 [Phase 7.48.53]: 默认使用TTS（因为没有预录音频文件）
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 16
-
-            Text { text: "音频来源:"; font.pixelSize: root.lblFs; color: root.lblC }
-            ButtonGroup { id: audioSourceGroup }
-            RadioButton {
-                id: audioDefaultRadio; text: "默认"
-                ButtonGroup.group: audioSourceGroup
-                enabled: tensionEnabledSwitch.checked
-                contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
-            }
-            RadioButton {
-                id: audioTtsRadio; text: "TTS"; checked: true
-                ButtonGroup.group: audioSourceGroup
-                enabled: tensionEnabledSwitch.checked
-                contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
-            }
-        }
 
         // ========== 预警语音(4) + 失败语音(5) ==========
         // ✅ 2026-03-17 [Phase 7.48.53]: 设置默认TTS文本
@@ -190,8 +188,8 @@ Rectangle {
                 placeholderText: root.controlIndex + "号张紧启动"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
-                // 旧：focusParamIndex === 4  // ✅ 2026-03-22 [Phase 7.48.74]: 停止延时插入+开关加入导航后，语音字段索引4→7
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 7 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                // ✅ 2026-03-22 [Phase 7.48.80]: 移除预警语音焦点高亮（不参与导航）
+                // 旧：Rectangle { ... focusParamIndex === 7 ... }
             }
         }
 
@@ -212,8 +210,8 @@ Rectangle {
                 placeholderText: root.controlIndex + "号张紧运行失败"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
-                // 旧：focusParamIndex === 5  // ✅ 2026-03-22 [Phase 7.48.74]: 停止延时插入+开关加入导航后，语音字段索引5→8
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 8 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                // ✅ 2026-03-22 [Phase 7.48.80]: 移除失败语音焦点高亮（不参与导航）
+                // 旧：Rectangle { ... focusParamIndex === 8 ... }
             }
         }
 
@@ -390,8 +388,9 @@ Rectangle {
 
     // 旧：function getParamFieldCount() { return 6 }  // 参数索引 0-5
     // ✅ 2026-03-22 [Phase 7.48.74]: 新增停止延时+开关加入导航，参数数量6→9
-    // 布局：张紧启用(0), 输出通道(1), 使用反馈(2), 反馈通道(3), 反馈超时(4), 启动延时(5), 停止延时(6), 预警语音(7), 失败语音(8)
-    function getParamFieldCount() { return 9 }  // 参数索引 0-8
+    // ✅ 2026-03-22 [Phase 7.48.80.1]: 音频来源(6)和停止延时(7)位置互换
+    // 布局：张紧启用(0), 输出通道(1), 使用反馈(2), 反馈通道(3), 反馈超时(4), 启动延时(5), 音频来源(6), 停止延时(7)
+    function getParamFieldCount() { return 8 }  // 参数索引 0-7
 
     // ✅ 2026-03-17 [Phase 7.48.53]: 删除旧playVoice函数
     // 旧：function playVoice(voiceText, label) { ... commonControl.testTTS() ... }
@@ -516,16 +515,20 @@ Rectangle {
         switch(paramIndex) {
         // ✅ 2026-03-22 [Phase 7.48.76]: SpinBox改用activateVirtualKeyboard, TextField加Qt.inputMethod.show
         // 旧：forceActiveFocus() 不弹出虚拟键盘
-        // 张紧启用(0), 输出通道(1), 使用反馈(2), 反馈通道(3), 反馈超时(4), 启动延时(5), 停止延时(6), 预警语音(7), 失败语音(8)
+        // ✅ 2026-03-22 [Phase 7.48.80.1]: 音频来源(6)和停止延时(7)位置互换
+        // 张紧启用(0), 输出通道(1), 使用反馈(2), 反馈通道(3), 反馈超时(4), 启动延时(5), 音频来源(6), 停止延时(7)
         case 0: tensionEnabledSwitch.toggle(); break
         case 1: outputChannelSpin.activateVirtualKeyboard(); break
         case 2: useFeedbackSwitch.toggle(); break
         case 3: feedbackChannelSpin.activateVirtualKeyboard(); break
         case 4: feedbackTimeoutSpin.activateVirtualKeyboard(); break
         case 5: startupDelaySpin.activateVirtualKeyboard(); break
-        case 6: stopDelaySpin.activateVirtualKeyboard(); break
-        case 7: warningVoiceField.forceActiveFocus(); Qt.inputMethod.show(); break
-        case 8: failureVoiceField.forceActiveFocus(); Qt.inputMethod.show(); break
+        // 音频来源: 切换 默认↔TTS（使用if/else单向设置，避免ButtonGroup互斥问题）
+        case 6:
+            if (audioDefaultRadio.checked) { audioTtsRadio.checked = true }
+            else { audioDefaultRadio.checked = true }
+            break
+        case 7: stopDelaySpin.activateVirtualKeyboard(); break
         }
     }
 
