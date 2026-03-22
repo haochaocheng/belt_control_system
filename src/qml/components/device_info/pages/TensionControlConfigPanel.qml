@@ -513,18 +513,18 @@ Rectangle {
     function triggerParamInput(paramIndex) {
         console.log("✅ [TensionControlConfigPanel] triggerParamInput:", paramIndex)
         switch(paramIndex) {
-        // ✅ 2026-03-22 [Phase 7.48.74]: 开关加入导航，所有索引重排
-        // 旧：case 0: outputChannelSpin → case 1: feedbackChannelSpin → ...
-        // 新：张紧启用(0), 输出通道(1), 使用反馈(2), 反馈通道(3), 反馈超时(4), 启动延时(5), 停止延时(6), 预警语音(7), 失败语音(8)
+        // ✅ 2026-03-22 [Phase 7.48.76]: SpinBox改用activateVirtualKeyboard, TextField加Qt.inputMethod.show
+        // 旧：forceActiveFocus() 不弹出虚拟键盘
+        // 张紧启用(0), 输出通道(1), 使用反馈(2), 反馈通道(3), 反馈超时(4), 启动延时(5), 停止延时(6), 预警语音(7), 失败语音(8)
         case 0: tensionEnabledSwitch.toggle(); break
-        case 1: outputChannelSpin.forceActiveFocus(); break
+        case 1: outputChannelSpin.activateVirtualKeyboard(); break
         case 2: useFeedbackSwitch.toggle(); break
-        case 3: feedbackChannelSpin.forceActiveFocus(); break
-        case 4: feedbackTimeoutSpin.forceActiveFocus(); break
-        case 5: startupDelaySpin.forceActiveFocus(); break
-        case 6: stopDelaySpin.forceActiveFocus(); break
-        case 7: warningVoiceField.forceActiveFocus(); break
-        case 8: failureVoiceField.forceActiveFocus(); break
+        case 3: feedbackChannelSpin.activateVirtualKeyboard(); break
+        case 4: feedbackTimeoutSpin.activateVirtualKeyboard(); break
+        case 5: startupDelaySpin.activateVirtualKeyboard(); break
+        case 6: stopDelaySpin.activateVirtualKeyboard(); break
+        case 7: warningVoiceField.forceActiveFocus(); Qt.inputMethod.show(); break
+        case 8: failureVoiceField.forceActiveFocus(); Qt.inputMethod.show(); break
         }
     }
 

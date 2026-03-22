@@ -91,7 +91,8 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: nameField.implicitHeight
-                DeviceInfo.CustomTextField { id: nameField; text: "张力传感器"; anchors.fill: parent; keyboardManager: root.keyboardManager }
+                // ✅ 2026-03-22 [Phase 7.48.76]: inputMethodHints改为Qt.ImhNone，允许中文输入
+                DeviceInfo.CustomTextField { id: nameField; text: "张力传感器"; anchors.fill: parent; keyboardManager: root.keyboardManager; inputMethodHints: Qt.ImhNone }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "播放次数:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
@@ -209,6 +210,8 @@ Rectangle {
                     RadioButton { id: audioDefaultRadio; text: "默认"; ButtonGroup.group: audioSourceGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
                     RadioButton { id: audioTtsRadio; text: "TTS"; checked: true; ButtonGroup.group: audioSourceGroup; contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 } }
                 }
+                // ✅ 2026-03-22 [Phase 7.48.76]: 添加焦点高亮（参数索引12）
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 12 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "播放方式:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             // ✅ 2026-03-18 [Phase 7.48.55]: 播放方式切换按钮（Cyberpunk工业风，与开关量输入统一）
@@ -274,6 +277,8 @@ Rectangle {
                         onClicked: { playDurationRadio.checked = true }
                     }
                 }
+                // ✅ 2026-03-22 [Phase 7.48.76]: 添加焦点高亮（参数索引13）
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 13 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
             // ===== Row 1: TTS文本(12) / 音频文件(13) =====
@@ -287,15 +292,19 @@ Rectangle {
                     id: ttsTextField; text: "张力传感器报警"
                     anchors.fill: parent; visible: audioTtsRadio.checked
                     keyboardManager: root.keyboardManager
-                    Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 12 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                    // ✅ 2026-03-22 [Phase 7.48.76]: inputMethodHints改为Qt.ImhNone，允许中文输入
+                    inputMethodHints: Qt.ImhNone
+                    // ✅ 2026-03-22 [Phase 7.48.76]: 参数索引12→14（新增音频来源12、播放方式13后后移）
+                    Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 14 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
                 }
                 DeviceInfo.CustomTextField {
                     id: audioFileField; text: ""
                     // 旧：placeholderText: "自动生成"
                     // ✅ 2026-03-18 [Phase 7.48.54]: 改为"张力保护"（更准确描述功能）
+                    // ✅ 2026-03-22 [Phase 7.48.76]: 参数索引13→14（新增音频来源12、播放方式13后后移）
                     anchors.fill: parent; readOnly: true; visible: audioDefaultRadio.checked; placeholderText: "张力保护"
                     keyboardManager: root.keyboardManager
-                    Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 13 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+                    Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 14 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
                 }
             }
         } // 语音配置GridLayout end
@@ -315,7 +324,8 @@ Rectangle {
                 id: sprinklerIndexSpin; from: 0; to: 7; value: 0; enabled: sprinklerSwitch.checked
                 Layout.preferredWidth: 120; keyboardManager: root.keyboardManager
             }
-            Rectangle { anchors.fill: sprinklerIndexSpin; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 14 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
+            // ✅ 2026-03-22 [Phase 7.48.76]: 参数索引14→15（新增音频来源12、播放方式13后后移）
+            Rectangle { anchors.fill: sprinklerIndexSpin; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 15 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
         }
 
         // ========== 分隔线3 ==========
@@ -512,7 +522,8 @@ Rectangle {
     }
 
     // ========== 函数 ==========
-    function getParamFieldCount() { return 15 }  // 参数索引 0-14
+    // ✅ 2026-03-22 [Phase 7.48.76]: 参数数量15→16（新增音频来源12、播放方式13）
+    function getParamFieldCount() { return 16 }  // 参数索引 0-15
 
     function collectConfig() {
         return {
@@ -577,28 +588,43 @@ Rectangle {
         }
     }
 
-    // ✅ 2026-03-17 [Phase 7.48.52]: 参数索引重排后的triggerParamInput
+    // ✅ 2026-03-22 [Phase 7.48.76]: triggerParamInput 全面修复
+    // 修复1: SpinBox 改用 activateVirtualKeyboard()（弹出虚拟键盘）
+    // 修复2: ComboBox 改用循环切换值（与CustomComboBox回车行为一致）
+    // 修复3: TextField 加 Qt.inputMethod.show()（弹出虚拟键盘）
+    // 修复4: 新增音频来源(12)、播放方式(13)导航
     // 新索引: 0=名称, 1=播放次数, 2=模块类型, 3=播放时长, 4=通道号, 5=上限值,
     //         6=下限值, 7=量程, 8=单位, 9=输入类型, 10=保护延时, 11=保护级别,
-    //         12=TTS文本, 13=音频文件, 14=洒水编号
+    //         12=音频来源, 13=播放方式, 14=TTS文本/音频文件, 15=洒水编号
     function triggerParamInput(paramIndex) {
         console.log("✅ [TensionSensorConfigPanel] triggerParamInput:", paramIndex)
         switch(paramIndex) {
-        case 0: nameField.forceActiveFocus(); break
-        case 1: playCountSpin.forceActiveFocus(); break
-        case 2: moduleTypeCombo.popup.open(); break
-        case 3: playDurationSpin.forceActiveFocus(); break
-        case 4: channelSpin.forceActiveFocus(); break
-        case 5: upperLimitSpin.forceActiveFocus(); break
-        case 6: lowerLimitSpin.forceActiveFocus(); break
-        case 7: rangeSpin.forceActiveFocus(); break
-        case 8: unitCombo.popup.open(); break
-        case 9: inputTypeCombo.popup.open(); break
-        case 10: protectionDelaySpin.forceActiveFocus(); break
-        case 11: protectionLevelCombo.popup.open(); break
-        case 12: ttsTextField.forceActiveFocus(); break
-        case 13: audioFileField.forceActiveFocus(); break
-        case 14: sprinklerIndexSpin.forceActiveFocus(); break
+        // TextField: forceActiveFocus + Qt.inputMethod.show
+        case 0: nameField.forceActiveFocus(); Qt.inputMethod.show(); break
+        // SpinBox: activateVirtualKeyboard
+        case 1: playCountSpin.activateVirtualKeyboard(); break
+        // ComboBox: 循环切换值
+        case 2: moduleTypeCombo.isUserAction = true; moduleTypeCombo.currentIndex = (moduleTypeCombo.currentIndex + 1) % moduleTypeCombo.count; moduleTypeCombo.isUserAction = false; break
+        case 3: playDurationSpin.activateVirtualKeyboard(); break
+        case 4: channelSpin.activateVirtualKeyboard(); break
+        case 5: upperLimitSpin.activateVirtualKeyboard(); break
+        case 6: lowerLimitSpin.activateVirtualKeyboard(); break
+        case 7: rangeSpin.activateVirtualKeyboard(); break
+        case 8: unitCombo.isUserAction = true; unitCombo.currentIndex = (unitCombo.currentIndex + 1) % unitCombo.count; unitCombo.isUserAction = false; break
+        case 9: inputTypeCombo.isUserAction = true; inputTypeCombo.currentIndex = (inputTypeCombo.currentIndex + 1) % inputTypeCombo.count; inputTypeCombo.isUserAction = false; break
+        case 10: protectionDelaySpin.activateVirtualKeyboard(); break
+        case 11: protectionLevelCombo.isUserAction = true; protectionLevelCombo.currentIndex = (protectionLevelCombo.currentIndex + 1) % protectionLevelCombo.count; protectionLevelCombo.isUserAction = false; break
+        // 音频来源: 切换 默认/TTS
+        case 12: audioDefaultRadio.checked = !audioDefaultRadio.checked; audioTtsRadio.checked = !audioTtsRadio.checked; break
+        // 播放方式: 切换 按次数/按时长
+        case 13: playCountRadio.checked = !playCountRadio.checked; playDurationRadio.checked = !playDurationRadio.checked; break
+        // TTS文本/音频文件
+        case 14:
+            if (audioTtsRadio.checked) { ttsTextField.forceActiveFocus(); Qt.inputMethod.show() }
+            else { audioFileField.forceActiveFocus() }
+            break
+        // 洒水编号
+        case 15: sprinklerIndexSpin.activateVirtualKeyboard(); break
         }
     }
 
