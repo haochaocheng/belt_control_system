@@ -203,9 +203,14 @@ Item {
         // 创建并显示 DeviceSettingsDialog
         var component = Qt.createComponent("../../components/device_info/DeviceSettingsDialog.qml")
         if (component.status === Component.Ready) {
+            // ✅ 2026-03-22 [Phase 7.48.82.4]: 根据选中索引传递不同的deviceId和deviceName
+            // 原因：12个设备卡片都使用默认deviceId=1，导致修改一个设备的参数影响所有设备
+            var deviceIndex = selectedIndex + 1  // 设备编号从1开始
             var dialog = component.createObject(root, {
                 // ✅ 2026-01-30 [修复]: 传递 parentContainer 引用，用于焦点恢复
-                parentContainer: root
+                parentContainer: root,
+                deviceId: deviceIndex,
+                deviceName: deviceIndex + "号皮带"
             })
             if (dialog) {
                 console.log("🔍 [Screen01] 对话框创建成功")
