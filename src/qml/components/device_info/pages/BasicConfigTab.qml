@@ -800,7 +800,9 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 6
                 Layout.fillWidth: true; Layout.maximumWidth: 300
-                implicitHeight: startupKeyCombo.implicitHeight
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 统一高度为50（与其他输入框一致）
+                // 旧：implicitHeight: startupKeyCombo.implicitHeight
+                implicitHeight: 50
 
                 // ✅ 2026-03-12 [Phase 7.48.41]: 从ComboBox改为CustomComboBox（统一组件风格）
                 DeviceInfo.CustomComboBox {
@@ -816,15 +818,17 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
-                        root.requestFocusParamIndex(12)
+                        // ✅ 2026-03-22 [Phase 7.48.74.1]: 修复索引12→11
+                        root.requestFocusParamIndex(11)
                         mouse.accepted = false
                     }
                 }
 
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 12) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 12) ? 3 : 0
+                    // ✅ 2026-03-22 [Phase 7.48.74.1]: 修复索引12→11
+                    border.color: (root.focusParamIndex === 11) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 11) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -1068,13 +1072,8 @@ Rectangle {
                     }
                 }
 
-                // 焦点指示器
-                Rectangle {
-                    anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 13) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 13) ? 3 : 0
-                    radius: 4; z: 1000; enabled: false
-                }
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 移除焦点指示器（运行状态为只读，不需要键盘导航）
+                // 旧：focusParamIndex === 13 焦点指示器
             }
 
             // 反馈LED
@@ -1154,13 +1153,8 @@ Rectangle {
                     }
                 }
 
-                // 焦点指示器
-                Rectangle {
-                    anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 14) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 14) ? 3 : 0
-                    radius: 4; z: 1000; enabled: false
-                }
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 移除焦点指示器（反馈状态为只读，不需要键盘导航）
+                // 旧：focusParamIndex === 14 焦点指示器
             }
 
             // ========== 传感器实时数据（合并到状态监控区域）==========
@@ -1457,10 +1451,11 @@ Rectangle {
                 }
 
                 // 焦点指示器
+                // ✅ 2026-03-22 [Phase 7.48.74.1]: 索引从15调整为13（移除只读LED导航后重编号）
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
-                    border.color: (root.focusParamIndex === 15) ? "#2196F3" : "transparent"
-                    border.width: (root.focusParamIndex === 15) ? 3 : 0
+                    border.color: (root.focusParamIndex === 13) ? "#2196F3" : "transparent"
+                    border.width: (root.focusParamIndex === 13) ? 3 : 0
                     radius: 4; z: 1000; enabled: false
                 }
             }
@@ -1470,21 +1465,20 @@ Rectangle {
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
     // 获取参数字段数量
     // ✅ 2026-03-10 [Phase 7.48.34]: 从8扩展到9（新增"是否使用反馈"开关，反馈通道右移）
-    // ✅ 2026-03-22 [Phase 7.48.74]: 从15扩展到16（新增停止延时）
-    // 旧值：return 15
+    // ✅ 2026-03-22 [Phase 7.48.74.1]: 从16缩减到14（移除运行LED和反馈LED的导航）
+    // 旧值：return 16
     function getParamFieldCount() {
-        return 16  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6反馈延时、7启动延时、8停止延时、9预警语音、10失败语音、11启动键、12音频来源、13运行LED、14反馈LED、15测试按钮
+        return 14  // 0运行状态、1模块类型、2模块地址、3输出通道、4使用反馈、5反馈通道、6反馈延时、7启动延时、8停止延时、9预警语音、10失败语音、11启动键、12音频来源、13测试按钮
     }
 
-    // ✅ 2026-03-22 [Phase 7.48.74]: 返回参数行映射，用于非均匀网格导航
-    // 格式：[[startIndex, colCount], ...] — 每行起始索引和该行字段数
+    // ✅ 2026-03-22 [Phase 7.48.74.1]: 移除运行LED和反馈LED行，测试按钮重编号
+    // 旧值：[[0,2],[2,2],[4,2],[6,2],[8,1],[9,2],[11,2],[13,2],[15,1]]
     function getParamRows() {
-        return [[0,2],[2,2],[4,2],[6,2],[8,1],[9,2],[11,2],[13,2],[15,1]]
+        return [[0,2],[2,2],[4,2],[6,2],[8,1],[9,2],[11,2],[13,1]]
         // Row0: 运行状态+模块类型  Row1: 模块地址+输出通道
         // Row2: 使用反馈+反馈通道  Row3: 反馈延时+启动延时
         // Row4: 停止延时(单列)     Row5: 预警语音+失败语音
-        // Row6: 启动键+音频来源    Row7: 运行LED+反馈LED
-        // Row8: 测试按钮(单列)
+        // Row6: 启动键+音频来源    Row7: 测试按钮(单列)
     }
 
     // 触发参数输入
@@ -1563,14 +1557,8 @@ Rectangle {
                 ttsAudioBtn.checked = false
             }
             break
-        // ✅ 2026-03-22 [Phase 7.48.74]: 索引从12/13/14调整为13/14/15
-        case 13:  // 运行LED（只读）
-            console.log("✅ [BasicConfigTab] 运行LED（只读）")
-            break
-        case 14:  // 反馈LED（只读）
-            console.log("✅ [BasicConfigTab] 反馈LED（只读）")
-            break
-        case 15:  // 测试按钮（启动/停止切换）
+        // ✅ 2026-03-22 [Phase 7.48.74.1]: 移除运行LED(13)和反馈LED(14)的导航，测试按钮索引从15调整为13
+        case 13:  // 测试按钮（启动/停止切换）
             console.log("✅ [BasicConfigTab] 测试按钮 - 切换电机状态")
             var ch8 = outputChannelSpin.value
             var topic8 = "belt_control/do/module1/cmd"
