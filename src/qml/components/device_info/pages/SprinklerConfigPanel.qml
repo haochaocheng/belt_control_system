@@ -237,7 +237,7 @@ Rectangle {
             "sprinkler_name": sprinklerNameField.text,
             "enabled": enabledSwitch.checked ? 1 : 0,
             // 旧："module_type": moduleTypeCombo.currentText,  // 2026-03-18 删除模块类型（固定为继电器模块）
-            "channel": channelSpin.value
+            "channel": channelSpin.value,
             // 旧："mqtt_topic": mqttTopicField.text  // 2026-03-18 删除MQTT主题（使用全局配置）
             // ✅ 2026-03-22 [Phase 7.48.74]: 新增启动延时+停止延时
             "startup_delay": startupDelaySpin.value,
