@@ -359,11 +359,11 @@ Item {
         if (currentCategory === 3 && currentFocusArea === 2) {
             var motorPage = motorControlPageLoader.item
             if (motorPage && typeof motorPage.handleKeyPress === "function") {
-                // ✅ 2026-03-22 [Phase 7.48.74]: 列表第一项上键 → 顶部按钮区域
-                if (motorPage.focusSubArea === 0 && motorPage.focusItemIndex === 0) {
+                // ✅ 2026-03-22 [Phase 7.48.74]: 列表第一项或Tab区域上键 → 顶部按钮区域
+                if ((motorPage.focusSubArea === 0 && motorPage.focusItemIndex === 0) || motorPage.focusSubArea === 1) {
                     currentFocusArea = 0
                     currentTopButtonIndex = 0
-                    console.log("✅ [导航] 电机控制列表第一项上键 → 顶部按钮区域")
+                    console.log("✅ [导航] 电机控制上键 → 顶部按钮区域 (focusSubArea:", motorPage.focusSubArea, ")")
                     event.accepted = true
                     return
                 }
