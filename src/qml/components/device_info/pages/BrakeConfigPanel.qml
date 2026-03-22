@@ -43,10 +43,18 @@ Rectangle {
     }
 
     // ========== 内容区域 ==========
-    ColumnLayout {
-        id: contentArea
-        anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom; margins: 10 }
-        spacing: 6
+    // ✅ 2026-03-22 [Phase 7.48.74.2]: 新增ScrollView包裹，解决虚拟键盘遮挡输入框问题
+    // 旧：ColumnLayout直接anchors到parent.bottom，无滚动能力
+    ScrollView {
+        id: paramScrollView
+        anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom }
+        clip: true
+        ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+        ColumnLayout {
+            id: contentArea
+            width: paramScrollView.width * 0.95
+            spacing: 6
 
         // ========== 统一8列GridLayout：行0-5全部对齐 ==========
         GridLayout {
@@ -122,23 +130,33 @@ Rectangle {
             Text { text: "抱闸释放电流:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomTextField { id: releaseCurrentField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
 
-            // ---- 行5：抱闸动作电压 | 抱闸释放电压 | 松闸启动延时 | 抱闸启动延时 ----
+            // ---- 行5：抱闸动作电压 | 抱闸释放电压 ----
+            // ✅ 2026-03-22 [Phase 7.48.74.2]: 电压行独立（旧：与启动延时同行）
             Text { text: "抱闸动作电压:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomTextField { id: brakeVoltageField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸释放电压:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomTextField { id: releaseVoltageField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            // ✅ 2026-03-21 [Phase 7.48.68]: 新增松闸启动延时和抱闸启动延时
-            // 原因：逻辑控制需要读取制动器的启动延时参数
+            Item { Layout.columnSpan: 4; Layout.fillWidth: true }
+
+            // ---- 分隔线：电压与延时区域分割 ----
+            // ✅ 2026-03-22 [Phase 7.48.74.2]: 新增分割线
+            Rectangle { Layout.columnSpan: 8; Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
+
+            // ---- 行6：松闸启动延时 | 抱闸启动延时 ----
+            // ✅ 2026-03-22 [Phase 7.48.74.2]: 启动延时独立行（旧：与电压同行）
             Text { text: "松闸启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomTextField { id: releaseStartupDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomTextField { id: brakeStartupDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            // ✅ 2026-03-22 [Phase 7.48.74]: 新增松闸停止延时和抱闸停止延时
-            // 原因：启动延时和停止延时需要独立配置
+            Item { Layout.columnSpan: 4; Layout.fillWidth: true }
+
+            // ---- 行7：松闸停止延时 | 抱闸停止延时 ----
+            // ✅ 2026-03-22 [Phase 7.48.74.2]: 停止延时独立行
             Text { text: "松闸停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomTextField { id: releaseStopDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             DeviceInfo.CustomTextField { id: brakeStopDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Item { Layout.columnSpan: 4; Layout.fillWidth: true }
         }
 
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#334155" }
@@ -259,6 +277,7 @@ Rectangle {
         // 填充剩余空间（防止底部空白把内容撑开）
         Item { Layout.fillHeight: true; Layout.maximumHeight: 10 }
     }
+    }  // ScrollView 结束
 
     // ========== 定时器 ==========
     Timer {
@@ -327,6 +346,20 @@ Rectangle {
                 var field = fields[idx]
                 var pos = field.mapToItem(root, 0, 0)
                 x = pos.x - 2; y = pos.y - 2; width = field.width + 4; height = field.height + 4
+                // ✅ 2026-03-22 [Phase 7.48.74.2]: 自动滚动确保焦点字段可见
+                var flickable = paramScrollView.contentItem
+                if (flickable) {
+                    var fieldInFlickable = field.mapToItem(flickable, 0, 0)
+                    var viewportTop = flickable.contentY
+                    var viewportBottom = viewportTop + paramScrollView.height
+                    var fieldTop = fieldInFlickable.y - 10
+                    var fieldBottom = fieldInFlickable.y + field.height + 10
+                    if (fieldTop < viewportTop) {
+                        flickable.contentY = fieldTop
+                    } else if (fieldBottom > viewportBottom) {
+                        flickable.contentY = fieldBottom - paramScrollView.height
+                    }
+                }
             }
         }
         Connections { target: root
