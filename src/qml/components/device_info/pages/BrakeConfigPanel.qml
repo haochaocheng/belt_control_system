@@ -51,18 +51,10 @@ Rectangle {
         anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom; margins: 10 }
         clip: true
         contentWidth: width
-        contentHeight: {
-            contentArea.implicitHeight
-            var totalHeight = 0
-            for (var i = 0; i < contentArea.children.length; i++) {
-                var child = contentArea.children[i]
-                if (child && child.visible !== false) {
-                    totalHeight += child.implicitHeight || child.height || 0
-                }
-            }
-            totalHeight += contentArea.spacing * (contentArea.children.length - 1)
-            return Math.max(totalHeight + 700, 1200)
-        }
+        // ✅ 2026-03-22 [Phase 7.48.74.2 fix2]: 简化contentHeight计算
+        // 旧：遍历children手动累加 + 700缓冲（过大导致滚动过多）
+        // 新：使用implicitHeight + 合理缓冲（仅需覆盖键盘遮挡区域，约300px）
+        contentHeight: contentArea.implicitHeight + 300
         flickableDirection: Flickable.VerticalFlick
         boundsBehavior: Flickable.StopAtBounds
 
@@ -90,28 +82,52 @@ Rectangle {
             easing.type: Easing.OutQuad
         }
 
-        // 确保输入框在虚拟键盘上方可见
+        // ✅ 2026-03-22 [Phase 7.48.74.2 fix2]: 重写ensureVisible，精确计算滚动量
+        // 旧：使用root.parent.height作为屏幕高度（错误，实际是Loader高度~600px）
+        // 新：使用Qt.inputMethod.keyboardRectangle.y获取键盘顶部的窗口坐标
         function ensureVisible(item) {
             if (!item) return
             Qt.callLater(function() {
-                var itemGlobalRect = item.mapToItem(null, 0, 0)
-                var itemGlobalBottom = itemGlobalRect.y + item.height
+                var kbRect = Qt.inputMethod.keyboardRectangle
+                if (kbRect.height <= 0) return  // 键盘未显示
 
-                var keyboardHeight = Qt.inputMethod.keyboardRectangle.height
-                if (keyboardHeight === 0) keyboardHeight = 400
+                // 输入框的全局底部坐标（窗口坐标系）
+                var itemGlobal = item.mapToItem(null, 0, 0)
+                var itemGlobalBottom = itemGlobal.y + item.height
 
-                var screenHeight = root.parent ? root.parent.height : 1080
-                var keyboardGlobalTop = screenHeight - keyboardHeight
-                var candidateBarHeight = 50
-                var margin = 10
-                var targetGlobalBottom = keyboardGlobalTop - candidateBarHeight - margin
+                // 键盘顶部的窗口坐标
+                // Qt.inputMethod.keyboardRectangle 在窗口坐标系中
+                var kbTop
+                if (kbRect.y > 100) {
+                    // keyboardRectangle.y 有效值（键盘从屏幕中间某处开始）
+                    kbTop = kbRect.y
+                } else {
+                    // 备用：1080p全屏应用，键盘在底部
+                    kbTop = 1080 - kbRect.height
+                }
 
-                if (itemGlobalBottom <= targetGlobalBottom) return
+                // 安全底部 = 键盘顶部 - 候选词栏(50px) - 间距(10px)
+                var safeBottom = kbTop - 60
 
-                var scrollNeeded = itemGlobalBottom - targetGlobalBottom
+                console.log("[BrakeConfigPanel] ensureVisible: itemBottom=" + itemGlobalBottom +
+                            " kbRect.y=" + kbRect.y + " kbRect.h=" + kbRect.height +
+                            " kbTop=" + kbTop + " safeBottom=" + safeBottom +
+                            " contentY=" + paramScrollView.contentY)
+
+                // 输入框已在安全区域内，不需要滚动
+                if (itemGlobalBottom <= safeBottom) {
+                    console.log("[BrakeConfigPanel] 输入框已可见，无需滚动")
+                    return
+                }
+
+                // 精确计算需要滚动的距离 = 输入框底部超出安全区域的量
+                var scrollNeeded = itemGlobalBottom - safeBottom
                 var targetY = paramScrollView.contentY + scrollNeeded
                 var maxScroll = Math.max(0, paramScrollView.contentHeight - paramScrollView.height)
-                targetY = Math.max(0, Math.min(targetY, maxScroll))
+                targetY = Math.min(targetY, maxScroll)
+
+                console.log("[BrakeConfigPanel] 滚动: needed=" + scrollNeeded +
+                            " targetY=" + targetY + " maxScroll=" + maxScroll)
 
                 scrollAnimation.to = targetY
                 scrollAnimation.start()
