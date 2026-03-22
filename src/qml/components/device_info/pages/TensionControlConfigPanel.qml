@@ -203,18 +203,17 @@ Rectangle {
             // col 0: 标签占位（与参数区标签列对齐）
             Item { Layout.column: 0; Layout.row: 0; Layout.preferredWidth: root.lblW }
 
-            // col 1: 启动按钮（与第一列输入框对齐）
+            // col 1: 启动按钮（与第一列输入框对齐，Item宽度匹配输入框列）
             Item {
-                Layout.column: 1; Layout.row: 0; Layout.preferredWidth: 140; Layout.preferredHeight: 44
+                Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 44
 
                 Rectangle {
                     id: startBtnBg
-                    anchors.fill: parent
+                    width: 140; height: parent.height
                     radius: 6
                     color: startBtn.pressed ? "#1B5E20" : (startBtn.hovered ? "#388E3C" : "#2E7D32")
                     border.color: "#4CAF50"; border.width: 1
 
-                    // 顶部高光
                     Rectangle {
                         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
                         height: 1; radius: 6; color: "#66BB6A"; opacity: 0.5
@@ -223,7 +222,7 @@ Rectangle {
 
                 Button {
                     id: startBtn
-                    anchors.fill: parent
+                    width: 140; height: parent.height
                     enabled: tensionEnabledSwitch.checked
                     onClicked: startTensionControl()
                     background: Item {}
@@ -235,24 +234,23 @@ Rectangle {
                 }
 
                 // 焦点高亮
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 6; z: 100 }
+                Rectangle { width: 140; height: parent.height; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 6; z: 100 }
             }
 
             // col 2: 标签占位（与参数区标签列对齐）
             Item { Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW }
 
-            // col 3: 停止按钮（与第二列输入框对齐）
+            // col 3: 停止按钮（与第二列输入框对齐，Item宽度匹配输入框列）
             Item {
-                Layout.column: 3; Layout.row: 0; Layout.preferredWidth: 140; Layout.preferredHeight: 44
+                Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 44
 
                 Rectangle {
                     id: stopBtnBg
-                    anchors.fill: parent
+                    width: 140; height: parent.height
                     radius: 6
                     color: stopBtn.pressed ? "#B71C1C" : (stopBtn.hovered ? "#D32F2F" : "#C62828")
                     border.color: "#EF5350"; border.width: 1
 
-                    // 顶部高光
                     Rectangle {
                         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
                         height: 1; radius: 6; color: "#EF5350"; opacity: 0.5
@@ -261,7 +259,7 @@ Rectangle {
 
                 Button {
                     id: stopBtn
-                    anchors.fill: parent
+                    width: 140; height: parent.height
                     enabled: tensionEnabledSwitch.checked
                     onClicked: stopTensionControl()
                     background: Item {}
@@ -273,7 +271,7 @@ Rectangle {
                 }
 
                 // 焦点高亮
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 6; z: 100 }
+                Rectangle { width: 140; height: parent.height; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 6; z: 100 }
             }
         }
 
