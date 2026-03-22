@@ -133,33 +133,30 @@ Rectangle {
         // 导航：参数区域（5个参数）
         function moveInParamArea(direction) {
             var newIndex = paramIndex
-            var maxIndex = 4  // 5个参数（0-4）
+            // 旧：var maxIndex = 4  // 5个参数（0-4），使用2列导航
+            // ✅ 2026-03-22 [Phase 7.48.74]: 改为单列导航（每个参数独占一行）
+            // Row0: 启用状态(0), Row1: 洒水名称(1), Row2: 通道号(2),
+            // Row3: 启动延时(3), Row4: 停止延时(4)
+            var maxIndex = 4
 
             switch(direction) {
             case "Left":
-                if (paramIndex % 2 === 1) {
+                switchToArea(areaList)
+                return
+            case "Right":
+                // 单列布局，右键不移动
+                break
+            case "Up":
+                if (paramIndex > 0) {
                     newIndex = paramIndex - 1
                 } else {
                     switchToArea(areaList)
                     return
                 }
                 break
-            case "Right":
-                if (paramIndex % 2 === 0 && paramIndex < maxIndex) {
-                    newIndex = paramIndex + 1
-                }
-                break
-            case "Up":
-                if (paramIndex >= 2) {
-                    newIndex = paramIndex - 2
-                } else {
-                    switchToArea(areaList)
-                    return
-                }
-                break
             case "Down":
-                if (paramIndex <= maxIndex - 2) {
-                    newIndex = paramIndex + 2
+                if (paramIndex < maxIndex) {
+                    newIndex = paramIndex + 1
                 } else {
                     switchToArea(areaButtons)
                     buttonIndex = 0

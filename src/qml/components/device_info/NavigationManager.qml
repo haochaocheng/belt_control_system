@@ -38,6 +38,14 @@ QtObject {
     // ✅ 2026-02-08 [Phase 7.43.8]: 是否跳过按钮区域（MQTT页面没有底部按钮）
     property bool skipButtonArea: false            // 默认false（电机控制有按钮），MQTT设置为true
 
+    // ✅ 2026-03-22 [Phase 7.48.74]: 参数区域列数（默认2列，某些单列面板设为1）
+    property int paramColumns: 2
+
+    // ✅ 2026-03-22 [Phase 7.48.74]: 参数区域行映射（可选，用于非均匀网格布局）
+    // 格式：[[startIndex, count], ...] — 每行起始索引和该行字段数
+    // 为空数组时使用paramColumns均匀网格导航
+    property var paramRows: []
+
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.5]: 监听 paramIndex 变化
     onParamIndexChanged: {
         console.log("🔷 [NavigationManager] paramIndex 变化:", paramIndex)
@@ -209,59 +217,51 @@ QtObject {
     // 行4：[8] 过滤干扰延时      [ ] 空
 
     function moveInParamArea(direction) {
+        // ✅ 2026-03-22 [Phase 7.48.74]: 支持 paramRows 行映射（非均匀网格布局）
+        if (paramRows && paramRows.length > 0) {
+            moveInParamAreaByRows(direction)
+            return
+        }
+
         var newIndex = paramIndex
+        // ✅ 2026-03-22 [Phase 7.48.74]: 使用 paramColumns 代替硬编码2
+        var cols = paramColumns
 
         switch(direction) {
         case "Up":
-            // 向上移动（同列）
-            if (paramIndex >= 2) {
-                newIndex = paramIndex - 2
-            } else if (paramIndex === 0 || paramIndex === 1) {
-                // 在第一个参数，向上返回到对应的Tab
+            if (paramIndex >= cols) {
+                newIndex = paramIndex - cols
+            } else if (paramIndex < cols) {
                 switchToArea(areaTabBar)
                 return
             }
             break
 
         case "Down":
-            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.3]: 使用 lastParamIndex 判断最后一个参数
-            // 向下移动（同列）
-
-            // 计算下一个索引（同列下一行）
-            var nextIndex = paramIndex + 2
-
-            // 检查下一个索引是否超出范围
+            var nextIndex = paramIndex + cols
             if (nextIndex > lastParamIndex) {
-                // ✅ 2026-02-08 [Phase 7.43.8]: 根据 skipButtonArea 决定是否进入按钮区
                 if (skipButtonArea) {
-                    // 跳过按钮区域的页面（如MQTT）：保持在参数区域
                     console.log("✅ [NavigationManager] 已在参数区底部，跳过按钮区域")
                     return
                 } else {
-                    // 有按钮区域的页面：进入底部按钮区
                     switchToArea(areaButtons)
                     buttonIndex = 0
                     return
                 }
             } else {
-                // 在范围内，移动到下一个索引
                 newIndex = nextIndex
             }
             break
 
         case "Left":
-            // 向左移动（同行）
-            if (paramIndex % 2 === 1) {
+            if (cols > 1 && paramIndex % cols > 0) {
                 newIndex = paramIndex - 1
             } else {
-                // ✅ 2026-02-08 [Phase 7.43.8]: 在左列时，根据 skipTabArea 决定返回目标
                 if (skipTabArea) {
-                    // 跳过Tab区域的页面（如MQTT）：直接返回到模块列表
                     console.log("✅ [NavigationManager] 从参数区返回到模块列表（跳过Tab）")
                     switchToArea(areaMotorList)
                     return
                 } else {
-                    // 有Tab区域的页面：返回到Tab栏
                     console.log("✅ [NavigationManager] 从参数区返回到Tab栏")
                     switchToArea(areaTabBar)
                     return
@@ -270,20 +270,64 @@ QtObject {
             break
 
         case "Right":
-            // 向右移动（同行）
-            // ✅ 2026-02-02 [FIX 100.300.112.8.25.5]: 使用 lastParamIndex 而不是硬编码的8
-            if (paramIndex % 2 === 0 && paramIndex < lastParamIndex) {
+            if (cols > 1 && paramIndex % cols < cols - 1 && paramIndex < lastParamIndex) {
                 newIndex = paramIndex + 1
             }
-            // 在右列或最后一行，保持不变
             break
         }
 
         if (newIndex !== paramIndex) {
             paramIndex = newIndex
-            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
             console.log("✅ [NavigationManager] 参数索引:", newIndex)
         }
+    }
+
+    // ✅ 2026-03-22 [Phase 7.48.74]: 基于行映射的参数区域导航（支持非均匀网格）
+    // paramRows格式: [[startIdx, colCount], ...] 如 [[0,2],[2,2],[4,1],[5,2]]
+    function moveInParamAreaByRows(direction) {
+        var idx = paramIndex
+        var rows = paramRows
+        var curRow = -1, colInRow = 0
+        for (var r = 0; r < rows.length; r++) {
+            if (idx >= rows[r][0] && idx < rows[r][0] + rows[r][1]) {
+                curRow = r; colInRow = idx - rows[r][0]; break
+            }
+        }
+        if (curRow < 0) return
+
+        switch(direction) {
+        case "Left":
+            if (colInRow > 0) { paramIndex = idx - 1 }
+            else {
+                if (skipTabArea) { switchToArea(areaMotorList) }
+                else { switchToArea(areaTabBar) }
+                return
+            }
+            break
+        case "Right":
+            if (colInRow < rows[curRow][1] - 1) { paramIndex = idx + 1 }
+            break
+        case "Up":
+            if (curRow > 0) {
+                var prevRow = rows[curRow - 1]
+                var targetCol = Math.min(colInRow, prevRow[1] - 1)
+                paramIndex = prevRow[0] + targetCol
+            } else { switchToArea(areaTabBar); return }
+            break
+        case "Down":
+            if (curRow < rows.length - 1) {
+                var nextRow = rows[curRow + 1]
+                var targetCol2 = Math.min(colInRow, nextRow[1] - 1)
+                paramIndex = nextRow[0] + targetCol2
+            } else {
+                if (skipButtonArea) return
+                switchToArea(areaButtons)
+                buttonIndex = 0
+                return
+            }
+            break
+        }
+        console.log("✅ [NavigationManager] 参数索引(rows):", paramIndex)
     }
 
     // ========== 区域D：底部按钮导航 ==========

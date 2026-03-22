@@ -93,6 +93,8 @@ Rectangle {
                 if (paramCount > 0) {
                     navigationManager.updateLastParamIndex(paramCount)
                 }
+                // ✅ 2026-03-22 [Phase 7.48.74]: 更新参数行映射（用于非均匀网格导航）
+                navigationManager.paramRows = root.getParamRows()
             })
         }
 
@@ -128,6 +130,8 @@ Rectangle {
                 if (paramCount > 0) {
                     navigationManager.updateLastParamIndex(paramCount)
                 }
+                // ✅ 2026-03-22 [Phase 7.48.74]: 更新参数行映射（用于非均匀网格导航）
+                navigationManager.paramRows = root.getParamRows()
             })
 
             // ✅ 2026-02-02 [参数持久化]: 切换Tab时加载配置
@@ -627,6 +631,15 @@ Rectangle {
             return currentTab.getParamFieldCount()
         }
         return 0
+    }
+
+    // ✅ 2026-03-22 [Phase 7.48.74]: 获取当前Tab的参数行映射（用于非均匀网格导航）
+    function getParamRows() {
+        var currentTab = motorConfigPanel.item ? motorConfigPanel.item.getCurrentTab() : null
+        if (currentTab && typeof currentTab.getParamRows === "function") {
+            return currentTab.getParamRows()
+        }
+        return []  // 空数组=使用默认paramColumns均匀网格
     }
 
     // 触发参数输入
