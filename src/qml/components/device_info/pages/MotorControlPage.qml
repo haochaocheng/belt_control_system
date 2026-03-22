@@ -450,6 +450,11 @@ Rectangle {
                         // NavigationManager 会自动触发 focusParamIndex 的更新
                         navigationManager.paramIndex = paramIndex
                     })
+
+                    // ✅ 2026-03-22 [Phase 7.48.81]: 首次加载时主动加载电机配置
+                    // 原因：currentMotorIndex 初始值为0，不触发 onCurrentMotorIndexChanged，
+                    // 导致首次显示1号电机时使用默认值而非数据库保存的配置
+                    Qt.callLater(root.loadMotorConfig)
                 }
             }
         }
