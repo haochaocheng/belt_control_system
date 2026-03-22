@@ -169,63 +169,120 @@ Rectangle {
             }
         } // GridLayout end
 
-        // ========== 预警语音(4) + 失败语音(5) ==========
-        // ✅ 2026-03-17 [Phase 7.48.53]: 设置默认TTS文本
-        RowLayout {
+        // ✅ 2026-03-22 [Phase 7.48.80.2]: 预警语音+失败语音合并一行，使用GridLayout 4列对齐
+        GridLayout {
             Layout.fillWidth: true
-            spacing: 8
+            columns: 4; columnSpacing: 10; rowSpacing: 12
 
-            Text { text: "预警语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
+            // Row 0: 预警语音 | 失败语音
+            Text { text: "预警语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             DeviceInfo.CustomTextField {
                 id: warningVoiceField
-                // ✅ 2026-03-17 [Phase 7.48.53]: 改为音频文件名（不含扩展名），参照BasicConfigTab命名规范
-                // 旧：text: "一号皮带张紧准备启动，请注意安全"（TTS全文，不是文件名）
-                // 新：匹配BatchAudioGenerator生成的文件名 "{tensionNum}号张紧启动.wav"
-                // ✅ 2026-03-18 [Phase 7.48.54]: placeholderText改为具体文件名，不再显示通用"TTS文本"/"音频文件名"
                 text: root.controlIndex + "号张紧启动"
-                // ✅ 2026-03-18 [Phase 7.48.54]: 限制宽度与GridLayout输入框一致
-                Layout.fillWidth: true; Layout.maximumWidth: 300
+                Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 placeholderText: root.controlIndex + "号张紧启动"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
-                // ✅ 2026-03-22 [Phase 7.48.80]: 移除预警语音焦点高亮（不参与导航）
-                // 旧：Rectangle { ... focusParamIndex === 7 ... }
             }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            Text { text: "失败语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW }
+            Text { text: "失败语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             DeviceInfo.CustomTextField {
                 id: failureVoiceField
-                // ✅ 2026-03-17 [Phase 7.48.53]: 改为音频文件名（不含扩展名），参照BasicConfigTab命名规范
-                // 旧：text: "一号皮带张紧运行失败"（TTS全文，不是文件名）
-                // 新：匹配BatchAudioGenerator生成的文件名 "{tensionNum}号张紧运行失败.wav"
-                // ✅ 2026-03-18 [Phase 7.48.54]: placeholderText改为具体文件名
                 text: root.controlIndex + "号张紧运行失败"
-                // ✅ 2026-03-18 [Phase 7.48.54]: 限制宽度与GridLayout输入框一致
-                Layout.fillWidth: true; Layout.maximumWidth: 300
+                Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 placeholderText: root.controlIndex + "号张紧运行失败"
                 enabled: tensionEnabledSwitch.checked
                 keyboardManager: root.keyboardManager
-                // ✅ 2026-03-22 [Phase 7.48.80]: 移除失败语音焦点高亮（不参与导航）
-                // 旧：Rectangle { ... focusParamIndex === 8 ... }
             }
         }
 
-        // ✅ 2026-03-22 [Phase 7.48.75]: 在ScrollView中不需要弹性空间，改为固定间距
-        // 旧：Item { Layout.fillHeight: true }
-        Item { Layout.preferredHeight: 20 }
+        // ✅ 2026-03-22 [Phase 7.48.80.2]: 启动/停止按钮移��独立行，可导航
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 56
+            spacing: 16
+
+            // 启动按钮（工业风格）
+            Item {
+                Layout.fillWidth: true
+                Layout.maximumWidth: 460
+                Layout.preferredHeight: 48
+
+                Rectangle {
+                    id: startBtnBg
+                    anchors.fill: parent
+                    radius: 6
+                    color: startBtn.pressed ? "#1B5E20" : (startBtn.hovered ? "#388E3C" : "#2E7D32")
+                    border.color: "#4CAF50"; border.width: 1
+
+                    // 顶部高光
+                    Rectangle {
+                        anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+                        height: 1; radius: 6; color: "#66BB6A"; opacity: 0.5
+                    }
+                }
+
+                Button {
+                    id: startBtn
+                    anchors.fill: parent
+                    enabled: tensionEnabledSwitch.checked
+                    onClicked: startTensionControl()
+                    background: Item {}
+                    contentItem: Row {
+                        anchors.centerIn: parent; spacing: 8
+                        Text { text: "▶"; font.pixelSize: 16; color: "#FFFFFF"; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: "启 动"; font.pixelSize: 18; font.weight: Font.Bold; color: "#FFFFFF"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+                }
+
+                // 焦点高亮
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 6; z: 100 }
+            }
+
+            // 停止按钮（工业风格）
+            Item {
+                Layout.fillWidth: true
+                Layout.maximumWidth: 460
+                Layout.preferredHeight: 48
+
+                Rectangle {
+                    id: stopBtnBg
+                    anchors.fill: parent
+                    radius: 6
+                    color: stopBtn.pressed ? "#B71C1C" : (stopBtn.hovered ? "#D32F2F" : "#C62828")
+                    border.color: "#EF5350"; border.width: 1
+
+                    // 顶部高光
+                    Rectangle {
+                        anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+                        height: 1; radius: 6; color: "#EF5350"; opacity: 0.5
+                    }
+                }
+
+                Button {
+                    id: stopBtn
+                    anchors.fill: parent
+                    enabled: tensionEnabledSwitch.checked
+                    onClicked: stopTensionControl()
+                    background: Item {}
+                    contentItem: Row {
+                        anchors.centerIn: parent; spacing: 8
+                        Text { text: "■"; font.pixelSize: 16; color: "#FFFFFF"; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: "停 止"; font.pixelSize: 18; font.weight: Font.Bold; color: "#FFFFFF"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+                }
+
+                // 焦点高亮
+                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 6; z: 100 }
+            }
+        }
 
         // ========== 分隔线2 ==========
         Rectangle { Layout.fillWidth: true; height: 1; color: "#3d4556" }
 
-        // ========== LED状态 + 启动/停止按钮 ==========
+        // ========== LED状态指示 ==========
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 50
+            Layout.preferredHeight: 40
             spacing: 16
 
             // 张紧打开LED
@@ -250,34 +307,6 @@ Rectangle {
             Text {
                 text: "张紧关闭"
                 font.pixelSize: root.lblFs; color: root.lblC
-            }
-
-            Item { Layout.fillWidth: true }
-
-            // 启动按钮
-            Button {
-                id: startBtn
-                text: "启动"
-                Layout.preferredWidth: 100
-                Layout.preferredHeight: 36
-                enabled: tensionEnabledSwitch.checked
-                background: Rectangle { color: startBtn.pressed ? "#2E7D32" : "#4CAF50"; radius: 4 }
-                contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: startTensionControl()
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 100 }
-            }
-
-            // 停止按钮
-            Button {
-                id: stopBtn
-                text: "停止"
-                Layout.preferredWidth: 100
-                Layout.preferredHeight: 36
-                enabled: tensionEnabledSwitch.checked
-                background: Rectangle { color: stopBtn.pressed ? "#C62828" : "#F44336"; radius: 4 }
-                contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: stopTensionControl()
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 100 }
             }
         }
     } // ColumnLayout end

@@ -215,9 +215,10 @@ Rectangle {
                     var nextRow = rows[curRow + 1]
                     var targetCol2 = Math.min(colInRow, nextRow[1] - 1)
                     paramIndex = nextRow[0] + targetCol2
+                } else {
+                    // ✅ 2026-03-22 [Phase 7.48.80.2]: 恢复Down进入按钮区，按钮已移到独立行
+                    switchToArea(areaButtons); buttonIndex = colInRow; return
                 }
-                // ✅ 2026-03-22 [Phase 7.48.80.1]: 最后一行按下键保持不动（不进入按钮区）
-                // 用户通过点击或其他方式进入按钮区
                 break
             }
         }
@@ -243,11 +244,14 @@ Rectangle {
                 }
                 break
             case "Up":
-                // 返回参数区域最后一行的第一列（col 0）
-                // ✅ 2026-03-22 [Phase 7.48.80.1]: 上下导航保持同列，Up从按钮区回到最后行首列
-                // 张力传感器: 最后行[15,2]首列=15(洒水启用), 张紧控制: 最后行[6,2]首列=6(音频来源)
+                // ✅ 2026-03-22 [Phase 7.48.80.2]: Up从按钮区回到参数区最后行，保持列位置
+                // 张力传感器: 最后行[15,2], 张紧控制: 最后行[6,2]
                 switchToArea(areaParams)
-                paramIndex = (root.currentControlIndex === 0) ? 15 : 6
+                if (root.currentControlIndex === 0) {
+                    paramIndex = 15 + Math.min(buttonIndex, 1)  // 15(col0) 或 16(col1)
+                } else {
+                    paramIndex = 6 + Math.min(buttonIndex, 1)   // 6(col0) 或 7(col1)
+                }
                 return
             }
 
