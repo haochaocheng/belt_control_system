@@ -1193,8 +1193,10 @@ Item {
                 currentTopButtonIndex--
                 console.log("✅ [导航] 顶部按钮左移:", currentTopButtonIndex + 1, "→", currentTopButtonIndex)
             } else {
-                currentFocusArea = 3
-                console.log("✅ [导航] 顶部按钮开头左键 → 底部按钮区域（循环）")
+                // 旧：currentFocusArea = 3  // 跳到底部按钮（循环），需要按两次左键才能到内容区
+                // ✅ 2026-03-22 [Phase 7.48.80.2]: 直接跳到内容区（一次左键到达控制列表）
+                currentFocusArea = 2
+                console.log("✅ [导航] 顶部按钮开头左键 → 内容区域")
             }
             break
         case 1:  // 左侧类别 → 顶部按钮
