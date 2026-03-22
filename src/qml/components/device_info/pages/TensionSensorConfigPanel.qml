@@ -45,12 +45,23 @@ Rectangle {
     }
 
     // ========== 内容区域 ==========
-    ColumnLayout {
+    // ✅ 2026-03-22 [Phase 7.48.75]: 添加ScrollView包裹，支持虚拟键盘弹出时自动滚动
+    ScrollView {
+        id: paramScrollView
         anchors.top: headerBar.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 15
+        clip: true
+        ScrollBar.vertical.policy: ScrollBar.AsNeeded
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+        // ✅ 2026-03-22 [Phase 7.48.75]: 动态contentHeight，键盘弹出时增加额外空间
+        contentHeight: contentArea.implicitHeight + (Qt.inputMethod.visible ? Qt.inputMethod.keyboardRectangle.height : 0)
+
+    ColumnLayout {
+        id: contentArea
+        width: paramScrollView.width
         spacing: 12
 
         // ========== 传感器启用 ==========
@@ -426,8 +437,9 @@ Rectangle {
             }
         }
 
-        // ========== 弹性空间 ==========
-        Item { Layout.fillHeight: true }
+        // ✅ 2026-03-22 [Phase 7.48.75]: 在ScrollView中不需要弹性空间，改为固定间距
+        // 旧：Item { Layout.fillHeight: true }
+        Item { Layout.preferredHeight: 20 }
 
         // // ========== 底部按钮行 ==========
         // RowLayout {
@@ -450,6 +462,54 @@ Rectangle {
         //     Item { Layout.fillWidth: true }
         // }
     } // ColumnLayout end
+    } // ScrollView end
+
+    // ✅ 2026-03-22 [Phase 7.48.75]: 滚动动画
+    NumberAnimation {
+        id: scrollAnimation
+        target: paramScrollView
+        property: "contentY"
+        duration: 200
+        easing.type: Easing.OutQuad
+    }
+
+    // ✅ 2026-03-22 [Phase 7.48.75]: 虚拟键盘弹出时自动滚动，确保输入框可见
+    Connections {
+        target: Qt.inputMethod
+        function onVisibleChanged() {
+            if (Qt.inputMethod.visible) {
+                // 延迟执行，等待键盘动画完成
+                Qt.callLater(function() {
+                    var focusItem = root.Window ? root.Window.activeFocusItem : null
+                    if (focusItem) ensureVisible(focusItem)
+                })
+            }
+        }
+    }
+
+    function ensureVisible(item) {
+        if (!item) return
+        Qt.callLater(function() {
+            var kbRect = Qt.inputMethod.keyboardRectangle
+            if (kbRect.height <= 0) return
+            var itemGlobal = item.mapToItem(null, 0, 0)
+            var itemGlobalBottom = itemGlobal.y + item.height
+            var screenHeight = (kbRect.y >= kbRect.height) ? kbRect.y : 1080
+            var kbTop = screenHeight - kbRect.height
+            var safeBottom = kbTop - 60
+            if (itemGlobalBottom <= safeBottom) {
+                console.log("✅ [TensionSensorConfigPanel] ensureVisible: 无需滚动")
+                return
+            }
+            var scrollNeeded = itemGlobalBottom - safeBottom
+            var targetY = paramScrollView.contentY + scrollNeeded
+            var maxScroll = Math.max(0, paramScrollView.contentHeight - paramScrollView.height)
+            targetY = Math.min(targetY, maxScroll)
+            console.log("✅ [TensionSensorConfigPanel] ensureVisible: scrollNeeded=" + scrollNeeded + " targetY=" + targetY + " maxScroll=" + maxScroll)
+            scrollAnimation.to = targetY
+            scrollAnimation.start()
+        })
+    }
 
     // ========== 函数 ==========
     function getParamFieldCount() { return 15 }  // 参数索引 0-14

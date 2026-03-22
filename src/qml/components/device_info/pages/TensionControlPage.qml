@@ -243,7 +243,8 @@ Rectangle {
                 // 返回参数区域最后一个参数
                 // 2026-03-17 [Phase 7.48.51]: 动态返回，张力传感器14，张紧控制5
                 switchToArea(areaParams)
-                paramIndex = (root.currentControlIndex === 0) ? 14 : 5
+                // 旧：paramIndex = (root.currentControlIndex === 0) ? 14 : 5  // ✅ 2026-03-22 [Phase 7.48.75]: 张紧控制参数数量6→9后，最后索引5→8
+                paramIndex = (root.currentControlIndex === 0) ? 14 : 8
                 return
             }
 
