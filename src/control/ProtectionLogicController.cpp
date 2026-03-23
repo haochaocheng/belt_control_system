@@ -3,6 +3,7 @@
 #include "DeviceConfigManager.h"
 #include "DeviceRoleManager.h"
 #include "DeviceRuntimeTracker.h"
+#include "MqttProtectionMonitor.h"
 #include <QDebug>
 
 // ✅ 2026-03-23 [Phase 7.48.85]: 保护逻辑控制器实现
@@ -14,6 +15,7 @@ ProtectionLogicController::ProtectionLogicController(QObject *parent)
     , m_deviceConfigMgr(nullptr)
     , m_deviceRoleManager(nullptr)
     , m_runtimeTracker(nullptr)
+    , m_mqttProtectionMonitor(nullptr)
 {
     qDebug() << "✅ ProtectionLogicController: 保护逻辑控制器已创建";
 }
@@ -45,6 +47,12 @@ void ProtectionLogicController::setDeviceRuntimeTracker(DeviceRuntimeTracker *tr
 {
     m_runtimeTracker = tracker;
     qDebug() << "🔗 ProtectionLogicController: DeviceRuntimeTracker已连接";
+}
+
+void ProtectionLogicController::setMqttProtectionMonitor(MqttProtectionMonitor *monitor)
+{
+    m_mqttProtectionMonitor = monitor;
+    qDebug() << "🔗 ProtectionLogicController: MqttProtectionMonitor已连接";
 }
 
 QString ProtectionLogicController::stopSourceName(int source)
@@ -246,6 +254,16 @@ QVariantList ProtectionLogicController::activeProtections() const
 void ProtectionLogicController::resetAllProtections()
 {
     qDebug() << "🔄 ProtectionLogicController: 手动复位所有保护";
+
+    // ✅ 2026-03-23 [Phase 7.48.86.1]: F键复位时清除速度保护报警状态
+    // 原因：速度保护禁止自动清除，必须通过F键手动复位
+    if (m_mqttProtectionMonitor) {
+        // 遍历所有已停车的皮带，清除其速度保护报警
+        for (auto it = m_beltStopped.constBegin(); it != m_beltStopped.constEnd(); ++it) {
+            m_mqttProtectionMonitor->resetSpeedProtectionAlarm(it.key());
+        }
+    }
+
     int count = m_activeProtections.size();
     m_activeProtections.clear();
     m_beltStopped.clear();

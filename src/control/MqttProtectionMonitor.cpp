@@ -148,20 +148,31 @@ void MqttProtectionMonitor::notifyMotorStopped(int beltNumber)
     m_motorRunning[beltNumber] = false;
     m_slipTimerActive[beltNumber] = false;
 
-    // ✅ 2026-03-23 [Phase 7.48.86]: 电机停止时，清除速度保护报警状态
-    // 原因：电机停止后速度=0是正常状态，不应保留速度保护报警
-    // 遍历 m_protectionAlarmActive，清除该皮带的速度相关保护
+    // ✅ 2026-03-23 [Phase 7.48.86.1]: 速度保护禁止自动清除/自动复位
+    // 旧代码：电机停止时自动清除速度保护报警状态 + emit protectionActionCleared
+    // 修改原因：速度保护停车后必须按F键复位，不能自动恢复
+    // 只重置检测状态（计时器等），不清除报警状态（m_protectionAlarmActive 保留）
+    // QString speedKey = QString("%1:速度").arg(beltNumber);
+    // if (m_protectionAlarmActive.value(speedKey, false)) {
+    //     m_protectionAlarmActive[speedKey] = false;
+    //     emit protectionActionCleared(beltNumber, "速度", 2);
+    //     emit analogProtectionRestored(beltNumber, "速度", 0.0);
+    // }
+
+    qDebug() << "🛑 [MqttProtectionMonitor] 电机停止通知 - 皮带" << beltNumber
+             << "速度保护检测状态已重置（报警状态保留，需F键复位）";
+}
+
+// ✅ 2026-03-23 [Phase 7.48.86.1]: 手动复位速度保护报警状态
+// 原因：速度保护禁止自动清除，F键复位时由App.qml调用此方法
+void MqttProtectionMonitor::resetSpeedProtectionAlarm(int beltNumber)
+{
     QString speedKey = QString("%1:速度").arg(beltNumber);
     if (m_protectionAlarmActive.value(speedKey, false)) {
         m_protectionAlarmActive[speedKey] = false;
-        qDebug() << "✅ [MqttProtectionMonitor] 电机停止 - 清除速度保护报警状态（皮带" << beltNumber << "）";
-        // 通知 ProtectionLogicController 速度保护已恢复
+        qDebug() << "✅ [MqttProtectionMonitor] F键复位 - 清除速度保护报警状态（皮带" << beltNumber << "）";
         emit protectionActionCleared(beltNumber, "速度", 2);  // source=2: 模拟量保护
-        emit analogProtectionRestored(beltNumber, "速度", 0.0);
     }
-
-    qDebug() << "🛑 [MqttProtectionMonitor] 电机停止通知 - 皮带" << beltNumber
-             << "速度保护状态已重置";
 }
 
 void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool value)

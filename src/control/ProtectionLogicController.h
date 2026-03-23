@@ -11,6 +11,7 @@ class CommonControl;
 class DeviceConfigManager;
 class DeviceRoleManager;
 class DeviceRuntimeTracker;
+class MqttProtectionMonitor;
 
 /**
  * @file ProtectionLogicController.h
@@ -63,6 +64,9 @@ public:
     // ✅ 2026-03-23 [Phase 7.48.86]: 注入 DeviceRuntimeTracker
     // 原因：保护停车时需要设置故障状态，阻止R键直接重启
     void setDeviceRuntimeTracker(DeviceRuntimeTracker *tracker);
+    // ✅ 2026-03-23 [Phase 7.48.86.1]: 注入 MqttProtectionMonitor
+    // 原因：F键复位时需要清除速度保护报警状态
+    void setMqttProtectionMonitor(MqttProtectionMonitor *monitor);
 
     /**
      * @brief 获取当前所有活跃的保护（供QML显示）
@@ -137,6 +141,8 @@ private:
     DeviceRoleManager *m_deviceRoleManager;
     // ✅ 2026-03-23 [Phase 7.48.86]: 保护停车时设置故障状态
     DeviceRuntimeTracker *m_runtimeTracker;
+    // ✅ 2026-03-23 [Phase 7.48.86.1]: F键复位时清除速度保护报警
+    MqttProtectionMonitor *m_mqttProtectionMonitor;
 
     /**
      * @brief 活跃保护记录

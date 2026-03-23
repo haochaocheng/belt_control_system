@@ -125,6 +125,10 @@ public:
      */
     Q_INVOKABLE int getBeltMapping(int moduleIndex) const;
 
+    // ✅ 2026-03-23 [Phase 7.48.86.1]: 手动复位速度保护报警状态（F键复位时调用）
+    // 原因：速度保护禁止自动清除，必须按F键复位
+    Q_INVOKABLE void resetSpeedProtectionAlarm(int beltNumber);
+
 public slots:
     // ✅ 2026-03-05 [Phase 7.48.5]: AI通道变化槽函数（移至 public slots）
     /**

@@ -67,9 +67,18 @@
 |---------|---------|---------|-----------|
 | 开关量（急停/跑偏/撕裂） | bit=1 | bit恢复为0 | 外部信号已恢复 |
 | 模拟量（温度/张力） | 超上/下限 | 值回到安全范围 | 值已恢复正常 |
-| 速度保护 | 超速/低速打滑 | 电机停止自动清除 | 自动恢复 |
+| 速度保护 | 超速/低速打滑 | **禁止自动清除** | **必须按F键手动复位** |
 | 电机保护 | 电流/温度超限 | 寄存器值恢复 | 外部信号已恢复 |
 | CS沿线点位 | bit=1 | bit恢复为0 | 外部信号已恢复 |
+
+## Phase 7.48.86.1 补充：速度保护禁止自动清除
+
+**问题**：Phase 7.48.86 中 `notifyMotorStopped()` 会自动清除速度保护报警并 emit `protectionActionCleared`，导致速度保护可自动复位。
+
+**修改**：
+1. `notifyMotorStopped()` 不再清除 `m_protectionAlarmActive` 和 emit 信号，只重置检测状态（计时器等）
+2. 新增 `resetSpeedProtectionAlarm(beltNumber)` 方法，仅在F键复位时由 `resetAllProtections()` 调用
+3. ProtectionLogicController 新增 `m_mqttProtectionMonitor` 引用，`resetAllProtections()` 中遍历已停车皮带清除速度保护
 
 ## 验证方法
 1. 电机未运行时速度=0 → 不触发下限报警

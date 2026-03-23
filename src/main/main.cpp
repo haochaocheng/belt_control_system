@@ -413,6 +413,9 @@ int main(int argc, char *argv[]) {
         // ✅ 2026-03-23 [Phase 7.48.86]: 注入 DeviceRuntimeTracker
         // 原因：保护停车时需要设置故障状态，阻止R键直接重启，必须按F键复位
         protectionLogicController.setDeviceRuntimeTracker(&runtimeTracker);
+        // ✅ 2026-03-23 [Phase 7.48.86.1]: 注入 MqttProtectionMonitor
+        // 原因：F键复位时需要清除速度保护报警状态（速度保护禁止自动清除）
+        protectionLogicController.setMqttProtectionMonitor(&mqttProtectionMonitor);
 
         // 连接 MqttProtectionMonitor → ProtectionLogicController
         QObject::connect(&mqttProtectionMonitor, &MqttProtectionMonitor::protectionActionRequired,
