@@ -100,17 +100,31 @@ DI/AI/Motor/CS → MqttProtectionMonitor → AlarmPlaybackService → 播放音�
 DI/AI/Motor/CS → MqttProtectionMonitor → protectionActionRequired信号
     → ProtectionLogicController.onProtectionTriggered()
     → 检查 protection_level
-    → level=0: CommonControl.emergencyStopBelt()
-    → level=1: CommonControl.stopBelt()
+    → level=0: CommonControl.emergencyStopBelt()（跳过停车预警）
+    → level=1: CommonControl.emergencyStopBelt()（跳过停车预警）
     → level=2: 不停车（仅报警）
     → level=3: 不处理
 ```
 
+### 音频冲突处理（Phase 7.48.85.1 补充）
+
+**问题**：保护报警语音和停车预警语音共用同一个 QMediaPlayer，同时播放会冲突。
+
+**决策**：保护触发的停车（level=0 和 level=1）**都不播放停车预警**，只播放保护报警语音后直接停车。
+
+| 场景 | 报警语音 | 停车预警 | 说明 |
+|------|---------|---------|------|
+| 保护触发（level=0） | ✅ 播放 | ❌ 跳过 | 紧急停车，直接停止 |
+| 保护触发（level=1） | ✅ 播放 | ❌ 跳过 | 正常停车，报警已提醒 |
+| 手动S键停车 | 无 | ✅ 播放 | 正常停车流程 |
+| 远程停止命令 | 无 | ✅ 播放 | 正常停车流程 |
+
 ## 验证方法
 1. 编译通过（Docker交叉编译）
-2. protection_level=0：保护触发 → 跳过停车音频 → 直接停止序列
-3. protection_level=1：保护触发 → 播放停车音频 → 停止序列
+2. protection_level=0：保护触发 → 播放报警语音 → 跳过停车预警 → 直接停止序列
+3. protection_level=1：保护触发 → 播放报警语音 → 跳过停车预警 → 直接停止序列
 4. protection_level=2：保护触发 → 仅报警，不停车
 5. protection_level=3：保护触发 → 什么都不做
 6. enabled=0：保护不触发任何动作
 7. 同一皮带多个保护同时触发，只执行一次停车
+8. 手动S键停车：正常播放停车预警后停车（不受影响）

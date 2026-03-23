@@ -163,7 +163,10 @@ void ProtectionLogicController::executeProtectionAction(int beltNumber, const QS
         break;
     }
     case 1: {
-        // 正常停车：播放停车音频 + 停止序列
+        // ✅ 2026-03-23 [Phase 7.48.85.1]: 保护触发的正常停车也跳过停车预警音频
+        // 原因：保护触发时报警语音已在播放，停车预警会与报警语音冲突（共用QMediaPlayer）
+        // 实际场景：保护报警语音播放 → 直接停车，不播放停车预警
+        // 只有手动S键/远程停止才播放停车预警
         if (m_beltStopped.value(beltNumber, false)) {
             qDebug() << "⚠️ ProtectionLogicController: 皮带" << beltNumber
                      << "已因保护触发停车，忽略重复停车请求";
@@ -175,11 +178,12 @@ void ProtectionLogicController::executeProtectionAction(int beltNumber, const QS
         emit statusMessage(msg);
         emit protectionStopTriggered(beltNumber, protectionName, protectionLevel, source);
 
-        qWarning() << "⚠️ ProtectionLogicController: 执行正常停车 - 皮带" << beltNumber
+        qWarning() << "⚠️ ProtectionLogicController: 执行正常停车（跳过停车预警）- 皮带" << beltNumber
                    << "保护:" << protectionName << "来源:" << stopSourceName(source);
 
         if (m_commonControl) {
-            m_commonControl->stopBelt(beltNumber);
+            // 使用 emergencyStopBelt 跳过停车预警音频，避免与报警语音冲突
+            m_commonControl->emergencyStopBelt(beltNumber);
         } else {
             qWarning() << "❌ ProtectionLogicController: CommonControl未设置，无法执行正常停车";
         }
