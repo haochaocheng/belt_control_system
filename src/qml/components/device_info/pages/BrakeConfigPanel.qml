@@ -589,6 +589,10 @@ Rectangle {
         return true
     }
     Component.onCompleted: { loadBrakeConfig() }
+    // ✅ 2026-03-23 [Phase 7.48.83]: deviceId由Loader.onLoaded设置，变化时重新加载（修复所有设备共用deviceId=1的问题）
+    onDeviceIdChanged: {
+        if (deviceId > 0) loadBrakeConfig()
+    }
     // 2026-03-14: 切换制动器时先保存当前配置再加载新配置
     property int _previousBrakeIndex: -1
     onBrakeIndexChanged: {

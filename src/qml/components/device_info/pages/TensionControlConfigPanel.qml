@@ -584,4 +584,8 @@ Rectangle {
         console.log("✅ [TensionControlConfigPanel] 初始化完成, deviceId:", root.deviceId)
         loadTensionControlConfig()
     }
+    // ✅ 2026-03-23 [Phase 7.48.83]: deviceId由Loader.onLoaded设置，变化时重新加载（修复所有设备共用deviceId=1的问题）
+    onDeviceIdChanged: {
+        if (deviceId > 0) loadTensionControlConfig()
+    }
 }
