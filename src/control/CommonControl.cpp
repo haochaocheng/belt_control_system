@@ -518,6 +518,17 @@ void CommonControl::playAudioInternal(const QString &audioPath)
 
 void CommonControl::startBelt(int beltNumber)
 {
+    // ✅ 2026-03-23 [Phase 7.48.85.2]: 防重入检查 - R键长按/自动重复导致startBelt被快速反复调用
+    // 原因：每次调用都会 stopWarningPlayback() + startWarningPlayback()，音频播放30-120ms就被打断，
+    //       m_warningTimer 被不断重置永远不到期，设备序列永远不启动。
+    if (m_isWarningPlaying || m_isStopAudioPlaying || m_isSequenceRunning) {
+        qDebug() << "⚠️ CommonControl: 忽略重复启动请求（当前状态："
+                 << (m_isWarningPlaying ? "预警播放中" : "")
+                 << (m_isStopAudioPlaying ? "停车音频中" : "")
+                 << (m_isSequenceRunning ? "设备序列中" : "") << "）";
+        return;
+    }
+
     qDebug() << "🚀 CommonControl: 请求启动" << beltNumber << "号皮带";
 
     // 记录启动操作到数据库
