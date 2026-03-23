@@ -47,7 +47,9 @@ QVariantMap StationStatusInfo::toVariantMap() const
 DeviceRoleManager::DeviceRoleManager(QObject *parent)
     : QObject(parent)
     , m_localDeviceId(1)  // 默认1号皮带
-    , m_stationRole("master")  // 默认主站
+    // 旧代码：, m_stationRole("master")  // 默认主站
+    // ✅ 2026-03-23 [Phase 7.48.84]: 初始默认独立控制，不连锁任何设备
+    , m_stationRole("standalone")
     , m_stationId(1)  // 默认集控ID为1
     , m_mqttController(nullptr)  // ✅ 2026-02-10 [Phase 7.45.6]: 初始化 MQTT 控制器
     , m_publishTimer(nullptr)    // ✅ 2026-02-10 [Phase 7.45.6]: 初始化发布定时器
@@ -92,7 +94,11 @@ QString DeviceRoleManager::localDeviceName() const
 
 QString DeviceRoleManager::stationName() const
 {
-    if (m_stationRole == "master") {
+    // 旧代码：if (m_stationRole == "master") return "主站"; else return "分站N";
+    // ✅ 2026-03-23 [Phase 7.48.84]: 添加独立控制模式名称
+    if (m_stationRole == "standalone") {
+        return "独立控制";
+    } else if (m_stationRole == "master") {
         return "主站";
     } else {
         return QString("分站%1").arg(m_stationId);
@@ -147,7 +153,9 @@ void DeviceRoleManager::setLocalDeviceId(int deviceId)
 
 void DeviceRoleManager::setStationRole(const QString &role)
 {
-    if (role != "master" && role != "sub") {
+    // 旧代码：if (role != "master" && role != "sub")
+    // ✅ 2026-03-23 [Phase 7.48.84]: 添加 standalone 独立控制模式
+    if (role != "standalone" && role != "master" && role != "sub") {
         qWarning() << "⚠️ [DeviceRoleManager] 无效的角色:" << role;
         return;
     }
@@ -175,7 +183,15 @@ bool DeviceRoleManager::isLocalDevice(int deviceId) const
 
 bool DeviceRoleManager::hasPermission(int deviceId) const
 {
-    // 只有本机设备才有权限修改
+    // 旧代码：只有本机设备才有权限修改
+    // return isLocalDevice(deviceId);
+    // ✅ 2026-03-23 [Phase 7.48.84]: 根据角色区分权限
+    // standalone（独立控制）：可修改所有1-8号设备参数（每个设备独立配置，不连锁）
+    // master（主站）：可修改所有1-8号设备参数（下位机参数存在主站本地）
+    // sub（分站）：只能修改本机设备参数（分站有自己的独立参数存储）
+    if (m_stationRole == "standalone" || m_stationRole == "master") {
+        return deviceId >= 1 && deviceId <= 8;
+    }
     return isLocalDevice(deviceId);
 }
 
@@ -258,7 +274,9 @@ void DeviceRoleManager::loadFromConfig()
             // 加载本机角色
             if (root.contains("stationRole")) {
                 QString role = root["stationRole"].toString();
-                if (role == "master" || role == "sub") {
+                // 旧代码：if (role == "master" || role == "sub")
+                // ✅ 2026-03-23 [Phase 7.48.84]: 添加 standalone 支持
+                if (role == "standalone" || role == "master" || role == "sub") {
                     m_stationRole = role;
                 }
             }

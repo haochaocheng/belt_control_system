@@ -109,14 +109,18 @@ Rectangle {
                             Layout.preferredWidth: 200
                             Layout.preferredHeight: 40
 
-                            model: ["主站", "分站"]
-                            currentIndex: 0  // 默认主站
+                            // 旧代码：model: ["主站", "分站"]
+                            // 旧代码：currentIndex: 0  // 默认主站
+                            // ✅ 2026-03-23 [Phase 7.48.84]: 添加独立控制模式，默认独立控制
+                            model: ["独立控制", "主站", "分站"]
+                            currentIndex: 0  // 默认独立控制
 
                             onCurrentIndexChanged: {
                                 if (typeof deviceRoleManager !== 'undefined') {
-                                    deviceRoleManager.setStationRole(
-                                        currentIndex === 0 ? "master" : "sub"
-                                    )
+                                    // 旧代码：deviceRoleManager.setStationRole(currentIndex === 0 ? "master" : "sub")
+                                    // ✅ 2026-03-23 [Phase 7.48.84]: 映射三种角色
+                                    var roles = ["standalone", "master", "sub"]
+                                    deviceRoleManager.setStationRole(roles[currentIndex])
                                 }
                             }
 
@@ -186,8 +190,10 @@ Rectangle {
                     }
 
                     // 说明文字
+                    // 旧代码：text: "💡 说明: 选择本机角色和控制的设备后，只能修改本机设备的参数"
+                    // ✅ 2026-03-23 [Phase 7.48.84]: 更新说明文字
                     Text {
-                        text: "💡 说明: 选择本机角色和控制的设备后，只能修改本机设备的参数"
+                        text: "💡 说明: 独立控制/主站模式可修改所有设备参数，分站模式只能修改本机设备参数"
                         font.pixelSize: 14
                         font.family: "Microsoft YaHei"
                         color: "#5a6f8f"
@@ -448,6 +454,15 @@ Rectangle {
     Component.onCompleted: {
         console.log("✅ [BasicConfigPage] 组件初始化 - 设备ID:", root.deviceId)
         loadAllConfig()
+
+        // ✅ 2026-03-23 [Phase 7.48.84]: 回显本机角色下拉框
+        if (typeof deviceRoleManager !== 'undefined') {
+            var roleMap = {"standalone": 0, "master": 1, "sub": 2}
+            var idx = roleMap[deviceRoleManager.stationRole]
+            if (idx !== undefined) {
+                stationRoleSelector.currentIndex = idx
+            }
+        }
     }
 
     // ✅ 2026-02-06 [参数持久化]: 设备ID变化时重新加载配置

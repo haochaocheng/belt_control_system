@@ -192,7 +192,9 @@ Item {
             console.log("🔒 [DeviceSettingsDialog] 设备ID:", deviceId, "权限检查:", hasPermission ? "可编辑" : "只读")
 
             if (isReadOnly) {
-                console.log("⚠️ [DeviceSettingsDialog] 只读模式：当前设备不是本机，无法修改参数")
+                // 旧代码：console.log("⚠️ [DeviceSettingsDialog] 只读模式：当前设备不是本机，无法修改参数")
+                // ✅ 2026-03-23 [Phase 7.48.84]: 更新日志，显示角色信息
+                console.log("⚠️ [DeviceSettingsDialog] 只读模式：分站模式，设备", deviceId, "不是本机设备", deviceRoleManager.localDeviceId)
             }
         } else {
             console.warn("⚠️ [DeviceSettingsDialog] deviceRoleManager 未定义，默认允许编辑")
@@ -2294,7 +2296,9 @@ Item {
 
                 // 提示文字
                 Text {
-                    text: "只读模式：当前设备不是本机，无法修改参数"
+                    // 旧代码：text: "只读模式：当前设备不是本机，无法修改参数"
+                    // ✅ 2026-03-23 [Phase 7.48.84]: 更新提示文字，区分主站/分站
+                    text: "只读模式：当前为分站模式，只能修改本机设备参数"
                     font.pixelSize: 18
                     font.bold: true
                     font.family: "Microsoft YaHei"
