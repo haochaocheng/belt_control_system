@@ -35,7 +35,9 @@ void LocalControl::setDeviceRoleManager(DeviceRoleManager *deviceRoleManager)
 {
     m_deviceRoleManager = deviceRoleManager;
     qDebug() << "🔗 LocalControl: DeviceRoleManager已连接";
-} LocalControl::checkStartInterlock()
+}
+
+bool LocalControl::checkStartInterlock()
 {
     // TODO: 实现连锁条件检查
     // 例如：
