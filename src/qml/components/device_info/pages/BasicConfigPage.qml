@@ -20,13 +20,15 @@ Rectangle {
     property bool __initialized: false
 
     // ✅ 2026-02-06 [参数持久化]: 基本参数配置对象
+    // 旧代码：machineNumber: 1, localDeviceName: "1号皮带" — 固定默认值不随deviceId变化
+    // ✅ 2026-03-23 [Phase 7.48.84.3]: 默认值跟随deviceId，未保存配置时显示正确的编号和名称
     property var basicParams: ({
-        machineNumber: 1,
+        machineNumber: root.deviceId,
         warningMode: 0,
         warningTimeSeconds: 10,
         warningPlayCount: 3,
         workMode: 0,
-        localDeviceName: "1号皮带",
+        localDeviceName: root.deviceId + "号皮带",
         speedSelection: 0,
         timeSettings: "",
         frontInterlock: 0,
@@ -483,6 +485,10 @@ Rectangle {
     // ✅ 2026-02-06 [参数持久化]: 设备ID变化时重新加载配置
     onDeviceIdChanged: {
         console.log("✅ [BasicConfigPage] 设备ID变化 - 新设备ID:", root.deviceId)
+        // ✅ 2026-03-23 [Phase 7.48.84.3]: 先更新默认值，再加载数据库配置
+        // 如果数据库无记录，至少显示正确的编号和名称
+        basicParams.machineNumber = root.deviceId
+        basicParams.localDeviceName = root.deviceId + "号皮带"
         loadAllConfig()
     }
 }
