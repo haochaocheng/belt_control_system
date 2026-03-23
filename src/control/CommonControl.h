@@ -225,6 +225,10 @@ public slots:
     void startBelt(int beltNumber);  // 启动指定编号的皮带（带预警播放）
     void stopBelt(int beltNumber);   // 停止指定编号的皮带（播放停车音频，然后停止设备序列）
 
+    // ✅ 2026-03-23 [Phase 7.48.85]: 紧急停车（跳过停车音频，直接执行停止序列）
+    // 用途：保护逻辑控制器触发紧急停车（protection_level=0）
+    void emergencyStopBelt(int beltNumber);
+
     // 停止当前预警播放
     void stopWarningPlayback();
 

@@ -562,6 +562,15 @@ void CommonControl::stopBelt(int beltNumber)
     // 停止当前预警播放（如果正在播放）
     stopWarningPlayback();
 
+    // ✅ 2026-03-23 [Phase 7.48.85]: 故障停车跳过停车音频，直接执行停止序列
+    // 原因：紧急停车（protection_level=0）无需播放停车音频，直接停止设备
+    if (m_isFaultStop) {
+        qDebug() << "🚨 CommonControl: 故障/紧急停车模式，跳过停车音频，直接停止设备序列";
+        m_isFaultStop = false;  // 重置标志
+        stopDeviceSequence();
+        return;
+    }
+
     // 获取停车音频路径
     QString stopAudioPath = getAudioPath(beltNumber, "停车");
     if (stopAudioPath.isEmpty()) {
@@ -577,6 +586,15 @@ void CommonControl::stopBelt(int beltNumber)
     // 播放停车音频（只播放一次）
     qDebug() << "🔊 CommonControl: 播放停车音频（一次）";
     playAudio(stopAudioPath);
+}
+
+// ✅ 2026-03-23 [Phase 7.48.85]: 紧急停车 — 跳过停车音频，直接执行停止序列
+// 用途：保护逻辑控制器触发的紧急停车（protection_level=0），或主站紧急停车命令
+void CommonControl::emergencyStopBelt(int beltNumber)
+{
+    qDebug() << "🚨 CommonControl: 紧急停车" << beltNumber << "号皮带（跳过停车音频）";
+    m_isFaultStop = true;   // 标记故障停车（stopBelt内部将跳过停车音频）
+    stopBelt(beltNumber);   // 复用现有停止逻辑
 }
 
 QString CommonControl::getAudioPath(int beltNumber, const QString &actionType)

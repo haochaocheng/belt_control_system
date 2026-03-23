@@ -164,6 +164,8 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
         int beltNumber = getBeltMapping(moduleIndex);
         QString protectionName = m_audioPathMapper->getShortProtectionName(bitIndex);
         checkSprinklerActivation(beltNumber, protectionName, false);
+        // ✅ 2026-03-23 [Phase 7.48.85]: 发射保护恢复信号给 ProtectionLogicController
+        emit protectionActionCleared(beltNumber, protectionName, 1);  // source=1: 开关量保护
         return;
     }
 
@@ -249,6 +251,25 @@ void MqttProtectionMonitor::onBitChanged(int moduleIndex, int bitIndex, bool val
     {
         QString shortName = m_audioPathMapper->getShortProtectionName(bitIndex);
         checkSprinklerActivation(beltNumber, shortName, true);
+
+        // ✅ 2026-03-23 [Phase 7.48.85]: 发射保护动作信号给 ProtectionLogicController
+        // 从数据库读取 protection_level，默认1（正常停车）
+        int protectionLevel = 1;
+        if (m_deviceConfigMgr) {
+            QVariantMap prot = m_deviceConfigMgr->loadDigitalProtection(beltNumber, shortName);
+            if (!prot.isEmpty()) {
+                protectionLevel = prot.value("protection_level", 1).toInt();
+                int enabled = prot.value("enabled", 1).toInt();
+                if (enabled != 1) {
+                    qDebug() << "📝 [MqttProtectionMonitor] 开关量保护" << shortName << "已禁用，不触发控制动作";
+                } else {
+                    emit protectionActionRequired(beltNumber, shortName, protectionLevel, 1);  // source=1: 开关量
+                }
+            } else {
+                // 数据库无记录，使用默认级别
+                emit protectionActionRequired(beltNumber, shortName, protectionLevel, 1);
+            }
+        }
     }
 }
 
@@ -462,6 +483,8 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
                 emit analogProtectionRestored(beltNumber, protName, engineeringValue);
                 // ✅ 2026-03-09 [Phase 7.48.26]: 检查洒水恢复
                 checkSprinklerActivation(beltNumber, protName, false);
+                // ✅ 2026-03-23 [Phase 7.48.85]: 发射保护恢复信号给 ProtectionLogicController
+                emit protectionActionCleared(beltNumber, protName, 2);  // source=2: 模拟量保护
             }
             continue;  // 未超限，继续检查下一个保护项
         }
@@ -492,6 +515,12 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
 
         // ✅ 2026-03-09 [Phase 7.48.26]: 检查洒水触发
         checkSprinklerActivation(beltNumber, protName, true);
+
+        // ✅ 2026-03-23 [Phase 7.48.85]: 发射保护动作信号给 ProtectionLogicController
+        {
+            int protLevel = prot.value("protection_level", 1).toInt();
+            emit protectionActionRequired(beltNumber, protName, protLevel, 2);  // source=2: 模拟量保护
+        }
 
         bool useTTS = (prot.value("use_text_to_speech", 0).toInt() == 1);
         QString playMode = prot.value("play_mode", "count").toString();
@@ -853,6 +882,11 @@ void MqttProtectionMonitor::onMotorRegisterReceived(int motorIndex, int tabIndex
         emit analogProtectionTriggered(beltNumber, QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName),
                                         engineeringValue, limitType);
 
+        // ✅ 2026-03-23 [Phase 7.48.85]: 发射保护动作信号给 ProtectionLogicController
+        emit protectionActionRequired(beltNumber,
+                                       QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName),
+                                       protLevel, 3);  // source=3: 电机保护
+
     } else if (!exceeded && wasActive) {
         // ===== 超限→正常（恢复）=====
         m_motorProtectionAlarmActive[alarmKey] = false;
@@ -869,6 +903,10 @@ void MqttProtectionMonitor::onMotorRegisterReceived(int motorIndex, int tabIndex
 
         emit analogProtectionRestored(beltNumber, QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName),
                                        engineeringValue);
+        // ✅ 2026-03-23 [Phase 7.48.85]: 发射保护恢复信号给 ProtectionLogicController
+        emit protectionActionCleared(beltNumber,
+                                      QString("电机%1 %2").arg(motorIndex + 1).arg(protectionName),
+                                      3);  // source=3: 电机保护
     }
 }
 
@@ -975,9 +1013,32 @@ void MqttProtectionMonitor::onCSBitChanged(int protType, int pointIndex, bool va
         int beltNumber = m_beltMapping.value(0, 1);
         emit protectionTriggered(5, pointIndex, beltNumber, protectionName, audioPath);
 
+        // ✅ 2026-03-23 [Phase 7.48.85]: 发射保护动作信号给 ProtectionLogicController
+        {
+            int csProtLevel = 1;  // CS沿线保护默认正常停车
+            if (m_deviceConfigMgr) {
+                int channelNum = protType * 100 + pointIndex;
+                QVariantMap csProt = m_deviceConfigMgr->loadDigitalProtectionByChannel("CS模块", channelNum);
+                if (!csProt.isEmpty()) {
+                    csProtLevel = csProt.value("protection_level", 1).toInt();
+                    int enabled = csProt.value("enabled", 1).toInt();
+                    if (enabled != 1) {
+                        qDebug() << "📝 [CS保护] " << protectionName << "已禁用，不触发控制动作";
+                    } else {
+                        emit protectionActionRequired(beltNumber, protectionName, csProtLevel, 4);  // source=4: CS
+                    }
+                } else {
+                    emit protectionActionRequired(beltNumber, protectionName, csProtLevel, 4);
+                }
+            }
+        }
+
     } else if (!value && wasActive) {
         // ===== 触发→恢复（1→0）=====
         m_csProtectionAlarmActive[alarmKey] = false;
         qDebug() << "🟢 [CS保护] " << protectionName << "恢复正常";
+        // ✅ 2026-03-23 [Phase 7.48.85]: 发射保护恢复信号给 ProtectionLogicController
+        int beltNumber = m_beltMapping.value(0, 1);
+        emit protectionActionCleared(beltNumber, protectionName, 4);  // source=4: CS
     }
 }

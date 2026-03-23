@@ -45,6 +45,7 @@
 #include "mqtt/DODataManager.h"  // ✅ 2026-03-10 [Phase 7.48.36]: 添加DO模块数据管理器头文件
 #include "mqtt/CSDataManager.h"  // ✅ 2026-03-18 [Phase 7.48.56]: 添加CS模块数据管理器头文件
 #include "control/MqttProtectionMonitor.h"  // ✅ 2026-02-27 [Phase 7.47.35]: 添加MQTT保护监控器头文件
+#include "control/ProtectionLogicController.h"  // ✅ 2026-03-23 [Phase 7.48.85]: 添加保护逻辑控制器头文件
 #endif
 #include "network/NetworkTask.h"
 
@@ -402,6 +403,20 @@ int main(int argc, char *argv[]) {
                          << "值:" << engineeringValue << "皮带:" << beltNumber;
             });
         logMessage("Analog protection trigger/restore -> alarm history DB connection established");
+
+        // ✅ 2026-03-23 [Phase 7.48.85]: 创建保护逻辑控制器 — 将保护触发与皮带停车控制关联
+        // 原因：之前保护触发只播放报警音频，不执行停车。现在根据 protection_level 字段执行控制动作
+        ProtectionLogicController protectionLogicController;
+        protectionLogicController.setCommonControl(&commonControl);
+        protectionLogicController.setDeviceConfigManager(&deviceConfigMgr);
+        protectionLogicController.setDeviceRoleManager(&deviceRoleManager);
+
+        // 连接 MqttProtectionMonitor → ProtectionLogicController
+        QObject::connect(&mqttProtectionMonitor, &MqttProtectionMonitor::protectionActionRequired,
+                         &protectionLogicController, &ProtectionLogicController::onProtectionTriggered);
+        QObject::connect(&mqttProtectionMonitor, &MqttProtectionMonitor::protectionActionCleared,
+                         &protectionLogicController, &ProtectionLogicController::onProtectionRestored);
+        logMessage("Protection logic controller connected to MqttProtectionMonitor");
 #endif
 
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）
@@ -418,6 +433,7 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("operationLogDB", &operationLogDB);
         engine.rootContext()->setContextProperty("alarmHistoryDB", &alarmHistoryDB);
         engine.rootContext()->setContextProperty("protectionConfigMgr", &protectionConfigMgr);
+        engine.rootContext()->setContextProperty("protectionLogicController", &protectionLogicController);  // ✅ 2026-03-23 [Phase 7.48.85]: 注册保护逻辑控制器到QML
         engine.rootContext()->setContextProperty("deviceConfigMgr", &deviceConfigMgr);  // ✅ 2026-02-02 [FIX 100.300.112.8.20]: 注册设备配置管理器到QML
         engine.rootContext()->setContextProperty("deviceRoleManager", &deviceRoleManager);  // ✅ 2026-02-10 [Phase 7.45]: 注册设备角色管理器到QML
         engine.rootContext()->setContextProperty("serialPortController", &serialPortController);  // ✅ 2026-02-06 [FIX 100.300.113 Phase 7.38.1]: 注册串口控制器到QML

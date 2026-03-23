@@ -221,6 +221,12 @@ signals:
     void motorValueUpdated(int motorIndex, int tabIndex, double engineeringValue,
                            const QString &unit, const QString &protectionName, bool exceeded);
 
+    // ✅ 2026-03-23 [Phase 7.48.85]: 保护逻辑控制信号（携带 protection_level，供 ProtectionLogicController 使用）
+    // source: 1=开关量, 2=模拟量, 3=电机, 4=CS沿线, 5=张紧
+    void protectionActionRequired(int beltNumber, const QString &protectionName,
+                                   int protectionLevel, int source);
+    void protectionActionCleared(int beltNumber, const QString &protectionName, int source);
+
 private slots:
     /**
      * @brief DI位变化槽函数

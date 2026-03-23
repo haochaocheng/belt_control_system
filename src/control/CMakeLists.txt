@@ -34,6 +34,7 @@ set(CONTROL_SOURCES
     # ✅ 2026-02-27 10:30 [Phase 7.47.35]: 添加音频路径映射器和MQTT保护监控器源文件
     AudioPathMapper.cpp
     MqttProtectionMonitor.cpp
+    ProtectionLogicController.cpp  # ✅ 2026-03-23 [Phase 7.48.85]: 添加保护逻辑控制器源文件
 )
 
 set(CONTROL_HEADERS
@@ -72,6 +73,7 @@ set(CONTROL_HEADERS
     # ✅ 2026-02-27 10:30 [Phase 7.47.35]: 添加音频路径映射器和MQTT保护监控器头文件
     AudioPathMapper.h
     MqttProtectionMonitor.h
+    ProtectionLogicController.h  # ✅ 2026-03-23 [Phase 7.48.85]: 添加保护逻辑控制器头文件
 )
 
 # ========== Sherpa-ONNX TTS 集成（可选） ==========
