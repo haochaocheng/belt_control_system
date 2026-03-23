@@ -304,6 +304,11 @@ int main(int argc, char *argv[]) {
         deviceRoleManager.loadFromConfig();  // 从配置文件加载
         logMessage("DeviceRoleManager initialized");
 
+        // ✅ 2026-03-23 [Phase 7.48.84.5]: 连接DeviceRoleManager到控制模块
+        // 原因：R/S键启动/停止时，需要使用DeviceRoleManager的localDeviceId而非SystemConfig的machineNumber
+        maintenanceControl.setDeviceRoleManager(&deviceRoleManager);
+        localControl.setDeviceRoleManager(&deviceRoleManager);
+
 #ifdef MQTT_ENABLED
         // ✅ 2026-02-10 [Phase 7.45.6]: 设置 MQTT 控制器并启动发布
         deviceRoleManager.setMQTTController(&mqttController);

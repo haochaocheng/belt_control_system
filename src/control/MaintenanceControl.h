@@ -6,6 +6,7 @@
 // 前向声明
 class CommonControl;
 class SystemConfig;
+class DeviceRoleManager;  // ✅ 2026-03-23 [Phase 7.48.84.5]: 添加设备角色管理器
 
 /**
  * @brief 检修模式控制类 - 没有连锁控制
@@ -29,6 +30,9 @@ public:
     // 设置SystemConfig引用
     void setSystemConfig(SystemConfig *systemConfig);
 
+    // ✅ 2026-03-23 [Phase 7.48.84.5]: 设置DeviceRoleManager引用
+    void setDeviceRoleManager(DeviceRoleManager *deviceRoleManager);
+
 public slots:
     /**
      * @brief 处理启动命令（检修模式：无连锁，直接启动）
@@ -46,6 +50,7 @@ signals:
 private:
     CommonControl *m_commonControl;
     SystemConfig *m_systemConfig;
+    DeviceRoleManager *m_deviceRoleManager;  // ✅ 2026-03-23 [Phase 7.48.84.5]
 };
 
 #endif // MAINTENANCECONTROL_H

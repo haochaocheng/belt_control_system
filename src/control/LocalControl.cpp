@@ -1,12 +1,14 @@
 #include "LocalControl.h"
 #include "CommonControl.h"
 #include "SystemConfig.h"
+#include "DeviceRoleManager.h"  // ✅ 2026-03-23 [Phase 7.48.84.5]
 #include <QDebug>
 
 LocalControl::LocalControl(QObject *parent)
     : QObject(parent)
     , m_commonControl(nullptr)
     , m_systemConfig(nullptr)
+    , m_deviceRoleManager(nullptr)  // ✅ 2026-03-23 [Phase 7.48.84.5]
 {
     qDebug() << "✅ LocalControl: 就地模式控制已创建";
 }
@@ -28,7 +30,12 @@ void LocalControl::setSystemConfig(SystemConfig *systemConfig)
     qDebug() << "🔗 LocalControl: SystemConfig已连接";
 }
 
-bool LocalControl::checkStartInterlock()
+// ✅ 2026-03-23 [Phase 7.48.84.5]: 添加DeviceRoleManager连接
+void LocalControl::setDeviceRoleManager(DeviceRoleManager *deviceRoleManager)
+{
+    m_deviceRoleManager = deviceRoleManager;
+    qDebug() << "🔗 LocalControl: DeviceRoleManager已连接";
+} LocalControl::checkStartInterlock()
 {
     // TODO: 实现连锁条件检查
     // 例如：
@@ -91,7 +98,9 @@ void LocalControl::handleStart()
     emit statusMessage("就地模式：启动皮带（连锁检查通过）");
 
     // 调用CommonControl的启动方法（带预警播放）
-    int beltNumber = m_systemConfig->machineNumber();
+    // ✅ 2026-03-23 [Phase 7.48.84.5]: 优先使用DeviceRoleManager的localDeviceId
+    // 旧代码：int beltNumber = m_systemConfig->machineNumber();
+    int beltNumber = m_deviceRoleManager ? m_deviceRoleManager->localDeviceId() : m_systemConfig->machineNumber();
     m_commonControl->startBelt(beltNumber);
 }
 
@@ -122,6 +131,8 @@ void LocalControl::handleStop()
     emit statusMessage("就地模式：停止皮带");
 
     // 调用CommonControl的停止方法（带停车音频 + 停止序列）
-    int beltNumber = m_systemConfig->machineNumber();
+    // ✅ 2026-03-23 [Phase 7.48.84.5]: 优先使用DeviceRoleManager的localDeviceId
+    // 旧代码：int beltNumber = m_systemConfig->machineNumber();
+    int beltNumber = m_deviceRoleManager ? m_deviceRoleManager->localDeviceId() : m_systemConfig->machineNumber();
     m_commonControl->stopBelt(beltNumber);
 }
