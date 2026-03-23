@@ -257,6 +257,20 @@ Item {
                 console.log("[Screen01] 🔄 初始化选中状态...")
                 updateSelection()
 
+                // ✅ 2026-03-23 [Phase 7.48.84.4]: 设置每个卡片的设备名称
+                // 旧代码：12个卡片全部显示默认值"设备 01"，未分别设置
+                var deviceNames = [
+                    "1号皮带", "2号皮带", "3号皮带", "4号皮带",
+                    "5号皮带", "6号皮带", "7号皮带", "8号皮带",
+                    "转载机", "破碎机", "前刮板", "后刮板"
+                ]
+                for (var j = 0; j < dataItems.length; j++) {
+                    if (dataItems[j]) {
+                        dataItems[j].deviceName = deviceNames[j]
+                    }
+                }
+                console.log("[Screen01] ✅ 设备名称已设置")
+
                 // ✅ 2026-01-28 [FIX 100.300.67]: 设置鼠标交互
                 console.log("[Screen01] 🖱️ 设置鼠标交互...")
                 setupMouseInteraction()
