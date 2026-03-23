@@ -15,6 +15,10 @@ Rectangle {
     property int deviceId: 1
     property string deviceName: ""
 
+    // ✅ 2026-03-23 [Phase 7.48.84.2]: 初始化保护标志
+    // 防止组件创建时ComboBox默认值触发onCurrentIndexChanged，覆盖已保存的配置
+    property bool __initialized: false
+
     // ✅ 2026-02-06 [参数持久化]: 基本参数配置对象
     property var basicParams: ({
         machineNumber: 1,
@@ -116,7 +120,9 @@ Rectangle {
                             currentIndex: 0  // 默认独立控制
 
                             onCurrentIndexChanged: {
-                                if (typeof deviceRoleManager !== 'undefined') {
+                                // 旧代码：无初始化保护，组件创建时默认值会覆盖已保存配置
+                                // ✅ 2026-03-23 [Phase 7.48.84.2]: 添加初始化保护
+                                if (root.__initialized && typeof deviceRoleManager !== 'undefined') {
                                     // 旧代码：deviceRoleManager.setStationRole(currentIndex === 0 ? "master" : "sub")
                                     // ✅ 2026-03-23 [Phase 7.48.84]: 映射三种角色
                                     var roles = ["standalone", "master", "sub"]
@@ -166,7 +172,9 @@ Rectangle {
                             currentIndex: 0  // 默认1号皮带
 
                             onCurrentIndexChanged: {
-                                if (currentIndex >= 0 && typeof deviceRoleManager !== 'undefined') {
+                                // 旧代码：无初始化保护，组件创建时默认值(0)覆盖已保存的localDeviceId
+                                // ✅ 2026-03-23 [Phase 7.48.84.2]: 添加初始化保护
+                                if (root.__initialized && currentIndex >= 0 && typeof deviceRoleManager !== 'undefined') {
                                     deviceRoleManager.setLocalDeviceId(currentIndex + 1)
                                 }
                             }
@@ -462,7 +470,14 @@ Rectangle {
             if (idx !== undefined) {
                 stationRoleSelector.currentIndex = idx
             }
+
+            // ✅ 2026-03-23 [Phase 7.48.84.2]: 回显本机设备下拉框
+            // 旧代码：未回显，每次打开弹窗都默认显示1号皮带，并触发onCurrentIndexChanged重置配置
+            localDeviceSelector.currentIndex = deviceRoleManager.localDeviceId - 1
         }
+
+        // ✅ 2026-03-23 [Phase 7.48.84.2]: 初始化完成后才允许ComboBox的onChange生效
+        root.__initialized = true
     }
 
     // ✅ 2026-02-06 [参数持久化]: 设备ID变化时重新加载配置
