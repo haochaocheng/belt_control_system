@@ -134,55 +134,82 @@ int MqttProtectionMonitor::getBeltMapping(int moduleIndex) const
 
 // ✅ 2026-03-05 [Phase 7.48.10]: 电机启动/停止通知（用于速度保护延时启动）
 // ✅ 2026-03-23 [Phase 7.48.86.2]: 修复：只在第一个电机启动时开始延时计时，后续电机不重置
+// ✅ 2026-03-23 [Phase 7.48.86.3]: 修复：电机启动通知皮带号与AI模块映射不匹配
+//   CommonControl emit motorActivated(m_currentBeltNumber=2)，但AI模块映射的皮带号=1
+//   解决方案：忽略传入的beltNumber，为所有已映射的皮带设置电机运行状态
 void MqttProtectionMonitor::notifyMotorStarted(int beltNumber)
 {
-    // 旧代码：每次调用都重置计时器，导致多个电机依次启动时延时被反复重置
-    // m_motorRunning[beltNumber] = true;
-    // m_motorStartTimers[beltNumber].start();
-    // m_slipTimerActive[beltNumber] = false;
+    Q_UNUSED(beltNumber);  // 旧代码用传入的beltNumber，但与AI模块映射不一致
 
-    m_activeMotorCount[beltNumber] = m_activeMotorCount.value(beltNumber, 0) + 1;
+    // 为所有已映射的皮带设置电机运行状态
+    QList<int> allBelts;
+    for (auto it = m_aiBeltMapping.constBegin(); it != m_aiBeltMapping.constEnd(); ++it) {
+        if (!allBelts.contains(it.value())) {
+            allBelts.append(it.value());
+        }
+    }
+    // 如果没有映射，至少包含默认皮带1
+    if (allBelts.isEmpty()) {
+        allBelts.append(1);
+    }
 
-    if (!m_motorRunning.value(beltNumber, false)) {
-        // 第一个电机启动 → 标记运行 + 开始延时计时
-        m_motorRunning[beltNumber] = true;
-        m_motorStartTimers[beltNumber].start();
-        m_slipTimerActive[beltNumber] = false;
-        qDebug() << "🏭 [MqttProtectionMonitor] 第一个电机启动 - 皮带" << beltNumber
-                 << "速度保护延时计时开始（已激活电机数:" << m_activeMotorCount[beltNumber] << "）";
-    } else {
-        // 后续电机启动 → 不重置计时器
-        qDebug() << "🏭 [MqttProtectionMonitor] 后续电机启动 - 皮带" << beltNumber
-                 << "延时计时不重置（已激活电机数:" << m_activeMotorCount[beltNumber] << "）";
+    for (int belt : allBelts) {
+        m_activeMotorCount[belt] = m_activeMotorCount.value(belt, 0) + 1;
+
+        if (!m_motorRunning.value(belt, false)) {
+            // 第一个电机启动 → 标记运行 + 开始延时计时
+            m_motorRunning[belt] = true;
+            m_motorStartTimers[belt].start();
+            m_slipTimerActive[belt] = false;
+            qDebug() << "🏭 [MqttProtectionMonitor] 第一个电机启动 - 皮带" << belt
+                     << "速度保护延时计时开始（已激活电机数:" << m_activeMotorCount[belt] << "）";
+        } else {
+            // 后续电机启动 → 不重置计时器
+            qDebug() << "🏭 [MqttProtectionMonitor] 后续电机启动 - 皮带" << belt
+                     << "延时计时不重置（已激活电机数:" << m_activeMotorCount[belt] << "）";
+        }
     }
 }
 
 // ✅ 2026-03-23 [Phase 7.48.86.2]: 修复：只在最后一个电机停止时才标记未运行
+// ✅ 2026-03-23 [Phase 7.48.86.3]: 修复：忽略传入beltNumber，为所有已映射皮带更新状态
 void MqttProtectionMonitor::notifyMotorStopped(int beltNumber)
 {
-    // 旧代码：每个电机停止都直接标记未运行
-    // m_motorRunning[beltNumber] = false;
+    Q_UNUSED(beltNumber);
 
-    int count = m_activeMotorCount.value(beltNumber, 0);
-    if (count > 0) {
-        count--;
-        m_activeMotorCount[beltNumber] = count;
+    // 为所有已映射的皮带更新电机停止状态
+    QList<int> allBelts;
+    for (auto it = m_aiBeltMapping.constBegin(); it != m_aiBeltMapping.constEnd(); ++it) {
+        if (!allBelts.contains(it.value())) {
+            allBelts.append(it.value());
+        }
+    }
+    if (allBelts.isEmpty()) {
+        allBelts.append(1);
     }
 
-    if (count <= 0) {
-        // 最后一个电机停止 → 标记未运行
-        m_motorRunning[beltNumber] = false;
-        m_activeMotorCount[beltNumber] = 0;
-        m_slipTimerActive[beltNumber] = false;
+    for (int belt : allBelts) {
+        int count = m_activeMotorCount.value(belt, 0);
+        if (count > 0) {
+            count--;
+            m_activeMotorCount[belt] = count;
+        }
 
-        // ✅ 2026-03-23 [Phase 7.48.86.1]: 速度保护禁止自动清除/自动复位
-        // 只重置检测状态（计时器等），不清除报警状态（m_protectionAlarmActive 保留）
+        if (count <= 0) {
+            // 最后一个电机停止 → 标记未运行
+            m_motorRunning[belt] = false;
+            m_activeMotorCount[belt] = 0;
+            m_slipTimerActive[belt] = false;
 
-        qDebug() << "🛑 [MqttProtectionMonitor] 所有电机已停止 - 皮带" << beltNumber
-                 << "速度保护检测状态已重置（报警状态保留，需F键复位）";
-    } else {
-        qDebug() << "🛑 [MqttProtectionMonitor] 电机停止 - 皮带" << beltNumber
-                 << "仍有" << count << "个电机运行，速度保护继续检测";
+            // ✅ 2026-03-23 [Phase 7.48.86.1]: 速度保护禁止自动清除/自动复位
+            // 只重置检测状态，不清除报警状态（m_protectionAlarmActive 保留）
+
+            qDebug() << "🛑 [MqttProtectionMonitor] 所有电机已停止 - 皮带" << belt
+                     << "速度保护检测状态已重置（报警状态保留，需F键复位）";
+        } else {
+            qDebug() << "🛑 [MqttProtectionMonitor] 电机停止 - 皮带" << belt
+                     << "仍有" << count << "个电机运行，速度保护继续检测";
+        }
     }
 }
 

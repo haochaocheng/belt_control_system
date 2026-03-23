@@ -100,6 +100,17 @@
 电机1停止 → count=0, motorRunning=false, 停止检测
 ```
 
+## Phase 7.48.86.3 补充：电机启动皮带号与AI模块映射不匹配
+
+**问题**：`CommonControl::activateDevice()` emit `motorActivated(m_currentBeltNumber)`，`m_currentBeltNumber=2`，但AI模块0映射的皮带号是1。导致 `m_motorRunning[2]=true`，而速度保护检测 `m_motorRunning[1]` 始终为 false。
+
+**修改**：
+1. `notifyMotorStarted/Stopped()` 忽略传入的 `beltNumber` 参数（`Q_UNUSED`）
+2. 遍历 `m_aiBeltMapping` 获取所有已映射皮带号
+3. 为所有已映射皮带统一设置电机运行状态和延时计时器
+
+**效果**：任意电机启动 → 所有已映射皮带的速度保护开始延时计时
+
 ## 验证方法
 1. 电机未运行时速度=0 → 不触发下限报警
 2. 电机启动后延时到期前 → 不检测速度保护
