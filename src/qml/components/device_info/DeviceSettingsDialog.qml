@@ -20,6 +20,11 @@ Item {
     // ✅ 2026-01-30 [修复]: 保存真正的父容器引用（Screen01），用于焦点恢复
     // 必须在最外层 Item 上定义，才能在 createObject 时设置
     property var parentContainer: null
+    // ✅ 2026-03-23 [Phase 7.48.83]: deviceId/deviceName 必须在最外层定义，createObject才能传入
+    // 旧代码：这两个属性定义在内层Rectangle(root)上，createObject设置时报错：
+    // "DeviceSettingsDialog does not have a property called deviceId"
+    property int deviceId: 1
+    property string deviceName: "1号皮带"
 
     // ✅ 2026-01-28 [FIX 100.300.100]: 全屏模态遮罩，阻止所有事件传播到主界面
     MouseArea {
@@ -63,8 +68,11 @@ Item {
     // ✅ 2026-01-25: 使用主题背景色
 
     // ========== 公开属性 ==========
-    property string deviceName: "1号皮带（预览）"  // 设备名称
-    property int deviceId: 1                      // 设备ID
+    // ✅ 2026-03-23 [Phase 7.48.83]: deviceId/deviceName 已移至外层modalContainer，这里改为绑定引用
+    // 旧代码：property string deviceName: "1号皮带（预览）"
+    // 旧代码：property int deviceId: 1
+    property string deviceName: modalContainer.deviceName
+    property int deviceId: modalContainer.deviceId
     property int currentCategory: 0               // 当前选中的参数类别
     property int currentBottomButtonIndex: 0      // ✅ 2026-01-24 [FIX]: 当前选中的底部按钮索引
 
