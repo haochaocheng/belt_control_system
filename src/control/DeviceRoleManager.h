@@ -85,8 +85,9 @@ public:
     QVariantList allStations() const;
 
     // 属性设置器
-    void setLocalDeviceId(int deviceId);
-    void setStationRole(const QString &role);
+    // ✅ 2026-03-23 [Phase 7.48.84.1]: 添加Q_INVOKABLE使QML可直接调用
+    Q_INVOKABLE void setLocalDeviceId(int deviceId);
+    Q_INVOKABLE void setStationRole(const QString &role);
 
     // QML 可调用方法
     Q_INVOKABLE bool isLocalDevice(int deviceId) const;
