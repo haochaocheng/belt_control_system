@@ -274,6 +274,9 @@ private:
     // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护状态（延时启动 + 低速打滑计时）
     QMap<int, QElapsedTimer> m_motorStartTimers;  ///< 电机启动计时器（key=beltNumber）
     QMap<int, bool> m_motorRunning;               ///< 电机运行状态（key=beltNumber）
+    // ✅ 2026-03-23 [Phase 7.48.86.2]: 追踪每条皮带已激活的电机数量
+    // 原因：一条皮带有多个电机，第一个电机启动时开始延时，最后一个电机停止时才标记未运行
+    QMap<int, int> m_activeMotorCount;            ///< 已激活电机数量（key=beltNumber）
     QMap<int, QElapsedTimer> m_slipTimers;        ///< 低速打滑计时器（key=beltNumber）
     QMap<int, bool> m_slipTimerActive;            ///< 低速打滑计时器是否激活（key=beltNumber）
 

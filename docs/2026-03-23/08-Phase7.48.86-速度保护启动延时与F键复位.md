@@ -80,6 +80,26 @@
 2. 新增 `resetSpeedProtectionAlarm(beltNumber)` 方法，仅在F键复位时由 `resetAllProtections()` 调用
 3. ProtectionLogicController 新增 `m_mqttProtectionMonitor` 引用，`resetAllProtections()` 中遍历已停车皮带清除速度保护
 
+## Phase 7.48.86.2 补充：多电机启动延时计时器不重置
+
+**问题**：一条皮带有多个电机（电机1、电机2...），`CommonControl::activateDevice()` 对每个电机都 emit `motorActivated`，导致 `notifyMotorStarted()` 被调用多次，每次都重置延时计时器。同样，每个电机停止都 emit `motorDeactivated`，第一个电机停止就将 `m_motorRunning` 置为 false。
+
+**修改**：
+1. 新增 `m_activeMotorCount[beltNumber]`：追踪每条皮带已激活的电机数量
+2. `notifyMotorStarted()`：只在第一个电机启动时（`m_motorRunning==false`）开始延时计时，后续电机启动只增加计数不重置计时器
+3. `notifyMotorStopped()`：递减计数，只在最后一个电机停止时（`count<=0`）才标记 `m_motorRunning=false`
+
+**逻辑流程**：
+```
+电机1启动 → count=1, motorRunning=true, 延时计时开始
+电机2启动 → count=2, 不重置计时器
+电机3启动 → count=3, 不重置计时器
+...延时到期后开始速度保护检测...
+电机3停止 → count=2, 继续检测
+电机2停止 → count=1, 继续检测
+电机1停止 → count=0, motorRunning=false, 停止检测
+```
+
 ## 验证方法
 1. 电机未运行时速度=0 → 不触发下限报警
 2. 电机启动后延时到期前 → 不检测速度保护

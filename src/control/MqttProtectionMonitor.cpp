@@ -133,34 +133,57 @@ int MqttProtectionMonitor::getBeltMapping(int moduleIndex) const
 }
 
 // ✅ 2026-03-05 [Phase 7.48.10]: 电机启动/停止通知（用于速度保护延时启动）
+// ✅ 2026-03-23 [Phase 7.48.86.2]: 修复：只在第一个电机启动时开始延时计时，后续电机不重置
 void MqttProtectionMonitor::notifyMotorStarted(int beltNumber)
 {
-    m_motorRunning[beltNumber] = true;
-    m_motorStartTimers[beltNumber].start();
-    // 重置低速打滑计时器
-    m_slipTimerActive[beltNumber] = false;
-    qDebug() << "🏭 [MqttProtectionMonitor] 电机启动通知 - 皮带" << beltNumber
-             << "速度保护延时计时开始";
+    // 旧代码：每次调用都重置计时器，导致多个电机依次启动时延时被反复重置
+    // m_motorRunning[beltNumber] = true;
+    // m_motorStartTimers[beltNumber].start();
+    // m_slipTimerActive[beltNumber] = false;
+
+    m_activeMotorCount[beltNumber] = m_activeMotorCount.value(beltNumber, 0) + 1;
+
+    if (!m_motorRunning.value(beltNumber, false)) {
+        // 第一个电机启动 → 标记运行 + 开始延时计时
+        m_motorRunning[beltNumber] = true;
+        m_motorStartTimers[beltNumber].start();
+        m_slipTimerActive[beltNumber] = false;
+        qDebug() << "🏭 [MqttProtectionMonitor] 第一个电机启动 - 皮带" << beltNumber
+                 << "速度保护延时计时开始（已激活电机数:" << m_activeMotorCount[beltNumber] << "）";
+    } else {
+        // 后续电机启动 → 不重置计时器
+        qDebug() << "🏭 [MqttProtectionMonitor] 后续电机启动 - 皮带" << beltNumber
+                 << "延时计时不重置（已激活电机数:" << m_activeMotorCount[beltNumber] << "）";
+    }
 }
 
+// ✅ 2026-03-23 [Phase 7.48.86.2]: 修复：只在最后一个电机停止时才标记未运行
 void MqttProtectionMonitor::notifyMotorStopped(int beltNumber)
 {
-    m_motorRunning[beltNumber] = false;
-    m_slipTimerActive[beltNumber] = false;
+    // 旧代码：每个电机停止都直接标记未运行
+    // m_motorRunning[beltNumber] = false;
 
-    // ✅ 2026-03-23 [Phase 7.48.86.1]: 速度保护禁止自动清除/自动复位
-    // 旧代码：电机停止时自动清除速度保护报警状态 + emit protectionActionCleared
-    // 修改原因：速度保护停车后必须按F键复位，不能自动恢复
-    // 只重置检测状态（计时器等），不清除报警状态（m_protectionAlarmActive 保留）
-    // QString speedKey = QString("%1:速度").arg(beltNumber);
-    // if (m_protectionAlarmActive.value(speedKey, false)) {
-    //     m_protectionAlarmActive[speedKey] = false;
-    //     emit protectionActionCleared(beltNumber, "速度", 2);
-    //     emit analogProtectionRestored(beltNumber, "速度", 0.0);
-    // }
+    int count = m_activeMotorCount.value(beltNumber, 0);
+    if (count > 0) {
+        count--;
+        m_activeMotorCount[beltNumber] = count;
+    }
 
-    qDebug() << "🛑 [MqttProtectionMonitor] 电机停止通知 - 皮带" << beltNumber
-             << "速度保护检测状态已重置（报警状态保留，需F键复位）";
+    if (count <= 0) {
+        // 最后一个电机停止 → 标记未运行
+        m_motorRunning[beltNumber] = false;
+        m_activeMotorCount[beltNumber] = 0;
+        m_slipTimerActive[beltNumber] = false;
+
+        // ✅ 2026-03-23 [Phase 7.48.86.1]: 速度保护禁止自动清除/自动复位
+        // 只重置检测状态（计时器等），不清除报警状态（m_protectionAlarmActive 保留）
+
+        qDebug() << "🛑 [MqttProtectionMonitor] 所有电机已停止 - 皮带" << beltNumber
+                 << "速度保护检测状态已重置（报警状态保留，需F键复位）";
+    } else {
+        qDebug() << "🛑 [MqttProtectionMonitor] 电机停止 - 皮带" << beltNumber
+                 << "仍有" << count << "个电机运行，速度保护继续检测";
+    }
 }
 
 // ✅ 2026-03-23 [Phase 7.48.86.1]: 手动复位速度保护报警状态
