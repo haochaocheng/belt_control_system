@@ -10,6 +10,7 @@
 class CommonControl;
 class DeviceConfigManager;
 class DeviceRoleManager;
+class DeviceRuntimeTracker;
 
 /**
  * @file ProtectionLogicController.h
@@ -59,6 +60,9 @@ public:
     void setCommonControl(CommonControl *ctrl);
     void setDeviceConfigManager(DeviceConfigManager *mgr);
     void setDeviceRoleManager(DeviceRoleManager *mgr);
+    // ✅ 2026-03-23 [Phase 7.48.86]: 注入 DeviceRuntimeTracker
+    // 原因：保护停车时需要设置故障状态，阻止R键直接重启
+    void setDeviceRuntimeTracker(DeviceRuntimeTracker *tracker);
 
     /**
      * @brief 获取当前所有活跃的保护（供QML显示）
@@ -131,6 +135,8 @@ private:
     CommonControl *m_commonControl;
     DeviceConfigManager *m_deviceConfigMgr;
     DeviceRoleManager *m_deviceRoleManager;
+    // ✅ 2026-03-23 [Phase 7.48.86]: 保护停车时设置故障状态
+    DeviceRuntimeTracker *m_runtimeTracker;
 
     /**
      * @brief 活跃保护记录

@@ -2,6 +2,7 @@
 #include "CommonControl.h"
 #include "DeviceConfigManager.h"
 #include "DeviceRoleManager.h"
+#include "DeviceRuntimeTracker.h"
 #include <QDebug>
 
 // ✅ 2026-03-23 [Phase 7.48.85]: 保护逻辑控制器实现
@@ -12,6 +13,7 @@ ProtectionLogicController::ProtectionLogicController(QObject *parent)
     , m_commonControl(nullptr)
     , m_deviceConfigMgr(nullptr)
     , m_deviceRoleManager(nullptr)
+    , m_runtimeTracker(nullptr)
 {
     qDebug() << "✅ ProtectionLogicController: 保护逻辑控制器已创建";
 }
@@ -37,6 +39,12 @@ void ProtectionLogicController::setDeviceRoleManager(DeviceRoleManager *mgr)
 {
     m_deviceRoleManager = mgr;
     qDebug() << "🔗 ProtectionLogicController: DeviceRoleManager已连接";
+}
+
+void ProtectionLogicController::setDeviceRuntimeTracker(DeviceRuntimeTracker *tracker)
+{
+    m_runtimeTracker = tracker;
+    qDebug() << "🔗 ProtectionLogicController: DeviceRuntimeTracker已连接";
 }
 
 QString ProtectionLogicController::stopSourceName(int source)
@@ -160,6 +168,13 @@ void ProtectionLogicController::executeProtectionAction(int beltNumber, const QS
         } else {
             qWarning() << "❌ ProtectionLogicController: CommonControl未设置，无法执行紧急停车";
         }
+
+        // ✅ 2026-03-23 [Phase 7.48.86]: 设置故障状态 → R键被阻止，必须按F键复位
+        if (m_runtimeTracker) {
+            m_runtimeTracker->setFault();
+            QString faultDesc = QString("%1号皮带 %2").arg(beltNumber).arg(protectionName);
+            m_runtimeTracker->onDeviceFault(faultDesc);
+        }
         break;
     }
     case 1: {
@@ -186,6 +201,13 @@ void ProtectionLogicController::executeProtectionAction(int beltNumber, const QS
             m_commonControl->emergencyStopBelt(beltNumber);
         } else {
             qWarning() << "❌ ProtectionLogicController: CommonControl未设置，无法执行正常停车";
+        }
+
+        // ✅ 2026-03-23 [Phase 7.48.86]: 设置故障状态 → R键被阻止，必须按F键复位
+        if (m_runtimeTracker) {
+            m_runtimeTracker->setFault();
+            QString faultDesc = QString("%1号皮带 %2").arg(beltNumber).arg(protectionName);
+            m_runtimeTracker->onDeviceFault(faultDesc);
         }
         break;
     }

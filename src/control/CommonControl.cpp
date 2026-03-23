@@ -1175,6 +1175,22 @@ void CommonControl::activateDevice(const QString &deviceName, bool activate)
         }
     }
 
+    // ✅ 2026-03-23 [Phase 7.48.86]: 电机状态变化通知 MqttProtectionMonitor
+    // 原因：速度保护启动延时需要知道电机何时启动/停止
+    // notifyMotorStarted/Stopped 之前从未被调用，m_motorRunning 始终为 false
+    if (deviceName.contains("电机") || deviceName.contains("号电机")) {
+        int beltNumber = m_currentBeltNumber;
+        if (activate) {
+            // 电机启动 → 通知速度保护延时计时开始
+            emit motorActivated(beltNumber);
+            qDebug() << "📡 CommonControl: 电机启动通知 - 皮带" << beltNumber << "设备:" << deviceName;
+        } else {
+            // 电机停止 → 通知速度保护停止检测
+            emit motorDeactivated(beltNumber);
+            qDebug() << "📡 CommonControl: 电机停止通知 - 皮带" << beltNumber << "设备:" << deviceName;
+        }
+    }
+
     if (activate) {
         // 启动设备时，检查是否需要启动反馈检测
         if (m_deviceFeedbackConfigs.contains(deviceName)) {

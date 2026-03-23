@@ -111,6 +111,24 @@ Item {
             event.accepted = true
         } else if (event.key === Qt.Key_F) {
             console.log("[Keyboard] F键按下 - 故障复位")
+
+            // ✅ 2026-03-23 [Phase 7.48.86]: 检查保护条件是否已恢复
+            // 原因：保护停车后必须先确认保护条件恢复，再按F键复位
+            if (protectionLogicController) {
+                var activeList = protectionLogicController.activeProtections()
+                if (activeList.length > 0) {
+                    console.log("⚠️ 还有", activeList.length, "个保护未恢复，不允许复位")
+                    // 更新未恢复保护列表供弹窗显示
+                    protectionNotClearedDialog.activeProtectionsList = activeList
+                    protectionNotClearedDialog.open()
+                    event.accepted = true
+                    return
+                }
+                // 所有保护已恢复，清除 ProtectionLogicController 状态
+                protectionLogicController.resetAllProtections()
+                console.log("✅ 保护逻辑控制器已复位")
+            }
+
             if (runtimeTracker) {
                 runtimeTracker.resetFault()
                 console.log("✅ 运行故障已复位")
@@ -391,7 +409,9 @@ Item {
                                     }
 
                                     Text {
-                                        text: modelData + " - 运行失败"
+                                        // ✅ 2026-03-23 [Phase 7.48.86]: 直接显示保护名称（如"1号皮带 速度超上限"）
+                                        // 旧代码：text: modelData + " - 运行失败"
+                                        text: modelData
                                         font.pixelSize: 14
                                         font.bold: true
                                         color: "#ffffff"
@@ -449,6 +469,191 @@ Item {
 
         onAccepted: {
             console.log("✅ 故障警告对话框已确认")
+        }
+    }
+
+    // ✅ 2026-03-23 [Phase 7.48.86]: 保护未恢复弹窗
+    // 原因：按F键复位时，如果还有保护条件未恢复，弹窗提示
+    Dialog {
+        id: protectionNotClearedDialog
+        anchors.centerIn: parent
+        width: 450
+        height: 320
+        modal: true
+        title: "保护未恢复"
+        standardButtons: Dialog.Ok
+
+        property var activeProtectionsList: []
+
+        background: Rectangle {
+            color: "#1a2332"
+            radius: 10
+            border.color: "#ffa502"
+            border.width: 3
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 3
+                color: "transparent"
+                radius: 8
+                border.color: "#ffbe76"
+                border.width: 1
+            }
+        }
+
+        header: Rectangle {
+            width: parent.width
+            height: 50
+            color: "#ffa502"
+            radius: 10
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 15
+                spacing: 10
+
+                Rectangle {
+                    width: 30
+                    height: 30
+                    radius: 15
+                    color: "#ffffff"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "⚠"
+                        font.pixelSize: 20
+                        font.bold: true
+                        color: "#ffa502"
+                    }
+                }
+
+                Text {
+                    text: "保护未恢复 - 无法复位"
+                    font.pixelSize: 18
+                    font.bold: true
+                    color: "#ffffff"
+                    Layout.fillWidth: true
+                }
+            }
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 15
+
+            Text {
+                text: "以下保护条件尚未恢复，无法复位："
+                font.pixelSize: 14
+                color: "#ecf0f1"
+                Layout.fillWidth: true
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                color: "#0d1926"
+                radius: 8
+                border.color: "#ffa502"
+                border.width: 1
+
+                ScrollView {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    clip: true
+
+                    ColumnLayout {
+                        width: parent.width
+                        spacing: 8
+
+                        Repeater {
+                            model: protectionNotClearedDialog.activeProtectionsList
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 35
+                                radius: 5
+                                color: "#e17055"
+                                border.color: "#fab1a0"
+                                border.width: 1
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 8
+                                    spacing: 10
+
+                                    Rectangle {
+                                        width: 20
+                                        height: 20
+                                        radius: 10
+                                        color: "#ffffff"
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "!"
+                                            font.pixelSize: 14
+                                            font.bold: true
+                                            color: "#e17055"
+                                        }
+                                    }
+
+                                    Text {
+                                        text: modelData.protectionName + "（" + modelData.sourceName + "）"
+                                        font.pixelSize: 14
+                                        font.bold: true
+                                        color: "#ffffff"
+                                        Layout.fillWidth: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text {
+                text: "请等待保护条件恢复后再按 F 键复位。"
+                font.pixelSize: 13
+                color: "#ffa502"
+                font.bold: true
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+            }
+        }
+
+        footer: DialogButtonBox {
+            background: Rectangle {
+                color: "transparent"
+            }
+
+            Button {
+                text: "确认"
+                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+
+                background: Rectangle {
+                    implicitWidth: 100
+                    implicitHeight: 40
+                    radius: 5
+                    color: parent.pressed ? "#2980b9" : (parent.hovered ? "#3498db" : "#2c3e50")
+                    border.color: "#00d4ff"
+                    border.width: 2
+
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
+                    }
+                }
+
+                contentItem: Text {
+                    text: parent.text
+                    font.pixelSize: 14
+                    font.bold: true
+                    color: "#ffffff"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+        }
+
+        onAccepted: {
+            console.log("✅ 保护未恢复弹窗已确认")
         }
     }
 }

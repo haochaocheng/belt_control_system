@@ -147,6 +147,19 @@ void MqttProtectionMonitor::notifyMotorStopped(int beltNumber)
 {
     m_motorRunning[beltNumber] = false;
     m_slipTimerActive[beltNumber] = false;
+
+    // ✅ 2026-03-23 [Phase 7.48.86]: 电机停止时，清除速度保护报警状态
+    // 原因：电机停止后速度=0是正常状态，不应保留速度保护报警
+    // 遍历 m_protectionAlarmActive，清除该皮带的速度相关保护
+    QString speedKey = QString("%1:速度").arg(beltNumber);
+    if (m_protectionAlarmActive.value(speedKey, false)) {
+        m_protectionAlarmActive[speedKey] = false;
+        qDebug() << "✅ [MqttProtectionMonitor] 电机停止 - 清除速度保护报警状态（皮带" << beltNumber << "）";
+        // 通知 ProtectionLogicController 速度保护已恢复
+        emit protectionActionCleared(beltNumber, "速度", 2);  // source=2: 模拟量保护
+        emit analogProtectionRestored(beltNumber, "速度", 0.0);
+    }
+
     qDebug() << "🛑 [MqttProtectionMonitor] 电机停止通知 - 皮带" << beltNumber
              << "速度保护状态已重置";
 }
@@ -376,9 +389,18 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         // ✅ 2026-03-05 [Phase 7.48.10]: 速度保护特殊处理（延时启动 + 额定百分比检测模式）
         bool speedHandled = false;
         if (protName == "速度") {
+            // ✅ 2026-03-23 [Phase 7.48.86]: 电机未运行时，完全跳过速度保护检测
+            // 原因：停车后速度=0，不应触发下限保护；只有电机运行中才需要检测速度
+            if (!m_motorRunning.value(beltNumber, false)) {
+                qDebug() << "   ⏸️ 速度保护跳过：电机未运行（皮带" << beltNumber << "）";
+                continue;
+            }
+
             // 1. 延时启动检查：电机启动后延时X秒才开始检测
             double startDelay = prot.value("speed_start_delay", 0.0).toDouble();
-            if (startDelay > 0 && m_motorRunning.value(beltNumber, false)) {
+            // ✅ 2026-03-23 [Phase 7.48.86]: 简化延时检查（电机运行已在上面确认）
+            // 旧代码：if (startDelay > 0 && m_motorRunning.value(beltNumber, false))
+            if (startDelay > 0) {
                 double elapsed = m_motorStartTimers[beltNumber].elapsed() / 1000.0;
                 if (elapsed < startDelay) {
                     qDebug() << "   ⏳ 速度保护延时中:" << elapsed << "/" << startDelay << "秒";

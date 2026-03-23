@@ -217,6 +217,12 @@ signals:
     // ✅ 2026-02-28 [Phase 7.47.39]: TTS模型异步切换完成信号
     void ttsModelSwitchCompleted(bool success, int modelIndex);
 
+    // ✅ 2026-03-23 [Phase 7.48.86]: 电机状态信号（用于速度保护启动延时）
+    // 原因：MqttProtectionMonitor::notifyMotorStarted/Stopped 从未被调用，
+    //       m_motorRunning 始终为 false，速度保护启动延时形同虚设
+    void motorActivated(int beltNumber);    // 电机启动（第一个电机激活时发出）
+    void motorDeactivated(int beltNumber);  // 电机停止（最后一个电机停用时发出）
+
 public slots:
     // 播放指定的音频文件
     void playAudio(const QString &audioPath);

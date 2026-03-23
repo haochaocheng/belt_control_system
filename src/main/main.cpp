@@ -410,6 +410,9 @@ int main(int argc, char *argv[]) {
         protectionLogicController.setCommonControl(&commonControl);
         protectionLogicController.setDeviceConfigManager(&deviceConfigMgr);
         protectionLogicController.setDeviceRoleManager(&deviceRoleManager);
+        // ✅ 2026-03-23 [Phase 7.48.86]: 注入 DeviceRuntimeTracker
+        // 原因：保护停车时需要设置故障状态，阻止R键直接重启，必须按F键复位
+        protectionLogicController.setDeviceRuntimeTracker(&runtimeTracker);
 
         // 连接 MqttProtectionMonitor → ProtectionLogicController
         QObject::connect(&mqttProtectionMonitor, &MqttProtectionMonitor::protectionActionRequired,
@@ -417,6 +420,15 @@ int main(int argc, char *argv[]) {
         QObject::connect(&mqttProtectionMonitor, &MqttProtectionMonitor::protectionActionCleared,
                          &protectionLogicController, &ProtectionLogicController::onProtectionRestored);
         logMessage("Protection logic controller connected to MqttProtectionMonitor");
+
+        // ✅ 2026-03-23 [Phase 7.48.86]: 连接电机状态信号到速度保护延时
+        // 原因：notifyMotorStarted/Stopped 之前从未被调用，m_motorRunning 始终为 false
+        // 导致速度保护启动延时无效，电机停止后速度=0 仍触发下限报警
+        QObject::connect(&commonControl, &CommonControl::motorActivated,
+                         &mqttProtectionMonitor, &MqttProtectionMonitor::notifyMotorStarted);
+        QObject::connect(&commonControl, &CommonControl::motorDeactivated,
+                         &mqttProtectionMonitor, &MqttProtectionMonitor::notifyMotorStopped);
+        logMessage("Motor state signals connected to MqttProtectionMonitor speed protection");
 #endif
 
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）
