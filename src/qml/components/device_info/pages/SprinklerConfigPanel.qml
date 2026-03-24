@@ -103,11 +103,11 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             spacing: 16
-            Text { text: "启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Text { text: "启动延时(秒):"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: startupDelaySpin.implicitHeight
-                DeviceInfo.CustomSpinBox { id: startupDelaySpin; from: 0; to: 60; value: 1; editable: true; anchors.fill: parent; suffix: "秒"; keyboardManager: root.keyboardManager }
+                DeviceInfo.CustomSpinBox { id: startupDelaySpin; from: 0; to: 60; value: 1; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
@@ -116,11 +116,11 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             spacing: 16
-            Text { text: "停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            Text { text: "停止延时(秒):"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: stopDelaySpin.implicitHeight
-                DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 1; editable: true; anchors.fill: parent; suffix: "秒"; keyboardManager: root.keyboardManager }
+                DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 1; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
