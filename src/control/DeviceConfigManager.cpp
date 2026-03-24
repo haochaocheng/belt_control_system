@@ -1822,6 +1822,51 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移032已执行过，跳过";
     }
+
+    // ✅ 2026-03-24 [Phase 7.48.88.5]: 迁移033 - 输出通道默认配置不冲突
+    // 原因：电机/制动器/张紧/洒水的输出通道全部默认为0或motorIndex，互相冲突
+    // 新方案：张紧=0, 制动器=brakeIndex+1, 电机=motorIndex+3, 洒水=sprinklerIndex+5
+    if (!query.exec("SELECT 1 FROM schema_migrations WHERE version = '033_fix_output_channel_conflicts'") || !query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移033: 修复输出通道冲突...";
+        QSqlQuery fix(m_database);
+        int totalUpdated = 0;
+
+        // 1. 电机：output_channel = motor_index + 3（仅Tab0基本配置）
+        // 旧默认：output_channel = motor_index（0,1,2...与张紧/制动器冲突）
+        fix.exec("UPDATE device_motor_config SET output_channel = motor_index + 3 "
+                 "WHERE tab_index = 0 AND output_channel = motor_index");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  电机: 更新" << fix.numRowsAffected() << "条（output_channel = motor_index + 3）";
+
+        // 2. 制动器：release_output_channel = brake_index + 1, brake_output_channel = -1
+        // 旧默认：release_output_channel = 0（所有制动器共用通道0，与张紧冲突）
+        fix.exec("UPDATE device_brake_config SET release_output_channel = brake_index + 1 "
+                 "WHERE release_output_channel = 0");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  制动器松闸: 更新" << fix.numRowsAffected() << "条（release = brake_index + 1）";
+
+        // 抱闸通道：旧默认0改为-1（不使用）
+        fix.exec("UPDATE device_brake_config SET brake_output_channel = -1 "
+                 "WHERE brake_output_channel = 0");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  制动器抱闸: 更新" << fix.numRowsAffected() << "条（brake = -1）";
+
+        // 3. 张紧：output_channel = 0（已经是0，无需更新）
+        // 跳过
+
+        // 4. 洒水：channel = sprinkler_index + 5（字段名是 sprinkler_index，从1开始）
+        // 旧默认：channel = sprinkler_index - 1（0,1,2...与张紧/制动器/电机冲突）
+        // sprinkler_output_config 表的 sprinkler_index 从1开始
+        fix.exec("UPDATE sprinkler_output_config SET channel = sprinkler_index + 4 "
+                 "WHERE channel = sprinkler_index - 1");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  洒水: 更新" << fix.numRowsAffected() << "条（channel = sprinkler_index + 4）";
+
+        qDebug() << "  ✅ 迁移033: 共更新" << totalUpdated << "条输出通道配置";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('033_fix_output_channel_conflicts')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移033已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
