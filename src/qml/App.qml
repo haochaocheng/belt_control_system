@@ -288,134 +288,235 @@ Item {
         }
     }
 
-    // Fault Warning Dialog - Shows when R key is pressed with active faults
+    // ✅ 2026-03-24 [Phase 7.48.87]: 故障警告弹窗 — 赛博朋克工业科技风重设计
+    // 功能：R键按下时若有活跃故障，弹出此弹窗
+    // 新增：键盘操作支持（Enter/Space确认，Escape关闭）+ 脉冲发光边框 + 扫描线效果 + 角标装饰
     Dialog {
         id: faultWarningDialog
         anchors.centerIn: parent
-        width: 450
-        height: 300
+        width: 500
+        height: 340
         modal: true
-        title: "设备故障警告"
-        standardButtons: Dialog.Ok
+        padding: 0
+        // 旧代码：standardButtons: Dialog.Ok
+        // 修改原因：自定义footer按钮以支持键盘焦点
+
+        // ✅ 脉冲发光动画属性
+        property real glowOpacity: 0.6
+        SequentialAnimation on glowOpacity {
+            running: faultWarningDialog.visible
+            loops: Animation.Infinite
+            NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutSine }
+            NumberAnimation { to: 0.4; duration: 800; easing.type: Easing.InOutSine }
+        }
+
+        // ✅ 扫描线动画属性
+        property real scanLineY: 0
+        NumberAnimation on scanLineY {
+            running: faultWarningDialog.visible
+            from: 0; to: 1.0
+            duration: 3000
+            loops: Animation.Infinite
+        }
 
         background: Rectangle {
-            color: "#1a2332"
-            radius: 10
-            border.color: "#ff4757"
-            border.width: 3
+            color: "#0a0e14"
+            radius: 4
+            border.color: Qt.rgba(1.0, 0.28, 0.34, faultWarningDialog.glowOpacity)
+            border.width: 2
 
+            // ✅ 外层发光效果
             Rectangle {
                 anchors.fill: parent
-                anchors.margins: 3
+                anchors.margins: -4
                 color: "transparent"
-                radius: 8
-                border.color: "#ff6677"
+                radius: 6
+                border.color: Qt.rgba(1.0, 0.28, 0.34, faultWarningDialog.glowOpacity * 0.3)
+                border.width: 2
+            }
+
+            // ✅ 内层细线框
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 6
+                color: "transparent"
+                radius: 2
+                border.color: Qt.rgba(1.0, 0.28, 0.34, 0.2)
                 border.width: 1
+            }
+
+            // ✅ 角标装饰 — 左上
+            Rectangle { x: 2; y: 2; width: 20; height: 2; color: "#ff4757" }
+            Rectangle { x: 2; y: 2; width: 2; height: 20; color: "#ff4757" }
+            // ✅ 角标装饰 — 右上
+            Rectangle { x: parent.width - 22; y: 2; width: 20; height: 2; color: "#ff4757" }
+            Rectangle { x: parent.width - 4; y: 2; width: 2; height: 20; color: "#ff4757" }
+            // ✅ 角标装饰 — 左下
+            Rectangle { x: 2; y: parent.height - 4; width: 20; height: 2; color: "#ff4757" }
+            Rectangle { x: 2; y: parent.height - 22; width: 2; height: 20; color: "#ff4757" }
+            // ✅ 角标装饰 — 右下
+            Rectangle { x: parent.width - 22; y: parent.height - 4; width: 20; height: 2; color: "#ff4757" }
+            Rectangle { x: parent.width - 4; y: parent.height - 22; width: 2; height: 20; color: "#ff4757" }
+
+            // ✅ 扫描线效果
+            Rectangle {
+                width: parent.width - 12
+                height: 1
+                x: 6
+                y: faultWarningDialog.scanLineY * parent.height
+                color: Qt.rgba(1.0, 0.28, 0.34, 0.15)
+            }
+            Rectangle {
+                width: parent.width - 12
+                height: 3
+                x: 6
+                y: faultWarningDialog.scanLineY * parent.height - 1
+                color: Qt.rgba(1.0, 0.28, 0.34, 0.05)
             }
         }
 
-        header: Rectangle {
+        header: Item {
             width: parent.width
-            height: 50
-            color: "#ff4757"
-            radius: 10
+            height: 52
 
-            RowLayout {
+            // ✅ 顶部渐变条
+            Rectangle {
                 anchors.fill: parent
-                anchors.margins: 15
-                spacing: 10
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Qt.rgba(1.0, 0.28, 0.34, 0.25) }
+                    GradientStop { position: 1.0; color: "transparent" }
+                }
+            }
 
-                Rectangle {
-                    width: 30
-                    height: 30
-                    radius: 15
-                    color: "#ffffff"
+            // ✅ 底部分隔线
+            Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: Qt.rgba(1.0, 0.28, 0.34, 0.5)
+            }
 
-                    Text {
+            Row {
+                anchors.fill: parent
+                anchors.leftMargin: 20
+                anchors.rightMargin: 20
+                spacing: 12
+                anchors.verticalCenter: parent.verticalCenter
+
+                // ✅ 警告图标 — 脉冲三角
+                Item {
+                    width: 36; height: 36
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Rectangle {
                         anchors.centerIn: parent
-                        text: "⚠"
-                        font.pixelSize: 20
-                        font.bold: true
-                        color: "#ff4757"
+                        width: 32; height: 32; radius: 4
+                        color: "transparent"
+                        border.color: Qt.rgba(1.0, 0.28, 0.34, faultWarningDialog.glowOpacity)
+                        border.width: 2
+                        rotation: 45
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 16; height: 16; radius: 2
+                            color: "#ff4757"
+                            opacity: faultWarningDialog.glowOpacity
+                        }
                     }
                 }
 
-                Text {
-                    text: "设备故障警告"
-                    font.pixelSize: 18
-                    font.bold: true
-                    color: "#ffffff"
-                    Layout.fillWidth: true
+                // ✅ 标题文字
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+
+                    Text {
+                        text: "FAULT WARNING"
+                        font.pixelSize: 11
+                        font.bold: true
+                        font.letterSpacing: 3
+                        color: Qt.rgba(1.0, 0.28, 0.34, 0.7)
+                    }
+                    Text {
+                        text: "设备故障警告"
+                        font.pixelSize: 17
+                        font.bold: true
+                        color: "#ff4757"
+                    }
                 }
             }
         }
 
         contentItem: ColumnLayout {
-            spacing: 15
+            spacing: 10
 
+            Item { Layout.preferredHeight: 4 }
+
+            // ✅ 提示文字
             Text {
-                text: "系统检测到以下设备存在故障："
-                font.pixelSize: 14
-                color: "#ecf0f1"
+                text: "// SYSTEM ALERT — 检测到以下设备故障"
+                font.pixelSize: 12
+                font.family: "Consolas"
+                color: "#ff6b7a"
                 Layout.fillWidth: true
+                Layout.leftMargin: 20
+                Layout.rightMargin: 20
             }
 
+            // ✅ 故障设备列表区域
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                color: "#0d1926"
-                radius: 8
-                border.color: "#ff4757"
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                color: "#060a10"
+                radius: 4
+                border.color: Qt.rgba(1.0, 0.28, 0.34, 0.3)
                 border.width: 1
 
                 ScrollView {
                     anchors.fill: parent
-                    anchors.margins: 10
+                    anchors.margins: 8
                     clip: true
 
                     ColumnLayout {
                         width: parent.width
-                        spacing: 8
+                        spacing: 6
 
                         Repeater {
                             model: runtimeTracker ? runtimeTracker.faultDevices : []
 
                             Rectangle {
                                 Layout.fillWidth: true
-                                height: 35
-                                radius: 5
-                                color: "#ff4757"
-                                border.color: "#ff6677"
+                                height: 36
+                                radius: 3
+                                color: Qt.rgba(1.0, 0.28, 0.34, 0.12)
+                                border.color: Qt.rgba(1.0, 0.28, 0.34, 0.4)
                                 border.width: 1
 
-                                RowLayout {
+                                Row {
                                     anchors.fill: parent
-                                    anchors.margins: 8
+                                    anchors.leftMargin: 10
+                                    anchors.rightMargin: 10
                                     spacing: 10
+                                    anchors.verticalCenter: parent.verticalCenter
 
+                                    // ✅ 状态指示灯（脉冲红点）
                                     Rectangle {
-                                        width: 20
-                                        height: 20
-                                        radius: 10
-                                        color: "#ffffff"
-
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: "✕"
-                                            font.pixelSize: 14
-                                            font.bold: true
-                                            color: "#ff4757"
-                                        }
+                                        width: 8; height: 8; radius: 4
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: "#ff4757"
+                                        opacity: faultWarningDialog.glowOpacity
                                     }
 
                                     Text {
-                                        // ✅ 2026-03-23 [Phase 7.48.86]: 直接显示保护名称（如"1号皮带 速度超上限"）
-                                        // 旧代码：text: modelData + " - 运行失败"
+                                        // ✅ 2026-03-23 [Phase 7.48.86]: 直接显示保护名称
                                         text: modelData
-                                        font.pixelSize: 14
+                                        font.pixelSize: 13
+                                        font.family: "Consolas"
                                         font.bold: true
-                                        color: "#ffffff"
-                                        Layout.fillWidth: true
+                                        color: "#ff8a94"
+                                        anchors.verticalCenter: parent.verticalCenter
                                     }
                                 }
                             }
@@ -424,183 +525,331 @@ Item {
                 }
             }
 
-            Text {
-                text: "请先按 F 键进行故障复位，然后再尝试启动设备。"
-                font.pixelSize: 13
-                color: "#ffa502"
-                font.bold: true
+            // ✅ 底部操作提示
+            Rectangle {
                 Layout.fillWidth: true
-                wrapMode: Text.WordWrap
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                height: 32
+                color: Qt.rgba(1.0, 0.65, 0.01, 0.1)
+                radius: 3
+                border.color: Qt.rgba(1.0, 0.65, 0.01, 0.3)
+                border.width: 1
+
+                Text {
+                    anchors.centerIn: parent
+                    text: ">>> 请先按 F 键进行故障复位，然后再尝试启动 <<<"
+                    font.pixelSize: 12
+                    font.family: "Consolas"
+                    font.bold: true
+                    color: "#ffa502"
+                }
             }
+
+            Item { Layout.preferredHeight: 2 }
         }
 
-        footer: DialogButtonBox {
-            background: Rectangle {
-                color: "transparent"
+        footer: Item {
+            width: parent.width
+            height: 56
+
+            // ✅ 顶部分隔线
+            Rectangle {
+                anchors.top: parent.top
+                width: parent.width
+                height: 1
+                color: Qt.rgba(1.0, 0.28, 0.34, 0.3)
             }
 
+            // ✅ 2026-03-24 [Phase 7.48.87]: 键盘可操作确认按钮
             Button {
-                text: "确认"
-                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+                id: faultConfirmBtn
+                anchors.centerIn: parent
+                width: 140; height: 40
+                text: "确  认"
+                focus: true
 
                 background: Rectangle {
-                    implicitWidth: 100
-                    implicitHeight: 40
-                    radius: 5
-                    color: parent.pressed ? "#2980b9" : (parent.hovered ? "#3498db" : "#2c3e50")
-                    border.color: "#00d4ff"
-                    border.width: 2
+                    radius: 4
+                    color: faultConfirmBtn.activeFocus ? Qt.rgba(1.0, 0.28, 0.34, 0.3) :
+                           (faultConfirmBtn.pressed ? Qt.rgba(1.0, 0.28, 0.34, 0.4) : "#12181f")
+                    border.color: faultConfirmBtn.activeFocus ? "#ff4757" :
+                                  Qt.rgba(1.0, 0.28, 0.34, 0.5)
+                    border.width: faultConfirmBtn.activeFocus ? 2 : 1
 
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
-                    }
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on border.color { ColorAnimation { duration: 150 } }
                 }
 
                 contentItem: Text {
-                    text: parent.text
+                    text: faultConfirmBtn.text
                     font.pixelSize: 14
                     font.bold: true
-                    color: "#ffffff"
+                    font.family: "Consolas"
+                    font.letterSpacing: 2
+                    color: faultConfirmBtn.activeFocus ? "#ff4757" : "#ff8a94"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
+
+                onClicked: faultWarningDialog.close()
+
+                // ✅ 键盘提示
+                Text {
+                    anchors.top: parent.bottom
+                    anchors.topMargin: 2
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "[Enter]"
+                    font.pixelSize: 9
+                    color: Qt.rgba(1.0, 1.0, 1.0, 0.3)
+                    visible: faultConfirmBtn.activeFocus
+                }
             }
         }
 
-        onAccepted: {
-            console.log("✅ 故障警告对话框已确认")
+        // ✅ 2026-03-24 [Phase 7.48.87]: 键盘操作支持
+        onOpened: {
+            faultConfirmBtn.forceActiveFocus()
+        }
+
+        // ✅ Enter/Escape 键关闭弹窗
+        Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter ||
+                event.key === Qt.Key_Escape || event.key === Qt.Key_Space) {
+                faultWarningDialog.close()
+                event.accepted = true
+            }
+        }
+
+        onClosed: {
+            console.log("✅ 故障警告对话框已关闭")
         }
     }
 
-    // ✅ 2026-03-23 [Phase 7.48.86]: 保护未恢复弹窗
-    // 原因：按F键复位时，如果还有保护条件未恢复，弹窗提示
+    // ✅ 2026-03-24 [Phase 7.48.87]: 保护未恢复弹窗 — 赛博朋克工业科技风
+    // 功能：F键复位时若有保护条件未恢复，弹出此弹窗
+    // 新增：键盘操作支持 + 橙色主题脉冲发光 + 扫描线效果
     Dialog {
         id: protectionNotClearedDialog
         anchors.centerIn: parent
-        width: 450
-        height: 320
+        width: 500
+        height: 360
         modal: true
-        title: "保护未恢复"
-        standardButtons: Dialog.Ok
+        padding: 0
 
         property var activeProtectionsList: []
 
-        background: Rectangle {
-            color: "#1a2332"
-            radius: 10
-            border.color: "#ffa502"
-            border.width: 3
+        // ✅ 脉冲发光动画
+        property real glowOpacity: 0.6
+        SequentialAnimation on glowOpacity {
+            running: protectionNotClearedDialog.visible
+            loops: Animation.Infinite
+            NumberAnimation { to: 1.0; duration: 1000; easing.type: Easing.InOutSine }
+            NumberAnimation { to: 0.4; duration: 1000; easing.type: Easing.InOutSine }
+        }
 
+        // ✅ 扫描线动画
+        property real scanLineY: 0
+        NumberAnimation on scanLineY {
+            running: protectionNotClearedDialog.visible
+            from: 0; to: 1.0
+            duration: 4000
+            loops: Animation.Infinite
+        }
+
+        background: Rectangle {
+            color: "#0a0e14"
+            radius: 4
+            border.color: Qt.rgba(1.0, 0.65, 0.01, protectionNotClearedDialog.glowOpacity)
+            border.width: 2
+
+            // ✅ 外层发光
             Rectangle {
                 anchors.fill: parent
-                anchors.margins: 3
+                anchors.margins: -4
                 color: "transparent"
-                radius: 8
-                border.color: "#ffbe76"
+                radius: 6
+                border.color: Qt.rgba(1.0, 0.65, 0.01, protectionNotClearedDialog.glowOpacity * 0.3)
+                border.width: 2
+            }
+
+            // ✅ 内层细线框
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 6
+                color: "transparent"
+                radius: 2
+                border.color: Qt.rgba(1.0, 0.65, 0.01, 0.2)
                 border.width: 1
+            }
+
+            // ✅ 角标装饰 — 左上
+            Rectangle { x: 2; y: 2; width: 20; height: 2; color: "#ffa502" }
+            Rectangle { x: 2; y: 2; width: 2; height: 20; color: "#ffa502" }
+            // ✅ 角标装饰 — 右上
+            Rectangle { x: parent.width - 22; y: 2; width: 20; height: 2; color: "#ffa502" }
+            Rectangle { x: parent.width - 4; y: 2; width: 2; height: 20; color: "#ffa502" }
+            // ✅ 角标装饰 — 左下
+            Rectangle { x: 2; y: parent.height - 4; width: 20; height: 2; color: "#ffa502" }
+            Rectangle { x: 2; y: parent.height - 22; width: 2; height: 20; color: "#ffa502" }
+            // ✅ 角标装饰 — 右下
+            Rectangle { x: parent.width - 22; y: parent.height - 4; width: 20; height: 2; color: "#ffa502" }
+            Rectangle { x: parent.width - 4; y: parent.height - 22; width: 2; height: 20; color: "#ffa502" }
+
+            // ✅ 扫描线
+            Rectangle {
+                width: parent.width - 12
+                height: 1
+                x: 6
+                y: protectionNotClearedDialog.scanLineY * parent.height
+                color: Qt.rgba(1.0, 0.65, 0.01, 0.15)
+            }
+            Rectangle {
+                width: parent.width - 12
+                height: 3
+                x: 6
+                y: protectionNotClearedDialog.scanLineY * parent.height - 1
+                color: Qt.rgba(1.0, 0.65, 0.01, 0.05)
             }
         }
 
-        header: Rectangle {
+        header: Item {
             width: parent.width
-            height: 50
-            color: "#ffa502"
-            radius: 10
+            height: 52
 
-            RowLayout {
+            Rectangle {
                 anchors.fill: parent
-                anchors.margins: 15
-                spacing: 10
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Qt.rgba(1.0, 0.65, 0.01, 0.2) }
+                    GradientStop { position: 1.0; color: "transparent" }
+                }
+            }
 
-                Rectangle {
-                    width: 30
-                    height: 30
-                    radius: 15
-                    color: "#ffffff"
+            Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: Qt.rgba(1.0, 0.65, 0.01, 0.5)
+            }
 
-                    Text {
+            Row {
+                anchors.fill: parent
+                anchors.leftMargin: 20
+                anchors.rightMargin: 20
+                spacing: 12
+                anchors.verticalCenter: parent.verticalCenter
+
+                // ✅ 警告图标 — 脉冲菱形
+                Item {
+                    width: 36; height: 36
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Rectangle {
                         anchors.centerIn: parent
-                        text: "⚠"
-                        font.pixelSize: 20
-                        font.bold: true
-                        color: "#ffa502"
+                        width: 32; height: 32; radius: 4
+                        color: "transparent"
+                        border.color: Qt.rgba(1.0, 0.65, 0.01, protectionNotClearedDialog.glowOpacity)
+                        border.width: 2
+                        rotation: 45
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 16; height: 16; radius: 2
+                            color: "#ffa502"
+                            opacity: protectionNotClearedDialog.glowOpacity
+                        }
                     }
                 }
 
-                Text {
-                    text: "保护未恢复 - 无法复位"
-                    font.pixelSize: 18
-                    font.bold: true
-                    color: "#ffffff"
-                    Layout.fillWidth: true
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+
+                    Text {
+                        text: "PROTECTION ACTIVE"
+                        font.pixelSize: 11
+                        font.bold: true
+                        font.letterSpacing: 3
+                        color: Qt.rgba(1.0, 0.65, 0.01, 0.7)
+                    }
+                    Text {
+                        text: "保护未恢复 — 无法复位"
+                        font.pixelSize: 17
+                        font.bold: true
+                        color: "#ffa502"
+                    }
                 }
             }
         }
 
         contentItem: ColumnLayout {
-            spacing: 15
+            spacing: 10
+
+            Item { Layout.preferredHeight: 4 }
 
             Text {
-                text: "以下保护条件尚未恢复，无法复位："
-                font.pixelSize: 14
-                color: "#ecf0f1"
+                text: "// PROTECTION STATUS — 以下保护条件尚未恢复"
+                font.pixelSize: 12
+                font.family: "Consolas"
+                color: "#ffbe76"
                 Layout.fillWidth: true
+                Layout.leftMargin: 20
+                Layout.rightMargin: 20
             }
 
+            // ✅ 保护列表区域
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                color: "#0d1926"
-                radius: 8
-                border.color: "#ffa502"
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                color: "#060a10"
+                radius: 4
+                border.color: Qt.rgba(1.0, 0.65, 0.01, 0.3)
                 border.width: 1
 
                 ScrollView {
                     anchors.fill: parent
-                    anchors.margins: 10
+                    anchors.margins: 8
                     clip: true
 
                     ColumnLayout {
                         width: parent.width
-                        spacing: 8
+                        spacing: 6
 
                         Repeater {
                             model: protectionNotClearedDialog.activeProtectionsList
 
                             Rectangle {
                                 Layout.fillWidth: true
-                                height: 35
-                                radius: 5
-                                color: "#e17055"
-                                border.color: "#fab1a0"
+                                height: 36
+                                radius: 3
+                                color: Qt.rgba(1.0, 0.65, 0.01, 0.1)
+                                border.color: Qt.rgba(1.0, 0.65, 0.01, 0.35)
                                 border.width: 1
 
-                                RowLayout {
+                                Row {
                                     anchors.fill: parent
-                                    anchors.margins: 8
+                                    anchors.leftMargin: 10
+                                    anchors.rightMargin: 10
                                     spacing: 10
+                                    anchors.verticalCenter: parent.verticalCenter
 
+                                    // ✅ 脉冲橙点
                                     Rectangle {
-                                        width: 20
-                                        height: 20
-                                        radius: 10
-                                        color: "#ffffff"
-
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: "!"
-                                            font.pixelSize: 14
-                                            font.bold: true
-                                            color: "#e17055"
-                                        }
+                                        width: 8; height: 8; radius: 4
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: "#ffa502"
+                                        opacity: protectionNotClearedDialog.glowOpacity
                                     }
 
                                     Text {
-                                        text: modelData.protectionName + "（" + modelData.sourceName + "）"
-                                        font.pixelSize: 14
+                                        text: modelData.protectionName + " [" + modelData.sourceName + "]"
+                                        font.pixelSize: 13
+                                        font.family: "Consolas"
                                         font.bold: true
-                                        color: "#ffffff"
-                                        Layout.fillWidth: true
+                                        color: "#ffbe76"
+                                        anchors.verticalCenter: parent.verticalCenter
                                     }
                                 }
                             }
@@ -609,51 +858,101 @@ Item {
                 }
             }
 
-            Text {
-                text: "请等待保护条件恢复后再按 F 键复位。"
-                font.pixelSize: 13
-                color: "#ffa502"
-                font.bold: true
+            // ✅ 底部提示
+            Rectangle {
                 Layout.fillWidth: true
-                wrapMode: Text.WordWrap
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                height: 32
+                color: Qt.rgba(1.0, 0.65, 0.01, 0.08)
+                radius: 3
+                border.color: Qt.rgba(1.0, 0.65, 0.01, 0.25)
+                border.width: 1
+
+                Text {
+                    anchors.centerIn: parent
+                    text: ">>> 请等待保护条件恢复后再按 F 键复位 <<<"
+                    font.pixelSize: 12
+                    font.family: "Consolas"
+                    font.bold: true
+                    color: "#ffa502"
+                }
             }
+
+            Item { Layout.preferredHeight: 2 }
         }
 
-        footer: DialogButtonBox {
-            background: Rectangle {
-                color: "transparent"
+        footer: Item {
+            width: parent.width
+            height: 56
+
+            Rectangle {
+                anchors.top: parent.top
+                width: parent.width
+                height: 1
+                color: Qt.rgba(1.0, 0.65, 0.01, 0.3)
             }
 
+            // ✅ 2026-03-24 [Phase 7.48.87]: 键盘可操作确认按钮
             Button {
-                text: "确认"
-                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+                id: protConfirmBtn
+                anchors.centerIn: parent
+                width: 140; height: 40
+                text: "确  认"
+                focus: true
 
                 background: Rectangle {
-                    implicitWidth: 100
-                    implicitHeight: 40
-                    radius: 5
-                    color: parent.pressed ? "#2980b9" : (parent.hovered ? "#3498db" : "#2c3e50")
-                    border.color: "#00d4ff"
-                    border.width: 2
+                    radius: 4
+                    color: protConfirmBtn.activeFocus ? Qt.rgba(1.0, 0.65, 0.01, 0.25) :
+                           (protConfirmBtn.pressed ? Qt.rgba(1.0, 0.65, 0.01, 0.35) : "#12181f")
+                    border.color: protConfirmBtn.activeFocus ? "#ffa502" :
+                                  Qt.rgba(1.0, 0.65, 0.01, 0.5)
+                    border.width: protConfirmBtn.activeFocus ? 2 : 1
 
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
-                    }
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on border.color { ColorAnimation { duration: 150 } }
                 }
 
                 contentItem: Text {
-                    text: parent.text
+                    text: protConfirmBtn.text
                     font.pixelSize: 14
                     font.bold: true
-                    color: "#ffffff"
+                    font.family: "Consolas"
+                    font.letterSpacing: 2
+                    color: protConfirmBtn.activeFocus ? "#ffa502" : "#ffbe76"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
+                }
+
+                onClicked: protectionNotClearedDialog.close()
+
+                Text {
+                    anchors.top: parent.bottom
+                    anchors.topMargin: 2
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "[Enter]"
+                    font.pixelSize: 9
+                    color: Qt.rgba(1.0, 1.0, 1.0, 0.3)
+                    visible: protConfirmBtn.activeFocus
                 }
             }
         }
 
-        onAccepted: {
-            console.log("✅ 保护未恢复弹窗已确认")
+        // ✅ 2026-03-24 [Phase 7.48.87]: 键盘操作支持
+        onOpened: {
+            protConfirmBtn.forceActiveFocus()
+        }
+
+        Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter ||
+                event.key === Qt.Key_Escape || event.key === Qt.Key_Space) {
+                protectionNotClearedDialog.close()
+                event.accepted = true
+            }
+        }
+
+        onClosed: {
+            console.log("✅ 保护未恢复弹窗已关闭")
         }
     }
 }
