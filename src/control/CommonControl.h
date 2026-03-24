@@ -350,8 +350,8 @@ private:
     // 激活/停用指定设备
     void activateDevice(const QString &deviceName, bool activate);
 
-    // 根据设备名获取通道号（临时实现，后续应从设备数据库读取）
-    int getDeviceChannel(const QString &deviceName);
+    // ❌ 2026-03-24 [Phase 7.48.88.5]: 废弃，输出通道由各设备配置面板设置
+    // int getDeviceChannel(const QString &deviceName);
 
     // 反馈检测相关方法
     void startFeedbackCheck(const QString &deviceName, int feedbackChannel, int feedbackDelay);

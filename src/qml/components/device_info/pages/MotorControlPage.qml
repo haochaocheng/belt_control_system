@@ -791,7 +791,9 @@ Rectangle {
             if (currentTab0 && typeof currentTab0.applyConfig === "function") {
                 var defaultConfig = {
                     "motor_module_address": 1,
-                    "output_channel": root.currentMotorIndex,
+                    // ✅ 2026-03-24 [Phase 7.48.88.5]: 默认通道=motorIndex+3，避免与张紧(0)/制动器(1,2)冲突
+                    // 旧代码："output_channel": root.currentMotorIndex
+                    "output_channel": root.currentMotorIndex + 3,
                     "use_feedback": 1,
                     "feedback_channel": root.currentMotorIndex,
                     "feedback_delay": 3

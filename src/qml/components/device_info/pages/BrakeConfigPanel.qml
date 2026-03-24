@@ -146,11 +146,15 @@ Rectangle {
             Switch { id: enabledSwitch; checked: true }
             Text { text: "松闸输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomSpinBox { id: releaseOutputChannelSpin; Layout.preferredWidth: root.fldW; from: 0; to: 15; value: 0
+            // ✅ 2026-03-24 [Phase 7.48.88.5]: 松闸默认通道=brakeIndex+1，避免与张紧(0)冲突
+            // 旧代码：value: 0（所有制动器默认通道0，与张紧和电机冲突）
+            DeviceInfo.CustomSpinBox { id: releaseOutputChannelSpin; Layout.preferredWidth: root.fldW; from: 0; to: 15; value: root.brakeIndex + 1
                 enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomSpinBox { id: brakeOutputChannelSpin; Layout.preferredWidth: root.fldW; from: -1; to: 15; value: 0
+            // ✅ 2026-03-24 [Phase 7.48.88.5]: 抱闸默认-1（不使用）
+            // 旧代码：value: 0（与松闸通道冲突）
+            DeviceInfo.CustomSpinBox { id: brakeOutputChannelSpin; Layout.preferredWidth: root.fldW; from: -1; to: 15; value: -1
                 enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Item { Layout.columnSpan: 2; Layout.fillWidth: true }
 

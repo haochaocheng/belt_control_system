@@ -2005,18 +2005,21 @@ Rectangle {
                         // 旧代码：var lower = lowerLimitSpin.value || 0; var range = rangeSpin.value || 100
                         // ✅ 2026-03-24 [Phase 7.48.88.2]: 根据输入类型修正4-20mA/1-5V零点偏移
                         // 旧代码：var engVal = lower + (adVal / 65535.0) * range
-                        var lower = lowerLimitSpin.realValue || 0
+                        // ✅ 2026-03-24 [Phase 7.48.88.4]: 工程量公式去掉lower
+                        // 原因：lower是保护报警阈值，不是传感器零点
+                        //       4mA=传感器零点应映射到0，不是lower_limit
+                        // 旧代码(Phase 7.48.88.2)：engVal = lower + (...)
                         var range = rangeSpin.realValue || 100
                         var engVal = 0
                         if (root.inputType.indexOf("4-20mA") >= 0 || root.inputType.indexOf("1-5V") >= 0) {
                             var adZero = 65535.0 * 0.2  // 4mA/1V对应的ADC零点
                             if (adVal <= adZero) {
-                                engVal = lower
+                                engVal = 0
                             } else {
-                                engVal = lower + ((adVal - adZero) / (65535.0 - adZero)) * range
+                                engVal = ((adVal - adZero) / (65535.0 - adZero)) * range
                             }
                         } else {
-                            engVal = lower + (adVal / 65535.0) * range
+                            engVal = (adVal / 65535.0) * range
                         }
                         engineeringValueText.text = engVal.toFixed(2) + " " + (item.unit || "")
                     }
@@ -3131,18 +3134,20 @@ Rectangle {
             // 旧代码：var lower = lowerLimitSpin.value || 0; var range = rangeSpin.value || 100
             // ✅ 2026-03-24 [Phase 7.48.88.2]: 根据输入类型修正4-20mA/1-5V零点偏移
             // 旧代码：var engVal = lower + (adVal / 65535.0) * range
-            var lower = lowerLimitSpin.realValue || 0
+            // ✅ 2026-03-24 [Phase 7.48.88.4]: 工程量公式去掉lower
+            // 原因：lower是保护报警阈值，不是传感器零点
+            // 旧代码(Phase 7.48.88.2)：engVal = lower + (...)
             var range = rangeSpin.realValue || 100
             var engVal = 0
             if (root.inputType.indexOf("4-20mA") >= 0 || root.inputType.indexOf("1-5V") >= 0) {
                 var adZero2 = 65535.0 * 0.2  // 4mA/1V对应的ADC零点
                 if (adVal <= adZero2) {
-                    engVal = lower
+                    engVal = 0
                 } else {
-                    engVal = lower + ((adVal - adZero2) / (65535.0 - adZero2)) * range
+                    engVal = ((adVal - adZero2) / (65535.0 - adZero2)) * range
                 }
             } else {
-                engVal = lower + (adVal / 65535.0) * range
+                engVal = (adVal / 65535.0) * range
             }
             engineeringValueText.text = engVal.toFixed(2)  // ✅ 2026-03-06: 单位单独显示，不包含在text中
         } else {

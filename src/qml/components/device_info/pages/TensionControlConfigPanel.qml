@@ -97,7 +97,9 @@ Rectangle {
             Item {
                 Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: outputChannelSpin.implicitHeight
-                DeviceInfo.CustomSpinBox { id: outputChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
+                // ✅ 2026-03-24 [Phase 7.48.88.5]: 通道范围扩展到0-15（16通道继电器模块）
+                // 旧代码：to: 7
+                DeviceInfo.CustomSpinBox { id: outputChannelSpin; from: 0; to: 15; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 

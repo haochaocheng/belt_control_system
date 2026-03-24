@@ -442,17 +442,22 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         //       旧公式把ADC=13107映射为 lowerLimit + 0.2*range，导致4mA输入显示1.6m/s而非0m/s
         double adValue = static_cast<double>(data.adValue);
         double engineeringValue = 0.0;
+        // ✅ 2026-03-24 [Phase 7.48.88.4]: 工程量公式去掉lowerLimit
+        // 原因：lowerLimit是保护报警阈值（如0.5m/s），不是传感器零点
+        //       4mA=传感器零点应映射到0，不是lowerLimit
+        //       与convert420mA()保持一致：4mA→0, 20mA→range
+        // 旧代码(Phase 7.48.88.2)：engineeringValue = lowerLimit + (...)
         if (inputType.contains("4-20mA") || inputType.contains("1-5V")) {
             // 4-20mA / 1-5V：零点在20%满量程处（ADC=13107）
             const double adZero = 65535.0 * 0.2;  // 13107 = 4mA/1V对应的ADC值
             if (adValue <= adZero) {
-                engineeringValue = lowerLimit;  // 低于零点，钳位到下限
+                engineeringValue = 0.0;  // 低于零点，钳位到0
             } else {
-                engineeringValue = lowerLimit + ((adValue - adZero) / (65535.0 - adZero)) * rangeValue;
+                engineeringValue = ((adValue - adZero) / (65535.0 - adZero)) * rangeValue;
             }
         } else {
             // 0-20mA / 0-5V / 0-10V：零点在0%
-            engineeringValue = lowerLimit + (adValue / 65535.0) * rangeValue;
+            engineeringValue = (adValue / 65535.0) * rangeValue;
         }
 
         // ✅ 2026-03-06 [Phase 7.48.14]: 临时屏蔽保护检测日志（日志量过大）

@@ -1205,27 +1205,25 @@ void CommonControl::activateDevice(const QString &deviceName, bool activate)
         stopFeedbackCheck(deviceName);
     }
 
-    // 通过NetworkTask控制Modbus寄存器
-    if (m_networkTask) {
-        // TODO: 需要从设备数据库或配置中获取设备的通道号
-        // 这里暂时使用固定映射（后续需要从OutputDevicePanel获取）
-        // 寄存器50：继电器输出模块，通道0-15
-        int channel = getDeviceChannel(deviceName);
-        if (channel >= 0) {
-            const int OUTPUT_REGISTER = 50;  // 继电器输出模块寄存器地址
-            // 使用QMetaObject::invokeMethod调用方法，避免包含NetworkTask.h
-            // NetworkTask继承自QObject，这里安全转换
-            QMetaObject::invokeMethod(reinterpret_cast<QObject*>(m_networkTask), "writeDeviceControl",
-                                     Qt::QueuedConnection,
-                                     Q_ARG(int, OUTPUT_REGISTER),
-                                     Q_ARG(int, channel),
-                                     Q_ARG(bool, activate));
-        } else {
-            qWarning() << "⚠️  CommonControl: 未找到设备通道配置:" << deviceName;
-        }
-    } else {
-        qWarning() << "⚠️  CommonControl: NetworkTask未设置，无法控制设备";
-    }
+    // ❌ 2026-03-24 [Phase 7.48.88.5]: 注释掉旧的Modbus寄存器控制
+    // 原因：实际设备控制已改为QML面板直接通过MQTT发送命令到DO模块
+    //       各设备的输出通道在配置界面中设置（电机:BasicConfigTab, 制动器:BrakeConfigPanel, 张紧:TensionControlConfigPanel）
+    //       getDeviceChannel()的硬编码映射不再使用
+    // if (m_networkTask) {
+    //     int channel = getDeviceChannel(deviceName);
+    //     if (channel >= 0) {
+    //         const int OUTPUT_REGISTER = 50;
+    //         QMetaObject::invokeMethod(reinterpret_cast<QObject*>(m_networkTask), "writeDeviceControl",
+    //                                  Qt::QueuedConnection,
+    //                                  Q_ARG(int, OUTPUT_REGISTER),
+    //                                  Q_ARG(int, channel),
+    //                                  Q_ARG(bool, activate));
+    //     } else {
+    //         qWarning() << "⚠️  CommonControl: 未找到设备通道配置:" << deviceName;
+    //     }
+    // } else {
+    //     qWarning() << "⚠️  CommonControl: NetworkTask未设置，无法控制设备";
+    // }
 }
 
 void CommonControl::setDeviceFeedbackConfig(const QString &deviceName, bool useFeedback, int feedbackChannel, int feedbackDelay)
@@ -1246,37 +1244,23 @@ void CommonControl::setDeviceFeedbackConfig(const QString &deviceName, bool useF
 // ❌ 2026-02-15 20:30: 删除旧的 TTS 实现（使用 m_tts，已废弃）
 // 新的实现在文件末尾，使用 m_ttsEngineManager
 
-// ✅ 2026-03-20 [Phase 7.48.58]: 根据设备名获取通道号
-// 支持逻辑控制面板的新名称和旧名称（兼容已有配置）
+// ❌ 2026-03-24 [Phase 7.48.88.5]: 废弃硬编码通道映射
+// 原因：实际输出通道由各设备配置面板设置（存储在数据库中），不再使用固定映射
+// 旧代码：getDeviceChannel() 返回硬编码的设备名→通道映射（0-15）
+/*
 int CommonControl::getDeviceChannel(const QString &deviceName)
 {
-    // 设备名到通道号的映射（0-15）
-    // ✅ 2026-03-20 [Phase 7.48.58]: 新增逻辑控制面板设备池名称别名
     static const QMap<QString, int> deviceChannelMap = {
-        // 旧名称（DeviceDatabase默认名）
-        {"张紧", 0},
-        {"抱闸", 1},
-        {"洒水", 2},
-        {"1号电机", 3},
-        {"2号电机", 4},
-        {"破碎机", 5},
-        {"转载机", 6},
-        {"前刮板", 7},
-        {"后刮板", 8},
-        {"1号乳化液泵", 9},
-        {"2号乳化液泵", 10},
-        {"3号乳化液泵", 11},
-        {"4号乳化液泵", 12},
-        {"1号喷雾泵", 13},
-        {"2号喷雾泵", 14},
-        {"3号喷雾泵", 15},
-        // ✅ 新名称别名（逻辑控制面板设备池使用）
-        {"张紧控制", 0},    // = 张紧
-        {"1号制动器", 1}    // = 抱闸
+        {"张紧", 0}, {"抱闸", 1}, {"洒水", 2},
+        {"1号电机", 3}, {"2号电机", 4}, {"破碎机", 5},
+        {"转载机", 6}, {"前刮板", 7}, {"后刮板", 8},
+        {"1号乳化液泵", 9}, {"2号乳化液泵", 10}, {"3号乳化液泵", 11},
+        {"4号乳化液泵", 12}, {"1号喷雾泵", 13}, {"2号喷雾泵", 14}, {"3号喷雾泵", 15},
+        {"张紧控制", 0}, {"1号制动器", 1}
     };
-
     return deviceChannelMap.value(deviceName, -1);
 }
+*/
 
 // ==================== 反馈检测实现 ====================
 

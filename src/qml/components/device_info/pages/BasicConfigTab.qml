@@ -411,8 +411,10 @@ Rectangle {
                     id: outputChannelSpin
                     anchors.fill: parent
                     from: 0
-                    to: 7
-                    value: root.motorIndex
+                    to: 15
+                    // ✅ 2026-03-24 [Phase 7.48.88.5]: 默认通道=motorIndex+3，避免与张紧(0)/制动器(1,2)冲突
+                    // 旧代码：value: root.motorIndex  // 电机0→通道0，与张紧/制动器冲突
+                    value: root.motorIndex + 3
                     editable: true
                     keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
                 }
