@@ -538,8 +538,10 @@ Rectangle {
     function loadBrakeConfig() {
         // 先重置所有UI到默认值，防止上一个制动器的值残留
         enabledSwitch.checked = true
-        releaseOutputChannelSpin.value = 0
-        brakeOutputChannelSpin.value = 0
+        // ✅ 2026-03-24 [Phase 7.48.88.7]: 默认值与QML声明一致，不再硬编码为0
+        // 旧代码：releaseOutputChannelSpin.value = 0; brakeOutputChannelSpin.value = 0
+        releaseOutputChannelSpin.value = root.brakeIndex < 5 ? root.brakeIndex + 6 : -1
+        brakeOutputChannelSpin.value = -1
         useReleaseFeedbackSwitch.checked = false
         releasePositionChannelSpin.value = 0
         releaseTimeoutSpin.value = 10
