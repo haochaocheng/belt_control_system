@@ -53,7 +53,13 @@ Rectangle {
         { name: "洒水", color: "#00d4ff", devices: ["洒水1", "洒水2", "洒水3", "洒水4", "洒水5", "洒水6", "洒水7", "洒水8"] }
     ]
 
-    Component.onCompleted: loadFromConfig()
+    // ✅ 2026-03-24 [Phase 7.48.88.8]: 加载配置后同步runtimeTracker当前状态
+    // 旧代码：Component.onCompleted: loadFromConfig()
+    // 问题：如果在其他页面按R启动，切换到逻辑控制页面时错过所有信号，时间轴显示默认状态
+    Component.onCompleted: {
+        loadFromConfig()
+        syncStateFromTracker()
+    }
 
     // ✅ 2026-03-21 [Phase 7.48.68]: deviceId由Loader.onLoaded设置，变化时重新加载
     // 旧代码：onSystemConfigChanged: { if (systemConfig) loadFromConfig() }
@@ -514,6 +520,45 @@ Rectangle {
         root.rtSequenceStart = 0
         root.rtDeviceStartTimes = []
         root.rtElapsed = 0
+    }
+
+    // ✅ 2026-03-24 [Phase 7.48.88.8]: 面板加载时同步runtimeTracker当前状态
+    // 问题：用户在电机控制页按R键启动，启动过程中的信号(warningStarted/deviceStatusChanged)
+    //       全部丢失（LogicControlPanel尚未加载），切换过来时时间轴显示默认状态
+    // 修复：加载时查询runtimeTracker.isRunning，如果皮带已运行则显示"启动完成"状态
+    function syncStateFromTracker() {
+        if (typeof runtimeTracker === "undefined" || !runtimeTracker) return
+
+        if (runtimeTracker.isFault) {
+            // 故障状态：显示故障时间轴
+            root.currentTab = 0
+            root.isRealtimeActive = true
+            root.rtPhase = 3  // 3=故障
+            root.rtActivatedCount = root.startupSeq.length  // 假设所有设备已尝试
+            var faultList = runtimeTracker.faultDevices
+            if (faultList && faultList.length > 0) {
+                root.rtFaultDevice = faultList[0]
+            }
+            console.log("📡 LogicControlPanel: 同步故障状态，故障设备:", root.rtFaultDevice)
+        } else if (runtimeTracker.isRunning) {
+            // 皮带已在运行：显示启动完成状态（所有设备已激活）
+            root.currentTab = 0
+            root.isRealtimeActive = true
+            root.rtPhase = 2  // 2=启动序列运行中
+            root.rtActivatedCount = root.startupSeq.length  // 所有设备已激活
+            // 填充设备激活时间戳（全部设为当前时间，表示已完成）
+            var times = []
+            for (var i = 0; i < root.startupSeq.length; i++) {
+                times.push(Date.now())
+            }
+            root.rtDeviceStartTimes = times
+            root.rtElapsed = 0
+            root.rtFaultDevice = ""
+            console.log("📡 LogicControlPanel: 同步运行状态，皮带已启动，设备数:", root.startupSeq.length)
+            // 3秒后停止实时跟踪（与正常启动完成逻辑一致）
+            rtStopTimer.restart()
+        }
+        // 如果都不是（停止状态），保持默认即可
     }
 
     // 获取预警时间（秒）
