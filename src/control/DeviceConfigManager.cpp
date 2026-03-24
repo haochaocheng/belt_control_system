@@ -1867,6 +1867,41 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移033已执行过，跳过";
     }
+
+    // ✅ 2026-03-24 [Phase 7.48.88.6]: 迁移034 - 16通道均匀分配
+    // 电机(1-5)、制动器(6-10)、洒水(11-15)、张紧(0)
+    if (!query.exec("SELECT 1 FROM schema_migrations WHERE version = '034_even_channel_distribution'") || !query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移034: 16通道均匀分配...";
+        QSqlQuery fix(m_database);
+        int totalUpdated = 0;
+
+        // 1. 电机：output_channel = motor_index + 1（通道1-5）
+        // 迁移033设为 motor_index + 3，现改为 motor_index + 1
+        fix.exec("UPDATE device_motor_config SET output_channel = motor_index + 1 "
+                 "WHERE tab_index = 0 AND output_channel = motor_index + 3");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  电机: 更新" << fix.numRowsAffected() << "条（output_channel = motor_index + 1）";
+
+        // 2. 制动器：release_output_channel = brake_index + 6（通道6-10）
+        // 迁移033设为 brake_index + 1，现改为 brake_index + 6
+        fix.exec("UPDATE device_brake_config SET release_output_channel = brake_index + 6 "
+                 "WHERE release_output_channel = brake_index + 1");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  制动器松闸: 更新" << fix.numRowsAffected() << "条（release = brake_index + 6）";
+
+        // 3. 洒水：channel = sprinkler_index + 10（通道11-15）
+        // sprinkler_index 从1开始，所以 sprinkler_index + 10 = 11,12,13,14,15
+        // 迁移033设为 sprinkler_index + 4，现改为 sprinkler_index + 10
+        fix.exec("UPDATE sprinkler_output_config SET channel = sprinkler_index + 10 "
+                 "WHERE channel = sprinkler_index + 4");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  洒水: 更新" << fix.numRowsAffected() << "条（channel = sprinkler_index + 10）";
+
+        qDebug() << "✅ [DeviceConfigManager] 迁移034完成，共更新" << totalUpdated << "条记录";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('034_even_channel_distribution')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移034已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
