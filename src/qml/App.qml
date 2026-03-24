@@ -538,7 +538,9 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: ">>> 请先按 F 键进行故障复位，然后再尝试启动 <<<"
+                    // ✅ 2026-03-24 [Phase 7.48.88]: 提示文字优化 — 先告知如何关闭弹窗，再提示F键复位
+                    // 旧文字：">>> 请先按 F 键进行故障复位，然后再尝试启动 <<<"
+                    text: ">>> 按 Enter / Space 关闭此弹窗，然后按 F 键复位 <<<"
                     font.pixelSize: 12
                     font.family: "Consolas"
                     font.bold: true
@@ -594,12 +596,23 @@ Item {
 
                 onClicked: faultWarningDialog.close()
 
+                // ✅ 2026-03-24 [Phase 7.48.88]: Keys.onPressed 移到 Button 上
+                // 原因：QML Button 默认只响应 Space 键 click，不响应 Enter/Return
+                //       Keys.onPressed 放在 Dialog 上时，焦点在 Button，事件不传播到 Dialog
+                Keys.onPressed: function(event) {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter ||
+                        event.key === Qt.Key_Escape || event.key === Qt.Key_Space) {
+                        faultWarningDialog.close()
+                        event.accepted = true
+                    }
+                }
+
                 // ✅ 键盘提示
                 Text {
                     anchors.top: parent.bottom
                     anchors.topMargin: 2
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "[Enter]"
+                    text: "[Enter / Space 关闭]"
                     font.pixelSize: 9
                     color: Qt.rgba(1.0, 1.0, 1.0, 0.3)
                     visible: faultConfirmBtn.activeFocus
@@ -610,15 +623,6 @@ Item {
         // ✅ 2026-03-24 [Phase 7.48.87]: 键盘操作支持
         onOpened: {
             faultConfirmBtn.forceActiveFocus()
-        }
-
-        // ✅ Enter/Escape 键关闭弹窗
-        Keys.onPressed: function(event) {
-            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter ||
-                event.key === Qt.Key_Escape || event.key === Qt.Key_Space) {
-                faultWarningDialog.close()
-                event.accepted = true
-            }
         }
 
         onClosed: {
@@ -871,7 +875,9 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: ">>> 请等待保护条件恢复后再按 F 键复位 <<<"
+                    // ✅ 2026-03-24 [Phase 7.48.88]: 提示文字优化 — 先告知如何关闭弹窗
+                    // 旧文字：">>> 请等待保护条件恢复后再按 F 键复位 <<<"
+                    text: ">>> 按 Enter / Space 关闭此弹窗，等待保护恢复后再按 F 键 <<<"
                     font.pixelSize: 12
                     font.family: "Consolas"
                     font.bold: true
@@ -926,11 +932,20 @@ Item {
 
                 onClicked: protectionNotClearedDialog.close()
 
+                // ✅ 2026-03-24 [Phase 7.48.88]: Keys.onPressed 移到 Button 上（同 faultWarningDialog）
+                Keys.onPressed: function(event) {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter ||
+                        event.key === Qt.Key_Escape || event.key === Qt.Key_Space) {
+                        protectionNotClearedDialog.close()
+                        event.accepted = true
+                    }
+                }
+
                 Text {
                     anchors.top: parent.bottom
                     anchors.topMargin: 2
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "[Enter]"
+                    text: "[Enter / Space 关闭]"
                     font.pixelSize: 9
                     color: Qt.rgba(1.0, 1.0, 1.0, 0.3)
                     visible: protConfirmBtn.activeFocus
@@ -941,14 +956,6 @@ Item {
         // ✅ 2026-03-24 [Phase 7.48.87]: 键盘操作支持
         onOpened: {
             protConfirmBtn.forceActiveFocus()
-        }
-
-        Keys.onPressed: function(event) {
-            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter ||
-                event.key === Qt.Key_Escape || event.key === Qt.Key_Space) {
-                protectionNotClearedDialog.close()
-                event.accepted = true
-            }
         }
 
         onClosed: {

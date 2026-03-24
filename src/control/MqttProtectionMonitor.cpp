@@ -471,7 +471,20 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
 
             // 2. 检测模式分支
             QString detectMode = prot.value("speed_detect_mode", "limit").toString();
-            if (detectMode == "percent") {
+            // ✅ 2026-03-24 [Phase 7.48.88]: "limit" 模式下也标记 speedHandled，只检查上限
+            // 原因：lower_limit 是传感器量程下限（如 0.5 m/s），不是保护报警阈值
+            //       当皮带低速时 engineeringValue ≈ lower_limit，不应触发"低于下限"报警
+            //       低速保护应使用 "percent" 模式（额定速度百分比检测）
+            if (detectMode == "limit") {
+                speedHandled = true;  // 不再 fallthrough 到通用上下限检查
+                if (engineeringValue >= upperLimit) {
+                    qWarning() << "⚠️ [MqttProtectionMonitor] 速度超上限（limit模式）:" << engineeringValue
+                               << ">=" << upperLimit;
+                    exceeded = true;
+                    limitDirection = AudioPathMapper::UpperLimit;
+                }
+                // 不检查下限：lower_limit 是量程下限，不是报警阈值
+            } else if (detectMode == "percent") {
                 // 模式B：额定速度百分比检测
                 double ratedSpeed = prot.value("rated_speed", 0.0).toDouble();
                 double slipDelay = prot.value("slip_delay", 10.0).toDouble();
