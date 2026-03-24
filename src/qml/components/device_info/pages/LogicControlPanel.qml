@@ -53,17 +53,25 @@ Rectangle {
         { name: "洒水", color: "#00d4ff", devices: ["洒水1", "洒水2", "洒水3", "洒水4", "洒水5", "洒水6", "洒水7", "洒水8"] }
     ]
 
-    // ✅ 2026-03-24 [Phase 7.48.88.8]: 加载配置后同步runtimeTracker当前状态
-    // 旧代码：Component.onCompleted: loadFromConfig()
-    // 问题：如果在其他页面按R启动，切换到逻辑控制页面时错过所有信号，时间轴显示默认状态
+    // ✅ 2026-03-24 [Phase 7.48.88.9]: 不在Component.onCompleted中加载配置
+    // 旧代码：Component.onCompleted: { loadFromConfig(); syncStateFromTracker() }
+    // 问题1：Component.onCompleted时deviceId仍是默认值1（Loader.onLoaded尚未设置）
+    //        对2-8号皮带，会先误加载1号皮带的配置（虽然onLoaded后会修正，但存在隐患）
+    // 问题2：如果打开的恰好是1号皮带，onDeviceIdChanged不触发（1→1无变化），
+    //        但如果onLoaded不显式调用loadFromConfig，配置不会加载
+    // 修复：配置加载由Loader.onLoaded显式触发（设置deviceId后立即调用loadFromConfig）
+    //       syncStateFromTracker也移到onLoaded确保在正确配置加载后执行
     Component.onCompleted: {
-        loadFromConfig()
-        syncStateFromTracker()
+        // 不在这里调用loadFromConfig()，由Loader.onLoaded确保正确deviceId后加载
+        // syncStateFromTracker()也移至onLoaded，确保在正确的设备配置加载后执行
     }
 
     // ✅ 2026-03-21 [Phase 7.48.68]: deviceId由Loader.onLoaded设置，变化时重新加载
+    // ✅ 2026-03-24 [Phase 7.48.88.9]: deviceId变化时重新加载
     // 旧代码：onSystemConfigChanged: { if (systemConfig) loadFromConfig() }
+    // 注意：Loader.onLoaded已经显式调用loadFromConfig()，这里处理动态deviceId变化场景
     onDeviceIdChanged: {
+        console.log("🔄 LogicControlPanel: deviceId changed to", deviceId)
         if (deviceId > 0) loadFromConfig()
     }
 
@@ -83,15 +91,18 @@ Rectangle {
     }
 
     function loadFromConfig() {
-        // ✅ 2026-03-21 [Phase 7.48.68]: 从 device_logic_configs 表读取per-device配置
-        // 旧代码：从 systemConfig 读取全局配置
+        // ✅ 2026-03-24 [Phase 7.48.88.9]: 增强诊断日志
+        // 旧代码：只打印设备ID和序列长度，无法定位保存后加载为空的问题
         if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) {
             console.warn("⚠️ LogicControlPanel: deviceConfigMgr 未初始化")
             return
         }
+        console.log("📖 LogicControlPanel: loadFromConfig - deviceId:", root.deviceId)
         var config = deviceConfigMgr.loadDeviceLogicConfig(root.deviceId)
         var startupStr = config["startup_sequence"] || "[]"
         var stopStr = config["stop_sequence"] || "[]"
+        // ✅ 2026-03-24 [Phase 7.48.88.9]: 打印原始DB值，用于诊断保存是否生效
+        console.log("📖 LogicControlPanel: DB原始值 - startup:", startupStr, "stop:", stopStr)
         var loadedStartup = JSON.parse(startupStr)
         var loadedStop = JSON.parse(stopStr)
         // 迁移旧名称
@@ -250,20 +261,35 @@ Rectangle {
     }
 
     function saveToConfig() {
-        // ✅ 2026-03-21 [Phase 7.48.68]: 保存到 device_logic_configs 表
-        // 旧代码：保存到 systemConfig
+        // ✅ 2026-03-24 [Phase 7.48.88.9]: 增强保存验证
+        // 旧代码：不检查返回值，保存失败时仍显示"已保存"
         if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
+        var startupJson = JSON.stringify(startupSeq)
+        var stopJson = JSON.stringify(stopSeq)
+        console.log("💾 LogicControlPanel: saveToConfig - deviceId:", root.deviceId,
+                     "startup:", startupJson, "stop:", stopJson)
         var config = {
-            "startup_sequence": JSON.stringify(startupSeq),
-            "stop_sequence": JSON.stringify(stopSeq),
+            "startup_sequence": startupJson,
+            "stop_sequence": stopJson,
             "warning_time": 10.0,
             "default_delay": defaultDelay
         }
-        deviceConfigMgr.saveDeviceLogicConfig(root.deviceId, config)
-        console.log("✅ 逻辑控制配置已保存 - 设备ID:", root.deviceId)
-        // 显示保存成功提示
-        saveSuccess = true
-        saveSuccessTimer.restart()
+        var success = deviceConfigMgr.saveDeviceLogicConfig(root.deviceId, config)
+        if (success) {
+            // 回读验证：确认数据确实写入数据库
+            var verify = deviceConfigMgr.loadDeviceLogicConfig(root.deviceId)
+            var verifyStartup = verify["startup_sequence"] || "[]"
+            if (verifyStartup === startupJson) {
+                console.log("✅ 逻辑控制配置已保存并验证 - 设备ID:", root.deviceId)
+            } else {
+                console.error("❌ 保存验证失败！写入:", startupJson, "回读:", verifyStartup)
+            }
+            saveSuccess = true
+            saveSuccessTimer.restart()
+        } else {
+            console.error("❌ LogicControlPanel: saveToConfig失败 - deviceId:", root.deviceId)
+            // 不显示"已保存"，保持saveSuccess=false
+        }
     }
 
     // ✅ 2026-03-20 保存成功提示自动隐藏定时器

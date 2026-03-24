@@ -3546,11 +3546,16 @@ Item {
                     source: "pages/LogicControlPanel.qml"
 
                     onLoaded: {
-                        console.log("✅ [DeviceSettingsDialog] LogicControlPanel 加载成功")
+                        console.log("✅ [DeviceSettingsDialog] LogicControlPanel 加载成功, deviceId:", root.deviceId)
                         if (item) {
-                            // ✅ 2026-03-21 [Phase 7.48.68]: 传入deviceId，不再使用systemConfig
-                            // 旧代码：item.systemConfig = systemConfig
+                            // ✅ 2026-03-24 [Phase 7.48.88.9]: 设置deviceId后显式触发配置加载
+                            // 旧代码：只设置deviceId，依赖onDeviceIdChanged触发加载
+                            // 问题：对1号皮带（deviceId=1=默认值），onDeviceIdChanged不触发，
+                            //       Component.onCompleted也不再调用loadFromConfig，导致配置不加载
+                            // 修复：显式调用loadFromConfig和syncStateFromTracker
                             item.deviceId = root.deviceId
+                            item.loadFromConfig()
+                            item.syncStateFromTracker()
                         }
                     }
                 }
