@@ -1902,6 +1902,66 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移034已执行过，跳过";
     }
+
+    // ✅ 2026-03-24 [Phase 7.48.88.7]: 迁移035 - 强制修正所有输出通道为最终值
+    // 原因：迁移033/034依赖旧值匹配，可能因条件不匹配导致未更新
+    // 本迁移不依赖旧值，直接按规则设置最终通道分配
+    if (!query.exec("SELECT 1 FROM schema_migrations WHERE version = '035_force_channel_assignment'") || !query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移035: 强制修正所有输出通道...";
+        QSqlQuery fix(m_database);
+        int totalUpdated = 0;
+
+        // 1. 电机1-5（motor_index 0-4）: output_channel = motor_index + 1（通道1-5）
+        fix.exec("UPDATE device_motor_config SET output_channel = motor_index + 1 "
+                 "WHERE tab_index = 0 AND motor_index < 5");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  电机1-5: 更新" << fix.numRowsAffected() << "条（通道1-5）";
+
+        // 2. 电机6-8（motor_index 5-7）: output_channel = -1（不使用）
+        fix.exec("UPDATE device_motor_config SET output_channel = -1 "
+                 "WHERE tab_index = 0 AND motor_index >= 5");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  电机6-8: 更新" << fix.numRowsAffected() << "条（通道-1）";
+
+        // 3. 制动器1-5（brake_index 0-4）: release_output_channel = brake_index + 6（通道6-10）
+        fix.exec("UPDATE device_brake_config SET release_output_channel = brake_index + 6 "
+                 "WHERE brake_index < 5");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  制动器1-5松闸: 更新" << fix.numRowsAffected() << "条（通道6-10）";
+
+        // 4. 制动器6-8（brake_index 5-7）: release_output_channel = -1（不使用）
+        fix.exec("UPDATE device_brake_config SET release_output_channel = -1 "
+                 "WHERE brake_index >= 5");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  制动器6-8松闸: 更新" << fix.numRowsAffected() << "条（通道-1）";
+
+        // 5. 所有制动器抱闸: brake_output_channel = -1
+        fix.exec("UPDATE device_brake_config SET brake_output_channel = -1");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  制动器抱闸: 更新" << fix.numRowsAffected() << "条（通道-1）";
+
+        // 6. 张紧控制: output_channel = 0
+        fix.exec("UPDATE device_tension_config SET output_channel = 0");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  张紧控制: 更新" << fix.numRowsAffected() << "条（通道0）";
+
+        // 7. 洒水1-5（sprinkler_index 1-5）: channel = sprinkler_index + 10（通道11-15）
+        fix.exec("UPDATE sprinkler_output_config SET channel = sprinkler_index + 10 "
+                 "WHERE sprinkler_index <= 5");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  洒水1-5: 更新" << fix.numRowsAffected() << "条（通道11-15）";
+
+        // 8. 洒水6-8（sprinkler_index 6-8）: channel = -1（不使用）
+        fix.exec("UPDATE sprinkler_output_config SET channel = -1 "
+                 "WHERE sprinkler_index > 5");
+        totalUpdated += fix.numRowsAffected();
+        qDebug() << "  洒水6-8: 更新" << fix.numRowsAffected() << "条（通道-1）";
+
+        qDebug() << "✅ [DeviceConfigManager] 迁移035完成，共更新" << totalUpdated << "条记录";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('035_force_channel_assignment')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移035已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()

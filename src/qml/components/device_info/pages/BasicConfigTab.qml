@@ -410,11 +410,11 @@ Rectangle {
                 DeviceInfo.CustomSpinBox {
                     id: outputChannelSpin
                     anchors.fill: parent
-                    from: 0
+                    from: -1
                     to: 15
-                    // ✅ 2026-03-24 [Phase 7.48.88.6]: 默认通道=motorIndex+1，16通道均匀分配（电机1-5，制动器6-10，洒水11-15）
-                    // 旧代码：value: root.motorIndex + 3  // Phase 7.48.88.5 的分配方案
-                    value: root.motorIndex + 1
+                    // ✅ 2026-03-24 [Phase 7.48.88.7]: 电机1-5通道1-5，电机6-8通道-1（不使用）
+                    // 旧代码：value: root.motorIndex + 1  // 8个电机都分配了通道，6-8与制动器冲突
+                    value: root.motorIndex < 5 ? root.motorIndex + 1 : -1
                     editable: true
                     keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
                 }

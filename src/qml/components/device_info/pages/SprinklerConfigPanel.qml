@@ -89,9 +89,9 @@ Rectangle {
             Text { text: "通道号:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             DeviceInfo.CustomSpinBox {
                 id: channelSpin
-                // ✅ 2026-03-24 [Phase 7.48.88.6]: 均匀分配，洒水通道11-15
-                // 旧代码：from: 0; to: 15; value: root.sprinklerIndex + 5
-                from: 0; to: 15; value: root.sprinklerIndex + 11
+                // ✅ 2026-03-24 [Phase 7.48.88.7]: 洒水1-5通道11-15，洒水6-8通道-1
+                // 旧代码：from: 0; to: 15; value: root.sprinklerIndex + 11
+                from: -1; to: 15; value: root.sprinklerIndex < 5 ? root.sprinklerIndex + 11 : -1
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 keyboardManager: root.keyboardManager
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
@@ -223,9 +223,10 @@ Rectangle {
 
         enabledSwitch.checked = (config.enabled === 1 || config.enabled === true)
         sprinklerNameField.text = config.sprinkler_name || ("洒水" + (root.sprinklerIndex + 1))
-        // ✅ 2026-03-24 [Phase 7.48.88.6]: 均匀分配，默认回退值改为 sprinklerIndex+11
-        // 旧代码：channelSpin.value = ... : (root.sprinklerIndex + 5)
-        channelSpin.value = (config.channel !== undefined) ? config.channel : (root.sprinklerIndex + 11)
+        // ✅ 2026-03-24 [Phase 7.48.88.7]: 洒水1-5默认通道11-15，洒水6-8通道-1
+        // 旧代码：channelSpin.value = ... : (root.sprinklerIndex + 11)
+        var defaultChannel = root.sprinklerIndex < 5 ? (root.sprinklerIndex + 11) : -1
+        channelSpin.value = (config.channel !== undefined) ? config.channel : defaultChannel
         // ✅ 2026-03-22 [Phase 7.48.74]: 加载启动延时+停止延时
         startupDelaySpin.value = (config.startup_delay !== undefined) ? config.startup_delay : 1
         stopDelaySpin.value = (config.stop_delay !== undefined) ? config.stop_delay : 1
