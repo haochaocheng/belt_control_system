@@ -1995,7 +1995,10 @@ Rectangle {
                         if (!chData) return
 
                         var adVal = chData.adValue || 0
-                        adValueText.text = adVal.toString()
+                        // ✅ 2026-03-24 [Phase 7.48.88.3]: 显示校准后mA值（MQTT voltage字段）
+                        // 旧代码：adValueText.text = adVal.toString()
+                        var currentMa = chData.voltage || 0
+                        adValueText.text = currentMa.toFixed(2) + " mA"
 
                         // 工程量计算
                         // ✅ 2026-03-24 [Phase 7.48.88.1]: 用 realValue（小数）替代 value（整数）
@@ -2069,8 +2072,10 @@ Rectangle {
                                     spacing: 2
 
                                     // 标签
+                                    // ✅ 2026-03-24 [Phase 7.48.88.3]: "AD值" → "电流"（显示校准后mA）
+                                    // 旧代码：text: "AD值"
                                     Text {
-                                        text: "AD值"
+                                        text: "电流"
                                         font.pixelSize: 11
                                         font.family: "Microsoft YaHei"
                                         color: "#64748B"
@@ -3109,7 +3114,7 @@ Rectangle {
             return
         }
         if (typeof aiDataManager === 'undefined' || aiDataManager === null) {
-            adValueText.text = "0"
+            adValueText.text = "0.00 mA"
             engineeringValueText.text = "0.00"  // ✅ 2026-03-06: 单位单独显示，不包含在text中
             return
         }
@@ -3118,7 +3123,10 @@ Rectangle {
         var chData = aiDataManager.getChannel(modIndex, item.registerAddress)
         if (chData) {
             var adVal = chData.adValue || 0
-            adValueText.text = adVal.toString()
+            // ✅ 2026-03-24 [Phase 7.48.88.3]: 显示校准后mA值（MQTT voltage字段）
+            // 旧代码：adValueText.text = adVal.toString()
+            var currentMa = chData.voltage || 0
+            adValueText.text = currentMa.toFixed(2) + " mA"
             // ✅ 2026-03-24 [Phase 7.48.88.1]: 用 realValue（小数）替代 value（整数）
             // 旧代码：var lower = lowerLimitSpin.value || 0; var range = rangeSpin.value || 100
             // ✅ 2026-03-24 [Phase 7.48.88.2]: 根据输入类型修正4-20mA/1-5V零点偏移
@@ -3138,7 +3146,7 @@ Rectangle {
             }
             engineeringValueText.text = engVal.toFixed(2)  // ✅ 2026-03-06: 单位单独显示，不包含在text中
         } else {
-            adValueText.text = "0"
+            adValueText.text = "0.00 mA"
             engineeringValueText.text = "0.00"  // ✅ 2026-03-06: 单位单独显示，不包含在text中
         }
     }
