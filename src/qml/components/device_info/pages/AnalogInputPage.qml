@@ -1099,12 +1099,26 @@ Rectangle {
                                 DeviceInfo.CustomSpinBox {
                                     id: upperLimitSpin
                                     from: 0
-                                    to: 10000
-                                    value: 100
-                                    stepSize: 10
+                                    to: 100000
+                                    value: 1000
+                                    stepSize: 1
                                     editable: true
                                     anchors.fill: parent
                                     keyboardManager: root.keyboardManager
+
+                                    // ✅ 2026-03-24 [Phase 7.48.88.1]: 添加1位小数支持
+                                    // 原因：SpinBox value 是整数，0.5 会被截断为 0
+                                    // 方案：内部值 * 10 存储，显示时 / 10（与 delaySpin 一致）
+                                    property int decimals: 1
+                                    property real realValue: value / 10
+
+                                    textFromValue: function(value, locale) {
+                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                    }
+
+                                    valueFromText: function(text, locale) {
+                                        return Number.fromLocaleString(locale, text) * 10
+                                    }
                                 }
 
                                 Rectangle {
@@ -1190,12 +1204,26 @@ Rectangle {
                                 DeviceInfo.CustomSpinBox {
                                     id: lowerLimitSpin
                                     from: 0
-                                    to: 10000
+                                    to: 100000
                                     value: 0
-                                    stepSize: 10
+                                    stepSize: 1
                                     editable: true
                                     anchors.fill: parent
                                     keyboardManager: root.keyboardManager
+
+                                    // ✅ 2026-03-24 [Phase 7.48.88.1]: 添加1位小数支持
+                                    // 原因：数据库 lower_limit=0.5，但 SpinBox 截断为 0，显示与实际不一致
+                                    // 特殊功能：lower_limit=0 时不检测下限（代码中 lowerLimit > 0 判断）
+                                    property int decimals: 1
+                                    property real realValue: value / 10
+
+                                    textFromValue: function(value, locale) {
+                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                    }
+
+                                    valueFromText: function(text, locale) {
+                                        return Number.fromLocaleString(locale, text) * 10
+                                    }
                                 }
 
                                 Rectangle {
@@ -1349,12 +1377,24 @@ Rectangle {
                                 DeviceInfo.CustomSpinBox {
                                     id: rangeSpin
                                     from: 1
-                                    to: 10000
-                                    value: 100
-                                    stepSize: 10
+                                    to: 100000
+                                    value: 1000
+                                    stepSize: 1
                                     editable: true
                                     anchors.fill: parent
                                     keyboardManager: root.keyboardManager
+
+                                    // ✅ 2026-03-24 [Phase 7.48.88.1]: 添加1位小数支持（与 upperLimit/lowerLimit 一致）
+                                    property int decimals: 1
+                                    property real realValue: value / 10
+
+                                    textFromValue: function(value, locale) {
+                                        return Number(value / 10).toLocaleString(locale, 'f', 1)
+                                    }
+
+                                    valueFromText: function(text, locale) {
+                                        return Number.fromLocaleString(locale, text) * 10
+                                    }
                                 }
 
                                 Rectangle {
@@ -1958,8 +1998,10 @@ Rectangle {
                         adValueText.text = adVal.toString()
 
                         // 工程量计算：下限 + (AD值 / 65535) × 量程
-                        var lower = lowerLimitSpin.value || 0
-                        var range = rangeSpin.value || 100
+                        // ✅ 2026-03-24 [Phase 7.48.88.1]: 用 realValue（小数）替代 value（整数）
+                        // 旧代码：var lower = lowerLimitSpin.value || 0; var range = rangeSpin.value || 100
+                        var lower = lowerLimitSpin.realValue || 0
+                        var range = rangeSpin.realValue || 100
                         var engVal = lower + (adVal / 65535.0) * range
                         engineeringValueText.text = engVal.toFixed(2) + " " + (item.unit || "")
                     }
@@ -2608,10 +2650,14 @@ Rectangle {
             channelSpin.value = protection.channel_number || protection.register_address
 
             // ✅ 2026-01-27 [FIX 100.300.31]: 加载上限值、下限值、量程、单位
-            upperLimitSpin.value = protection.upper_limit || 100
-            lowerLimitSpin.value = protection.lower_limit || 0
+            // ✅ 2026-03-24 [Phase 7.48.88.1]: 加载时 * 10（SpinBox 内部用整数存储，1位小数精度）
+            // 旧代码：upperLimitSpin.value = protection.upper_limit || 100
+            upperLimitSpin.value = (protection.upper_limit || 100) * 10
+            // 旧代码：lowerLimitSpin.value = protection.lower_limit || 0
+            lowerLimitSpin.value = (protection.lower_limit || 0) * 10
             // ✅ 2026-03-06 [Phase 7.48.18]: 修复参数名错误，range → range_value
-            rangeSpin.value = protection.range_value || 100
+            // 旧代码：rangeSpin.value = protection.range_value || 100
+            rangeSpin.value = (protection.range_value || 100) * 10
             unitCombo.currentIndex = unitCombo.model.indexOf(protection.unit || item.unit)
 
             // 基本参数
@@ -2680,9 +2726,11 @@ Rectangle {
             channelSpin.value = item.registerAddress
 
             // ✅ 2026-01-27 [FIX 100.300.31]: 设置默认值
-            upperLimitSpin.value = 100
-            lowerLimitSpin.value = 0
-            rangeSpin.value = 100
+            // ✅ 2026-03-24 [Phase 7.48.88.1]: 默认值也需要 * 10（SpinBox 内部整数）
+            // 旧：upperLimitSpin.value = 100; lowerLimitSpin.value = 0; rangeSpin.value = 100
+            upperLimitSpin.value = 1000  // 100.0 * 10
+            lowerLimitSpin.value = 0     // 0.0 * 10
+            rangeSpin.value = 1000       // 100.0 * 10
             unitCombo.currentIndex = unitCombo.model.indexOf(item.unit)
 
             // 设置默认值
@@ -2770,10 +2818,11 @@ Rectangle {
             "register_address": channelSpin.value,
             "channel_number": channelSpin.value,
             // ✅ 2026-01-27 [FIX 100.300.31]: 保存上限值、下限值、量程、单位
-            "upper_limit": upperLimitSpin.value,
-            "lower_limit": lowerLimitSpin.value,
+            // ✅ 2026-03-24 [Phase 7.48.88.1]: 用 realValue（/ 10 还原小数）
+            "upper_limit": upperLimitSpin.realValue,
+            "lower_limit": lowerLimitSpin.realValue,
             // ✅ 2026-03-06 [Phase 7.48.18]: 修复参数名错误，range → range_value
-            "range_value": rangeSpin.value,
+            "range_value": rangeSpin.realValue,
             "unit": unitCombo.editable ? unitCombo.editText : unitCombo.displayText,
             "protection_delay": delaySpin.realValue,
             "play_count": playCountSpin.value,
@@ -3003,9 +3052,11 @@ Rectangle {
             "module_type": moduleTypeCombo.currentText,
             "register_address": channelSpin.value,
             "channel_number": channelSpin.value,
-            "upper_limit": upperLimitSpin.value,
-            "lower_limit": lowerLimitSpin.value,
-            "range_value": rangeSpin.value,
+            // ✅ 2026-03-24 [Phase 7.48.88.1]: 保存时用 realValue（/ 10 还原真实小数值）
+            // 旧代码："upper_limit": upperLimitSpin.value, "lower_limit": lowerLimitSpin.value, "range_value": rangeSpin.value
+            "upper_limit": upperLimitSpin.realValue,
+            "lower_limit": lowerLimitSpin.realValue,
+            "range_value": rangeSpin.realValue,
             "unit": unitCombo.editable ? unitCombo.editText : unitCombo.displayText,
             "protection_delay": delaySpin.realValue,
             "play_count": playCountSpin.value,
@@ -3056,8 +3107,10 @@ Rectangle {
         if (chData) {
             var adVal = chData.adValue || 0
             adValueText.text = adVal.toString()
-            var lower = lowerLimitSpin.value || 0
-            var range = rangeSpin.value || 100
+            // ✅ 2026-03-24 [Phase 7.48.88.1]: 用 realValue（小数）替代 value（整数）
+            // 旧代码：var lower = lowerLimitSpin.value || 0; var range = rangeSpin.value || 100
+            var lower = lowerLimitSpin.realValue || 0
+            var range = rangeSpin.realValue || 100
             var engVal = lower + (adVal / 65535.0) * range
             engineeringValueText.text = engVal.toFixed(2)  // ✅ 2026-03-06: 单位单独显示，不包含在text中
         } else {
