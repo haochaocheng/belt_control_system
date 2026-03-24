@@ -432,11 +432,28 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         double upperLimit = prot.value("upper_limit").toDouble();
         double lowerLimit = prot.value("lower_limit").toDouble();
         double rangeValue = prot.value("range_value").toDouble();
+        QString inputType = prot.value("input_type", "4-20mA").toString();
 
-        // AD值转工程量（简化公式：线性映射）
-        // 工程量 = 下限 + (AD值 / 65535) × 范围值
+        // AD值转工程量
         // ✅ 2026-03-05 [Phase 7.48.5]: 从 ChannelData 获取 AD 值
-        double engineeringValue = lowerLimit + (data.adValue / 65535.0) * rangeValue;
+        // ✅ 2026-03-24 [Phase 7.48.88.2]: 根据输入类型修正4-20mA/1-5V的零点偏移
+        // 旧代码：double engineeringValue = lowerLimit + (data.adValue / 65535.0) * rangeValue;
+        // 问题：4-20mA输入时，4mA对应ADC≈13107（20%满量程），应映射为工程量下限
+        //       旧公式把ADC=13107映射为 lowerLimit + 0.2*range，导致4mA输入显示1.6m/s而非0m/s
+        double adValue = static_cast<double>(data.adValue);
+        double engineeringValue = 0.0;
+        if (inputType.contains("4-20mA") || inputType.contains("1-5V")) {
+            // 4-20mA / 1-5V：零点在20%满量程处（ADC=13107）
+            const double adZero = 65535.0 * 0.2;  // 13107 = 4mA/1V对应的ADC值
+            if (adValue <= adZero) {
+                engineeringValue = lowerLimit;  // 低于零点，钳位到下限
+            } else {
+                engineeringValue = lowerLimit + ((adValue - adZero) / (65535.0 - adZero)) * rangeValue;
+            }
+        } else {
+            // 0-20mA / 0-5V / 0-10V：零点在0%
+            engineeringValue = lowerLimit + (adValue / 65535.0) * rangeValue;
+        }
 
         // ✅ 2026-03-06 [Phase 7.48.14]: 临时屏蔽保护检测日志（日志量过大）
         // qDebug() << "   保护:" << protName << "工程量:" << engineeringValue
