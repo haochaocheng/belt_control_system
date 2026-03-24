@@ -242,6 +242,10 @@ public slots:
     Q_INVOKABLE void startDeviceSequence();  // 按启动顺序启动设备
     Q_INVOKABLE void stopDeviceSequence();   // 按停止顺序停止设备
 
+    // ✅ 2026-03-24 [Phase 7.48.88.8]: 获取当前序列执行状态（用于LogicControlPanel延迟加载时同步）
+    // 返回：{isRunning, isStartup, currentIndex, totalCount, isWarning, isStopAudio}
+    Q_INVOKABLE QVariantMap getSequenceState() const;
+
     // 设置设备反馈参数（从QML调用）
     Q_INVOKABLE void setDeviceFeedbackConfig(const QString &deviceName, bool useFeedback, int feedbackChannel, int feedbackDelay);
 

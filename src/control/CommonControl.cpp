@@ -942,6 +942,20 @@ void CommonControl::stopWarningPlayback()
 
 // ==================== 设备序列控制实现 ====================
 
+// ✅ 2026-03-24 [Phase 7.48.88.8]: 获取当前序列执行状态
+// 用途：LogicControlPanel延迟加载时，通过此方法同步已错过的信号状态
+QVariantMap CommonControl::getSequenceState() const
+{
+    QVariantMap state;
+    state["isRunning"] = m_isSequenceRunning;
+    state["isStartup"] = m_isStartupSequence;
+    state["currentIndex"] = m_currentSequenceIndex;
+    state["totalCount"] = m_currentSequence.size();
+    state["isWarning"] = m_isWarningPlaying;
+    state["isStopAudio"] = m_isStopAudioPlaying;
+    return state;
+}
+
 void CommonControl::startDeviceSequence()
 {
     if (!m_systemConfig) {

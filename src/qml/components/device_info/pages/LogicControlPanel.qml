@@ -525,18 +525,21 @@ Rectangle {
     // ✅ 2026-03-24 [Phase 7.48.88.8]: 面板加载时同步runtimeTracker当前状态
     // 问题：用户在电机控制页按R键启动，启动过程中的信号(warningStarted/deviceStatusChanged)
     //       全部丢失（LogicControlPanel尚未加载），切换过来时时间轴显示默认状态
-    // 修复：加载时查询runtimeTracker.currentStatus/detailedStatus，还原当前阶段
-    // runtimeTracker状态值：
-    //   currentStatus: "停止"/"启动中"/"运行"/"停止中"/"故障"
-    //   detailedStatus: "允许启动"/"起车预警"/"正在松闸"/"1号电机启动"/"2号电机启动"/"正在运行"
-    //                   "停车预警"/"停止1号电机"/"停止2号电机"/"抱闸开启"/"故障停车"/"保护触发"
+    // 修复：加载时查询runtimeTracker.currentStatus + commonControl.getSequenceState()还原当前阶段
     function syncStateFromTracker() {
         if (typeof runtimeTracker === "undefined" || !runtimeTracker) return
 
         var status = runtimeTracker.currentStatus
         var detail = runtimeTracker.detailedStatus
 
-        console.log("📡 LogicControlPanel: syncStateFromTracker - status:", status, "detail:", detail)
+        // 从CommonControl获取精确的序列执行状态
+        var seqState = null
+        if (typeof commonControl !== "undefined" && commonControl) {
+            seqState = commonControl.getSequenceState()
+        }
+
+        console.log("📡 LogicControlPanel: syncStateFromTracker - status:", status,
+                     "detail:", detail, "seqState:", JSON.stringify(seqState))
 
         if (status === "故障") {
             // 故障状态：显示故障时间轴
@@ -551,72 +554,83 @@ Rectangle {
             console.log("📡 LogicControlPanel: 同步故障状态，故障设备:", root.rtFaultDevice)
 
         } else if (status === "启动中") {
-            // 正在启动：区分预警阶段和设备序列阶段
             root.currentTab = 0
             root.isRealtimeActive = true
             root.rtFaultDevice = ""
 
-            if (detail === "起车预警") {
-                // 预警阶段：时间轴显示预警进行中
-                root.rtPhase = 1  // 1=预警中
-                root.rtWarningStart = Date.now()  // 无法知道精确开始时间，用当前时间近似
+            if (detail === "起车预警" || (seqState && seqState.isWarning)) {
+                // 预警阶段
+                root.rtPhase = 1
+                root.rtWarningStart = Date.now()
                 root.rtActivatedCount = 0
                 rtRefreshTimer.start()
                 console.log("📡 LogicControlPanel: 同步启动中-预警阶段")
             } else {
-                // 设备序列阶段（正在松闸/电机启动等）
-                root.rtPhase = 2  // 2=启动序列运行中
+                // 设备序列阶段：用getSequenceState()获取精确的已激活设备数
+                root.rtPhase = 2
                 root.rtSequenceStart = Date.now()
-                // 根据detailedStatus估算已激活设备数
-                // 无法精确知道哪些设备已激活，但可以估算：至少1个设备在运行
-                // 保守估计：显示序列进行中，不填充具体设备数
-                root.rtActivatedCount = 0  // 后续实时信号会更新
+                var activatedCount = 0
+                if (seqState && seqState.isRunning) {
+                    // currentIndex是"下一个要激活的设备索引"，已激活数=currentIndex
+                    activatedCount = seqState.currentIndex || 0
+                }
+                root.rtActivatedCount = activatedCount
+                // 填充已激活设备的时间戳（全部设为当前时间，表示已完成）
                 var times = []
+                for (var i = 0; i < activatedCount; i++) {
+                    times.push(Date.now())
+                }
                 root.rtDeviceStartTimes = times
                 rtRefreshTimer.start()
-                console.log("📡 LogicControlPanel: 同步启动中-设备序列阶段, detail:", detail)
+                console.log("📡 LogicControlPanel: 同步启动中-设备序列, 已激活:", activatedCount)
             }
 
         } else if (status === "运行") {
-            // 皮带已在运行：显示启动完成状态（所有设备已激活）
+            // 皮带已在运行：所有设备已激活，进度条全满
             root.currentTab = 0
             root.isRealtimeActive = true
-            root.rtPhase = 2  // 2=启动序列运行中
-            root.rtActivatedCount = root.startupSeq.length  // 所有设备已激活
+            root.rtPhase = 2
+            root.rtActivatedCount = root.startupSeq.length
             var allTimes = []
-            for (var i = 0; i < root.startupSeq.length; i++) {
+            for (var j = 0; j < root.startupSeq.length; j++) {
                 allTimes.push(Date.now())
             }
             root.rtDeviceStartTimes = allTimes
             root.rtElapsed = 0
             root.rtFaultDevice = ""
             console.log("📡 LogicControlPanel: 同步运行状态，设备数:", root.startupSeq.length)
-            // 3秒后停止实时跟踪（与正常启动完成逻辑一致）
             rtStopTimer.restart()
 
         } else if (status === "停止中") {
-            // 正在停止：区分停车预警和停止序列
-            root.currentTab = 1  // 切换到停止顺序Tab
+            root.currentTab = 1
             root.isRealtimeActive = true
             root.rtFaultDevice = ""
 
-            if (detail === "停车预警") {
-                root.rtPhase = 5  // 5=停车预警中
+            if (detail === "停车预警" || (seqState && seqState.isStopAudio)) {
+                root.rtPhase = 5
                 root.rtWarningStart = Date.now()
                 root.rtActivatedCount = 0
                 rtRefreshTimer.start()
                 console.log("📡 LogicControlPanel: 同步停止中-停车预警阶段")
             } else {
-                // 停止设备序列阶段
-                root.rtPhase = 4  // 4=停止序列运行中
+                // 停止设备序列：用getSequenceState()获取精确进度
+                root.rtPhase = 4
                 root.rtSequenceStart = Date.now()
-                root.rtActivatedCount = 0
-                root.rtDeviceStartTimes = []
+                var stopActivated = 0
+                if (seqState && seqState.isRunning) {
+                    stopActivated = seqState.currentIndex || 0
+                }
+                root.rtActivatedCount = stopActivated
+                var stopTimes = []
+                for (var k = 0; k < stopActivated; k++) {
+                    stopTimes.push(Date.now())
+                }
+                root.rtDeviceStartTimes = stopTimes
                 rtRefreshTimer.start()
-                console.log("📡 LogicControlPanel: 同步停止中-设备停止阶段, detail:", detail)
+                console.log("📡 LogicControlPanel: 同步停止中-设备停止, 已停止:", stopActivated)
             }
         }
-        // status === "停止" && detail === "允许启动" → 默认空闲状态，无需处理
+        // status === "停止" → 默认空闲状态，无需处理
     }
 
     // 获取预警时间（秒）
