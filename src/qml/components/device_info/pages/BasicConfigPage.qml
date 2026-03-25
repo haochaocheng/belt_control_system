@@ -85,11 +85,15 @@ Rectangle {
                         "底部:", itemBottomY,
                         "键盘顶部:", keyboardTopY,
                         "键盘高度:", keyboardRect.height,
-                        "当前contentY:", scrollView.contentY)
+                        "当前contentY:", scrollView.contentY,
+                        "候选词补偿:", 50)
 
             // 3. 计算被遮挡距离
+            // ✅ 2026-03-25 [Phase 7.48.88.16.3]: 中文拼音输入法有候选词栏，额外增加高度补偿
+            // Qt.inputMethod.keyboardRectangle 可能不包含候选词栏高度
+            var candidateBarHeight = 50  // 中文候选词栏高度补偿
             var margin = 8  // 输入框与键盘之间预留间距
-            var overlap = itemBottomY + margin - keyboardTopY
+            var overlap = itemBottomY + margin + candidateBarHeight - keyboardTopY
 
             // 4. 被遮挡时：向上滚动 overlap 距离
             if (overlap > 0) {
