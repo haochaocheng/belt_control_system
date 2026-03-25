@@ -875,10 +875,12 @@ Item {
                 console.log("✅ [导航] 顶部按钮末端下键 → 左侧类别区域")
             }
             break
-        case 1:  // 左侧类别（9个类别：0-8）
+        case 1:  // 左侧类别（13个类别：0-12）
             // ✅ 2026-02-07 [Phase 7.39.6]: 修改最大值为8（添加CAN控制后）
             // ✅ 2026-02-08 [Phase 7.42]: 修改最大值为9（添加TCP控制后）
-            if (currentCategory < 9) {
+            // 旧：if (currentCategory < 9) — 最大只能到TCP控制(9)，无法到达MQTT(10)/逻辑控制(11)/沿线点位保护(12)
+            // ✅ 2026-03-25 [Phase 7.48.88.10]: 修改最大值为12（匹配全部13个分类）
+            if (currentCategory < 12) {
                 currentCategory++
             }
             break
