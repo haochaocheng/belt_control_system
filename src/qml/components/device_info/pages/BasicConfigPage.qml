@@ -63,30 +63,44 @@ Rectangle {
 
         // ✅ 2026-03-25 [Phase 7.48.88.16]: 虚拟键盘弹出时自动滚动输入框到可见区域
         // 旧代码：用 Flickable 高度减键盘高度计算可见区域 → 滚动量过大
-        // ✅ 2026-03-25 [Phase 7.48.88.16.1]: 改用窗口坐标计算，精确定位
+        // 旧代码：mapToGlobal + devicePixelRatio → 坐标系不一致
+        // ✅ 2026-03-25 [Phase 7.48.88.16.2]: 使用 mapToItem(null) 获取窗口坐标，直接比较
         function ensureVisible(item) {
             if (!item) return
 
-            // 1. 获取键盘顶部在窗口中的Y坐标
+            // 1. 获取虚拟键盘信息（窗口坐标）
             var keyboardRect = Qt.inputMethod.keyboardRectangle
             if (keyboardRect.height <= 0) return  // 键盘未弹出
-            var keyboardTopY = keyboardRect.y / Screen.devicePixelRatio
 
-            // 2. 获取输入框底部在窗口中的Y坐标
-            var itemGlobal = item.mapToGlobal(0, 0)
-            var itemBottomY = itemGlobal.y / Screen.devicePixelRatio + item.height
+            // keyboardRect 是窗口坐标（像素），在嵌入式设备上 devicePixelRatio 通常为1
+            var keyboardTopY = keyboardRect.y
 
-            // 3. 计算输入框被遮挡的距离
-            var margin = 10  // 输入框与键盘之间的间距
+            // 2. 获取输入框在窗口中的坐标
+            // mapToItem(null) = 映射到窗口根坐标，比 mapToGlobal 更可靠
+            var itemInWindow = item.mapToItem(null, 0, 0)
+            var itemBottomY = itemInWindow.y + item.height
+
+            // 调试日志
+            console.log("📐 [ensureVisible] 输入框窗口Y:", itemInWindow.y,
+                        "底部:", itemBottomY,
+                        "键盘顶部:", keyboardTopY,
+                        "键盘高度:", keyboardRect.height,
+                        "当前contentY:", scrollView.contentY)
+
+            // 3. 计算被遮挡距离
+            var margin = 8  // 输入框与键盘之间预留间距
             var overlap = itemBottomY + margin - keyboardTopY
 
-            // 4. 只在被遮挡时滚动，且只滚动刚好够的距离
+            // 4. 被遮挡时：向上滚动 overlap 距离
             if (overlap > 0) {
                 var targetY = scrollView.contentY + overlap
                 targetY = Math.min(targetY, scrollView.contentHeight - scrollView.height)
                 targetY = Math.max(0, targetY)
+                console.log("📐 [ensureVisible] 需滚动:", overlap, "→ targetY:", targetY)
                 scrollAnim.to = targetY
                 scrollAnim.start()
+            } else {
+                console.log("📐 [ensureVisible] 无需滚动，overlap:", overlap)
             }
         }
 
