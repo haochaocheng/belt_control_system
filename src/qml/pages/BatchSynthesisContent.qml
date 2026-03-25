@@ -214,6 +214,118 @@ Rectangle {
                     }
                 }
 
+                // ✅ 2026-03-25 [Phase 7.48.88.11]: 清除旧语音区域
+                // 用途：皮带名称变更后，旧文件名仍存在导致批量生成跳过新文件
+                GroupBox {
+                    Layout.fillWidth: true
+                    title: "清除旧语音"
+                    background: Rectangle {
+                        color: "#252540"
+                        border.color: "#6a4a4a"
+                        radius: 4
+                        y: parent.topPadding - parent.padding
+                        height: parent.height - parent.topPadding + parent.padding
+                    }
+                    label: Text {
+                        text: parent.title
+                        color: "#ffaaaa"
+                        font.pixelSize: 14
+                    }
+
+                    ColumnLayout {
+                        spacing: 8
+                        anchors.fill: parent
+
+                        Text {
+                            text: "皮带名称变更后，需先清除旧语音再重新生成"
+                            color: "#999999"
+                            font.pixelSize: 11
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                        }
+
+                        GridLayout {
+                            columns: 2
+                            columnSpacing: 10
+                            rowSpacing: 4
+
+                            CheckBox {
+                                id: chkClearBeltOp
+                                text: "皮带操作状态"
+                                checked: true
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffcccc"
+                                    font.pixelSize: 12
+                                    leftPadding: parent.indicator.width + 5
+                                }
+                            }
+                            CheckBox {
+                                id: chkClearSwitchInput
+                                text: "开关量输入保护"
+                                checked: false
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffcccc"
+                                    font.pixelSize: 12
+                                    leftPadding: parent.indicator.width + 5
+                                }
+                            }
+                            CheckBox {
+                                id: chkClearSystemSound
+                                text: "系统提示音"
+                                checked: false
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffcccc"
+                                    font.pixelSize: 12
+                                    leftPadding: parent.indicator.width + 5
+                                }
+                            }
+                        }
+
+                        Button {
+                            text: "清除选中分类的旧语音"
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 32
+                            enabled: batchGenerator && !batchGenerator.isRunning
+                            background: Rectangle {
+                                color: parent.enabled ? (parent.hovered ? "#cc4444" : "#993333") : "#555555"
+                                radius: 4
+                            }
+                            contentItem: Text {
+                                text: parent.text
+                                color: "#ffffff"
+                                font.pixelSize: 12
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            onClicked: {
+                                if (!batchGenerator) return
+                                // 先设置配置（确保引擎和路径正确）
+                                batchGenerator.setConfig(getConfig())
+                                var cats = []
+                                if (chkClearBeltOp.checked) cats.push("beltOperation")
+                                if (chkClearSwitchInput.checked) cats.push("switchInput")
+                                if (chkClearSystemSound.checked) cats.push("systemSound")
+                                if (cats.length === 0) return
+                                var count = batchGenerator.clearCategoryFiles(cats)
+                                clearResultText.text = "已清除 " + count + " 个旧语音文件"
+                                clearResultText.visible = true
+                            }
+                        }
+
+                        Text {
+                            id: clearResultText
+                            visible: false
+                            color: "#ffaa66"
+                            font.pixelSize: 11
+                            Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                    }
+                }
+
                 // 范围设置 - 2列布局，更宽的输入框
                 // ✅ 2026-02-26 22:50 [Phase 7.47.19]: 修复输入框宽度问题
                 GroupBox {
@@ -774,6 +886,14 @@ Rectangle {
         var beltNumbers = []
         for (var i = 1; i <= spinBeltCount.value; i++) beltNumbers.push(i)
 
+        // ✅ 2026-03-25 [Phase 7.48.88.11]: 构建皮带名称映射（本机使用localDeviceName，其他默认）
+        var beltNames = {}
+        if (systemConfig) {
+            var localBelt = systemConfig.machineNumber
+            var localName = systemConfig.localDeviceName
+            beltNames[localBelt] = localName
+        }
+
         var motorNumbers = []
         for (var i = 1; i <= spinMotorCount.value; i++) motorNumbers.push(i)
 
@@ -786,6 +906,8 @@ Rectangle {
         return {
             categories: categories,
             beltNumbers: beltNumbers,
+            // ✅ 2026-03-25 [Phase 7.48.88.11]: 传递皮带名称映射
+            beltNames: beltNames,
             motorNumbers: motorNumbers,
             brakeNumbers: brakeNumbers,
             tensionNumbers: tensionNumbers,

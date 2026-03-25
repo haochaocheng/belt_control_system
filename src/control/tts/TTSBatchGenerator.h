@@ -81,6 +81,9 @@ public slots:
     // 重试失败的文件
     Q_INVOKABLE void retryFailed();
 
+    // ✅ 2026-03-25 [Phase 7.48.88.11]: 清除指定分类的已生成语音文件（用于皮带名称变更后重新生成）
+    Q_INVOKABLE int clearCategoryFiles(const QStringList &categories);
+
 signals:
     void runningChanged();
     void pausedChanged();

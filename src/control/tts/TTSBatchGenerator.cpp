@@ -67,6 +67,15 @@ void TTSBatchGenerator::setConfig(const QVariantMap& config)
         }
     }
 
+    // ✅ 2026-03-25 [Phase 7.48.88.11]: 解析皮带名称映射（支持自定义名称）
+    if (config.contains("beltNames")) {
+        m_config.beltNames.clear();
+        QVariantMap names = config["beltNames"].toMap();
+        for (auto it = names.begin(); it != names.end(); ++it) {
+            m_config.beltNames[it.key().toInt()] = it.value().toString();
+        }
+    }
+
     // 解析电机编号
     if (config.contains("motorNumbers")) {
         m_config.motorNumbers.clear();
@@ -651,36 +660,39 @@ void TTSBatchGenerator::buildSystemSoundList()
 }
 
 // ✅ 2026-03-25 [Phase 7.48.88.10]: 皮带操作状态语音清单（启车/停车预警）
+// ✅ 2026-03-25 [Phase 7.48.88.11]: 使用自定义皮带名称（如"大巷皮带"、"顺槽皮带"）
 void TTSBatchGenerator::buildBeltOperationList()
 {
     // 每条皮带生成：启车预警、停车预警
     // 文件存放在 {belt}#PD/ 目录，与 getAudioPath() 搜索路径一致
-    QStringList operations = {
-        "启车", "停车"
-    };
 
     for (int belt : m_config.beltNumbers) {
-        int fileIndex = 1;
+        // ✅ 2026-03-25 [Phase 7.48.88.11]: 优先使用自定义名称，无自定义则回退到"N号皮带"
+        QString beltName = m_config.beltNames.value(belt, QString("%1号皮带").arg(belt));
 
-        // 启车预警：X号皮带准备启车，请注意安全
+        // 启车预警：{皮带名称}准备启车，请注意安全
         {
             VoiceFileItem item;
             item.id = QString("belt_op_belt%1_startup").arg(belt);
             item.category = "皮带操作状态";
-            item.text = QString("%1号皮带准备启车，请注意安全").arg(belt);
-            item.filename = QString("%1号皮带启车.wav").arg(belt);
+            // 旧：item.text = QString("%1号皮带准备启车，请注意安全").arg(belt);
+            item.text = QString("%1准备启车，请注意安全").arg(beltName);
+            // 旧：item.filename = QString("%1号皮带启车.wav").arg(belt);
+            item.filename = QString("%1启车.wav").arg(beltName);
             item.relativePath = QString("%1#PD").arg(belt);
             item.status = VoiceFileItem::Status::Pending;
             m_fileList.append(item);
         }
 
-        // 停车预警：X号皮带准备停车，请注意安全
+        // 停车预警：{皮带名称}准备停车，请注意安全
         {
             VoiceFileItem item;
             item.id = QString("belt_op_belt%1_stop").arg(belt);
             item.category = "皮带操作状态";
-            item.text = QString("%1号皮带准备停车，请注意安全").arg(belt);
-            item.filename = QString("%1号皮带停车.wav").arg(belt);
+            // 旧：item.text = QString("%1号皮带准备停车，请注意安全").arg(belt);
+            item.text = QString("%1准备停车，请注意安全").arg(beltName);
+            // 旧：item.filename = QString("%1号皮带停车.wav").arg(belt);
+            item.filename = QString("%1停车.wav").arg(beltName);
             item.relativePath = QString("%1#PD").arg(belt);
             item.status = VoiceFileItem::Status::Pending;
             m_fileList.append(item);
@@ -691,8 +703,10 @@ void TTSBatchGenerator::buildBeltOperationList()
             VoiceFileItem itemStart;
             itemStart.id = QString("belt_op_belt%1_tension%2_start").arg(belt).arg(tension);
             itemStart.category = "皮带操作状态";
-            itemStart.text = QString("%1号皮带%2号张紧装置启动").arg(belt).arg(tension);
-            itemStart.filename = QString("%1号皮带%2号张紧装置启动.wav").arg(belt).arg(tension);
+            // 旧：itemStart.text = QString("%1号皮带%2号张紧装置启动").arg(belt).arg(tension);
+            itemStart.text = QString("%1%2号张紧装置启动").arg(beltName).arg(tension);
+            // 旧：itemStart.filename = QString("%1号皮带%2号张紧装置启动.wav").arg(belt).arg(tension);
+            itemStart.filename = QString("%1%2号张紧装置启动.wav").arg(beltName).arg(tension);
             itemStart.relativePath = QString("%1#PD").arg(belt);
             itemStart.status = VoiceFileItem::Status::Pending;
             m_fileList.append(itemStart);
@@ -700,11 +714,86 @@ void TTSBatchGenerator::buildBeltOperationList()
             VoiceFileItem itemFail;
             itemFail.id = QString("belt_op_belt%1_tension%2_fail").arg(belt).arg(tension);
             itemFail.category = "皮带操作状态";
-            itemFail.text = QString("%1号皮带%2号张紧装置失败").arg(belt).arg(tension);
-            itemFail.filename = QString("%1号皮带%2号张紧装置失败.wav").arg(belt).arg(tension);
+            // 旧：itemFail.text = QString("%1号皮带%2号张紧装置失败").arg(belt).arg(tension);
+            itemFail.text = QString("%1%2号张紧装置失败").arg(beltName).arg(tension);
+            // 旧：itemFail.filename = QString("%1号皮带%2号张紧装置失败.wav").arg(belt).arg(tension);
+            itemFail.filename = QString("%1%2号张紧装置失败.wav").arg(beltName).arg(tension);
             itemFail.relativePath = QString("%1#PD").arg(belt);
             itemFail.status = VoiceFileItem::Status::Pending;
             m_fileList.append(itemFail);
         }
     }
+}
+
+// ✅ 2026-03-25 [Phase 7.48.88.11]: 清除指定分类的已生成语音文件
+// 用途：皮带名称变更后，旧文件名（如"2号皮带启车.wav"）仍存在，
+//       批量生成因skipExisting跳过新文件名（如"大巷皮带启车.wav"），
+//       需先删除旧文件再重新生成
+int TTSBatchGenerator::clearCategoryFiles(const QStringList &categories)
+{
+    int deletedCount = 0;
+
+    for (const auto &engine : m_config.engines) {
+        QString engineDir = m_config.outputBaseDir + "/" + engine.outputFolder;
+        QDir engineDirObj(engineDir);
+        if (!engineDirObj.exists()) {
+            emitLog("warning", QString("引擎目录不存在: %1").arg(engineDir));
+            continue;
+        }
+
+        // 遍历皮带目录 ({N}#PD)
+        for (int belt : m_config.beltNumbers) {
+            QString beltDir = engineDir + "/" + QString("%1#PD").arg(belt);
+            QDir dir(beltDir);
+            if (!dir.exists()) continue;
+
+            // 皮带操作状态：启车/停车/张紧相关文件
+            if (categories.contains("beltOperation") || categories.contains("皮带操作状态")) {
+                QStringList filters;
+                filters << "*启车*.wav" << "*启车*.mp3"
+                        << "*停车*.wav" << "*停车*.mp3"
+                        << "*张紧*.wav" << "*张紧*.mp3";
+                QStringList files = dir.entryList(filters, QDir::Files);
+                for (const QString &file : files) {
+                    if (dir.remove(file)) {
+                        deletedCount++;
+                        emitLog("info", QString("已删除: %1/%2").arg(beltDir, file));
+                    }
+                }
+            }
+
+            // 开关量输入保护
+            if (categories.contains("switchInput") || categories.contains("开关量输入保护")) {
+                QStringList files = dir.entryList(QStringList() << "*.wav" << "*.mp3", QDir::Files);
+                for (const QString &file : files) {
+                    // 只删除保护类文件（避免误删启车/停车文件）
+                    if (file.contains("保护") || file.contains("急停") || file.contains("拉绳") || file.contains("跑偏") || file.contains("打滑") || file.contains("堆煤") || file.contains("撕裂")) {
+                        if (dir.remove(file)) {
+                            deletedCount++;
+                            emitLog("info", QString("已删除: %1/%2").arg(beltDir, file));
+                        }
+                    }
+                }
+            }
+        }
+
+        // 系统提示音在 system/ 目录
+        if (categories.contains("systemSound") || categories.contains("系统提示音")) {
+            QString sysDir = engineDir + "/system";
+            QDir dir(sysDir);
+            if (dir.exists()) {
+                QStringList files = dir.entryList(QStringList() << "*.wav" << "*.mp3", QDir::Files);
+                for (const QString &file : files) {
+                    if (dir.remove(file)) {
+                        deletedCount++;
+                        emitLog("info", QString("已删除: %1/%2").arg(sysDir, file));
+                    }
+                }
+            }
+        }
+    }
+
+    emitLog("info", QString("清除完成，共删除 %1 个文件").arg(deletedCount));
+    emit statusChanged();
+    return deletedCount;
 }

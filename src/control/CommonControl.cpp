@@ -616,7 +616,14 @@ QString CommonControl::getAudioPath(int beltNumber, const QString &actionType)
 {
     // 尝试多种文件名格式
     QStringList possibleNames;
-    // 格式1: "1号皮带启动.mp3" - 完整格式
+    // ✅ 2026-03-25 [Phase 7.48.88.11]: 优先搜索本机名称（支持自定义名如"大巷皮带"、"顺槽皮带"）
+    if (m_systemConfig && m_systemConfig->machineNumber() == beltNumber) {
+        QString localName = m_systemConfig->localDeviceName();
+        // 格式0: "大巷皮带启车.mp3" - 自定义名称格式（最优先）
+        possibleNames << QString("%1%2.mp3").arg(localName).arg(actionType);
+        possibleNames << QString("%1%2.wav").arg(localName).arg(actionType);
+    }
+    // 格式1: "1号皮带启动.mp3" - 完整格式（兼容旧文件）
     possibleNames << QString("%1号皮带%2.mp3").arg(beltNumber).arg(actionType);
     possibleNames << QString("%1号皮带%2.wav").arg(beltNumber).arg(actionType);
     // 格式2: "带启动.mp3" - 简化格式
@@ -881,12 +888,20 @@ void CommonControl::playWarningOnce()
         return;
     }
 
-    // 构造 TTS 预警文字：统一使用当前皮带号
+    // 构造 TTS 预警文字：使用本机名称（支持自定义名称如"大巷皮带"、"顺槽皮带"）
     // 旧代码：使用 localDeviceName()（本机名称），导致多皮带场景下文字与实际启动皮带不匹配
     // ✅ 2026-03-25 [Phase 7.48.88.10]: 统一使用 m_currentBeltNumber，文字改为"启车"（行业用语）
+    // ✅ 2026-03-25 [Phase 7.48.88.11]: 使用 localDeviceName（支持自定义名称），不再硬编码"N号皮带"
     QString warningText;
-    QString chineseNumber = numberToChinese(m_currentBeltNumber);
-    warningText = QString("%1号皮带准备启车，请注意安全").arg(chineseNumber);
+    QString beltName;
+    if (m_systemConfig && m_systemConfig->machineNumber() == m_currentBeltNumber) {
+        // 当前启动的是本机皮带，使用配置的本机名称
+        beltName = m_systemConfig->localDeviceName();
+    } else {
+        // 启动的是其他皮带（远程控制），使用默认"N号皮带"
+        beltName = QString("%1号皮带").arg(numberToChinese(m_currentBeltNumber));
+    }
+    warningText = QString("%1准备启车，请注意安全").arg(beltName);
 
     // ① 优先：使用预制音频文件（批量生成的）
     if (!m_currentAudioPath.isEmpty() && QFile::exists(m_currentAudioPath)) {
@@ -922,7 +937,9 @@ void CommonControl::playWarningOnce()
                                     .arg(speakerId)
                                     .arg(m_currentBeltNumber);
             QDir().mkpath(batchDir);
-            batchPath = QString("%1/%2号皮带启车.wav").arg(batchDir).arg(m_currentBeltNumber);
+            // 旧：batchPath = QString("%1/%2号皮带启车.wav").arg(batchDir).arg(m_currentBeltNumber);
+            // ✅ 2026-03-25 [Phase 7.48.88.11]: 使用本机名称命名文件（与批量生成一致）
+            batchPath = QString("%1/%2启车.wav").arg(batchDir).arg(beltName);
         }
         // 备选：临时路径
         QString outputPath = batchPath.isEmpty()

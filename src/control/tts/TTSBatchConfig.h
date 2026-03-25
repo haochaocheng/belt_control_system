@@ -8,6 +8,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include <QMap>
 #include <QObject>
 
 // ========== 保护类型枚举 ==========
@@ -46,6 +47,8 @@ struct TTSBatchConfig {
 
     // 生成范围
     QVector<int> beltNumbers;        // 皮带编号: 1-8
+    // ✅ 2026-03-25 [Phase 7.48.88.11]: 皮带名称映射（支持自定义名称如"大巷皮带"、"顺槽皮带"）
+    QMap<int, QString> beltNames;    // 皮带编号→名称: {1: "大巷皮带", 2: "顺槽皮带"}
     QVector<int> motorNumbers;       // 电机编号: 1-4
     QVector<int> brakeNumbers;       // 制动器编号: 1-4
     QVector<int> tensionNumbers;     // 张紧装置编号: 1-2
