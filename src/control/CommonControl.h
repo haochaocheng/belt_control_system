@@ -243,12 +243,14 @@ public slots:
     void stopWarningPlayback();
 
     // 设备序列控制（通过R/S键盘快捷键触发）
-    Q_INVOKABLE void startDeviceSequence();  // 按启动顺序启动设备
-    Q_INVOKABLE void stopDeviceSequence();   // 按停止顺序停止设备
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 改为带皮带号参数，支持多皮带并行序列
+    Q_INVOKABLE void startDeviceSequence(int beltNumber = 0);  // 按启动顺序启动设备（0=使用m_currentBeltNumber）
+    Q_INVOKABLE void stopDeviceSequence(int beltNumber = 0);   // 按停止顺序停止设备（0=使用m_currentBeltNumber）
 
-    // ✅ 2026-03-25 [Phase 7.48.88.21]: 获取当前序列执行状态（用于LogicControlPanel延迟加载时同步）
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 获取序列执行状态（支持按皮带号查询）
     // 返回：{isRunning, isStartup, currentIndex, totalCount, isWarning, isStopAudio}
-    Q_INVOKABLE QVariantMap getSequenceState() const;
+    Q_INVOKABLE QVariantMap getSequenceState() const;           // 返回当前音频皮带的状态
+    Q_INVOKABLE QVariantMap getSequenceState(int beltNumber) const;  // 返回指定皮带状态
 
     // ✅ 2026-03-25 [Phase 7.48.88.21]: 按皮带号查询运行状态（用于数字键toggle判断）
     Q_INVOKABLE bool isBeltRunning(int beltNumber) const;
@@ -262,7 +264,8 @@ private slots:
     void onMediaPlayerError(QMediaPlayer::Error error, const QString &errorString);
     void onPlaybackFinished();
     void onWarningTimerTimeout();  // 按时间模式的定时器超时
-    void onDeviceSequenceTimer();  // 设备序列定时器超时
+    // ❌ 2026-03-25 [Phase 7.48.88.22]: 废弃单一定时器槽，改用per-belt lambda定时器
+    // void onDeviceSequenceTimer();  // 设备序列定时器超时
     void onRegisterValueReceived(int registerAddress, quint16 value);  // 接收寄存器值（用于反馈检测）
 
 private:
@@ -318,12 +321,25 @@ private:
     bool m_isFaultStop;            // 是否因故障而停止（跳过停车音频）
     QElapsedTimer m_playbackTimer; // ✅ 2026-02-26 [Phase 7.47.8]: 播放时长计时器
 
-    // 设备序列控制相关
-    QTimer *m_deviceSequenceTimer; // 设备序列延时定时器
-    QStringList m_currentSequence; // 当前执行的设备序列
-    int m_currentSequenceIndex;    // 当前序列执行索引
-    bool m_isSequenceRunning;      // 是否正在执行序列
-    bool m_isStartupSequence;      // true=启动序列, false=停止序列
+    // ❌ 2026-03-25 [Phase 7.48.88.22]: 废弃单一序列状态变量，改用per-belt BeltSequenceState
+    // 原因：单一全局状态导致多皮带无法并行执行启停序列
+    // QTimer *m_deviceSequenceTimer; // 设备序列延时定时器
+    // QStringList m_currentSequence; // 当前执行的设备序列
+    // int m_currentSequenceIndex;    // 当前序列执行索引
+    // bool m_isSequenceRunning;      // 是否正在执行序列
+    // bool m_isStartupSequence;      // true=启动序列, false=停止序列
+
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 按皮带号独立管理序列状态（支持多皮带并行）
+    struct BeltSequenceState {
+        int beltNumber;
+        QStringList sequence;       // 设备列表
+        int currentIndex;           // 当前进度
+        bool isRunning;             // 序列是否在执行
+        bool isStartup;             // true=启动, false=停止
+        QTimer *timer;              // 独立定时器
+    };
+    QMap<int, BeltSequenceState*> m_beltSequences;  // 按皮带号的活跃序列
+    QList<QPair<int, bool>> m_pendingBeltOps;       // 待处理操作队列 (皮带号, true=启动/false=停止)
 
     // ✅ 2026-03-25 [Phase 7.48.88.21]: 按皮带号跟踪运行状态（支持多皮带并行运行）
     QMap<int, bool> m_beltRunning;
@@ -359,7 +375,20 @@ private:
     void playWarningOnce();
 
     // 执行设备序列的下一步
-    void executeNextDeviceInSequence();
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 改为按皮带号独立执行
+    void executeNextDeviceInSequence(int beltNumber);
+
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 按皮带号的定时器回调
+    void onBeltSequenceTimer(int beltNumber);
+
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 处理待处理的启停操作队列
+    void processPendingBeltOps();
+
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 读取设备延时配置
+    int readDeviceDelay(const QString &deviceName, int beltNumber, bool isStartup);
+
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 获取或创建per-belt序列状态
+    BeltSequenceState* getOrCreateBeltState(int beltNumber);
 
     // 激活/停用指定设备
     void activateDevice(const QString &deviceName, bool activate);

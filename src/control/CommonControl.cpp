@@ -59,10 +59,11 @@ CommonControl::CommonControl(QObject *parent)
     , m_currentBeltNumber(0)  // ✅ 2026-01-23 00:00 [TTS网络传输] 初始化皮带编号
     , m_isStopAudioPlaying(false)
     , m_isFaultStop(false)
-    , m_deviceSequenceTimer(new QTimer(this))
-    , m_currentSequenceIndex(0)
-    , m_isSequenceRunning(false)
-    , m_isStartupSequence(true)
+    // ❌ 2026-03-25 [Phase 7.48.88.22]: 废弃单一序列定时器，改用per-belt定时器
+    // , m_deviceSequenceTimer(new QTimer(this))
+    // , m_currentSequenceIndex(0)
+    // , m_isSequenceRunning(false)
+    // , m_isStartupSequence(true)
     , m_lastFeedbackRegisterValue(0)
 {
     qDebug() << "✅ CommonControl: 公共控制模块已创建";
@@ -205,10 +206,10 @@ CommonControl::CommonControl(QObject *parent)
     connect(m_warningTimer, &QTimer::timeout,
             this, &CommonControl::onWarningTimerTimeout);
 
-    // 连接设备序列定时器
-    m_deviceSequenceTimer->setSingleShot(true);
-    connect(m_deviceSequenceTimer, &QTimer::timeout,
-            this, &CommonControl::onDeviceSequenceTimer);
+    // ❌ 2026-03-25 [Phase 7.48.88.22]: 废弃单一设备序列定时器，改用per-belt定时器
+    // m_deviceSequenceTimer->setSingleShot(true);
+    // connect(m_deviceSequenceTimer, &QTimer::timeout,
+    //         this, &CommonControl::onDeviceSequenceTimer);
 
     qDebug() << "🔊 CommonControl: 音频播放器已初始化";
 
@@ -299,6 +300,9 @@ CommonControl::~CommonControl()
     if (m_mediaPlayer) {
         m_mediaPlayer->stop();
     }
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 清理per-belt序列状态
+    qDeleteAll(m_beltSequences);
+    m_beltSequences.clear();
     qDebug() << "✅ CommonControl: 公共控制模块已销毁";
 }
 
@@ -518,14 +522,22 @@ void CommonControl::playAudioInternal(const QString &audioPath)
 
 void CommonControl::startBelt(int beltNumber)
 {
-    // ✅ 2026-03-23 [Phase 7.48.85.2]: 防重入检查 - R键长按/自动重复导致startBelt被快速反复调用
-    // 原因：每次调用都会 stopWarningPlayback() + startWarningPlayback()，音频播放30-120ms就被打断，
-    //       m_warningTimer 被不断重置永远不到期，设备序列永远不启动。
-    if (m_isWarningPlaying || m_isStopAudioPlaying || m_isSequenceRunning) {
-        qDebug() << "⚠️ CommonControl: 忽略重复启动请求（当前状态："
-                 << (m_isWarningPlaying ? "预警播放中" : "")
-                 << (m_isStopAudioPlaying ? "停车音频中" : "")
-                 << (m_isSequenceRunning ? "设备序列中" : "") << "）";
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 改为per-belt防重入 + 音频忙排队
+    // 原因：旧的全局m_isSequenceRunning阻止多皮带并行，现在只检查本皮带状态
+    // ❌ 2026-03-23 [Phase 7.48.85.2]: 旧的全局防重入检查（已改为per-belt）
+    // if (m_isWarningPlaying || m_isStopAudioPlaying || m_isSequenceRunning) { return; }
+
+    // 检查本皮带是否已有活跃序列
+    BeltSequenceState *state = m_beltSequences.value(beltNumber, nullptr);
+    if (state && state->isRunning) {
+        qDebug() << "⚠️ CommonControl:" << beltNumber << "号皮带序列正在执行，忽略启动请求";
+        return;
+    }
+
+    // 音频忙（预警或停车音频播放中）→ 入待处理队列
+    if (m_isWarningPlaying || m_isStopAudioPlaying) {
+        qDebug() << "🔄 CommonControl:" << beltNumber << "号皮带排队等待（音频忙）";
+        m_pendingBeltOps.append({beltNumber, true});
         return;
     }
 
@@ -548,13 +560,21 @@ void CommonControl::stopBelt(int beltNumber)
 {
     qDebug() << "🛑 CommonControl: 请求停止" << beltNumber << "号皮带";
 
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 音频忙 → 入待处理队列
+    if (m_isWarningPlaying || m_isStopAudioPlaying) {
+        qDebug() << "🔄 CommonControl:" << beltNumber << "号皮带停止排队等待（音频忙）";
+        m_pendingBeltOps.append({beltNumber, false});
+        return;
+    }
+
     // ✅ 2026-03-25 [Phase 7.48.88.10]: 更新 m_currentBeltNumber 供 stopDeviceSequence 使用
     // 原因：stopDeviceSequence 需要根据当前皮带号加载对应的停止序列配置
     m_currentBeltNumber = beltNumber;
 
     // 检查是否已经停止（避免重复执行停止逻辑）
-    if (m_runtimeTracker && !m_runtimeTracker->isRunning() && m_runtimeTracker->currentStatus() == "停止") {
-        qDebug() << "⚠️  CommonControl: 设备已经停止，忽略停止请求";
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 改为检查per-belt运行状态
+    if (!m_beltRunning.value(beltNumber, false)) {
+        qDebug() << "⚠️  CommonControl:" << beltNumber << "号皮带未运行，忽略停止请求";
         return;
     }
 
@@ -582,7 +602,7 @@ void CommonControl::stopBelt(int beltNumber)
     if (m_isFaultStop) {
         qDebug() << "🚨 CommonControl: 故障/紧急停车模式，跳过停车音频，直接停止设备序列";
         m_isFaultStop = false;  // 重置标志
-        stopDeviceSequence();
+        stopDeviceSequence(beltNumber);
         return;
     }
 
@@ -591,7 +611,7 @@ void CommonControl::stopBelt(int beltNumber)
     if (stopAudioPath.isEmpty()) {
         qWarning() << "❌ CommonControl: 未找到" << beltNumber << "号皮带的停车音频";
         // 即使没有音频，也要停止设备序列
-        stopDeviceSequence();
+        stopDeviceSequence(beltNumber);
         return;
     }
 
@@ -608,6 +628,15 @@ void CommonControl::stopBelt(int beltNumber)
 void CommonControl::emergencyStopBelt(int beltNumber)
 {
     qDebug() << "🚨 CommonControl: 紧急停车" << beltNumber << "号皮带（跳过停车音频）";
+
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 先取消该皮带的启动序列（如果正在执行）
+    BeltSequenceState *state = m_beltSequences.value(beltNumber, nullptr);
+    if (state && state->isRunning) {
+        qDebug() << "  ⏹️ 取消" << beltNumber << "号皮带正在执行的序列";
+        state->isRunning = false;
+        state->timer->stop();
+    }
+
     m_isFaultStop = true;   // 标记故障停车（stopBelt内部将跳过停车音频）
     stopBelt(beltNumber);   // 复用现有停止逻辑
 }
@@ -713,8 +742,10 @@ void CommonControl::onPlaybackFinished()
         m_audioQueue.clear();
 
         // 自动停止设备序列
-        qDebug() << "🔄 CommonControl: 停车音频结束，自动停止设备序列";
-        stopDeviceSequence();
+        qDebug() << "🔄 CommonControl: 停车音频结束，自动停止" << m_currentBeltNumber << "号设备序列";
+        stopDeviceSequence(m_currentBeltNumber);
+        // ✅ 2026-03-25 [Phase 7.48.88.22]: 处理待处理的启停操作队列
+        processPendingBeltOps();
     } else if (m_isWarningPlaying) {
         // 预警播放模式
         if (!m_systemConfig) {
@@ -744,8 +775,10 @@ void CommonControl::onPlaybackFinished()
                 emit beltStartRequested(m_systemConfig->machineNumber());
 
                 // 自动启动设备序列
-                qDebug() << "🔄 CommonControl: 预警结束，自动启动设备序列";
-                startDeviceSequence();
+                qDebug() << "🔄 CommonControl: 预警结束，自动启动" << m_currentBeltNumber << "号设备序列";
+                startDeviceSequence(m_currentBeltNumber);
+                // ✅ 2026-03-25 [Phase 7.48.88.22]: 处理待处理的启停操作队列
+                processPendingBeltOps();
             }
         } else {
             // 按时间模式：检查定时器是否还在运行，继续播放
@@ -795,8 +828,10 @@ void CommonControl::onWarningTimerTimeout()
         emit beltStartRequested(m_systemConfig->machineNumber());
 
         // 自动启动设备序列
-        qDebug() << "🔄 CommonControl: 预警结束，自动启动设备序列";
-        startDeviceSequence();
+        qDebug() << "🔄 CommonControl: 预警结束，自动启动" << m_currentBeltNumber << "号设备序列";
+        startDeviceSequence(m_currentBeltNumber);
+        // ✅ 2026-03-25 [Phase 7.48.88.22]: 处理待处理的启停操作队列
+        processPendingBeltOps();
     }
 }
 
@@ -975,7 +1010,7 @@ void CommonControl::playWarningOnce()
     //       导致设备故障停止后自动重启，形成无限循环。
     m_warningTimer->stop();
     m_isWarningPlaying = false;
-    startDeviceSequence();
+    startDeviceSequence(m_currentBeltNumber);
 }
 
 void CommonControl::stopWarningPlayback()
@@ -1000,13 +1035,28 @@ void CommonControl::stopWarningPlayback()
 
 // ✅ 2026-03-24 [Phase 7.48.88.8]: 获取当前序列执行状态
 // 用途：LogicControlPanel延迟加载时，通过此方法同步已错过的信号状态
+// ✅ 2026-03-25 [Phase 7.48.88.22]: 无参版本返回当前音频皮带的序列状态（向后兼容）
 QVariantMap CommonControl::getSequenceState() const
 {
+    return getSequenceState(m_currentBeltNumber);
+}
+
+// ✅ 2026-03-25 [Phase 7.48.88.22]: 按皮带号查询序列状态
+QVariantMap CommonControl::getSequenceState(int beltNumber) const
+{
     QVariantMap state;
-    state["isRunning"] = m_isSequenceRunning;
-    state["isStartup"] = m_isStartupSequence;
-    state["currentIndex"] = m_currentSequenceIndex;
-    state["totalCount"] = m_currentSequence.size();
+    BeltSequenceState *beltState = m_beltSequences.value(beltNumber, nullptr);
+    if (beltState) {
+        state["isRunning"] = beltState->isRunning;
+        state["isStartup"] = beltState->isStartup;
+        state["currentIndex"] = beltState->currentIndex;
+        state["totalCount"] = beltState->sequence.size();
+    } else {
+        state["isRunning"] = false;
+        state["isStartup"] = true;
+        state["currentIndex"] = 0;
+        state["totalCount"] = 0;
+    }
     state["isWarning"] = m_isWarningPlaying;
     state["isStopAudio"] = m_isStopAudioPlaying;
     return state;
@@ -1019,45 +1069,52 @@ bool CommonControl::isBeltRunning(int beltNumber) const
     return m_beltRunning.value(beltNumber, false);
 }
 
-void CommonControl::startDeviceSequence()
+// ✅ 2026-03-25 [Phase 7.48.88.22]: 重构为per-belt并行序列执行
+// 原因：旧的全局单一序列状态阻止多皮带并行，现在每条皮带有独立的序列状态和定时器
+void CommonControl::startDeviceSequence(int beltNumber)
 {
     if (!m_systemConfig) {
         qWarning() << "❌ CommonControl: 无法启动设备序列 - SystemConfig未设置";
         return;
     }
 
-    if (m_isSequenceRunning) {
-        qDebug() << "⚠️  CommonControl: 设备序列正在运行中，忽略新的启动请求";
+    // 使用传入的皮带号，0表示使用m_currentBeltNumber
+    int actualBelt = beltNumber > 0 ? beltNumber : m_currentBeltNumber;
+    if (actualBelt <= 0) actualBelt = 1;
+
+    // 检查该皮带是否已有活跃序列
+    BeltSequenceState *state = m_beltSequences.value(actualBelt, nullptr);
+    if (state && state->isRunning) {
+        qDebug() << "⚠️  CommonControl:" << actualBelt << "号皮带序列正在运行中，忽略新的启动请求";
         return;
     }
 
-    // ✅ 2026-03-21 [Phase 7.48.68]: 从 device_logic_configs 读取per-device启动序列
-    // 旧代码：m_currentSequence = m_systemConfig->startupSequence();
+    // 加载该皮带的启动序列
+    QStringList sequence;
     if (m_deviceConfigMgr) {
-        // 旧代码：QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(1);
-        // ✅ 2026-03-25 [Phase 7.48.88.10]: 使用 m_currentBeltNumber 替代硬编码1
-        // 原因：硬编码1导致所有皮带启动时都使用1号皮带的逻辑控制配置
-        int deviceId = m_currentBeltNumber > 0 ? m_currentBeltNumber : 1;
-        QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(deviceId);
-        qDebug() << "📖 CommonControl: 加载设备" << deviceId << "启动序列";
+        QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(actualBelt);
+        qDebug() << "📖 CommonControl: 加载设备" << actualBelt << "启动序列";
         QString seqStr = logicConfig.value("startup_sequence", "[]").toString();
         QJsonArray seqArray = QJsonDocument::fromJson(seqStr.toUtf8()).array();
-        m_currentSequence.clear();
         for (const QJsonValue &val : seqArray) {
-            m_currentSequence.append(val.toString());
+            sequence.append(val.toString());
         }
     } else {
-        m_currentSequence = m_systemConfig->startupSequence();
+        sequence = m_systemConfig->startupSequence();
     }
-    if (m_currentSequence.isEmpty()) {
-        qDebug() << "⚠️  CommonControl: 启动顺序为空，无需执行";
+    if (sequence.isEmpty()) {
+        qDebug() << "⚠️  CommonControl:" << actualBelt << "号皮带启动顺序为空，无需执行";
         return;
     }
 
-    qDebug() << "🚀 CommonControl: 开始执行启动顺序:" << m_currentSequence.join(" → ");
-    m_isStartupSequence = true;
-    m_isSequenceRunning = true;
-    m_currentSequenceIndex = 0;
+    // 获取或创建per-belt序列状态
+    state = getOrCreateBeltState(actualBelt);
+    state->sequence = sequence;
+    state->isStartup = true;
+    state->isRunning = true;
+    state->currentIndex = 0;
+
+    qDebug() << "🚀 CommonControl:" << actualBelt << "号皮带开始执行启动顺序:" << sequence.join(" → ");
 
     // 更新RuntimeTracker：正在松闸（启动前）
     if (m_runtimeTracker) {
@@ -1065,28 +1122,30 @@ void CommonControl::startDeviceSequence()
     }
 
     // 立即执行第一个设备
-    executeNextDeviceInSequence();
+    executeNextDeviceInSequence(actualBelt);
 }
 
-void CommonControl::stopDeviceSequence()
+// ✅ 2026-03-25 [Phase 7.48.88.22]: 重构为per-belt并行序列执行
+void CommonControl::stopDeviceSequence(int beltNumber)
 {
     if (!m_systemConfig) {
         qWarning() << "❌ CommonControl: 无法停止设备序列 - SystemConfig未设置";
         return;
     }
 
-    // 停止当前正在运行的序列
-    if (m_isSequenceRunning) {
-        qDebug() << "⏸️  CommonControl: 中断当前序列";
-        m_isSequenceRunning = false;
-        m_deviceSequenceTimer->stop();
+    // 使用传入的皮带号，0表示使用m_currentBeltNumber
+    int actualBelt = beltNumber > 0 ? beltNumber : m_currentBeltNumber;
+    if (actualBelt <= 0) actualBelt = 1;
+
+    // 停止该皮带正在运行的启动序列（如果有）
+    BeltSequenceState *state = m_beltSequences.value(actualBelt, nullptr);
+    if (state && state->isRunning) {
+        qDebug() << "⏸️  CommonControl: 中断" << actualBelt << "号皮带当前序列";
+        state->isRunning = false;
+        state->timer->stop();
     }
 
     // ✅ 2026-03-20 [Phase 7.48.59]: 取消所有正在运行的反馈检测定时器
-    // 原因：启动序列激活多个设备时，每个设备都有独立的反馈超时定时器。
-    //       当第一个设备失败触发 stopDeviceSequence() 时，其他设备的定时器仍在运行。
-    //       这些定时器逐个超时后又各自触发 stopDeviceSequence()，
-    //       导致同时有多个停止序列并发运行（日志中可见 [1/4] 2号电机 连续打印3次）。
     if (!m_feedbackChecks.isEmpty()) {
         QList<QString> activeDevices = m_feedbackChecks.keys();
         qDebug() << "⏹️  CommonControl: 取消" << activeDevices.size() << "个反馈检测定时器:" << activeDevices.join(", ");
@@ -1095,73 +1154,72 @@ void CommonControl::stopDeviceSequence()
         }
     }
 
-    // ✅ 2026-03-21 [Phase 7.48.68]: 从 device_logic_configs 读取per-device停止序列
-    // 旧代码：m_currentSequence = m_systemConfig->stopSequence();
+    // 加载该皮带的停止序列
+    QStringList sequence;
     if (m_deviceConfigMgr) {
-        // 旧代码：QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(1);
-        // ✅ 2026-03-25 [Phase 7.48.88.10]: 使用 m_currentBeltNumber 替代硬编码1
-        // 原因：硬编码1导致所有皮带停止时都使用1号皮带的逻辑控制配置
-        int deviceId = m_currentBeltNumber > 0 ? m_currentBeltNumber : 1;
-        QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(deviceId);
-        qDebug() << "📖 CommonControl: 加载设备" << deviceId << "停止序列";
+        QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(actualBelt);
+        qDebug() << "📖 CommonControl: 加载设备" << actualBelt << "停止序列";
         QString seqStr = logicConfig.value("stop_sequence", "[]").toString();
         QJsonArray seqArray = QJsonDocument::fromJson(seqStr.toUtf8()).array();
-        m_currentSequence.clear();
         for (const QJsonValue &val : seqArray) {
-            m_currentSequence.append(val.toString());
+            sequence.append(val.toString());
         }
     } else {
-        m_currentSequence = m_systemConfig->stopSequence();
+        sequence = m_systemConfig->stopSequence();
     }
-    if (m_currentSequence.isEmpty()) {
-        qDebug() << "⚠️  CommonControl: 停止顺序为空，无需执行";
-        m_isFaultStop = false;  // 重置故障停止标志
+    if (sequence.isEmpty()) {
+        qDebug() << "⚠️  CommonControl:" << actualBelt << "号皮带停止顺序为空，无需执行";
+        m_isFaultStop = false;
         return;
     }
 
     if (m_isFaultStop) {
-        qDebug() << "🛑 CommonControl: 故障停止，直接执行停止顺序（跳过停车预警）";
-        m_isFaultStop = false;  // 重置故障停止标志
+        qDebug() << "🛑 CommonControl: 故障停止" << actualBelt << "号皮带（跳过停车预警）";
+        m_isFaultStop = false;
     } else {
-        qDebug() << "🛑 CommonControl: 开始执行停止顺序:" << m_currentSequence.join(" → ");
+        qDebug() << "🛑 CommonControl:" << actualBelt << "号皮带执行停止顺序:" << sequence.join(" → ");
     }
 
-    m_isStartupSequence = false;
-    m_isSequenceRunning = true;
-    m_currentSequenceIndex = 0;
+    // 获取或创建per-belt序列状态
+    state = getOrCreateBeltState(actualBelt);
+    state->sequence = sequence;
+    state->isStartup = false;
+    state->isRunning = true;
+    state->currentIndex = 0;
 
     // ✅ 2026-03-21 [Phase 7.48.70]: 发出停止序列开始信号（用于QML时间轴可视化停车过程）
     emit stopSequenceStarted();
 
     // 立即执行第一个设备
-    executeNextDeviceInSequence();
+    executeNextDeviceInSequence(actualBelt);
 }
 
-// ✅ 2026-03-21 [Phase 7.48.72]: 重构为"前等待"语义
-// 含义："张紧控制启动延时=5s"表示预警结束后等5秒才激活张紧
-// 旧代码（后等待）：先激活设备，再用该设备的延时等待下一设备
-// 新代码（前等待）：先用当前设备的延时等待，再激活当前设备
-void CommonControl::executeNextDeviceInSequence()
+// ✅ 2026-03-25 [Phase 7.48.88.22]: 重构为per-belt并行 + "前等待"语义
+// 原因：旧的全局单一状态变量阻止多皮带并行执行启停序列
+void CommonControl::executeNextDeviceInSequence(int beltNumber)
 {
-    if (!m_isSequenceRunning || m_currentSequenceIndex >= m_currentSequence.size()) {
+    BeltSequenceState *state = m_beltSequences.value(beltNumber, nullptr);
+    if (!state || !state->isRunning || state->currentIndex >= state->sequence.size()) {
         // 序列执行完成
-        m_isSequenceRunning = false;
-        qDebug() << "✅ CommonControl: 设备序列执行完成";
+        if (state) {
+            state->isRunning = false;
+        }
+        qDebug() << "✅ CommonControl:" << beltNumber << "号皮带设备序列执行完成";
 
         // ✅ 2026-03-25 [Phase 7.48.88.21]: 更新按皮带号运行状态
-        if (m_isStartupSequence) {
-            m_beltRunning[m_currentBeltNumber] = true;
-            emit beltRunningChanged(m_currentBeltNumber, true);
-            qDebug() << "🟢 CommonControl:" << m_currentBeltNumber << "号皮带已启动运行";
+        if (state && state->isStartup) {
+            m_beltRunning[beltNumber] = true;
+            emit beltRunningChanged(beltNumber, true);
+            qDebug() << "🟢 CommonControl:" << beltNumber << "号皮带已启动运行";
         } else {
-            m_beltRunning[m_currentBeltNumber] = false;
-            emit beltRunningChanged(m_currentBeltNumber, false);
-            qDebug() << "🔴 CommonControl:" << m_currentBeltNumber << "号皮带已停止";
+            m_beltRunning[beltNumber] = false;
+            emit beltRunningChanged(beltNumber, false);
+            qDebug() << "🔴 CommonControl:" << beltNumber << "号皮带已停止";
         }
 
         // 更新RuntimeTracker：序列完成后的状态
         if (m_runtimeTracker) {
-            if (m_isStartupSequence) {
+            if (state && state->isStartup) {
                 m_runtimeTracker->onRunning();
             } else {
                 m_runtimeTracker->onBrakeEngaging();
@@ -1175,8 +1233,47 @@ void CommonControl::executeNextDeviceInSequence()
         return;
     }
 
-    // 读取即将激活的设备的延时（前等待）
-    const QString deviceName = m_currentSequence[m_currentSequenceIndex];
+    // 读取即将激活的设备的延时（前等待语义）
+    const QString deviceName = state->sequence[state->currentIndex];
+    int delayMs = readDeviceDelay(deviceName, beltNumber, state->isStartup);
+
+    qDebug() << QString("  [%1/%2] %3号皮带 等待 %4ms 后%5设备: %6")
+                    .arg(state->currentIndex + 1)
+                    .arg(state->sequence.size())
+                    .arg(beltNumber)
+                    .arg(delayMs)
+                    .arg(state->isStartup ? "启动" : "停止")
+                    .arg(deviceName);
+    state->timer->start(delayMs);
+}
+
+// ✅ 2026-03-25 [Phase 7.48.88.22]: per-belt定时器回调
+void CommonControl::onBeltSequenceTimer(int beltNumber)
+{
+    BeltSequenceState *state = m_beltSequences.value(beltNumber, nullptr);
+    if (!state || !state->isRunning || state->currentIndex >= state->sequence.size()) {
+        return;
+    }
+
+    const QString deviceName = state->sequence[state->currentIndex];
+    qDebug() << QString("  [%1/%2] %3号皮带 %4设备: %5")
+                    .arg(state->currentIndex + 1)
+                    .arg(state->sequence.size())
+                    .arg(beltNumber)
+                    .arg(state->isStartup ? "启动" : "停止")
+                    .arg(deviceName);
+
+    // 激活/停用设备
+    activateDevice(deviceName, state->isStartup);
+    state->currentIndex++;
+
+    // 继续执行下一个
+    executeNextDeviceInSequence(beltNumber);
+}
+
+// ✅ 2026-03-25 [Phase 7.48.88.22]: 读取设备延时配置（提取为独立方法）
+int CommonControl::readDeviceDelay(const QString &deviceName, int beltNumber, bool isStartup)
+{
     int delayMs = 1000;  // 默认1秒
 
     if (m_deviceConfigMgr) {
@@ -1187,61 +1284,76 @@ void CommonControl::executeNextDeviceInSequence()
         auto brakeMatch = brakeRe.match(deviceName);
         if (motorMatch.hasMatch()) {
             int idx = motorMatch.captured(1).toInt() - 1;
-            QVariantMap cfg = m_deviceConfigMgr->loadMotorConfig(1, idx, 0);
+            // ✅ 2026-03-25 [Phase 7.48.88.22]: 使用 beltNumber 替代硬编码1
+            QVariantMap cfg = m_deviceConfigMgr->loadMotorConfig(beltNumber, idx, 0);
             delaySec = cfg.value("startup_delay", 8).toDouble();
         } else if (brakeMatch.hasMatch()) {
             int idx = brakeMatch.captured(1).toInt() - 1;
-            QVariantMap cfg = m_deviceConfigMgr->loadBrakeConfig(1, idx);
-            if (m_isStartupSequence) {
+            QVariantMap cfg = m_deviceConfigMgr->loadBrakeConfig(beltNumber, idx);
+            if (isStartup) {
                 delaySec = cfg.value("release_startup_delay", 1.0).toDouble();
             } else {
                 delaySec = cfg.value("brake_startup_delay", 1.0).toDouble();
             }
         } else if (deviceName == "张紧控制" || deviceName == "张紧") {
-            QVariantMap cfg = m_deviceConfigMgr->loadTensionConfig(1, 0);
+            QVariantMap cfg = m_deviceConfigMgr->loadTensionConfig(beltNumber, 0);
             delaySec = cfg.value("startup_delay", 5).toDouble();
         }
         delayMs = static_cast<int>(delaySec * 1000);
     } else if (m_systemConfig) {
-        QVariantList delays = m_isStartupSequence ?
+        // 回退到全局配置
+        QVariantList delays = isStartup ?
             m_systemConfig->startupDelays() : m_systemConfig->stopDelays();
-        if (m_currentSequenceIndex < delays.size()) {
-            delayMs = static_cast<int>(delays[m_currentSequenceIndex].toDouble() * 1000);
-        }
+        // 无法按索引读取（per-belt state不共享索引），使用默认值
+        delayMs = 1000;
     }
 
     if (delayMs < 500) delayMs = 500;
     if (delayMs > 30000) delayMs = 30000;
-    qDebug() << QString("  [%1/%2] 等待 %3ms 后%4设备: %5")
-                    .arg(m_currentSequenceIndex + 1)
-                    .arg(m_currentSequence.size())
-                    .arg(delayMs)
-                    .arg(m_isStartupSequence ? "启动" : "停止")
-                    .arg(deviceName);
-    m_deviceSequenceTimer->start(delayMs);
+    return delayMs;
 }
 
-void CommonControl::onDeviceSequenceTimer()
+// ✅ 2026-03-25 [Phase 7.48.88.22]: 获取或创建per-belt序列状态
+CommonControl::BeltSequenceState* CommonControl::getOrCreateBeltState(int beltNumber)
 {
-    // ✅ 2026-03-21 [Phase 7.48.72]: 定时器到期，激活当前设备（前等待语义）
-    if (!m_isSequenceRunning || m_currentSequenceIndex >= m_currentSequence.size()) {
-        return;
+    BeltSequenceState *state = m_beltSequences.value(beltNumber, nullptr);
+    if (!state) {
+        state = new BeltSequenceState();
+        state->beltNumber = beltNumber;
+        state->currentIndex = 0;
+        state->isRunning = false;
+        state->isStartup = true;
+        state->timer = new QTimer(this);
+        state->timer->setSingleShot(true);
+        connect(state->timer, &QTimer::timeout, this, [this, beltNumber]() {
+            onBeltSequenceTimer(beltNumber);
+        });
+        m_beltSequences[beltNumber] = state;
     }
-
-    const QString deviceName = m_currentSequence[m_currentSequenceIndex];
-    qDebug() << QString("  [%1/%2] %3设备: %4")
-                    .arg(m_currentSequenceIndex + 1)
-                    .arg(m_currentSequence.size())
-                    .arg(m_isStartupSequence ? "启动" : "停止")
-                    .arg(deviceName);
-
-    // 激活/停用设备
-    activateDevice(deviceName, m_isStartupSequence);
-    m_currentSequenceIndex++;
-
-    // 继续执行下一个
-    executeNextDeviceInSequence();
+    return state;
 }
+
+// ✅ 2026-03-25 [Phase 7.48.88.22]: 处理待处理的启停操作队列
+void CommonControl::processPendingBeltOps()
+{
+    if (m_pendingBeltOps.isEmpty()) return;
+    if (m_isWarningPlaying || m_isStopAudioPlaying) return;  // 音频还在忙
+
+    auto op = m_pendingBeltOps.takeFirst();
+    int pendingBelt = op.first;
+    bool isStart = op.second;
+
+    qDebug() << "🔄 CommonControl: 处理待处理操作 -" << (isStart ? "启动" : "停止") << pendingBelt << "号皮带";
+
+    if (isStart) {
+        startBelt(pendingBelt);
+    } else {
+        stopBelt(pendingBelt);
+    }
+}
+
+// ❌ 2026-03-25 [Phase 7.48.88.22]: 废弃旧的全局executeNextDeviceInSequence和onDeviceSequenceTimer
+// 原因：已被per-belt版本替代（带beltNumber参数的版本 + onBeltSequenceTimer）
 
 void CommonControl::activateDevice(const QString &deviceName, bool activate)
 {
