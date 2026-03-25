@@ -12,6 +12,9 @@ Rectangle {
 
     property var virtualKeyboardPopup: null
 
+    // ✅ 2026-03-25 [Phase 7.48.88.16.3]: Flickable 引用，用于虚拟键盘弹出时自动滚动
+    property var flickableParent: null
+
     // ✅ 2026-02-06 [参数持久化]: 配置对象（由父组件传递）
     property var networkConfig: null
 
@@ -92,6 +95,19 @@ Rectangle {
         // ✅ 2026-02-06 [参数持久化]: 添加值变化信号
         signal fieldValueChanged(string newValue)
 
+        // ✅ 2026-03-25 [Phase 7.48.88.16.3]: 延迟滚动定时器，等待键盘完全弹出
+        Timer {
+            id: scrollTimer
+            interval: 300
+            repeat: false
+            property var targetItem: null
+            onTriggered: {
+                if (targetItem && root.flickableParent && root.flickableParent.ensureVisible) {
+                    root.flickableParent.ensureVisible(targetItem)
+                }
+            }
+        }
+
         Layout.fillWidth: true
         spacing: 10
 
@@ -121,6 +137,14 @@ Rectangle {
             // ✅ 2026-02-06 [参数持久化]: 发送值变化信号
             onTextChanged: {
                 fieldValueChanged(text)
+            }
+
+            // ✅ 2026-03-25 [Phase 7.48.88.16.3]: 虚拟键盘弹出时自动滚动到输入框
+            onActiveFocusChanged: {
+                if (activeFocus && root.flickableParent && root.flickableParent.ensureVisible) {
+                    scrollTimer.targetItem = inputField
+                    scrollTimer.start()
+                }
             }
         }
 

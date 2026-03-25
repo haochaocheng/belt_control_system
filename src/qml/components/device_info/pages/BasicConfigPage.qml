@@ -320,10 +320,8 @@ Rectangle {
                     // ✅ 2026-02-06 [参数持久化]: 传递配置对象
                     if (item) {
                         item.networkConfig = Qt.binding(function() { return root.networkParams })
-                        // ✅ 2026-03-25 [Phase 7.48.88.16]: 传递 Flickable 引用
-                        if (item.hasOwnProperty("flickableParent")) {
-                            item.flickableParent = scrollView
-                        }
+                        // ✅ 2026-03-25 [Phase 7.48.88.16.3]: 传递 Flickable 引用，网络参数也支持自动滚动
+                        item.flickableParent = scrollView
                     }
                 }
 
