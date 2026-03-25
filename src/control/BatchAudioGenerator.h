@@ -93,6 +93,9 @@ public slots:
      */
     void exportLog(const QString &filePath);
 
+    // ✅ 2026-03-25 [Phase 7.48.88.14]: 清除指定分类的已生成语音文件（用于皮带名称变更后重新生成）
+    Q_INVOKABLE int clearCategoryFiles(const QStringList &categories);
+
     /**
      * @brief 生成所有说话人ID测试语音
      * ✅ 2026-02-27 00:25 [Phase 7.47.23]: 新增功能

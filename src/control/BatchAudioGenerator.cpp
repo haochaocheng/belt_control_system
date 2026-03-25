@@ -1097,3 +1097,125 @@ void BatchAudioGenerator::generateAllSpeakerSamples()
 
     emit finished(m_failedFiles == 0, "说话人测试语音生成完成");
 }
+
+// ✅ 2026-03-25 [Phase 7.48.88.14]: 清除指定分类的已生成语音文件
+// 原因：clearCategoryFiles 定义在 TTSBatchGenerator 中，但 QML 绑定的是 BatchAudioGenerator
+// 解决：在 BatchAudioGenerator 中实现相同功能
+int BatchAudioGenerator::clearCategoryFiles(const QStringList &categories)
+{
+    int deletedCount = 0;
+
+    // 辅助lambda：删除目录下匹配过滤器的文件
+    auto deleteFilesInDir = [&](const QString &dirPath, const QStringList &filters) {
+        QDir dir(dirPath);
+        if (!dir.exists()) return;
+        QStringList files = dir.entryList(filters, QDir::Files);
+        for (const QString &file : files) {
+            if (dir.remove(file)) {
+                deletedCount++;
+                emit logMessage("info", QString("已删除: %1/%2").arg(dirPath, file));
+            }
+        }
+    };
+
+    // 辅助lambda：删除目录下包含任一关键字的音频文件
+    auto deleteFilesByKeywords = [&](const QString &dirPath, const QStringList &keywords) {
+        QDir dir(dirPath);
+        if (!dir.exists()) return;
+        QStringList files = dir.entryList(QStringList() << "*.wav" << "*.mp3", QDir::Files);
+        for (const QString &file : files) {
+            for (const QString &kw : keywords) {
+                if (file.contains(kw)) {
+                    if (dir.remove(file)) {
+                        deletedCount++;
+                        emit logMessage("info", QString("已删除: %1/%2").arg(dirPath, file));
+                    }
+                    break;
+                }
+            }
+        }
+    };
+
+    for (const auto &engine : m_engines) {
+        QString engineDir = m_outputBaseDir + "/" + engine.outputFolder;
+        QDir engineDirObj(engineDir);
+        if (!engineDirObj.exists()) {
+            emit logMessage("warning", QString("引擎目录不存在: %1").arg(engineDir));
+            continue;
+        }
+
+        // 遍历皮带目录 ({N}#PD)
+        for (int belt : m_beltNumbers) {
+            QString beltDir = engineDir + "/" + QString("%1#PD").arg(belt);
+
+            // 1. 开关量输入保护
+            if (categories.contains("switchInput")) {
+                deleteFilesByKeywords(beltDir, {
+                    "急停", "跑偏", "撕裂", "烟雾", "温度保护", "堆煤", "拉绳", "断带"
+                });
+            }
+
+            // 2. 模拟量输入保护
+            if (categories.contains("analogInput")) {
+                deleteFilesByKeywords(beltDir, {
+                    "速度超速", "低速打滑", "张力上限", "张力下限",
+                    "电流上限", "电流下限", "振动上限", "皮带温度",
+                    "功率上限", "堆煤高度", "速度上限", "速度下限",
+                    "环境温度", "环境湿度", "粉尘浓度", "甲烷浓度",
+                    "一氧化碳", "氧气浓度", "风速", "水位", "负压"
+                });
+            }
+
+            // 3. 电机保护
+            if (categories.contains("motor")) {
+                deleteFilesByKeywords(beltDir, {"号电机"});
+            }
+
+            // 4. 制动器保护
+            if (categories.contains("brake")) {
+                deleteFilesByKeywords(beltDir, {"号制动器", "制动器"});
+            }
+
+            // 5. 张紧控制保护
+            if (categories.contains("tension")) {
+                deleteFilesByKeywords(beltDir, {"号张紧装置"});
+            }
+
+            // 6. 沿线点位保护
+            if (categories.contains("linePosition")) {
+                deleteFilesByKeywords(beltDir, {"号沿线"});
+            }
+
+            // 7. 皮带操作状态
+            if (categories.contains("beltOperation")) {
+                deleteFilesByKeywords(beltDir, {
+                    "启车", "停车", "皮带启动", "皮带停车", "皮带运行",
+                    "皮带通讯", "皮带启动请注意", "张紧装置启动", "张紧装置失败"
+                });
+            }
+
+            // 8. 系统/通讯状态
+            if (categories.contains("systemStatus")) {
+                deleteFilesByKeywords(beltDir, {
+                    "通信失败", "通讯失败", "终端离线", "继电器", "远程急停",
+                    "集控停车", "集控起车"
+                });
+            }
+        }
+
+        // 9. 系统提示音：system/ 目录下所有文件
+        if (categories.contains("systemSound")) {
+            QString sysDir = engineDir + "/system";
+            deleteFilesInDir(sysDir, QStringList() << "*.wav" << "*.mp3");
+        }
+
+        // 10. 模块在线状态：Status/ 目录下所有文件
+        if (categories.contains("moduleStatus")) {
+            QString statusDir = engineDir + "/Status";
+            deleteFilesInDir(statusDir, QStringList() << "*.wav" << "*.mp3");
+        }
+    }
+
+    emit logMessage("info", QString("清除完成，共删除 %1 个文件").arg(deletedCount));
+    return deletedCount;
+}
