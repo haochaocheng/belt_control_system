@@ -91,7 +91,9 @@ Rectangle {
             // 3. 计算被遮挡距离
             // ✅ 2026-03-25 [Phase 7.48.88.16.3]: 中文拼音输入法有候选词栏，额外增加高度补偿
             // Qt.inputMethod.keyboardRectangle 可能不包含候选词栏高度
-            var candidateBarHeight = 50  // 中文候选词栏高度补偿
+            // 旧代码：var candidateBarHeight = 50  // 补偿不足，本机名称仍被遮挡一半
+            // ✅ 2026-03-25 [Phase 7.48.88.16.4]: 增大候选词栏补偿到100px
+            var candidateBarHeight = 100  // 中文候选词栏高度补偿
             var margin = 8  // 输入框与键盘之间预留间距
             var overlap = itemBottomY + margin + candidateBarHeight - keyboardTopY
 
@@ -333,10 +335,11 @@ Rectangle {
             }
 
             // 底部填充空间
-            // ✅ 2026-03-25 [Phase 7.48.88.16]: 增加底部填充到350px，确保最后的输入框可以滚动到虚拟键盘上方
+            // 旧代码：Layout.preferredHeight: 350  // 网关输入框滚动空间不足
+            // ✅ 2026-03-25 [Phase 7.48.88.16.4]: 增加到500px，确保网关等底部输入框有足够滚动空间
             Item {
                 Layout.fillHeight: true
-                Layout.preferredHeight: 350
+                Layout.preferredHeight: 500
             }
         }
     }
