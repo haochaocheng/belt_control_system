@@ -814,7 +814,12 @@ void CommonControl::startWarningPlayback(int beltNumber)
     // ❌ 2026-01-23 00:05 [TTS网络传输] 不再需要音频文件路径（改用 TTS 生成）
     // 保留此代码用于 TTS 不可用时的备选方案
     // 获取音频文件路径
-    m_currentAudioPath = getAudioPath(beltNumber, "启动");
+    // 旧代码：m_currentAudioPath = getAudioPath(beltNumber, "启动");
+    // ✅ 2026-03-25 [Phase 7.48.88.10]: 改用"启车"（行业用语），同时兼容旧文件名"启动"
+    m_currentAudioPath = getAudioPath(beltNumber, "启车");
+    if (m_currentAudioPath.isEmpty()) {
+        m_currentAudioPath = getAudioPath(beltNumber, "启动");  // 兼容旧文件名
+    }
     if (m_currentAudioPath.isEmpty()) {
         qDebug() << "⚠️ CommonControl: 未找到" << beltNumber << "号皮带的启动音频，将使用 TTS 生成";
         // ✅ 不再 return，继续使用 TTS
@@ -866,16 +871,22 @@ void CommonControl::playWarningOnce()
     // 旧逻辑：TTS代码已注释 + 音频文件路径错误 → 无法播放 → onPlaybackFinished永不触发 → 设备序列永不启动
     // 新逻辑：优先预制音频文件 → TTS合成 → 直接启动（保证设备序列一定执行）
 
-    // 构造 TTS 预警文字：使用本机名称（例如 "1号皮带准备启动，注意安全"）
-    QString warningText;
-    if (m_systemConfig && !m_systemConfig->localDeviceName().isEmpty()) {
-        // ✅ 用本机名称（基本参数设置中配置）
-        warningText = m_systemConfig->localDeviceName() + "准备启动，注意安全";
-    } else {
-        // 备选：用皮带编号中文
-        QString chineseNumber = numberToChinese(m_currentBeltNumber);
-        warningText = QString("%1号皮带准备启动，注意安全").arg(chineseNumber);
+    // ✅ 2026-03-25 [Phase 7.48.88.10]: 检查预警是否已停止，防止singleShot延迟调用产生残留TTS合成
+    // 原因：onPlaybackFinished中QTimer::singleShot(300, playWarningOnce)排队后，
+    //       warningTimer可能在300ms内到期并调用stopWarningPlayback()，
+    //       但singleShot仍会触发playWarningOnce()，m_currentAudioPath已被清空，
+    //       落入TTS合成分支产生延迟半截语音
+    if (!m_isWarningPlaying) {
+        qDebug() << "⚠️ CommonControl: 预警已停止，跳过playWarningOnce()";
+        return;
     }
+
+    // 构造 TTS 预警文字：统一使用当前皮带号
+    // 旧代码：使用 localDeviceName()（本机名称），导致多皮带场景下文字与实际启动皮带不匹配
+    // ✅ 2026-03-25 [Phase 7.48.88.10]: 统一使用 m_currentBeltNumber，文字改为"启车"（行业用语）
+    QString warningText;
+    QString chineseNumber = numberToChinese(m_currentBeltNumber);
+    warningText = QString("%1号皮带准备启车，请注意安全").arg(chineseNumber);
 
     // ① 优先：使用预制音频文件（批量生成的）
     if (!m_currentAudioPath.isEmpty() && QFile::exists(m_currentAudioPath)) {
