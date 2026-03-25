@@ -62,30 +62,30 @@ Rectangle {
         boundsBehavior: Flickable.StopAtBounds
 
         // ✅ 2026-03-25 [Phase 7.48.88.16]: 虚拟键盘弹出时自动滚动输入框到可见区域
+        // 旧代码：用 Flickable 高度减键盘高度计算可见区域 → 滚动量过大
+        // ✅ 2026-03-25 [Phase 7.48.88.16.1]: 改用窗口坐标计算，精确定位
         function ensureVisible(item) {
             if (!item) return
-            // 将输入框坐标映射到 Flickable 内容坐标
-            var mappedPos = item.mapToItem(scrollView.contentItem, 0, 0)
-            var itemY = mappedPos.y
-            var itemHeight = item.height
-            // 获取虚拟键盘高度
-            var keyboardRect = Qt.inputMethod.keyboardRectangle
-            var keyboardHeight = keyboardRect.height / Screen.devicePixelRatio
-            // 可见区域高度 = Flickable高度 - 键盘高度
-            var visibleHeight = scrollView.height - keyboardHeight
-            var margin = 60  // 额外边距，确保输入框不紧贴键盘顶部
 
-            // 输入框底部超出可见区域 → 向上滚动
-            if (itemY + itemHeight + margin > scrollView.contentY + visibleHeight) {
-                var targetY = itemY + itemHeight + margin - visibleHeight
+            // 1. 获取键盘顶部在窗口中的Y坐标
+            var keyboardRect = Qt.inputMethod.keyboardRectangle
+            if (keyboardRect.height <= 0) return  // 键盘未弹出
+            var keyboardTopY = keyboardRect.y / Screen.devicePixelRatio
+
+            // 2. 获取输入框底部在窗口中的Y坐标
+            var itemGlobal = item.mapToGlobal(0, 0)
+            var itemBottomY = itemGlobal.y / Screen.devicePixelRatio + item.height
+
+            // 3. 计算输入框被遮挡的距离
+            var margin = 10  // 输入框与键盘之间的间距
+            var overlap = itemBottomY + margin - keyboardTopY
+
+            // 4. 只在被遮挡时滚动，且只滚动刚好够的距离
+            if (overlap > 0) {
+                var targetY = scrollView.contentY + overlap
                 targetY = Math.min(targetY, scrollView.contentHeight - scrollView.height)
+                targetY = Math.max(0, targetY)
                 scrollAnim.to = targetY
-                scrollAnim.start()
-            }
-            // 输入框顶部超出可见区域 → 向下滚动
-            else if (itemY - margin < scrollView.contentY) {
-                var targetY2 = Math.max(0, itemY - margin)
-                scrollAnim.to = targetY2
                 scrollAnim.start()
             }
         }

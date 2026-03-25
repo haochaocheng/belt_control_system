@@ -200,6 +200,19 @@ Rectangle {
         signal fieldValueChanged(string newValue)
         signal fieldComboChanged(int newIndex)
 
+        // ✅ 2026-03-25 [Phase 7.48.88.16.1]: 延迟滚动定时器，等待键盘完全弹出
+        Timer {
+            id: scrollTimer
+            interval: 300
+            repeat: false
+            property var targetItem: null
+            onTriggered: {
+                if (targetItem && root.flickableParent && root.flickableParent.ensureVisible) {
+                    root.flickableParent.ensureVisible(targetItem)
+                }
+            }
+        }
+
         Layout.fillWidth: true
         spacing: 10
 
@@ -244,12 +257,11 @@ Rectangle {
             }
 
             // ✅ 2026-03-25 [Phase 7.48.88.16]: 虚拟键盘弹出时自动滚动到输入框
+            // ✅ 2026-03-25 [Phase 7.48.88.16.1]: 延迟200ms等待键盘完全弹出后再计算
             onActiveFocusChanged: {
                 if (activeFocus && root.flickableParent && root.flickableParent.ensureVisible) {
-                    // 延迟100ms等待虚拟键盘完成弹出动画后再计算滚动位置
-                    Qt.callLater(function() {
-                        root.flickableParent.ensureVisible(inputField)
-                    })
+                    scrollTimer.targetItem = inputField
+                    scrollTimer.start()
                 }
             }
 
