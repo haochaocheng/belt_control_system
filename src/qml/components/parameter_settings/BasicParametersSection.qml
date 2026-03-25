@@ -126,11 +126,18 @@ Rectangle {
                 }
             }
 
+            // 旧代码：comboCurrentIndex: 0  // 硬编码，不绑定systemConfig，修改后无法保存
+            // ✅ 2026-03-25 [Phase 7.48.88.17]: 绑定systemConfig，支持保存和回显
             ParameterRow {
                 label: "速度选择"
                 isComboBox: true
                 comboModel: ["模拟", "电平", "频率"]
-                comboCurrentIndex: 0
+                comboCurrentIndex: systemConfig ? (systemConfig.speedSelection || 0) : 0
+                onFieldComboChanged: function(newIndex) {
+                    if (systemConfig) {
+                        systemConfig.speedSelection = newIndex
+                    }
+                }
             }
 
             ParameterRow {
@@ -141,32 +148,60 @@ Rectangle {
                 dateTimePickerPopup: root.dateTimePopup
             }
 
+            // 旧代码：comboCurrentIndex: 0  // 硬编码，不绑定systemConfig
+            // ✅ 2026-03-25 [Phase 7.48.88.17]: 绑定systemConfig，支持保存和回显
             ParameterRow {
                 label: "前级连锁"
                 isComboBox: true
                 comboModel: ["连锁", "解除"]
-                comboCurrentIndex: 0
+                comboCurrentIndex: systemConfig ? (systemConfig.frontInterlock || 0) : 0
+                onFieldComboChanged: function(newIndex) {
+                    if (systemConfig) {
+                        systemConfig.frontInterlock = newIndex
+                    }
+                }
             }
 
+            // 旧代码：comboCurrentIndex: 0
+            // ✅ 2026-03-25 [Phase 7.48.88.17]: 绑定systemConfig
             ParameterRow {
                 label: "后继连锁"
                 isComboBox: true
                 comboModel: ["连锁", "解除"]
-                comboCurrentIndex: 0
+                comboCurrentIndex: systemConfig ? (systemConfig.rearInterlock || 0) : 0
+                onFieldComboChanged: function(newIndex) {
+                    if (systemConfig) {
+                        systemConfig.rearInterlock = newIndex
+                    }
+                }
             }
 
+            // 旧代码：comboCurrentIndex: 0
+            // ✅ 2026-03-25 [Phase 7.48.88.17]: 绑定systemConfig
             ParameterRow {
                 label: "终端类型"
                 isComboBox: true
                 comboModel: ["智能", "普通"]
-                comboCurrentIndex: 0
+                comboCurrentIndex: systemConfig ? (systemConfig.terminalType || 0) : 0
+                onFieldComboChanged: function(newIndex) {
+                    if (systemConfig) {
+                        systemConfig.terminalType = newIndex
+                    }
+                }
             }
 
+            // 旧代码：comboCurrentIndex: 0
+            // ✅ 2026-03-25 [Phase 7.48.88.17]: 绑定systemConfig
             ParameterRow {
                 label: "终端投入"
                 isComboBox: true
                 comboModel: ["投入", "取消"]
-                comboCurrentIndex: 0
+                comboCurrentIndex: systemConfig ? (systemConfig.terminalEnabled || 0) : 0
+                onFieldComboChanged: function(newIndex) {
+                    if (systemConfig) {
+                        systemConfig.terminalEnabled = newIndex
+                    }
+                }
             }
 
             // ✅ 2026-03-20 [Phase 7.48.60]: 皮带音频来源配置
