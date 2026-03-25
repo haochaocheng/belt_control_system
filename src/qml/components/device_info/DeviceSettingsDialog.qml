@@ -2219,6 +2219,22 @@ Item {
                         case 7:  // 串口控制
                             // TODO: 调用串口控制的保存函数
                             break
+                        // ✅ 2026-03-25 [Phase 7.48.88.10]: 补充 case 8-11 的保存逻辑
+                        // 旧：缺少 case 8-11，导致逻辑控制等面板保存时走到 default 分支，saveToConfig 从未被调用
+                        case 8:  // CAN控制
+                            // TODO: 调用CAN控制的保存函数
+                            break
+                        case 9:  // TCP控制
+                            // TODO: 调用TCP控制的保存函数
+                            break
+                        case 10:  // MQTT控制
+                            // TODO: 调用MQTT控制的保存函数
+                            break
+                        case 11:  // 逻辑控制
+                            if (logicControlPageLoader.item && typeof logicControlPageLoader.item.saveToConfig === "function") {
+                                logicControlPageLoader.item.saveToConfig()
+                            }
+                            break
                         default:
                             console.log("⚠️ [DeviceSettingsDialog] 未知分类:", root.currentCategory)
                             break
