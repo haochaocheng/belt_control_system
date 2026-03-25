@@ -491,7 +491,11 @@ Rectangle {
         if (seq.length >= 10) return
         seq.push(deviceName)
         delays.push(defaultDelay)
-        if (currentTab === 0) { startupSeq = seq.slice(); startupDelays = delays.slice() }
+        if (currentTab === 0) {
+            startupSeq = seq.slice(); startupDelays = delays.slice()
+            // ✅ 2026-03-25 [Phase 7.48.88.10]: 启动序列变更自动同步停止序列（反转）
+            reverseToStop()
+        }
         else { stopSeq = seq.slice(); stopDelays = delays.slice() }
     }
 
@@ -501,7 +505,11 @@ Rectangle {
         if (index < 0 || index >= seq.length) return
         seq.splice(index, 1)
         delays.splice(index, 1)
-        if (currentTab === 0) { startupSeq = seq.slice(); startupDelays = delays.slice() }
+        if (currentTab === 0) {
+            startupSeq = seq.slice(); startupDelays = delays.slice()
+            // ✅ 2026-03-25 [Phase 7.48.88.10]: 启动序列变更自动同步停止序列（反转）
+            reverseToStop()
+        }
         else { stopSeq = seq.slice(); stopDelays = delays.slice() }
     }
 
@@ -526,7 +534,11 @@ Rectangle {
         if (fromIndex < 0 || fromIndex >= seq.length || toIndex < 0 || toIndex >= seq.length) return
         var tmpName = seq[fromIndex]; seq[fromIndex] = seq[toIndex]; seq[toIndex] = tmpName
         var tmpDelay = delays[fromIndex]; delays[fromIndex] = delays[toIndex]; delays[toIndex] = tmpDelay
-        if (currentTab === 0) { startupSeq = seq.slice(); startupDelays = delays.slice() }
+        if (currentTab === 0) {
+            startupSeq = seq.slice(); startupDelays = delays.slice()
+            // ✅ 2026-03-25 [Phase 7.48.88.10]: 启动序列变更自动同步停止序列（反转）
+            reverseToStop()
+        }
         else { stopSeq = seq.slice(); stopDelays = delays.slice() }
     }
 
