@@ -13,6 +13,9 @@ Rectangle {
     // External popup references (set by parent)
     property var dateTimePopup: null
 
+    // ✅ 2026-03-25 [Phase 7.48.88.16]: Flickable 引用，用于虚拟键盘弹出时自动滚动
+    property var flickableParent: null
+
     // ✅ 2026-02-06 [参数持久化]: 配置对象（由父组件传递）
     property var systemConfig: null
 
@@ -237,6 +240,16 @@ Rectangle {
             onTextChanged: {
                 if (!isDateTime) {
                     fieldValueChanged(text)
+                }
+            }
+
+            // ✅ 2026-03-25 [Phase 7.48.88.16]: 虚拟键盘弹出时自动滚动到输入框
+            onActiveFocusChanged: {
+                if (activeFocus && root.flickableParent && root.flickableParent.ensureVisible) {
+                    // 延迟100ms等待虚拟键盘完成弹出动画后再计算滚动位置
+                    Qt.callLater(function() {
+                        root.flickableParent.ensureVisible(inputField)
+                    })
                 }
             }
 

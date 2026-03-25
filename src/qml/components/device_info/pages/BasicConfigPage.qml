@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtQuick.Window 2.15  // ✅ 2026-03-25 [Phase 7.48.88.16]: Screen.devicePixelRatio
 
 // ✅ 2026-01-24 [设备信息界面重构] Phase 2: 基本配置页面
 // 复用现有的 BasicParametersSection 和 NetworkParametersSection 组件
@@ -49,16 +50,56 @@ Rectangle {
     })
 
     // ========== 内容区域 ==========
-    ScrollView {
+    // 旧代码：ScrollView { ... }
+    // ✅ 2026-03-25 [Phase 7.48.88.16]: 改为 Flickable，支持虚拟键盘弹出时自动滚动
+    Flickable {
         id: scrollView
         anchors.fill: parent
         clip: true
+        contentWidth: width
+        contentHeight: contentColumn.implicitHeight + 40
+        flickableDirection: Flickable.VerticalFlick
+        boundsBehavior: Flickable.StopAtBounds
 
-        // 滚动条样式
-        ScrollBar.vertical.policy: ScrollBar.AsNeeded
-        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+        // ✅ 2026-03-25 [Phase 7.48.88.16]: 虚拟键盘弹出时自动滚动输入框到可见区域
+        function ensureVisible(item) {
+            if (!item) return
+            // 将输入框坐标映射到 Flickable 内容坐标
+            var mappedPos = item.mapToItem(scrollView.contentItem, 0, 0)
+            var itemY = mappedPos.y
+            var itemHeight = item.height
+            // 获取虚拟键盘高度
+            var keyboardRect = Qt.inputMethod.keyboardRectangle
+            var keyboardHeight = keyboardRect.height / Screen.devicePixelRatio
+            // 可见区域高度 = Flickable高度 - 键盘高度
+            var visibleHeight = scrollView.height - keyboardHeight
+            var margin = 60  // 额外边距，确保输入框不紧贴键盘顶部
+
+            // 输入框底部超出可见区域 → 向上滚动
+            if (itemY + itemHeight + margin > scrollView.contentY + visibleHeight) {
+                var targetY = itemY + itemHeight + margin - visibleHeight
+                targetY = Math.min(targetY, scrollView.contentHeight - scrollView.height)
+                scrollAnim.to = targetY
+                scrollAnim.start()
+            }
+            // 输入框顶部超出可见区域 → 向下滚动
+            else if (itemY - margin < scrollView.contentY) {
+                var targetY2 = Math.max(0, itemY - margin)
+                scrollAnim.to = targetY2
+                scrollAnim.start()
+            }
+        }
+
+        // 平滑滚动动画
+        NumberAnimation on contentY {
+            id: scrollAnim
+            duration: 300
+            easing.type: Easing.OutCubic
+            running: false
+        }
 
         ColumnLayout {
+            id: contentColumn
             width: scrollView.width
             spacing: 20
 
@@ -231,6 +272,8 @@ Rectangle {
                     // ✅ 2026-02-06 [参数持久化]: 传递配置对象
                     if (item) {
                         item.systemConfig = Qt.binding(function() { return root.basicParams })
+                        // ✅ 2026-03-25 [Phase 7.48.88.16]: 传递 Flickable 引用，支持虚拟键盘自动滚动
+                        item.flickableParent = scrollView
                     }
                 }
 
@@ -259,6 +302,10 @@ Rectangle {
                     // ✅ 2026-02-06 [参数持久化]: 传递配置对象
                     if (item) {
                         item.networkConfig = Qt.binding(function() { return root.networkParams })
+                        // ✅ 2026-03-25 [Phase 7.48.88.16]: 传递 Flickable 引用
+                        if (item.hasOwnProperty("flickableParent")) {
+                            item.flickableParent = scrollView
+                        }
                     }
                 }
 
@@ -270,9 +317,10 @@ Rectangle {
             }
 
             // 底部填充空间
+            // ✅ 2026-03-25 [Phase 7.48.88.16]: 增加底部填充到350px，确保最后的输入框可以滚动到虚拟键盘上方
             Item {
                 Layout.fillHeight: true
-                Layout.preferredHeight: 20
+                Layout.preferredHeight: 350
             }
         }
     }
