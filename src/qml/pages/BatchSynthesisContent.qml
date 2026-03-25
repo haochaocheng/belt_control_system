@@ -83,8 +83,9 @@ Rectangle {
             // ✅ 2026-02-26 22:45 [Phase 7.47.19]: 修复对齐问题，添加顶部对齐
             ColumnLayout {
                 // 旧：Layout.preferredWidth: 350
-                // ✅ 2026-03-25 [Phase 7.48.88.12]: 左侧区域加宽，容纳并排的选择分类+清除旧语音
-                Layout.preferredWidth: 420
+                // 旧：Layout.preferredWidth: 420 [Phase 7.48.88.12]
+                // ✅ 2026-03-25 [Phase 7.48.88.13]: 加宽到480，让两个并排GroupBox有更充裕空间
+                Layout.preferredWidth: 480
                 Layout.fillHeight: true
                 Layout.alignment: Qt.AlignTop
                 spacing: 10
@@ -95,8 +96,10 @@ Rectangle {
                     spacing: 10
 
                     // 分类选择（左）
+                    // ✅ 2026-03-25 [Phase 7.48.88.13]: 左右GroupBox等宽等高对齐
                     GroupBox {
                         Layout.fillWidth: true
+                        Layout.fillHeight: true
                         title: "选择分类"
                         background: Rectangle {
                             color: "#252540"
@@ -230,13 +233,14 @@ Rectangle {
                         }
                     }
 
-                    // ✅ 2026-03-25 [Phase 7.48.88.12]: 清除旧语音区域（右侧，与选择分类并排）
-                    // 用途：皮带名称变更后，旧文件名仍存在导致批量生成跳过新文件
+                    // ✅ 2026-03-25 [Phase 7.48.88.13]: 清除旧语音区域（右侧，等宽等高对齐）
                     // 旧布局：在选择分类下方 [Phase 7.48.88.11]
-                    // 新布局：在选择分类右侧，分类数量与选择分类一致（10个）
+                    // 中间布局：右侧但尺寸不对齐 [Phase 7.48.88.12]
+                    // 新布局：右侧等宽等高 [Phase 7.48.88.13]
                     GroupBox {
                         Layout.fillWidth: true
-                        title: "清除旧语音"
+                        Layout.fillHeight: true
+                        title: "清除旧语音（名称变更后先清除再生成）"
                         background: Rectangle {
                             color: "#252540"
                             border.color: "#6a4a4a"
@@ -254,13 +258,8 @@ Rectangle {
                             spacing: 4
                             anchors.fill: parent
 
-                            Text {
-                                text: "名称变更后先清除再重新生成"
-                                color: "#999999"
-                                font.pixelSize: 10
-                                wrapMode: Text.WordWrap
-                                Layout.fillWidth: true
-                            }
+                            // 旧：提示文字 "名称变更后先清除再重新生成" 已移到GroupBox标题
+                            // ✅ 2026-03-25 [Phase 7.48.88.13]: 移除独立提示文字，减少高度差异
 
                             GridLayout {
                                 columns: 1
