@@ -1104,6 +1104,13 @@ void CommonControl::startDeviceSequence(int beltNumber)
     }
     if (sequence.isEmpty()) {
         qDebug() << "⚠️  CommonControl:" << actualBelt << "号皮带启动顺序为空，无需执行";
+        // ✅ 2026-03-25 [Phase 7.48.88.23]: 序列为空仍需标记为运行状态
+        // 原因：4-8号皮带未配置启动序列，但预警已播放，应视为"已启动"
+        //       否则 isBeltRunning() 永远返回false → 数字键toggle永远走startBelt
+        m_beltRunning[actualBelt] = true;
+        emit beltRunningChanged(actualBelt, true);
+        emit motorActivated(actualBelt);
+        qDebug() << "🟢 CommonControl:" << actualBelt << "号皮带已启动运行（无设备序列）";
         return;
     }
 
@@ -1169,6 +1176,13 @@ void CommonControl::stopDeviceSequence(int beltNumber)
     }
     if (sequence.isEmpty()) {
         qDebug() << "⚠️  CommonControl:" << actualBelt << "号皮带停止顺序为空，无需执行";
+        // ✅ 2026-03-25 [Phase 7.48.88.23]: 序列为空仍需标记为停止状态
+        // 原因：与startDeviceSequence对称，序列为空时仍需更新运行状态
+        //       否则停车音频播完后 m_beltRunning 仍为true → 下次按键还是走stopBelt
+        m_beltRunning[actualBelt] = false;
+        emit beltRunningChanged(actualBelt, false);
+        emit motorDeactivated(actualBelt);
+        qDebug() << "🔴 CommonControl:" << actualBelt << "号皮带已停止（无设备序列）";
         m_isFaultStop = false;
         return;
     }

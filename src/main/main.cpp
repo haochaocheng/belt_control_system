@@ -332,6 +332,19 @@ int main(int argc, char *argv[]) {
                     systemConfig.setLocalDeviceName(newName);
                 }
             }
+            // ✅ 2026-03-25 [Phase 7.48.88.23]: 同步 beltAudioSource
+            // 原因：config.ini 默认值为0（预制音频），但QML界面默认值为1（TTS）
+            //       用户在界面选TTS后保存到SQLite，但config.ini未同步 → C++层仍用0
+            //       导致 getAudioPath() 走预制音频路径而非TTS路径
+            QVariant sqlAudioSource = deviceConfigMgr.loadBasicConfig(localDeviceId, "beltAudioSource");
+            if (sqlAudioSource.isValid()) {
+                int newSource = sqlAudioSource.toInt();
+                if (newSource != systemConfig.beltAudioSource()) {
+                    qDebug() << "🔄 [启动同步] SQLite beltAudioSource:" << newSource
+                             << "覆盖 config.ini beltAudioSource:" << systemConfig.beltAudioSource();
+                    systemConfig.setBeltAudioSource(newSource);
+                }
+            }
             // 持久化到config.ini，确保后续读取一致
             systemConfig.saveConfig();
             logMessage("SystemConfig synced from SQLite");
