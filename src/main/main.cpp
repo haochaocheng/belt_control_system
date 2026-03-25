@@ -96,6 +96,10 @@ int main(int argc, char *argv[]) {
 
         // Enable Qt Virtual Keyboard
         qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
+        // ✅ 2026-03-25 [Phase 7.48.88.15]: 启用中文拼音输入法支持
+        // 旧代码：无 QT_VIRTUALKEYBOARD_LOCALE 设置（默认英文）
+        // 修正：设置默认 locale 为中文，虚拟键盘启动即为中文拼音
+        qputenv("QT_VIRTUALKEYBOARD_LOCALE", QByteArray("zh_CN"));
 
         QGuiApplication app(argc, argv);
         logMessage("QGuiApplication created");
