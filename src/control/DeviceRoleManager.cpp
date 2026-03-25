@@ -6,6 +6,7 @@
 
 #include "DeviceRoleManager.h"
 #include "mqtt/MQTTController.h"
+#include "DataPathConfig.h"
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -56,7 +57,10 @@ DeviceRoleManager::DeviceRoleManager(QObject *parent)
     , m_mqttEnabled(false)       // ✅ 2026-02-10 [Phase 7.45.6]: 默认禁用 MQTT
 {
     // 设置配置文件路径
-    QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    // 旧代码：QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    // 旧代码：存储在容器内 ~/.config/，重新部署容器后配置丢失
+    // ✅ 2026-03-25 [Phase 7.48.88.18]: 改用 DataPathConfig 统一数据目录（/app/appdata/），该目录挂载到宿主机
+    QString configDir = DataPathConfig::getDataDirectory();
     QDir().mkpath(configDir);
     m_configFilePath = configDir + "/device_role.json";
 

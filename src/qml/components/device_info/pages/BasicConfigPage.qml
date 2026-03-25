@@ -365,6 +365,13 @@ Rectangle {
         success = success && deviceConfigMgr.saveBasicConfig(root.deviceId, "rearInterlock", basicParams.rearInterlock)
         success = success && deviceConfigMgr.saveBasicConfig(root.deviceId, "terminalType", basicParams.terminalType)
         success = success && deviceConfigMgr.saveBasicConfig(root.deviceId, "terminalEnabled", basicParams.terminalEnabled)
+        // ✅ 2026-03-25 [Phase 7.48.88.18]: 同步本机名称和编号到全局 C++ systemConfig
+        // 原因：BatchAudioGenerator 从全局 systemConfig 读取 localDeviceName 生成 TTS 文本
+        // 如果不同步，TTS 仍用默认的"X号皮带"而非用户自定义名称
+        if (typeof systemConfig !== "undefined" && systemConfig !== null) {
+            systemConfig.localDeviceName = basicParams.localDeviceName
+            systemConfig.machineNumber = basicParams.machineNumber
+        }
         // ✅ 2026-03-20 [Phase 7.48.60]: 保存皮带音频来源（SQLite + C++ systemConfig + config.ini）
         success = success && deviceConfigMgr.saveBasicConfig(root.deviceId, "beltAudioSource", basicParams.beltAudioSource)
         if (typeof systemConfig !== "undefined" && systemConfig !== null && typeof systemConfig.setBeltAudioSource === "function") {

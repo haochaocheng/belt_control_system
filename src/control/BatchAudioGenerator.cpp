@@ -92,6 +92,18 @@ void BatchAudioGenerator::setConfig(const QVariantMap &config)
         m_beltNumbers.append(num.toInt());
     }
 
+    // ✅ 2026-03-25 [Phase 7.48.88.18]: 解析自定义皮带名称映射
+    m_beltNames.clear();
+    QVariantMap beltNamesMap = config.value("beltNames").toMap();
+    for (auto it = beltNamesMap.begin(); it != beltNamesMap.end(); ++it) {
+        int beltId = it.key().toInt();
+        QString customName = it.value().toString();
+        if (!customName.isEmpty()) {
+            m_beltNames[beltId] = customName;
+            qDebug() << "[BatchAudioGenerator] 自定义皮带名称:" << beltId << "→" << customName;
+        }
+    }
+
     m_motorNumbers.clear();
     QVariantList motorNumbers = config.value("motorNumbers").toList();
     for (const QVariant &num : motorNumbers) {
@@ -320,9 +332,23 @@ void BatchAudioGenerator::generateTasks()
             }
         }
     }
-}
 
-void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
+    // ✅ 2026-03-25 [Phase 7.48.88.18]: 后处理 - 将TTS文本中的"X号皮带"替换为自定义皮带名称
+    // 例如：m_beltNames[2]="1109顺槽皮带" → "2号皮带启动" → "1109顺槽皮带启动"
+    if (!m_beltNames.isEmpty()) {
+        for (int i = 0; i < m_tasks.size(); ++i) {
+            for (auto it = m_beltNames.begin(); it != m_beltNames.end(); ++it) {
+                QString oldName = QString("%1号皮带").arg(it.key());
+                if (m_tasks[i].text.contains(oldName)) {
+                    QString before = m_tasks[i].text;
+                    m_tasks[i].text.replace(oldName, it.value());
+                    qDebug() << "[BatchAudioGenerator] TTS文本替换:" << before << "→" << m_tasks[i].text;
+                }
+            }
+        }
+        emit logMessage("info", QString("已应用 %1 个自定义皮带名称").arg(m_beltNames.size()));
+    }
+}
 {
     // ✅ 2026-02-28 [Phase 7.47.42]: 重构为真实文档定义
     // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第二章（8种DI保护）

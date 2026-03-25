@@ -190,6 +190,10 @@ private:
     QString m_outputBaseDir;
     QList<EngineConfig> m_engines;
 
+    // ✅ 2026-03-25 [Phase 7.48.88.18]: 自定义皮带名称映射（皮带编号 → 自定义名称）
+    // 例如：{2: "1109顺槽皮带"}, TTS文本中"2号皮带"会被替换为"1109顺槽皮带"
+    QMap<int, QString> m_beltNames;
+
     // 任务列表
     QList<FileTask> m_tasks;
 
