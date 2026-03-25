@@ -64,37 +64,38 @@ Rectangle {
         // ✅ 2026-03-25 [Phase 7.48.88.16]: 虚拟键盘弹出时自动滚动输入框到可见区域
         // 旧代码：用 Flickable 高度减键盘高度计算可见区域 → 滚动量过大
         // 旧代码：mapToGlobal + devicePixelRatio → 坐标系不一致
-        // ✅ 2026-03-25 [Phase 7.48.88.16.2]: 使用 mapToItem(null) 获取窗口坐标，直接比较
+        // 旧代码 [Phase 7.48.88.16.2]: keyboardRect.y 当作键盘顶部 → 实际是0（键盘局部坐标）
+        // ✅ 2026-03-25 [Phase 7.48.88.16.5]: keyboardRect.y=0 是键盘自身坐标，非窗口坐标
+        // 正确算法：键盘顶部 = 窗口高度 - 键盘高度
         function ensureVisible(item) {
             if (!item) return
 
-            // 1. 获取虚拟键盘信息（窗口坐标）
+            // 1. 获取虚拟键盘信息
             var keyboardRect = Qt.inputMethod.keyboardRectangle
             if (keyboardRect.height <= 0) return  // 键盘未弹出
 
-            // keyboardRect 是窗口坐标（像素），在嵌入式设备上 devicePixelRatio 通常为1
-            var keyboardTopY = keyboardRect.y
+            // keyboardRect.y 在设备上返回0（键盘局部坐标，非窗口坐标）
+            // 正确的键盘顶部位置 = 窗口高度 - 键盘高度
+            var windowHeight = Window.window ? Window.window.height : 800
+            var keyboardTopY = windowHeight - keyboardRect.height
 
             // 2. 获取输入框在窗口中的坐标
-            // mapToItem(null) = 映射到窗口根坐标，比 mapToGlobal 更可靠
             var itemInWindow = item.mapToItem(null, 0, 0)
             var itemBottomY = itemInWindow.y + item.height
+
+            // 中文候选词栏补偿（键盘高度可能不含候选词栏）
+            var candidateBarHeight = 50
+            var margin = 8
 
             // 调试日志
             console.log("📐 [ensureVisible] 输入框窗口Y:", itemInWindow.y,
                         "底部:", itemBottomY,
-                        "键盘顶部:", keyboardTopY,
+                        "窗口高度:", windowHeight,
                         "键盘高度:", keyboardRect.height,
-                        "当前contentY:", scrollView.contentY,
-                        "候选词补偿:", 50)
+                        "键盘顶部(计算):", keyboardTopY,
+                        "当前contentY:", scrollView.contentY)
 
             // 3. 计算被遮挡距离
-            // ✅ 2026-03-25 [Phase 7.48.88.16.3]: 中文拼音输入法有候选词栏，额外增加高度补偿
-            // Qt.inputMethod.keyboardRectangle 可能不包含候选词栏高度
-            // 旧代码：var candidateBarHeight = 50  // 补偿不足，本机名称仍被遮挡一半
-            // ✅ 2026-03-25 [Phase 7.48.88.16.4]: 增大候选词栏补偿到100px
-            var candidateBarHeight = 100  // 中文候选词栏高度补偿
-            var margin = 8  // 输入框与键盘之间预留间距
             var overlap = itemBottomY + margin + candidateBarHeight - keyboardTopY
 
             // 4. 被遮挡时：向上滚动 overlap 距离
@@ -481,7 +482,11 @@ Rectangle {
             }
         }
 
-        console.log("✅ [BasicConfigPage] 基本参数加载成功")
+        console.log("✅ [BasicConfigPage] 基本参数加载成功, localDeviceName:", basicParams.localDeviceName)
+        // ✅ 2026-03-25 [Phase 7.48.88.17]: 强制触发 QML 绑定更新
+        // basicParams 是普通 JS 对象，修改内部属性不会触发 property 变化通知
+        // 重新赋值整个对象，让绑定 systemConfig 的子组件刷新
+        root.basicParams = basicParams
         return true
     }
 
@@ -508,6 +513,8 @@ Rectangle {
         }
 
         console.log("✅ [BasicConfigPage] 网络参数加载成功")
+        // ✅ 2026-03-25 [Phase 7.48.88.17]: 强制触发 QML 绑定更新
+        root.networkParams = networkParams
         return true
     }
 
