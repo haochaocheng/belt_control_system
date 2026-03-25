@@ -333,22 +333,41 @@ void BatchAudioGenerator::generateTasks()
         }
     }
 
-    // ✅ 2026-03-25 [Phase 7.48.88.18]: 后处理 - 将TTS文本中的"X号皮带"替换为自定义皮带名称
+    // ✅ 2026-03-25 [Phase 7.48.88.19]: 后处理 - 将TTS文本中的"X号皮带"替换为自定义皮带名称
     // 例如：m_beltNames[2]="1109顺槽皮带" → "2号皮带启动" → "1109顺槽皮带启动"
+    // 同时处理中文数字："二号皮带准备启动" → "1109顺槽皮带准备启动"
     if (!m_beltNames.isEmpty()) {
+        // 旧代码：static const QStringList chineseNums 未定义，中文数字替换缺失
+        // ✅ 2026-03-25 [Phase 7.48.88.19]: 新增中文数字映射，与generateBeltOperationTasks中一致
+        static const QStringList chineseNums = {
+            "", "一", "二", "三", "四", "五", "六", "七", "八"
+        };
         for (int i = 0; i < m_tasks.size(); ++i) {
             for (auto it = m_beltNames.begin(); it != m_beltNames.end(); ++it) {
-                QString oldName = QString("%1号皮带").arg(it.key());
+                int beltNum = it.key();
+                // 替换阿拉伯数字格式："2号皮带" → "1109顺槽皮带"
+                QString oldName = QString("%1号皮带").arg(beltNum);
                 if (m_tasks[i].text.contains(oldName)) {
                     QString before = m_tasks[i].text;
                     m_tasks[i].text.replace(oldName, it.value());
                     qDebug() << "[BatchAudioGenerator] TTS文本替换:" << before << "→" << m_tasks[i].text;
+                }
+                // 替换中文数字格式："二号皮带" → "1109顺槽皮带"
+                if (beltNum >= 1 && beltNum <= 8) {
+                    QString oldNameCN = QString("%1号皮带").arg(chineseNums.at(beltNum));
+                    if (m_tasks[i].text.contains(oldNameCN)) {
+                        QString before = m_tasks[i].text;
+                        m_tasks[i].text.replace(oldNameCN, it.value());
+                        qDebug() << "[BatchAudioGenerator] TTS文本替换(中文):" << before << "→" << m_tasks[i].text;
+                    }
                 }
             }
         }
         emit logMessage("info", QString("已应用 %1 个自定义皮带名称").arg(m_beltNames.size()));
     }
 }
+
+void BatchAudioGenerator::generateSwitchInputTasks(const EngineConfig &engine)
 {
     // ✅ 2026-02-28 [Phase 7.47.42]: 重构为真实文档定义
     // 来源：docs/2026-02-24/01-TTS语音文件批量生成清单.md 第二章（8种DI保护）
@@ -774,7 +793,9 @@ void BatchAudioGenerator::generateBeltOperationTasks(const EngineConfig &engine)
             // ❌ 原来: task.text = QString("%1号%2").arg(beltNum).arg(op)
             if (op == "皮带启动") {
                 QString chNum = (beltNum >= 1 && beltNum <= 8) ? chineseNums.at(beltNum) : QString::number(beltNum);
-                task.text = QString("%1号皮带准备启动，注意安全").arg(chNum);
+                // 旧代码：task.text = QString("%1号皮带准备启动，注意安全").arg(chNum);
+                // ✅ 2026-03-25 [Phase 7.48.88.20]: 修复缺少"请"字，与电机/张紧模板统一
+                task.text = QString("%1号皮带准备启动，请注意安全").arg(chNum);
             } else {
                 task.text = QString("%1号%2").arg(beltNum).arg(op);
             }

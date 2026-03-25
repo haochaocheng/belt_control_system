@@ -987,9 +987,22 @@ Rectangle {
         var beltNumbers = []
         for (var i = 1; i <= spinBeltCount.value; i++) beltNumbers.push(i)
 
-        // ✅ 2026-03-25 [Phase 7.48.88.11]: 构建皮带名称映射（本机使用localDeviceName，其他默认）
+        // 旧代码：只从 systemConfig 读取 machineNumber 和 localDeviceName
+        // 问题：systemConfig 可能未同步最新的SQLite值（如用户改了设备号/名称但未重启）
+        // ✅ 2026-03-25 [Phase 7.48.88.19]: 优先从 SQLite 读取，确保始终使用最新配置
         var beltNames = {}
-        if (systemConfig) {
+        if (typeof deviceConfigMgr !== "undefined" && deviceConfigMgr !== null
+            && typeof deviceRoleManager !== "undefined" && deviceRoleManager !== null) {
+            var localDeviceId = deviceRoleManager.localDeviceId
+            var sqlName = deviceConfigMgr.loadBasicConfig(localDeviceId, "localDeviceName")
+            if (sqlName !== "" && sqlName !== undefined && sqlName !== null) {
+                beltNames[localDeviceId] = sqlName
+                console.log("[BatchSynthesis] 从SQLite读取皮带名称: 设备" + localDeviceId + " → " + sqlName)
+            } else if (systemConfig) {
+                // 回退到 systemConfig
+                beltNames[systemConfig.machineNumber] = systemConfig.localDeviceName
+            }
+        } else if (systemConfig) {
             var localBelt = systemConfig.machineNumber
             var localName = systemConfig.localDeviceName
             beltNames[localBelt] = localName

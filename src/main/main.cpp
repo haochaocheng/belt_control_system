@@ -309,6 +309,34 @@ int main(int argc, char *argv[]) {
         deviceRoleManager.loadFromConfig();  // 从配置文件加载
         logMessage("DeviceRoleManager initialized");
 
+        // ✅ 2026-03-25 [Phase 7.48.88.19]: 从SQLite同步基本参数到SystemConfig
+        // 原因：config.ini 可能与 SQLite 中的设备配置不一致（如用户改了设备号/名称后重新部署）
+        // SQLite 是权威数据源，启动时以 SQLite 为准同步到 SystemConfig
+        {
+            int localDeviceId = deviceRoleManager.localDeviceId();
+            QVariant sqlMachineNumber = deviceConfigMgr.loadBasicConfig(localDeviceId, "machineNumber");
+            QVariant sqlDeviceName = deviceConfigMgr.loadBasicConfig(localDeviceId, "localDeviceName");
+            if (sqlMachineNumber.isValid() && sqlMachineNumber.toInt() >= 1 && sqlMachineNumber.toInt() <= 8) {
+                int newNum = sqlMachineNumber.toInt();
+                if (newNum != systemConfig.machineNumber()) {
+                    qDebug() << "🔄 [启动同步] SQLite machineNumber:" << newNum
+                             << "覆盖 config.ini machineNumber:" << systemConfig.machineNumber();
+                    systemConfig.setMachineNumber(newNum);
+                }
+            }
+            if (sqlDeviceName.isValid() && !sqlDeviceName.toString().isEmpty()) {
+                QString newName = sqlDeviceName.toString();
+                if (newName != systemConfig.localDeviceName()) {
+                    qDebug() << "🔄 [启动同步] SQLite localDeviceName:" << newName
+                             << "覆盖 config.ini localDeviceName:" << systemConfig.localDeviceName();
+                    systemConfig.setLocalDeviceName(newName);
+                }
+            }
+            // 持久化到config.ini，确保后续读取一致
+            systemConfig.saveConfig();
+            logMessage("SystemConfig synced from SQLite");
+        }
+
         // ✅ 2026-03-23 [Phase 7.48.84.5]: 连接DeviceRoleManager到控制模块
         // 原因：R/S键启动/停止时，需要使用DeviceRoleManager的localDeviceId而非SystemConfig的machineNumber
         maintenanceControl.setDeviceRoleManager(&deviceRoleManager);
