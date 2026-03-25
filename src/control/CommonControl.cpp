@@ -548,6 +548,10 @@ void CommonControl::stopBelt(int beltNumber)
 {
     qDebug() << "🛑 CommonControl: 请求停止" << beltNumber << "号皮带";
 
+    // ✅ 2026-03-25 [Phase 7.48.88.10]: 更新 m_currentBeltNumber 供 stopDeviceSequence 使用
+    // 原因：stopDeviceSequence 需要根据当前皮带号加载对应的停止序列配置
+    m_currentBeltNumber = beltNumber;
+
     // 检查是否已经停止（避免重复执行停止逻辑）
     if (m_runtimeTracker && !m_runtimeTracker->isRunning() && m_runtimeTracker->currentStatus() == "停止") {
         qDebug() << "⚠️  CommonControl: 设备已经停止，忽略停止请求";
@@ -971,8 +975,12 @@ void CommonControl::startDeviceSequence()
     // ✅ 2026-03-21 [Phase 7.48.68]: 从 device_logic_configs 读取per-device启动序列
     // 旧代码：m_currentSequence = m_systemConfig->startupSequence();
     if (m_deviceConfigMgr) {
-        // 默认设备ID=1（后续可通过参数传入指定设备ID）
-        QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(1);
+        // 旧代码：QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(1);
+        // ✅ 2026-03-25 [Phase 7.48.88.10]: 使用 m_currentBeltNumber 替代硬编码1
+        // 原因：硬编码1导致所有皮带启动时都使用1号皮带的逻辑控制配置
+        int deviceId = m_currentBeltNumber > 0 ? m_currentBeltNumber : 1;
+        QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(deviceId);
+        qDebug() << "📖 CommonControl: 加载设备" << deviceId << "启动序列";
         QString seqStr = logicConfig.value("startup_sequence", "[]").toString();
         QJsonArray seqArray = QJsonDocument::fromJson(seqStr.toUtf8()).array();
         m_currentSequence.clear();
@@ -1031,7 +1039,12 @@ void CommonControl::stopDeviceSequence()
     // ✅ 2026-03-21 [Phase 7.48.68]: 从 device_logic_configs 读取per-device停止序列
     // 旧代码：m_currentSequence = m_systemConfig->stopSequence();
     if (m_deviceConfigMgr) {
-        QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(1);
+        // 旧代码：QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(1);
+        // ✅ 2026-03-25 [Phase 7.48.88.10]: 使用 m_currentBeltNumber 替代硬编码1
+        // 原因：硬编码1导致所有皮带停止时都使用1号皮带的逻辑控制配置
+        int deviceId = m_currentBeltNumber > 0 ? m_currentBeltNumber : 1;
+        QVariantMap logicConfig = m_deviceConfigMgr->loadDeviceLogicConfig(deviceId);
+        qDebug() << "📖 CommonControl: 加载设备" << deviceId << "停止序列";
         QString seqStr = logicConfig.value("stop_sequence", "[]").toString();
         QJsonArray seqArray = QJsonDocument::fromJson(seqStr.toUtf8()).array();
         m_currentSequence.clear();
