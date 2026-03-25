@@ -1962,6 +1962,35 @@ void DeviceConfigManager::runMigrations()
     } else {
         qDebug() << "⏭️ [DeviceConfigManager] 迁移035已执行过，跳过";
     }
+
+    // ✅ 2026-03-25 [Phase 7.48.88.24]: 迁移036 - 为序列为空的设备初始化默认启停序列
+    // 原因：迁移030只为device_id=1预设了序列，2-12号插入时用表默认值"[]"
+    //       QML界面用硬编码回退值显示假序列，用户以为已配置但DB实际为空
+    //       导致C++执行startDeviceSequence()时序列为空 → 不执行设备动作
+    if (!query.exec("SELECT 1 FROM schema_migrations WHERE version = '036_init_default_sequences'") || !query.next()) {
+        qDebug() << "🔄 [DeviceConfigManager] 执行迁移036: 为空序列设备初始化默认启停序列...";
+        QSqlQuery fix(m_database);
+        // 默认启动序列：张紧控制 → 1号制动器 → 1号电机 → 2号电机
+        // 默认停止序列：2号电机 → 1号电机 → 1号制动器 → 张紧控制
+        QString defaultStartup = R"(["张紧控制","1号制动器","1号电机","2号电机"])";
+        QString defaultStop = R"(["2号电机","1号电机","1号制动器","张紧控制"])";
+        int updated = 0;
+        for (int i = 1; i <= 12; i++) {
+            fix.prepare("UPDATE device_logic_configs SET startup_sequence = ?, stop_sequence = ? "
+                        "WHERE device_id = ? AND (startup_sequence = '[]' OR startup_sequence IS NULL OR startup_sequence = '')");
+            fix.addBindValue(defaultStartup);
+            fix.addBindValue(defaultStop);
+            fix.addBindValue(i);
+            if (fix.exec() && fix.numRowsAffected() > 0) {
+                updated++;
+                qDebug() << "  📝 设备" << i << "写入默认序列";
+            }
+        }
+        qDebug() << "✅ [DeviceConfigManager] 迁移036完成，共更新" << updated << "条记录";
+        query.exec("INSERT INTO schema_migrations (version) VALUES ('036_init_default_sequences')");
+    } else {
+        qDebug() << "⏭️ [DeviceConfigManager] 迁移036已执行过，跳过";
+    }
 }
 
 bool DeviceConfigManager::initDefaultData()
