@@ -143,6 +143,41 @@ Item {
             }
             event.accepted = true
         }
+        // ✅ 2026-03-25 [Phase 7.48.88.21]: 数字键1-8独立启停设备
+        // 前提条件：界面必须在Input1Page（索引5），防止误触发
+        // 交互模式：toggle - 未运行按下启动，已运行按下停止
+        else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_8) {
+            var keyNumber = event.key - Qt.Key_0  // 1-8
+
+            // 前提条件：必须在 Input1Page（索引5）
+            if (swipeView.currentIndex !== 5) {
+                console.log("[Keyboard] 数字键" + keyNumber + "按下，不在Input1页面，忽略")
+                event.accepted = true
+                return
+            }
+
+            console.log("[Keyboard] 数字键" + keyNumber + "按下 - Input1页面，执行启停操作")
+
+            // 检查故障状态 - 存在故障时不允许启动
+            if (runtimeTracker && runtimeTracker.isFault) {
+                console.log("⚠️ 检测到故障状态，请先按F键复位")
+                faultWarningDialog.open()
+                event.accepted = true
+                return
+            }
+
+            // Toggle逻辑：按皮带号判断运行状态
+            if (commonControl.isBeltRunning(keyNumber)) {
+                // 该皮带正在运行 → 停止
+                console.log("  ➡️ " + keyNumber + "号皮带正在运行，执行停止")
+                commonControl.stopBelt(keyNumber)
+            } else {
+                // 该皮带未运行 → 启动（startBelt内部有防重入保护）
+                console.log("  ➡️ 启动" + keyNumber + "号皮带")
+                commonControl.startBelt(keyNumber)
+            }
+            event.accepted = true
+        }
     }
 
     // Tech blue gradient background

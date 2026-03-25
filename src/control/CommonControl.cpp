@@ -1012,6 +1012,13 @@ QVariantMap CommonControl::getSequenceState() const
     return state;
 }
 
+// ✅ 2026-03-25 [Phase 7.48.88.21]: 按皮带号查询运行状态
+// 用途：QML数字键toggle判断 - 已运行则停止，未运行则启动
+bool CommonControl::isBeltRunning(int beltNumber) const
+{
+    return m_beltRunning.value(beltNumber, false);
+}
+
 void CommonControl::startDeviceSequence()
 {
     if (!m_systemConfig) {
@@ -1140,6 +1147,17 @@ void CommonControl::executeNextDeviceInSequence()
         // 序列执行完成
         m_isSequenceRunning = false;
         qDebug() << "✅ CommonControl: 设备序列执行完成";
+
+        // ✅ 2026-03-25 [Phase 7.48.88.21]: 更新按皮带号运行状态
+        if (m_isStartupSequence) {
+            m_beltRunning[m_currentBeltNumber] = true;
+            emit beltRunningChanged(m_currentBeltNumber, true);
+            qDebug() << "🟢 CommonControl:" << m_currentBeltNumber << "号皮带已启动运行";
+        } else {
+            m_beltRunning[m_currentBeltNumber] = false;
+            emit beltRunningChanged(m_currentBeltNumber, false);
+            qDebug() << "🔴 CommonControl:" << m_currentBeltNumber << "号皮带已停止";
+        }
 
         // 更新RuntimeTracker：序列完成后的状态
         if (m_runtimeTracker) {

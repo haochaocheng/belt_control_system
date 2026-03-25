@@ -223,13 +223,17 @@ signals:
     void motorActivated(int beltNumber);    // 电机启动（第一个电机激活时发出）
     void motorDeactivated(int beltNumber);  // 电机停止（最后一个电机停用时发出）
 
+    // ✅ 2026-03-25 [Phase 7.48.88.21]: 按皮带号运行状态变化信号
+    void beltRunningChanged(int beltNumber, bool running);
+
 public slots:
     // 播放指定的音频文件
     void playAudio(const QString &audioPath);
 
     // 皮带控制函数
-    void startBelt(int beltNumber);  // 启动指定编号的皮带（带预警播放）
-    void stopBelt(int beltNumber);   // 停止指定编号的皮带（播放停车音频，然后停止设备序列）
+    // ✅ 2026-03-25 [Phase 7.48.88.21]: 添加 Q_INVOKABLE，支持QML数字键直接调用
+    Q_INVOKABLE void startBelt(int beltNumber);  // 启动指定编号的皮带（带预警播放）
+    Q_INVOKABLE void stopBelt(int beltNumber);   // 停止指定编号的皮带（播放停车音频，然后停止设备序列）
 
     // ✅ 2026-03-23 [Phase 7.48.85]: 紧急停车（跳过停车音频，直接执行停止序列）
     // 用途：保护逻辑控制器触发紧急停车（protection_level=0）
@@ -242,9 +246,12 @@ public slots:
     Q_INVOKABLE void startDeviceSequence();  // 按启动顺序启动设备
     Q_INVOKABLE void stopDeviceSequence();   // 按停止顺序停止设备
 
-    // ✅ 2026-03-24 [Phase 7.48.88.8]: 获取当前序列执行状态（用于LogicControlPanel延迟加载时同步）
+    // ✅ 2026-03-25 [Phase 7.48.88.21]: 获取当前序列执行状态（用于LogicControlPanel延迟加载时同步）
     // 返回：{isRunning, isStartup, currentIndex, totalCount, isWarning, isStopAudio}
     Q_INVOKABLE QVariantMap getSequenceState() const;
+
+    // ✅ 2026-03-25 [Phase 7.48.88.21]: 按皮带号查询运行状态（用于数字键toggle判断）
+    Q_INVOKABLE bool isBeltRunning(int beltNumber) const;
 
     // 设置设备反馈参数（从QML调用）
     Q_INVOKABLE void setDeviceFeedbackConfig(const QString &deviceName, bool useFeedback, int feedbackChannel, int feedbackDelay);
@@ -317,6 +324,9 @@ private:
     int m_currentSequenceIndex;    // 当前序列执行索引
     bool m_isSequenceRunning;      // 是否正在执行序列
     bool m_isStartupSequence;      // true=启动序列, false=停止序列
+
+    // ✅ 2026-03-25 [Phase 7.48.88.21]: 按皮带号跟踪运行状态（支持多皮带并行运行）
+    QMap<int, bool> m_beltRunning;
 
     // 反馈检测相关
     struct FeedbackCheck {
