@@ -82,246 +82,348 @@ Rectangle {
             // 左侧：配置区
             // ✅ 2026-02-26 22:45 [Phase 7.47.19]: 修复对齐问题，添加顶部对齐
             ColumnLayout {
-                Layout.preferredWidth: 350
+                // 旧：Layout.preferredWidth: 350
+                // ✅ 2026-03-25 [Phase 7.48.88.12]: 左侧区域加宽，容纳并排的选择分类+清除旧语音
+                Layout.preferredWidth: 420
                 Layout.fillHeight: true
                 Layout.alignment: Qt.AlignTop
                 spacing: 10
 
-                // 分类选择
-                GroupBox {
+                // ✅ 2026-03-25 [Phase 7.48.88.12]: 选择分类和清除旧语音并排布局
+                RowLayout {
                     Layout.fillWidth: true
-                    title: "选择分类"
-                    background: Rectangle {
-                        color: "#252540"
-                        border.color: "#4a4a6a"
-                        radius: 4
-                        y: parent.topPadding - parent.padding
-                        height: parent.height - parent.topPadding + parent.padding
-                    }
-                    label: Text {
-                        text: parent.title
-                        color: "#aaaacc"
-                        font.pixelSize: 14
-                    }
+                    spacing: 10
 
-                    GridLayout {
-                        columns: 2
-                        columnSpacing: 15
-                        rowSpacing: 5
-
-                        CheckBox {
-                            id: chkSwitchInput
-                            text: "开关量输入保护"
-                            checked: true
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                leftPadding: parent.indicator.width + 5
-                            }
+                    // 分类选择（左）
+                    GroupBox {
+                        Layout.fillWidth: true
+                        title: "选择分类"
+                        background: Rectangle {
+                            color: "#252540"
+                            border.color: "#4a4a6a"
+                            radius: 4
+                            y: parent.topPadding - parent.padding
+                            height: parent.height - parent.topPadding + parent.padding
                         }
-                        CheckBox {
-                            id: chkAnalogInput
-                            text: "模拟量输入保护"
-                            checked: true
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                leftPadding: parent.indicator.width + 5
-                            }
-                        }
-                        CheckBox {
-                            id: chkMotor
-                            text: "电机保护"
-                            checked: true
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                leftPadding: parent.indicator.width + 5
-                            }
-                        }
-                        CheckBox {
-                            id: chkBrake
-                            text: "制动器保护"
-                            checked: true
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                leftPadding: parent.indicator.width + 5
-                            }
-                        }
-                        CheckBox {
-                            id: chkTension
-                            text: "张紧控制保护"
-                            checked: true
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                leftPadding: parent.indicator.width + 5
-                            }
-                        }
-                        CheckBox {
-                            id: chkLinePosition
-                            text: "沿线点位保护"
-                            checked: true
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                leftPadding: parent.indicator.width + 5
-                            }
-                        }
-                        CheckBox {
-                            id: chkSystemSound
-                            text: "系统提示音"
-                            checked: true
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                leftPadding: parent.indicator.width + 5
-                            }
-                        }
-                        // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
-                        CheckBox {
-                            id: chkBeltOperation
-                            text: "皮带操作状态"
-                            checked: true
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                leftPadding: parent.indicator.width + 5
-                            }
-                        }
-                        CheckBox {
-                            id: chkSystemStatus
-                            text: "系统/通讯状态"
-                            checked: true
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                leftPadding: parent.indicator.width + 5
-                            }
-                        }
-                        // ✅ 2026-03-02 [Phase 7.47.69]: 新增 - 模块在线状态语音
-                        CheckBox {
-                            id: chkModuleStatus
-                            text: "模块在线状态"
-                            checked: true
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                leftPadding: parent.indicator.width + 5
-                            }
-                        }
-                    }
-                }
-
-                // ✅ 2026-03-25 [Phase 7.48.88.11]: 清除旧语音区域
-                // 用途：皮带名称变更后，旧文件名仍存在导致批量生成跳过新文件
-                GroupBox {
-                    Layout.fillWidth: true
-                    title: "清除旧语音"
-                    background: Rectangle {
-                        color: "#252540"
-                        border.color: "#6a4a4a"
-                        radius: 4
-                        y: parent.topPadding - parent.padding
-                        height: parent.height - parent.topPadding + parent.padding
-                    }
-                    label: Text {
-                        text: parent.title
-                        color: "#ffaaaa"
-                        font.pixelSize: 14
-                    }
-
-                    ColumnLayout {
-                        spacing: 8
-                        anchors.fill: parent
-
-                        Text {
-                            text: "皮带名称变更后，需先清除旧语音再重新生成"
-                            color: "#999999"
-                            font.pixelSize: 11
-                            wrapMode: Text.WordWrap
-                            Layout.fillWidth: true
+                        label: Text {
+                            text: parent.title
+                            color: "#aaaacc"
+                            font.pixelSize: 14
                         }
 
                         GridLayout {
-                            columns: 2
-                            columnSpacing: 10
-                            rowSpacing: 4
+                            columns: 1
+                            rowSpacing: 2
 
                             CheckBox {
-                                id: chkClearBeltOp
+                                id: chkSwitchInput
+                                text: "开关量输入保护"
+                                checked: true
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffffff"
+                                    font.pixelSize: 12
+                                    leftPadding: parent.indicator.width + 5
+                                }
+                            }
+                            CheckBox {
+                                id: chkAnalogInput
+                                text: "模拟量输入保护"
+                                checked: true
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffffff"
+                                    font.pixelSize: 12
+                                    leftPadding: parent.indicator.width + 5
+                                }
+                            }
+                            CheckBox {
+                                id: chkMotor
+                                text: "电机保护"
+                                checked: true
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffffff"
+                                    font.pixelSize: 12
+                                    leftPadding: parent.indicator.width + 5
+                                }
+                            }
+                            CheckBox {
+                                id: chkBrake
+                                text: "制动器保护"
+                                checked: true
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffffff"
+                                    font.pixelSize: 12
+                                    leftPadding: parent.indicator.width + 5
+                                }
+                            }
+                            CheckBox {
+                                id: chkTension
+                                text: "张紧控制保护"
+                                checked: true
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffffff"
+                                    font.pixelSize: 12
+                                    leftPadding: parent.indicator.width + 5
+                                }
+                            }
+                            CheckBox {
+                                id: chkLinePosition
+                                text: "沿线点位保护"
+                                checked: true
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffffff"
+                                    font.pixelSize: 12
+                                    leftPadding: parent.indicator.width + 5
+                                }
+                            }
+                            CheckBox {
+                                id: chkSystemSound
+                                text: "系统提示音"
+                                checked: true
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffffff"
+                                    font.pixelSize: 12
+                                    leftPadding: parent.indicator.width + 5
+                                }
+                            }
+                            // ✅ 2026-02-27 05:30 [Phase 7.47.30]: 补充1#PD已有但批量代码缺失的语音分类
+                            CheckBox {
+                                id: chkBeltOperation
                                 text: "皮带操作状态"
                                 checked: true
                                 contentItem: Text {
                                     text: parent.text
-                                    color: "#ffcccc"
+                                    color: "#ffffff"
                                     font.pixelSize: 12
                                     leftPadding: parent.indicator.width + 5
                                 }
                             }
                             CheckBox {
-                                id: chkClearSwitchInput
-                                text: "开关量输入保护"
-                                checked: false
+                                id: chkSystemStatus
+                                text: "系统/通讯状态"
+                                checked: true
                                 contentItem: Text {
                                     text: parent.text
-                                    color: "#ffcccc"
+                                    color: "#ffffff"
                                     font.pixelSize: 12
                                     leftPadding: parent.indicator.width + 5
                                 }
                             }
+                            // ✅ 2026-03-02 [Phase 7.47.69]: 新增 - 模块在线状态语音
                             CheckBox {
-                                id: chkClearSystemSound
-                                text: "系统提示音"
-                                checked: false
+                                id: chkModuleStatus
+                                text: "模块在线状态"
+                                checked: true
                                 contentItem: Text {
                                     text: parent.text
-                                    color: "#ffcccc"
+                                    color: "#ffffff"
                                     font.pixelSize: 12
                                     leftPadding: parent.indicator.width + 5
                                 }
                             }
                         }
+                    }
 
-                        Button {
-                            text: "清除选中分类的旧语音"
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 32
-                            enabled: batchGenerator && !batchGenerator.isRunning
-                            background: Rectangle {
-                                color: parent.enabled ? (parent.hovered ? "#cc4444" : "#993333") : "#555555"
-                                radius: 4
+                    // ✅ 2026-03-25 [Phase 7.48.88.12]: 清除旧语音区域（右侧，与选择分类并排）
+                    // 用途：皮带名称变更后，旧文件名仍存在导致批量生成跳过新文件
+                    // 旧布局：在选择分类下方 [Phase 7.48.88.11]
+                    // 新布局：在选择分类右侧，分类数量与选择分类一致（10个）
+                    GroupBox {
+                        Layout.fillWidth: true
+                        title: "清除旧语音"
+                        background: Rectangle {
+                            color: "#252540"
+                            border.color: "#6a4a4a"
+                            radius: 4
+                            y: parent.topPadding - parent.padding
+                            height: parent.height - parent.topPadding + parent.padding
+                        }
+                        label: Text {
+                            text: parent.title
+                            color: "#ffaaaa"
+                            font.pixelSize: 14
+                        }
+
+                        ColumnLayout {
+                            spacing: 4
+                            anchors.fill: parent
+
+                            Text {
+                                text: "名称变更后先清除再重新生成"
+                                color: "#999999"
+                                font.pixelSize: 10
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
                             }
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                font.pixelSize: 12
+
+                            GridLayout {
+                                columns: 1
+                                rowSpacing: 2
+
+                                CheckBox {
+                                    id: chkClearSwitchInput
+                                    text: "开关量输入保护"
+                                    checked: false
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "#ffcccc"
+                                        font.pixelSize: 12
+                                        leftPadding: parent.indicator.width + 5
+                                    }
+                                }
+                                CheckBox {
+                                    id: chkClearAnalogInput
+                                    text: "模拟量输入保护"
+                                    checked: false
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "#ffcccc"
+                                        font.pixelSize: 12
+                                        leftPadding: parent.indicator.width + 5
+                                    }
+                                }
+                                CheckBox {
+                                    id: chkClearMotor
+                                    text: "电机保护"
+                                    checked: false
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "#ffcccc"
+                                        font.pixelSize: 12
+                                        leftPadding: parent.indicator.width + 5
+                                    }
+                                }
+                                CheckBox {
+                                    id: chkClearBrake
+                                    text: "制动器保护"
+                                    checked: false
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "#ffcccc"
+                                        font.pixelSize: 12
+                                        leftPadding: parent.indicator.width + 5
+                                    }
+                                }
+                                CheckBox {
+                                    id: chkClearTension
+                                    text: "张紧控制保护"
+                                    checked: false
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "#ffcccc"
+                                        font.pixelSize: 12
+                                        leftPadding: parent.indicator.width + 5
+                                    }
+                                }
+                                CheckBox {
+                                    id: chkClearLinePosition
+                                    text: "沿线点位保护"
+                                    checked: false
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "#ffcccc"
+                                        font.pixelSize: 12
+                                        leftPadding: parent.indicator.width + 5
+                                    }
+                                }
+                                CheckBox {
+                                    id: chkClearSystemSound
+                                    text: "系统提示音"
+                                    checked: false
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "#ffcccc"
+                                        font.pixelSize: 12
+                                        leftPadding: parent.indicator.width + 5
+                                    }
+                                }
+                                CheckBox {
+                                    id: chkClearBeltOp
+                                    text: "皮带操作状态"
+                                    checked: true
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "#ffcccc"
+                                        font.pixelSize: 12
+                                        leftPadding: parent.indicator.width + 5
+                                    }
+                                }
+                                CheckBox {
+                                    id: chkClearSystemStatus
+                                    text: "系统/通讯状态"
+                                    checked: false
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "#ffcccc"
+                                        font.pixelSize: 12
+                                        leftPadding: parent.indicator.width + 5
+                                    }
+                                }
+                                CheckBox {
+                                    id: chkClearModuleStatus
+                                    text: "模块在线状态"
+                                    checked: false
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "#ffcccc"
+                                        font.pixelSize: 12
+                                        leftPadding: parent.indicator.width + 5
+                                    }
+                                }
+                            }
+
+                            Button {
+                                text: "清除选中分类的旧语音"
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 28
+                                enabled: batchGenerator && !batchGenerator.isRunning
+                                background: Rectangle {
+                                    color: parent.enabled ? (parent.hovered ? "#cc4444" : "#993333") : "#555555"
+                                    radius: 4
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "#ffffff"
+                                    font.pixelSize: 11
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                onClicked: {
+                                    if (!batchGenerator) return
+                                    // 先设置配置（确保引擎和路径正确）
+                                    batchGenerator.setConfig(buildConfig())
+                                    var cats = []
+                                    if (chkClearSwitchInput.checked) cats.push("switchInput")
+                                    if (chkClearAnalogInput.checked) cats.push("analogInput")
+                                    if (chkClearMotor.checked) cats.push("motor")
+                                    if (chkClearBrake.checked) cats.push("brake")
+                                    if (chkClearTension.checked) cats.push("tension")
+                                    if (chkClearLinePosition.checked) cats.push("linePosition")
+                                    if (chkClearSystemSound.checked) cats.push("systemSound")
+                                    if (chkClearBeltOp.checked) cats.push("beltOperation")
+                                    if (chkClearSystemStatus.checked) cats.push("systemStatus")
+                                    if (chkClearModuleStatus.checked) cats.push("moduleStatus")
+                                    if (cats.length === 0) return
+                                    var count = batchGenerator.clearCategoryFiles(cats)
+                                    clearResultText.text = "已清除 " + count + " 个旧语音文件"
+                                    clearResultText.visible = true
+                                }
+                            }
+
+                            Text {
+                                id: clearResultText
+                                visible: false
+                                color: "#ffaa66"
+                                font.pixelSize: 11
+                                Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
                             }
-                            onClicked: {
-                                if (!batchGenerator) return
-                                // 先设置配置（确保引擎和路径正确）
-                                batchGenerator.setConfig(getConfig())
-                                var cats = []
-                                if (chkClearBeltOp.checked) cats.push("beltOperation")
-                                if (chkClearSwitchInput.checked) cats.push("switchInput")
-                                if (chkClearSystemSound.checked) cats.push("systemSound")
-                                if (cats.length === 0) return
-                                var count = batchGenerator.clearCategoryFiles(cats)
-                                clearResultText.text = "已清除 " + count + " 个旧语音文件"
-                                clearResultText.visible = true
-                            }
-                        }
-
-                        Text {
-                            id: clearResultText
-                            visible: false
-                            color: "#ffaa66"
-                            font.pixelSize: 11
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignHCenter
                         }
                     }
                 }
