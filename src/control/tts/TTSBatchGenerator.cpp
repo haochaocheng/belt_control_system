@@ -115,6 +115,8 @@ void TTSBatchGenerator::setConfig(const QVariantMap& config)
             else if (cat == "tension") m_config.categories.append(ProtectionCategory::Tension);
             else if (cat == "linePosition") m_config.categories.append(ProtectionCategory::LinePosition);
             else if (cat == "systemSound") m_config.categories.append(ProtectionCategory::SystemSound);
+            // ✅ 2026-03-25 [Phase 7.48.88.10]: 新增皮带操作状态分类解析
+            else if (cat == "beltOperation") m_config.categories.append(ProtectionCategory::BeltOperation);
         }
     }
 
@@ -171,6 +173,10 @@ int TTSBatchGenerator::generateFileList()
                 break;
             case ProtectionCategory::SystemSound:
                 buildSystemSoundList();
+                break;
+            // ✅ 2026-03-25 [Phase 7.48.88.10]: 新增皮带操作状态批量生成
+            case ProtectionCategory::BeltOperation:
+                buildBeltOperationList();
                 break;
         }
     }
@@ -641,5 +647,64 @@ void TTSBatchGenerator::buildSystemSoundList()
 
         m_fileList.append(item);
         fileIndex++;
+    }
+}
+
+// ✅ 2026-03-25 [Phase 7.48.88.10]: 皮带操作状态语音清单（启车/停车预警）
+void TTSBatchGenerator::buildBeltOperationList()
+{
+    // 每条皮带生成：启车预警、停车预警
+    // 文件存放在 {belt}#PD/ 目录，与 getAudioPath() 搜索路径一致
+    QStringList operations = {
+        "启车", "停车"
+    };
+
+    for (int belt : m_config.beltNumbers) {
+        int fileIndex = 1;
+
+        // 启车预警：X号皮带准备启车，请注意安全
+        {
+            VoiceFileItem item;
+            item.id = QString("belt_op_belt%1_startup").arg(belt);
+            item.category = "皮带操作状态";
+            item.text = QString("%1号皮带准备启车，请注意安全").arg(belt);
+            item.filename = QString("%1号皮带启车.wav").arg(belt);
+            item.relativePath = QString("%1#PD").arg(belt);
+            item.status = VoiceFileItem::Status::Pending;
+            m_fileList.append(item);
+        }
+
+        // 停车预警：X号皮带准备停车，请注意安全
+        {
+            VoiceFileItem item;
+            item.id = QString("belt_op_belt%1_stop").arg(belt);
+            item.category = "皮带操作状态";
+            item.text = QString("%1号皮带准备停车，请注意安全").arg(belt);
+            item.filename = QString("%1号皮带停车.wav").arg(belt);
+            item.relativePath = QString("%1#PD").arg(belt);
+            item.status = VoiceFileItem::Status::Pending;
+            m_fileList.append(item);
+        }
+
+        // 张紧启动/失败
+        for (int tension : m_config.tensionNumbers) {
+            VoiceFileItem itemStart;
+            itemStart.id = QString("belt_op_belt%1_tension%2_start").arg(belt).arg(tension);
+            itemStart.category = "皮带操作状态";
+            itemStart.text = QString("%1号皮带%2号张紧装置启动").arg(belt).arg(tension);
+            itemStart.filename = QString("%1号皮带%2号张紧装置启动.wav").arg(belt).arg(tension);
+            itemStart.relativePath = QString("%1#PD").arg(belt);
+            itemStart.status = VoiceFileItem::Status::Pending;
+            m_fileList.append(itemStart);
+
+            VoiceFileItem itemFail;
+            itemFail.id = QString("belt_op_belt%1_tension%2_fail").arg(belt).arg(tension);
+            itemFail.category = "皮带操作状态";
+            itemFail.text = QString("%1号皮带%2号张紧装置失败").arg(belt).arg(tension);
+            itemFail.filename = QString("%1号皮带%2号张紧装置失败.wav").arg(belt).arg(tension);
+            itemFail.relativePath = QString("%1#PD").arg(belt);
+            itemFail.status = VoiceFileItem::Status::Pending;
+            m_fileList.append(itemFail);
+        }
     }
 }

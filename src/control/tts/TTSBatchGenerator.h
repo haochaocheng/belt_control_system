@@ -112,6 +112,8 @@ private:
     void buildTensionList();          // 张紧控制保护
     void buildLinePositionList();     // 沿线点位保护
     void buildSystemSoundList();      // 系统提示音
+    // ✅ 2026-03-25 [Phase 7.48.88.10]: 新增皮带操作状态
+    void buildBeltOperationList();    // 皮带操作状态（启车/停车预警）
 
     // 辅助方法
     QString formatTime(double seconds) const;

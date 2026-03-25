@@ -741,7 +741,9 @@ Rectangle {
                 modelName: modelName,
                 speakerId: id,
                 rate: TTSConfig.rate(TTSConfig.Test),
-                volume: TTSConfig.volume(TTSConfig.Test),
+                // 旧：volume: TTSConfig.volume(TTSConfig.Test),
+                // ✅ 2026-03-25 [Phase 7.48.88.10]: 批量生成音量强制最大值
+                volume: 1.0,
                 outputFolder: "paddlespeech-" + modelName + "-spk" + id
             })
         }
@@ -808,7 +810,9 @@ Rectangle {
                 // speakerId: 21,  // 2026-02-27 06:00 注释：原硬编码值
                 speakerId: TTSConfig.speakerId(TTSConfig.Test),
                 rate: TTSConfig.rate(TTSConfig.Test),
-                volume: TTSConfig.volume(TTSConfig.Test),
+                // 旧：volume: TTSConfig.volume(TTSConfig.Test),
+                // ✅ 2026-03-25 [Phase 7.48.88.10]: 批量生成音量强制最大值
+                volume: 1.0,
                 // ✅ 2026-02-27 10:00 [Phase 7.47.34]: 输出文件夹名称使用实际选择的模型
                 // outputFolder: "paddlespeech-fastspeech2-aishell3-spk" + TTSConfig.speakerId(TTSConfig.Test)  // 2026-02-27 10:00 注释：原硬编码值
                 outputFolder: "paddlespeech-" + TTSConfig.modelName(TTSConfig.modelIndex(TTSConfig.Test)) + "-spk" + TTSConfig.speakerId(TTSConfig.Test)

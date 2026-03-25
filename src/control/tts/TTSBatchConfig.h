@@ -18,7 +18,9 @@ enum class ProtectionCategory {
     Brake,            // 制动器保护
     Tension,          // 张紧控制保护
     LinePosition,     // 沿线点位保护
-    SystemSound       // 系统提示音
+    SystemSound,      // 系统提示音
+    // ✅ 2026-03-25 [Phase 7.48.88.10]: 新增皮带操作状态分类
+    BeltOperation     // 皮带操作状态（启车/停车预警）
 };
 
 // ========== TTS 引擎配置 ==========

@@ -895,20 +895,42 @@ void CommonControl::playWarningOnce()
         return;
     }
 
-    // ② 次选：TTS实时合成
+    // ② 次选：TTS实时合成，合成后保存到批量生成路径（下次直接使用）
     if (m_ttsEngineManager) {
         TTSParameters params;
         params.speakerId = 0;
+        // ✅ 2026-03-25 [Phase 7.48.88.10]: TTS音量强制最大值，与批量生成一致
         params.rate = 0.9;
         params.volume = 1.0;
 
-        // 使用固定临时文件路径（同一次预警复用，避免重复合成）
-        QString tempFile = QString("/tmp/startup_warning_%1.wav").arg(m_currentBeltNumber);
+        // ✅ 2026-03-25 [Phase 7.48.88.10]: 合成后保存到批量生成路径，下次直接复用
+        // 旧代码：保存到 /tmp/startup_warning_N.wav（临时文件，重启后丢失）
+        // 新逻辑：保存到 {audioBase}/{engine}-{model}-spk{id}/{N}#PD/N号皮带启车.wav
+        QString batchPath;
+        TTSConfigManager *ttsConfig = TTSConfigManager::instance();
+        if (ttsConfig) {
+            int modelIndex = ttsConfig->modelIndex(TTSConfigManager::Test);
+            QString engineName = "paddlespeech";
+            QString modelName = ttsConfig->modelName(modelIndex);
+            int speakerId = ttsConfig->speakerId(TTSConfigManager::Test);
+            QString batchDir = QString("%1/%2-%3-spk%4/%5#PD")
+                                    .arg(DataPathConfig::getAudioBaseDirectory())
+                                    .arg(engineName)
+                                    .arg(modelName)
+                                    .arg(speakerId)
+                                    .arg(m_currentBeltNumber);
+            QDir().mkpath(batchDir);
+            batchPath = QString("%1/%2号皮带启车.wav").arg(batchDir).arg(m_currentBeltNumber);
+        }
+        // 备选：临时路径
+        QString outputPath = batchPath.isEmpty()
+            ? QString("/tmp/startup_warning_%1.wav").arg(m_currentBeltNumber)
+            : batchPath;
 
-        qDebug() << "🗣️ CommonControl: TTS合成起车预警:" << warningText;
-        if (m_ttsEngineManager->synthesize(warningText, tempFile, params)) {
-            qDebug() << "✅ CommonControl: TTS合成成功，播放:" << tempFile;
-            m_currentAudioPath = tempFile;  // 缓存路径，本次预警重复播放时直接复用
+        qDebug() << "🗣️ CommonControl: TTS合成起车预警:" << warningText << "输出:" << outputPath;
+        if (m_ttsEngineManager->synthesize(warningText, outputPath, params)) {
+            qDebug() << "✅ CommonControl: TTS合成成功，播放:" << outputPath;
+            m_currentAudioPath = outputPath;  // 缓存路径，本次预警重复播放时直接复用
             playAudio(m_currentAudioPath);
             // ✅ 2026-03-20 [Phase 7.48.62]: TTS合成（同步约10秒）后重置计时器
             // 原因：m_warningTimer 在 startWarningPlayback() 中已 start(N秒)，
