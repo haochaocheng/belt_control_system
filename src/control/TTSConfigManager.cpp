@@ -61,7 +61,9 @@ void TTSConfigManager::loadConfig()
         config.modelPath = m_settings->value(key + "/modelPath", MODEL_PATHS[0]).toString();
         config.speakerId = m_settings->value(key + "/speakerId", 0).toInt();
         config.rate = m_settings->value(key + "/rate", 1.0).toDouble();
-        config.volume = m_settings->value(key + "/volume", 0.8).toDouble();
+        // 旧：config.volume = m_settings->value(key + "/volume", 0.8).toDouble();
+        // ✅ 2026-03-25 [Phase 7.48.88.10]: 默认音量改为1.0（最大值），确保预警语音清晰
+        config.volume = m_settings->value(key + "/volume", 1.0).toDouble();
         // ✅ 2026-02-26 [Phase 7.47.19]: 加载采样率配置
         // ❌ 2026-03-04 18:30 [Phase 7.47.91]: 旧默认值 24000 — dmix 需重采样且 ES8388 不支持 24kHz
         // ✅ 2026-03-04 18:30 [Phase 7.47.91]: 新默认值 48000 — 与 dmix/硬件一致，全链路零重采样

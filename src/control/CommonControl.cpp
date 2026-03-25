@@ -898,16 +898,18 @@ void CommonControl::playWarningOnce()
     // ② 次选：TTS实时合成，合成后保存到批量生成路径（下次直接使用）
     if (m_ttsEngineManager) {
         TTSParameters params;
-        params.speakerId = 0;
-        // ✅ 2026-03-25 [Phase 7.48.88.10]: TTS音量强制最大值，与批量生成一致
-        params.rate = 0.9;
-        params.volume = 1.0;
+        // ✅ 2026-03-25 [Phase 7.48.88.10]: 使用界面配置的TTS参数
+        TTSConfigManager *ttsConfig = TTSConfigManager::instance();
+        params.speakerId = ttsConfig ? ttsConfig->speakerId(TTSConfigManager::Test) : 0;
+        params.rate = ttsConfig ? ttsConfig->rate(TTSConfigManager::Test) : 0.9;
+        params.volume = ttsConfig ? ttsConfig->volume(TTSConfigManager::Test) : 1.0;
 
         // ✅ 2026-03-25 [Phase 7.48.88.10]: 合成后保存到批量生成路径，下次直接复用
         // 旧代码：保存到 /tmp/startup_warning_N.wav（临时文件，重启后丢失）
         // 新逻辑：保存到 {audioBase}/{engine}-{model}-spk{id}/{N}#PD/N号皮带启车.wav
         QString batchPath;
-        TTSConfigManager *ttsConfig = TTSConfigManager::instance();
+        // 旧代码：TTSConfigManager *ttsConfig = TTSConfigManager::instance(); // 重复声明
+        // ✅ 2026-03-25 [Phase 7.48.88.10]: 复用上方已声明的 ttsConfig
         if (ttsConfig) {
             int modelIndex = ttsConfig->modelIndex(TTSConfigManager::Test);
             QString engineName = "paddlespeech";
