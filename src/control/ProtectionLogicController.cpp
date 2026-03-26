@@ -120,9 +120,12 @@ void ProtectionLogicController::onProtectionRestored(int beltNumber, const QStri
             }
         }
         if (!hasActiveProtection) {
-            // 所有保护已恢复，清除停车标志
-            m_beltStopped.remove(beltNumber);
-            qDebug() << "✅ ProtectionLogicController: 皮带" << beltNumber << "所有保护已恢复，停车标志已清除";
+            // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护恢复时不立即清除停车标志
+            // 原因：急停恢复→m_beltStopped清除→跑偏触发→通过检查→再次停车→取消正在执行的停止序列
+            //       导致停止永远无法完成
+            // 修复：停车标志仅在F键复位时清除（resetAllProtections），不在保护恢复时清除
+            // 旧代码：m_beltStopped.remove(beltNumber);
+            qDebug() << "✅ ProtectionLogicController: 皮带" << beltNumber << "所有保护已恢复（停车标志保留，需F键复位）";
         }
     }
 }

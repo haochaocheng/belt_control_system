@@ -661,10 +661,21 @@ void CommonControl::emergencyStopBelt(int beltNumber)
 {
     qDebug() << "🚨 CommonControl: 紧急停车" << beltNumber << "号皮带（跳过停车音频）";
 
-    // ✅ 2026-03-25 [Phase 7.48.88.22]: 先取消该皮带的启动序列（如果正在执行）
+    // ✅ 2026-03-26 [Phase 7.48.88.27]: 如果该皮带已有停止序列在执行，不重新启动
+    // 原因：急停触发停止序列→急停恢复→跑偏触发→又调emergencyStopBelt→取消当前停止→重新开始
+    //       只要保护不断触发，停止永远无法完成
+    // 修复：只有首次保护触发执行停止，后续保护触发忽略（停止序列已在执行中）
     BeltSequenceState *state = m_beltSequences.value(beltNumber, nullptr);
-    if (state && state->isRunning) {
-        qDebug() << "  ⏹️ 取消" << beltNumber << "号皮带正在执行的序列";
+    if (state && state->isRunning && !state->isStartup) {
+        qDebug() << "⚠️  CommonControl:" << beltNumber << "号皮带停止序列已在执行中，忽略重复紧急停车请求";
+        return;
+    }
+
+    // ✅ 2026-03-25 [Phase 7.48.88.22]: 取消该皮带的启动序列（如果正在执行启动）
+    // ❌ 2026-03-25 旧代码：无条件取消任何序列（包括停止序列），导致停止被中断
+    // if (state && state->isRunning) { state->isRunning = false; state->timer->stop(); }
+    if (state && state->isRunning && state->isStartup) {
+        qDebug() << "  ⏹️ 取消" << beltNumber << "号皮带正在执行的启动序列";
         state->isRunning = false;
         state->timer->stop();
     }
