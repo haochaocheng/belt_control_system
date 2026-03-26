@@ -21,6 +21,24 @@ Rectangle {
     // ✅ 2026-02-26 21:15 [Phase 7.47.18]: 是否显示标题栏（嵌入模式设为 false）
     property bool showHeader: true
 
+    // ✅ 2026-03-26 [Phase 7.48.88.28]: 按设备选择（替代原"皮带数量"SpinBox）
+    // 每个元素对应1#~8#设备是否选中，true=选中参与生成/清除
+    property var beltChecked: [true, true, true, true, true, true, true, true]
+
+    function setAllBelts(checked) {
+        var arr = []
+        for (var i = 0; i < 8; i++) arr.push(checked)
+        beltChecked = arr
+    }
+
+    function getSelectedBeltNumbers() {
+        var result = []
+        for (var i = 0; i < 8; i++) {
+            if (beltChecked[i]) result.push(i + 1)
+        }
+        return result
+    }
+
     // 关闭信号，由父组件处理
     signal closeRequested()
 
@@ -451,13 +469,59 @@ Rectangle {
                         rowSpacing: 8
                         anchors.fill: parent
 
-                        Text { text: "皮带数量:"; color: "#cccccc"; Layout.preferredWidth: 80 }
-                        SpinBox {
-                            id: spinBeltCount
-                            from: 1; to: 8; value: 8
-                            editable: true
+                        // 旧：Text { text: "皮带数量:"; ... } + SpinBox { id: spinBeltCount }
+                        // ✅ 2026-03-26 [Phase 7.48.88.28]: 改为8个独立CheckBox，支持按设备选择
+                        Text { text: "设备选择:"; color: "#cccccc"; Layout.preferredWidth: 80 }
+                        Flow {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 35
+                            spacing: 2
+                            Repeater {
+                                model: 8
+                                CheckBox {
+                                    text: (index + 1) + "#"
+                                    checked: beltChecked[index]
+                                    onCheckedChanged: {
+                                        if (beltChecked[index] !== checked) {
+                                            var arr = beltChecked.slice()
+                                            arr[index] = checked
+                                            beltChecked = arr
+                                        }
+                                    }
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: parent.checked ? "#00ff88" : "#888888"
+                                        font.pixelSize: 12
+                                        font.bold: parent.checked
+                                        leftPadding: parent.indicator.width + 2
+                                    }
+                                }
+                            }
+                            Button {
+                                text: "全选"
+                                width: 40; height: 28
+                                onClicked: setAllBelts(true)
+                                background: Rectangle {
+                                    color: parent.hovered ? "#445566" : "#333344"
+                                    radius: 3
+                                }
+                                contentItem: Text {
+                                    text: parent.text; color: "#ffffff"; font.pixelSize: 11
+                                    horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+                            Button {
+                                text: "清空"
+                                width: 40; height: 28
+                                onClicked: setAllBelts(false)
+                                background: Rectangle {
+                                    color: parent.hovered ? "#554444" : "#333344"
+                                    radius: 3
+                                }
+                                contentItem: Text {
+                                    text: parent.text; color: "#ffffff"; font.pixelSize: 11
+                                    horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                                }
+                            }
                         }
 
                         Text { text: "电机数量:"; color: "#cccccc"; Layout.preferredWidth: 80 }
@@ -868,7 +932,9 @@ Rectangle {
     // ✅ 2026-03-05 [Phase 7.48.7]: 模拟量输入从8项更新为21项（设备保护10项+环境监测8项+安规补充3项）
     function calculateTotalFiles() {
         var total = 0
-        var beltCount = spinBeltCount.value
+        // 旧：var beltCount = spinBeltCount.value
+        // ✅ 2026-03-26 [Phase 7.48.88.28]: 使用选中的设备数量
+        var beltCount = getSelectedBeltNumbers().length
         var motorCount = spinMotorCount.value
         var brakeCount = spinBrakeCount.value
         var tensionCount = spinTensionCount.value
@@ -984,8 +1050,10 @@ Rectangle {
         // ✅ 2026-03-02 [Phase 7.47.69]
         if (chkModuleStatus.checked) categories.push("moduleStatus")
 
-        var beltNumbers = []
-        for (var i = 1; i <= spinBeltCount.value; i++) beltNumbers.push(i)
+        // 旧：var beltNumbers = []
+        // 旧：for (var i = 1; i <= spinBeltCount.value; i++) beltNumbers.push(i)
+        // ✅ 2026-03-26 [Phase 7.48.88.28]: 使用选中的设备列表（支持非连续选择）
+        var beltNumbers = getSelectedBeltNumbers()
 
         // 旧代码：只从 systemConfig 读取 machineNumber 和 localDeviceName
         // 问题：systemConfig 可能未同步最新的SQLite值（如用户改了设备号/名称但未重启）
@@ -1077,7 +1145,9 @@ Rectangle {
         TTSConfig.setValue("batch/chkBeltOperation", chkBeltOperation.checked)
         TTSConfig.setValue("batch/chkSystemStatus", chkSystemStatus.checked)
         TTSConfig.setValue("batch/chkModuleStatus", chkModuleStatus.checked)
-        TTSConfig.setValue("batch/beltCount", spinBeltCount.value)
+        // 旧：TTSConfig.setValue("batch/beltCount", spinBeltCount.value)
+        // ✅ 2026-03-26 [Phase 7.48.88.28]: 保存设备选择状态（JSON数组）
+        TTSConfig.setValue("batch/beltChecked", JSON.stringify(beltChecked))
         TTSConfig.setValue("batch/motorCount", spinMotorCount.value)
         TTSConfig.setValue("batch/brakeCount", spinBrakeCount.value)
         TTSConfig.setValue("batch/tensionCount", spinTensionCount.value)
@@ -1106,7 +1176,14 @@ Rectangle {
         chkBeltOperation.checked = TTSConfig.getValue("batch/chkBeltOperation", true)
         chkSystemStatus.checked = TTSConfig.getValue("batch/chkSystemStatus", true)
         chkModuleStatus.checked = TTSConfig.getValue("batch/chkModuleStatus", true)
-        spinBeltCount.value = TTSConfig.getValue("batch/beltCount", 8)
+        // 旧：spinBeltCount.value = TTSConfig.getValue("batch/beltCount", 8)
+        // ✅ 2026-03-26 [Phase 7.48.88.28]: 恢复设备选择状态（JSON数组）
+        var savedBelts = TTSConfig.getValue("batch/beltChecked", "")
+        if (savedBelts !== "" && savedBelts !== undefined && savedBelts !== null) {
+            try { beltChecked = JSON.parse(savedBelts) } catch(e) {
+                console.warn("⚠️ 解析beltChecked失败:", e)
+            }
+        }
         // 旧：spinMotorCount.value = TTSConfig.getValue("batch/motorCount", 4)
         // ✅ 2026-03-13 [Phase 7.48.44]: 默认电机数量改为8（覆盖全部电机）
         spinMotorCount.value = TTSConfig.getValue("batch/motorCount", 8)
@@ -1169,10 +1246,9 @@ Rectangle {
         target: chkModuleStatus
         function onCheckedChanged() { saveBatchConfig() }
     }
-    Connections {
-        target: spinBeltCount
-        function onValueChanged() { saveBatchConfig() }
-    }
+    // 旧：Connections { target: spinBeltCount; function onValueChanged() { saveBatchConfig() } }
+    // ✅ 2026-03-26 [Phase 7.48.88.28]: 监听设备选择变化自动保存
+    onBeltCheckedChanged: saveBatchConfig()
     Connections {
         target: spinMotorCount
         function onValueChanged() { saveBatchConfig() }
