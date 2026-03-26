@@ -26,6 +26,9 @@ Item {
     readonly property int rows: 3
     readonly property int cols: 4
     readonly property int totalItems: 12
+    readonly property int beltCardCount: 8
+
+    property var beltSensorMappings: ({})
 
     focus: true
     activeFocusOnTab: true
@@ -100,6 +103,223 @@ Item {
             screen01Form.data_row3_col3,
             screen01Form.data_row3_col4
         ]
+    }
+
+    function getLocalDeviceId() {
+        if (typeof deviceRoleManager !== "undefined" && deviceRoleManager && deviceRoleManager.localDeviceId > 0) {
+            return deviceRoleManager.localDeviceId
+        }
+        if (typeof systemConfig !== "undefined" && systemConfig && systemConfig.machineNumber > 0) {
+            return systemConfig.machineNumber
+        }
+        return 1
+    }
+
+    function getLocalDeviceName() {
+        var localDeviceId = getLocalDeviceId()
+
+        if (typeof deviceConfigMgr !== "undefined" && deviceConfigMgr && localDeviceId > 0) {
+            var sqlName = deviceConfigMgr.loadBasicConfig(localDeviceId, "localDeviceName")
+            if (sqlName && sqlName !== "") {
+                return sqlName
+            }
+        }
+
+        if (typeof systemConfig !== "undefined" && systemConfig && systemConfig.localDeviceName) {
+            return systemConfig.localDeviceName
+        }
+
+        return localDeviceId + "号皮带"
+    }
+
+    function qmlModuleIndex(moduleType) {
+        if (moduleType === "模拟量模块1") return 2
+        if (moduleType === "模拟量模块2") return 3
+        return -1
+    }
+
+    function clampPercent(value) {
+        return Math.max(0, Math.min(1, value || 0))
+    }
+
+    function computeEngineeringValue(adValue, rangeValue, inputType) {
+        var range = Number(rangeValue) || 0
+        var adc = Number(adValue) || 0
+        if (range <= 0) return 0
+
+        var normalized = adc / 65535.0
+        if (inputType && (inputType.indexOf("4-20mA") >= 0 || inputType.indexOf("1-5V") >= 0)) {
+            var zeroPoint = 65535.0 * 0.2
+            if (adc <= zeroPoint) return 0
+            normalized = (adc - zeroPoint) / (65535.0 - zeroPoint)
+        }
+
+        return Math.max(0, normalized * range)
+    }
+
+    function buildAnalogMapping(config, valueKey) {
+        if (!config) return null
+
+        var moduleIndex = qmlModuleIndex(config.module_type)
+        var channelIndex = Number(config.register_address)
+        if (moduleIndex < 0 || channelIndex < 0) return null
+
+        return {
+            moduleIndex: moduleIndex,
+            channelIndex: channelIndex,
+            rangeValue: Number(config.range_value) || Number(config.rated_value) || 0,
+            inputType: config.input_type || "4-20mA电流型",
+            unit: config.unit || "",
+            valueKey: valueKey
+        }
+    }
+
+    function buildTensionMapping(config) {
+        if (!config) return null
+
+        var moduleIndex = qmlModuleIndex(config.module_type)
+        var channelIndex = Number(config.channel_number)
+        if (moduleIndex < 0 || channelIndex < 0) return null
+
+        return {
+            moduleIndex: moduleIndex,
+            channelIndex: channelIndex,
+            rangeValue: Number(config.range_value) || Number(config.rated_value) || 0,
+            inputType: config.input_type || "4-20mA电流型",
+            unit: config.unit || "kN",
+            valueKey: "param4"
+        }
+    }
+
+    function rebuildBeltSensorMappings() {
+        var mappings = {}
+
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) {
+            console.log("[Screen01] ⚠️ deviceConfigMgr 不可用, 无法构建传感器映射")
+            beltSensorMappings = mappings
+            return
+        }
+
+        for (var beltNumber = 1; beltNumber <= beltCardCount; beltNumber++) {
+            var analogProtections = deviceConfigMgr.loadAllAnalogProtections(beltNumber)
+            var speedMapping = null
+
+            // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 添加调试日志，排查速度数据绑定
+            console.log("[Screen01] 📊 皮带", beltNumber, "加载保护配置:", analogProtections.length, "项")
+
+            for (var i = 0; i < analogProtections.length; i++) {
+                var protection = analogProtections[i]
+                if (protection.protection_name === "速度") {
+                    speedMapping = buildAnalogMapping(protection, "param1")
+                    console.log("[Screen01] ✅ 皮带", beltNumber, "速度映射: moduleIndex=",
+                        speedMapping ? speedMapping.moduleIndex : "null",
+                        "channelIndex=", speedMapping ? speedMapping.channelIndex : "null",
+                        "rangeValue=", speedMapping ? speedMapping.rangeValue : "null")
+                    break
+                }
+            }
+
+            var tensionConfig = deviceConfigMgr.loadTensionConfig(beltNumber, 0)
+            var tensionMapping = buildTensionMapping(tensionConfig)
+
+            if (!speedMapping) {
+                console.log("[Screen01] ⚠️ 皮带", beltNumber, "没有速度保护配置")
+            }
+
+            mappings[beltNumber - 1] = {
+                speed: speedMapping,
+                tension: tensionMapping
+            }
+        }
+
+        beltSensorMappings = mappings
+    }
+
+    function applyMappedValue(item, mapping, data) {
+        if (!item || !mapping || !data || !data.valid) return
+
+        var engineeringValue = computeEngineeringValue(data.adValue, mapping.rangeValue, mapping.inputType)
+        var percent = mapping.rangeValue > 0 ? clampPercent(engineeringValue / mapping.rangeValue) : 0
+        var valueText = engineeringValue.toFixed(mapping.valueKey === "param1" ? 2 : 1)
+        var percentKey = mapping.valueKey + "Percent"
+
+        // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 调试日志 - 确认数据是否到达卡片
+        console.log("[Screen01] 📈", mapping.valueKey, "AD:", data.adValue,
+            "→ 工程值:", valueText, mapping.unit, "percent:", percent.toFixed(2))
+
+        item[mapping.valueKey + "Value"] = valueText
+        item[mapping.valueKey + "Unit"] = mapping.unit
+        item[percentKey] = percent
+    }
+
+    function applyAnalogChannelUpdate(moduleIndex, channelIndex, data) {
+        var dataItems = getDataItems()
+
+        for (var cardIndex = 0; cardIndex < beltCardCount; cardIndex++) {
+            var item = dataItems[cardIndex]
+            var mappingGroup = beltSensorMappings[cardIndex]
+            if (!item || !mappingGroup) continue
+
+            if (mappingGroup.speed &&
+                mappingGroup.speed.moduleIndex === moduleIndex &&
+                mappingGroup.speed.channelIndex === channelIndex) {
+                applyMappedValue(item, mappingGroup.speed, data)
+            }
+
+            if (mappingGroup.tension &&
+                mappingGroup.tension.moduleIndex === moduleIndex &&
+                mappingGroup.tension.channelIndex === channelIndex) {
+                applyMappedValue(item, mappingGroup.tension, data)
+            }
+        }
+    }
+
+    function refreshMappedAnalogValues() {
+        if (typeof aiDataManager === "undefined" || !aiDataManager) return
+
+        for (var cardIndex = 0; cardIndex < beltCardCount; cardIndex++) {
+            var mappingGroup = beltSensorMappings[cardIndex]
+            if (!mappingGroup) continue
+
+            if (mappingGroup.speed) {
+                var speedData = aiDataManager.getChannel(mappingGroup.speed.moduleIndex, mappingGroup.speed.channelIndex)
+                applyAnalogChannelUpdate(mappingGroup.speed.moduleIndex, mappingGroup.speed.channelIndex, speedData)
+            }
+
+            if (mappingGroup.tension) {
+                var tensionData = aiDataManager.getChannel(mappingGroup.tension.moduleIndex, mappingGroup.tension.channelIndex)
+                applyAnalogChannelUpdate(mappingGroup.tension.moduleIndex, mappingGroup.tension.channelIndex, tensionData)
+            }
+        }
+    }
+
+    function applyDeviceMetadata() {
+        var dataItems = getDataItems()
+        var localDeviceId = getLocalDeviceId()
+        var localDeviceName = getLocalDeviceName()
+        var deviceNames = [
+            "1号皮带", "2号皮带", "3号皮带", "4号皮带",
+            "5号皮带", "6号皮带", "7号皮带", "8号皮带",
+            "转载机", "破碎机", "前刮板", "后刮板"
+        ]
+
+        if (localDeviceId >= 1 && localDeviceId <= beltCardCount) {
+            deviceNames[localDeviceId - 1] = localDeviceName
+        }
+
+        for (var j = 0; j < dataItems.length; j++) {
+            if (dataItems[j]) {
+                dataItems[j].deviceName = deviceNames[j]
+                dataItems[j].deviceIndex = j
+                dataItems[j].isLocalDevice = (j === localDeviceId - 1)
+            }
+        }
+    }
+
+    function refreshDeviceCards() {
+        applyDeviceMetadata()
+        rebuildBeltSensorMappings()
+        refreshMappedAnalogValues()
     }
 
     // ✅ 2026-01-28 [FIX 100.300.67]: 为每个数据组件添加鼠标交互
@@ -256,23 +476,39 @@ Item {
             if (validCount > 0) {
                 console.log("[Screen01] 🔄 初始化选中状态...")
                 updateSelection()
+                applyDeviceMetadata()
+                rebuildBeltSensorMappings()
+                refreshMappedAnalogValues()
 
                 // ✅ 2026-03-23 [Phase 7.48.84.4]: 设置每个卡片的设备名称
-                // 旧代码：12个卡片全部显示默认值"设备 01"，未分别设置
+                // ✅ 2026-03-26 [Phase 7.48.88.26.2]: 从systemConfig读取本机名称
+                // 旧代码：12个卡片硬编码"N号皮带"，不使用基本参数设置中的"本机名称"
                 var deviceNames = [
                     "1号皮带", "2号皮带", "3号皮带", "4号皮带",
                     "5号皮带", "6号皮带", "7号皮带", "8号皮带",
                     "转载机", "破碎机", "前刮板", "后刮板"
                 ]
+                // 用systemConfig的本机名称覆盖对应皮带卡片
+                if (typeof systemConfig !== "undefined" && systemConfig) {
+                    var machineIdx = systemConfig.machineNumber - 1  // machineNumber从1开始，数组从0开始
+                    if (machineIdx >= 0 && machineIdx < 8) {
+                        deviceNames[machineIdx] = systemConfig.localDeviceName
+                        console.log("[Screen01] 📋 本机名称:", systemConfig.localDeviceName,
+                                    "编号:", systemConfig.machineNumber)
+                    }
+                }
                 for (var j = 0; j < dataItems.length; j++) {
                     if (dataItems[j]) {
                         dataItems[j].deviceName = deviceNames[j]
+                        dataItems[j].deviceIndex = j
                     }
                 }
                 console.log("[Screen01] ✅ 设备名称已设置")
 
                 // ✅ 2026-01-28 [FIX 100.300.67]: 设置鼠标交互
                 console.log("[Screen01] 🖱️ 设置鼠标交互...")
+                refreshDeviceCards()
+                console.log("[Screen01] refreshDeviceCards after legacy initialization")
                 setupMouseInteraction()
             } else {
                 console.warn("[Screen01] ⚠️ dataItems 仍未定义，跳过初始化")
@@ -404,6 +640,171 @@ Item {
                 color: "#FFFF00"
                 font.pixelSize: 12
             }
+        }
+    }
+
+    // ✅ 2026-03-26 [Phase 7.48.88.25]: 监听序列进度信号，更新卡片状态显示
+    Connections {
+        target: typeof commonControl !== "undefined" ? commonControl : null
+        enabled: target !== null
+
+        function onBeltSequenceProgress(beltNumber, phase, current, total, delayMs) {
+            var idx = beltNumber - 1
+            if (idx < 0 || idx >= 12) return
+            var dataItems = getDataItems()
+            var item = dataItems[idx]
+            if (!item) return
+
+            item.sequencePhase = phase
+            item.sequenceCurrent = current
+            item.sequenceTotal = total
+            item.sequenceDelayMs = delayMs
+
+            // 更新运行状态文字
+            if (phase === "运行") {
+                item.deviceStatus = "运行"
+            } else if (phase === "停止") {
+                item.deviceStatus = "停止"
+                item.sequencePhase = ""  // 清空阶段，回到参数显示
+            } else if (phase === "起车预警" || phase === "停车预警") {
+                item.deviceStatus = phase
+            } else {
+                // 序列执行中：显示"启动中"/"停止中"
+                item.deviceStatus = current > 0 ? (phase.indexOf("停") >= 0 ? "停止中" : "启动中") : item.deviceStatus
+            }
+
+            console.log("[Screen01] 📊 卡片", beltNumber, "阶段:", phase,
+                        "进度:", current + "/" + total, "倒计时:", delayMs + "ms")
+        }
+
+        function onBeltRunningChanged(beltNumber, running) {
+            var idx = beltNumber - 1
+            if (idx < 0 || idx >= 12) return
+            var dataItems = getDataItems()
+            var item = dataItems[idx]
+            if (!item) return
+            item.deviceStatus = running ? "运行" : "停止"
+        }
+    }
+
+    // ✅ 2026-03-26 [Phase 7.48.88.25]: 监听DI开关量保护状态
+    Connections {
+        target: typeof diDataManager !== "undefined" ? diDataManager : null
+        enabled: target !== null
+
+        function onBitChanged(moduleIndex, bitIndex, value) {
+            // DI模块0对应1号皮带的保护，DI模块1对应2号皮带的保护（简化映射）
+            // 实际映射需要根据保护配置来确定，这里先用模块索引
+            if (moduleIndex < 0 || moduleIndex >= 2) return
+            var dataItems = getDataItems()
+            // 暂时将DI模块0映射给所有皮带卡片（后续可按保护配置精确映射）
+            for (var i = 0; i < 8; i++) {
+                var item = dataItems[i]
+                if (item && moduleIndex === 0) {
+                    if (value) {
+                        item.protectionBits = item.protectionBits | (1 << bitIndex)
+                    } else {
+                        item.protectionBits = item.protectionBits & ~(1 << bitIndex)
+                    }
+                }
+            }
+        }
+    }
+
+    // ✅ 2026-03-26 [Phase 7.48.88.25]: 监听MQTT通讯状态
+    Connections {
+        target: typeof mqttAutoManager !== "undefined" ? mqttAutoManager : null
+        enabled: target !== null
+
+        function onModuleStatusChanged(moduleIndex, status) {
+            // 只要有任一模块在线，卡片就显示在线
+            var dataItems = getDataItems()
+            var online = (status === "正常" || status === "已连接")
+            for (var i = 0; i < dataItems.length; i++) {
+                if (dataItems[i]) {
+                    dataItems[i].commOnline = online
+                }
+            }
+        }
+    }
+
+    // ✅ 2026-03-26 [Phase 7.48.88.26]: 监听电机保护实时数据（Modbus寄存器→工程量）
+    // motorIndex 0-7 → 卡片 0-7（1号~8号皮带）
+    // tabIndex: 1=电流, 2=前轴承温, 3=后轴承温, 4=电机温, 5=甲绕组温, 6=乙绕组温, 7=丙绕组温, 8=X振动, 9=Y振动
+    Connections {
+        target: typeof deviceRoleManager !== "undefined" ? deviceRoleManager : null
+        enabled: target !== null
+
+        function onLocalDeviceIdChanged() {
+            refreshDeviceCards()
+        }
+
+        function onLocalDeviceNameChanged() {
+            refreshDeviceCards()
+        }
+    }
+
+    Connections {
+        target: typeof deviceConfigMgr !== "undefined" ? deviceConfigMgr : null
+        enabled: target !== null
+
+        function onDeviceConfigChanged(deviceId) {
+            if (deviceId >= 1 && deviceId <= beltCardCount) {
+                refreshDeviceCards()
+            }
+        }
+    }
+
+    Connections {
+        target: typeof systemConfig !== "undefined" ? systemConfig : null
+        enabled: target !== null
+
+        function onMachineNumberChanged() {
+            refreshDeviceCards()
+        }
+
+        function onLocalDeviceNameChanged() {
+            refreshDeviceCards()
+        }
+    }
+
+    Connections {
+        target: typeof mqttProtectionMonitor !== "undefined" ? mqttProtectionMonitor : null
+        enabled: target !== null
+
+        function onMotorValueUpdated(motorIndex, tabIndex, engineeringValue, unit, protectionName, exceeded) {
+            if (motorIndex < 0 || motorIndex >= 8) return
+            var dataItems = getDataItems()
+            var item = dataItems[motorIndex]
+            if (!item) return
+
+            // 根据tabIndex映射到卡片参数
+            var valueStr = engineeringValue.toFixed(1)
+            if (tabIndex === 1) {
+                // 电流 → param2
+                item.param2Value = valueStr
+                item.param2Unit = unit
+                item.param2Percent = clampPercent(engineeringValue / 100.0)
+            } else if (tabIndex === 4) {
+                // 电机温度 → param3
+                item.param3Value = valueStr
+                item.param3Unit = unit
+                item.param3Percent = clampPercent(engineeringValue / 120.0)
+            } else if (tabIndex === 2) {
+                // 前轴承温度 → 暂时不显示（param3已被电机温度占用）
+            }
+        }
+    }
+
+    // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 改用channelUpdatedMap信号（QVariantMap）
+    // 原因：原channelChanged传递ChannelData结构体，QML无法解析导致后续更新不生效
+    Connections {
+        target: typeof aiDataManager !== "undefined" ? aiDataManager : null
+        enabled: target !== null
+
+        function onChannelUpdatedMap(moduleIndex, channelIndex, data) {
+            if (!data || !data.valid) return
+            applyAnalogChannelUpdate(moduleIndex, channelIndex, data)
         }
     }
 }

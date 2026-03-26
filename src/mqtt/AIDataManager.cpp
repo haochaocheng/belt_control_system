@@ -235,8 +235,12 @@ void AIDataManager::detectChanges(int dataIndex, const QVector<ChannelData> &new
         if (diff > m_changeThreshold) {
             hasChange = true;
 
-            // 发送单个通道变化信号
+            // 发送单个通道变化信号（C++端使用）
             emit channelChanged(dataIndex + 2, i, newData[i]);
+
+            // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 发送QML友好信号（QVariantMap）
+            // 原因：ChannelData结构体未注册Q_DECLARE_METATYPE，QML无法解析信号参数
+            emit channelUpdatedMap(dataIndex + 2, i, channelDataToVariant(newData[i]));
 
             // ✅ 2026-02-26 19:55 [Phase 7.47.16.2]: 移除高频通道变化日志
             // 原因：模拟量变化频繁，日志文件中重复10,000+次

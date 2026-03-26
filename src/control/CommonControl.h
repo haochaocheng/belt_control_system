@@ -226,6 +226,12 @@ signals:
     // ✅ 2026-03-25 [Phase 7.48.88.21]: 按皮带号运行状态变化信号
     void beltRunningChanged(int beltNumber, bool running);
 
+    // ✅ 2026-03-26 [Phase 7.48.88.25]: 序列执行进度信号（供QML卡片显示阶段状态）
+    // phase: "起车预警"/"松闸"/"1号电机"/"运行"/"停车预警"/"停止"等
+    // current/total: 当前步骤/总步骤数
+    // delayMs: 当前步骤倒计时毫秒数（0=无倒计时）
+    void beltSequenceProgress(int beltNumber, const QString &phase, int current, int total, int delayMs);
+
 public slots:
     // 播放指定的音频文件
     void playAudio(const QString &audioPath);

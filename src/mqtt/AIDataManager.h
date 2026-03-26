@@ -88,6 +88,8 @@ signals:
     void module4DataChanged();
     void dataChanged(int moduleIndex, const QVector<ChannelData> &data);
     void channelChanged(int moduleIndex, int channelIndex, const ChannelData &data);
+    // ✅ 2026-03-26 [Phase 7.48.88.26.3]: QML友好信号（ChannelData结构体无法直接传递到QML）
+    void channelUpdatedMap(int moduleIndex, int channelIndex, QVariantMap data);
     void changeThresholdChanged();
 
     // ✅ 2026-03-06 [Phase 7.48.17]: 滤波器配置信号
