@@ -243,9 +243,10 @@ Item {
         var valueText = engineeringValue.toFixed(mapping.valueKey === "param1" ? 2 : 1)
         var percentKey = mapping.valueKey + "Percent"
 
-        // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 调试日志 - 确认数据是否到达卡片
-        console.log("[Screen01] 📈", mapping.valueKey, "AD:", data.adValue,
-            "→ 工程值:", valueText, mapping.unit, "percent:", percent.toFixed(2))
+        // ✅ 2026-03-26 [Phase 7.48.88.27]: 移除高频调试日志
+        // 原因：每次AI数据更新都打印，日志文件中重复上万次
+        // console.log("[Screen01] 📈", mapping.valueKey, "AD:", data.adValue,
+        //     "→ 工程值:", valueText, mapping.unit, "percent:", percent.toFixed(2))
 
         item[mapping.valueKey + "Value"] = valueText
         item[mapping.valueKey + "Unit"] = mapping.unit
@@ -707,9 +708,30 @@ Item {
                 if (item && moduleIndex === 0) {
                     if (value) {
                         item.protectionBits = item.protectionBits | (1 << bitIndex)
+                        // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护触发时同时设置锁存位
+                        item.latchedProtectionBits = item.latchedProtectionBits | (1 << bitIndex)
                     } else {
+                        // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护物理恢复时只清实时位，保留锁存位
+                        // 锁存位仅在F键复位时清除
                         item.protectionBits = item.protectionBits & ~(1 << bitIndex)
                     }
+                }
+            }
+        }
+    }
+
+    // ✅ 2026-03-26 [Phase 7.48.88.27]: 监听F键复位信号，清除所有卡片的锁存保护位
+    Connections {
+        target: typeof protectionLogicController !== "undefined" ? protectionLogicController : null
+        enabled: target !== null
+        ignoreUnknownSignals: true
+
+        function onAllProtectionsReset() {
+            console.log("[Screen01] 🔄 F键复位：清除所有卡片保护锁存状态")
+            var dataItems = getDataItems()
+            for (var i = 0; i < dataItems.length; i++) {
+                if (dataItems[i]) {
+                    dataItems[i].latchedProtectionBits = 0
                 }
             }
         }

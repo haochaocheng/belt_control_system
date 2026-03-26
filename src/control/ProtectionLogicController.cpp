@@ -272,4 +272,6 @@ void ProtectionLogicController::resetAllProtections()
     m_beltStopped.clear();
     qDebug() << "✅ ProtectionLogicController: 已清除" << count << "个活跃保护记录";
     emit statusMessage(QString("已复位 %1 个保护").arg(count));
+    // ✅ 2026-03-26 [Phase 7.48.88.27]: 通知QML清除保护指示灯锁存状态
+    emit allProtectionsReset();
 }

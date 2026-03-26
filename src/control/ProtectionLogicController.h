@@ -135,6 +135,10 @@ signals:
      */
     void statusMessage(const QString &msg);
 
+    // ✅ 2026-03-26 [Phase 7.48.88.27]: F键复位完成信号
+    // 用途：QML清除保护指示灯的锁存状态（三态指示：绿/红/待确认）
+    void allProtectionsReset();
+
 private:
     CommonControl *m_commonControl;
     DeviceConfigManager *m_deviceConfigMgr;

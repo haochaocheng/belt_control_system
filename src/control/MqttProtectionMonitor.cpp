@@ -475,7 +475,9 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
             // ✅ 2026-03-23 [Phase 7.48.86]: 电机未运行时，完全跳过速度保护检测
             // 原因：停车后速度=0，不应触发下限保护；只有电机运行中才需要检测速度
             if (!m_motorRunning.value(beltNumber, false)) {
-                qDebug() << "   ⏸️ 速度保护跳过：电机未运行（皮带" << beltNumber << "）";
+                // ✅ 2026-03-26 [Phase 7.48.88.27]: 移除高频日志
+                // 原因：每秒多次打印"速度保护跳过"，日志文件中重复数千次
+                // qDebug() << "   ⏸️ 速度保护跳过：电机未运行（皮带" << beltNumber << "）";
                 continue;
             }
 

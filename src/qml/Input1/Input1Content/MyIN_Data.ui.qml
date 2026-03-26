@@ -55,6 +55,10 @@ Image {
 
     // ✅ 保护状态（DI开关量位图）
     property int protectionBits: 0x00  // 8位: bit0=急停 bit1=跑偏 bit2=撕裂 bit3=烟雾 bit4=温度 bit5=护网 bit6=堆煤
+    // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护锁存位图（三态指示）
+    // 保护触发时设置，保护物理恢复后保持，仅F键复位时清除
+    // 三态：绿(正常) / 红(保护触发中) / 琥珀(已恢复待确认)
+    property int latchedProtectionBits: 0x00
 
     // ✅ 运行时间
     property string dailyRuntime: "--"
@@ -989,7 +993,17 @@ Image {
                         width: (parent.width - 8) / 6
                         height: parent.height
 
+                        // ✅ 2026-03-26 [Phase 7.48.88.27]: 三态保护指示
+                        // triggered: 保护当前触发中（DI位=1）→ 红色
+                        // latched: 保护曾触发已恢复，未F键确认 → 琥珀色闪烁
+                        // 正常: 绿色
                         property bool triggered: (protectionBits & (1 << modelData.bit)) !== 0
+                        property bool latched: !triggered && ((latchedProtectionBits & (1 << modelData.bit)) !== 0)
+
+                        // 三态颜色
+                        property color indicatorColor: triggered ? (modelData.bit <= 2 ? "#DC2626" : "#F59E0B")
+                                                     : latched ? "#FF8C00"  // 琥珀色（待确认）
+                                                     : "#22C55E"            // 绿色（正常）
 
                         Column {
                             anchors.centerIn: parent
@@ -1001,15 +1015,15 @@ Image {
                                 height: 22
                                 anchors.horizontalCenter: parent.horizontalCenter
 
-                                // 外发光（触发时）
+                                // 外发光（触发或待确认时）
                                 Rectangle {
                                     anchors.centerIn: parent
                                     width: 30
                                     height: 30
                                     radius: 15
-                                    color: triggered ? (modelData.bit <= 2 ? "#DC2626" : "#F59E0B") : "transparent"
+                                    color: indicatorColor
                                     opacity: 0.3
-                                    visible: triggered
+                                    visible: triggered || latched
                                 }
 
                                 Rectangle {
@@ -1017,14 +1031,22 @@ Image {
                                     width: 18
                                     height: 18
                                     radius: 9
-                                    color: triggered ? (modelData.bit <= 2 ? "#DC2626" : "#F59E0B") : "#22C55E"
+                                    color: indicatorColor
 
-                                    // 触发时脉冲
+                                    // 触发时快速脉冲
                                     SequentialAnimation on scale {
                                         loops: Animation.Infinite
                                         running: triggered
                                         NumberAnimation { to: 1.3; duration: 500 }
                                         NumberAnimation { to: 1.0; duration: 500 }
+                                    }
+
+                                    // ✅ 2026-03-26 [Phase 7.48.88.27]: 待确认时慢速闪烁
+                                    SequentialAnimation on opacity {
+                                        loops: Animation.Infinite
+                                        running: latched && !triggered
+                                        NumberAnimation { to: 0.4; duration: 800 }
+                                        NumberAnimation { to: 1.0; duration: 800 }
                                     }
                                 }
                             }
@@ -1033,8 +1055,8 @@ Image {
                             Text {
                                 text: modelData.name
                                 font.pixelSize: 14
-                                font.bold: triggered
-                                color: triggered ? (modelData.bit <= 2 ? "#DC2626" : "#F59E0B") : "#64748B"
+                                font.bold: triggered || latched
+                                color: indicatorColor
                                 anchors.horizontalCenter: parent.horizontalCenter
                             }
                         }

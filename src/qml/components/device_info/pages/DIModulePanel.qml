@@ -32,6 +32,10 @@ Rectangle {
     property string moduleName: "开关量输入"
     property var bitsData: []
 
+    // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护锁存位数组（三态指示）
+    // 保护触发时设置，保护物理恢复后保持，仅F键复位时清除
+    property var latchedBitsData: [false,false,false,false,false,false,false,false]
+
     // ========== 布局 ==========
     ColumnLayout {
         anchors.fill: parent
@@ -110,6 +114,19 @@ Rectangle {
                     Layout.fillHeight: true
                     spacing: 10  // ✅ 2026-02-09 [Phase 7.44.23]: 8 → 10，增加内部间距
 
+                    // ✅ 2026-03-26 [Phase 7.48.88.27]: 三态保护指示
+                    // bitOn: DI位=1（保护触发中）→ 红色
+                    // bitLatched: DI位=0但曾触发未确认 → 琥珀色闪烁
+                    // 正常: 绿色
+                    property bool bitOn: getBitValue(index)
+                    property bool bitLatched: !bitOn && getLatchedValue(index)
+                    property color ledColor: bitOn ? "#FF3333"   // 红色（保护触发中）
+                                           : bitLatched ? "#FF8C00"  // 琥珀色（待确认）
+                                           : "#00ff00"               // 绿色（正常）
+                    property string statusText: bitOn ? "报警"
+                                              : bitLatched ? "待确认"
+                                              : "正常"
+
                     Rectangle {
                         Layout.preferredWidth: 70  // ✅ 2026-02-09 [Phase 7.44.23]: 60 → 70，增加标签宽度
                         Layout.preferredHeight: 26  // ✅ 2026-02-09 [Phase 7.44.23]: 22 → 26，增加标签高度
@@ -136,7 +153,8 @@ Rectangle {
                         color: "#0a0f1e"
                         radius: 40  // ✅ 2026-02-09 [Phase 7.44.23]: 30 → 40，调整圆角
                         border.width: 2
-                        border.color: getBitValue(index) ? "#00ff00" : "#2a3f5f"
+                        // ✅ 2026-03-26 [Phase 7.48.88.27]: 边框颜色跟随三态
+                        border.color: (bitOn || bitLatched) ? ledColor : "#2a3f5f"
 
                         Rectangle {
                             anchors.centerIn: parent
@@ -145,7 +163,7 @@ Rectangle {
                             radius: (parent.width + 8) / 2
                             color: "transparent"
                             border.width: 2
-                            border.color: getBitValue(index) ? "#00ff00" : "transparent"
+                            border.color: (bitOn || bitLatched) ? ledColor : "transparent"
                             opacity: 0.3
                         }
 
@@ -158,11 +176,14 @@ Rectangle {
                             gradient: Gradient {
                                 GradientStop {
                                     position: 0.0
-                                    color: getBitValue(index) ? "#00ff00" : "#2a3f5f"
+                                    color: ledColor
                                 }
                                 GradientStop {
                                     position: 1.0
-                                    color: getBitValue(index) ? "#00aa00" : "#1a2f4f"
+                                    // ✅ 2026-03-26 [Phase 7.48.88.27]: 深色版本跟随三态
+                                    color: bitOn ? "#AA0000"
+                                         : bitLatched ? "#B36200"
+                                         : (getBitValue(index) ? "#00aa00" : "#1a2f4f")
                                 }
                             }
                         }
@@ -174,17 +195,27 @@ Rectangle {
                             height: parent.height * 0.4
                             radius: width / 2
                             color: "white"
-                            opacity: getBitValue(index) ? 0.8 : 0.1
+                            opacity: (bitOn || bitLatched) ? 0.8 : 0.1
                         }
 
+                        // ✅ 2026-03-26 [Phase 7.48.88.27]: 触发中快速闪烁
                         SequentialAnimation on opacity {
-                            running: getBitValue(index)
+                            running: bitOn
                             loops: Animation.Infinite
-                            NumberAnimation { from: 1.0; to: 0.6; duration: 600 }
-                            NumberAnimation { from: 0.6; to: 1.0; duration: 600 }
+                            NumberAnimation { from: 1.0; to: 0.5; duration: 400 }
+                            NumberAnimation { from: 0.5; to: 1.0; duration: 400 }
+                        }
+
+                        // ✅ 2026-03-26 [Phase 7.48.88.27]: 待确认慢速闪烁
+                        SequentialAnimation on opacity {
+                            running: bitLatched && !bitOn
+                            loops: Animation.Infinite
+                            NumberAnimation { from: 1.0; to: 0.4; duration: 1000 }
+                            NumberAnimation { from: 0.4; to: 1.0; duration: 1000 }
                         }
                     }
 
+                    // ✅ 2026-03-26 [Phase 7.48.88.27]: 状态文字显示三态
                     Rectangle {
                         Layout.preferredWidth: 70  // ✅ 2026-02-09 [Phase 7.44.23]: 60 → 70，增加状态标签宽度
                         Layout.preferredHeight: 26  // ✅ 2026-02-09 [Phase 7.44.23]: 22 → 26，增加状态标签高度
@@ -192,15 +223,28 @@ Rectangle {
                         color: "#0a0f1e"
                         radius: 3
                         border.width: 1
-                        border.color: getBitValue(index) ? "#00ff00" : "#2a3f5f"
+                        border.color: ledColor
 
-                        Text {
+                        Row {
                             anchors.centerIn: parent
-                            text: getBitValue(index) ? "ON" : "OFF"
-                            font.pixelSize: 14  // ✅ 2026-02-09 [Phase 7.44.23]: 12 → 14，增大状态字体
-                            font.bold: false  // ✅ 2026-02-09 [Phase 7.44.23]: 移除粗体，提高可读性
-                            font.family: "Consolas"
-                            color: getBitValue(index) ? "#00ff00" : "#5a6f8f"
+                            spacing: 4
+
+                            // 状态方块指示器
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 2
+                                color: ledColor
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Text {
+                                text: statusText
+                                font.pixelSize: 12
+                                font.family: "Microsoft YaHei"
+                                color: ledColor
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
                         }
                     }
                 }
@@ -316,6 +360,14 @@ Rectangle {
         return bitsData[index] === true || bitsData[index] === 1
     }
 
+    // ✅ 2026-03-26 [Phase 7.48.88.27]: 获取锁存位值（三态指示用）
+    function getLatchedValue(index) {
+        if (!latchedBitsData || index < 0 || index >= latchedBitsData.length) {
+            return false
+        }
+        return latchedBitsData[index] === true
+    }
+
     function getByteValue() {
         var value = 0
         for (var i = 0; i < 8; i++) {
@@ -353,7 +405,25 @@ Rectangle {
         function onBitChanged(modIndex, bitIndex, value) {
             if (modIndex === moduleIndex) {
                 console.log("🔄 [DIModulePanel] 模块" + moduleIndex + "位" + bitIndex + "变化:" + value)
+                // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护触发时设置锁存位
+                if (value && bitIndex >= 0 && bitIndex < 8) {
+                    var newLatched = latchedBitsData.slice()
+                    newLatched[bitIndex] = true
+                    latchedBitsData = newLatched
+                }
+                // 注意：value=false时不清除锁存位，锁存位仅由F键复位清除
             }
+        }
+    }
+
+    // ✅ 2026-03-26 [Phase 7.48.88.27]: F键复位清除锁存状态
+    Connections {
+        target: typeof protectionLogicController !== "undefined" ? protectionLogicController : null
+        enabled: target !== null
+        ignoreUnknownSignals: true
+        function onAllProtectionsReset() {
+            console.log("🔄 [DIModulePanel] F键复位：清除模块" + moduleIndex + "锁存状态")
+            latchedBitsData = [false,false,false,false,false,false,false,false]
         }
     }
 }
