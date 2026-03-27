@@ -28,6 +28,10 @@ Image {
     property string deviceStatus: "停止"
     property bool commOnline: false
 
+    // ✅ 2026-03-27 [Phase 7.48.88.34]: 工作模式与连锁状态
+    property int workMode: 1              // 0=检修, 1=就地, 2=点动, 3=集控
+    property bool interlockActive: true   // 连锁状态（检修=false, 其他=true）
+
     // ✅ 序列执行阶段（核心显示区域）
     property string sequencePhase: ""          // 当前阶段: "起车预警"/"1号制动器"/"1号电机"/"运行"/"停车预警"/"停止"
     property int sequenceCurrent: 0            // 当前步骤
@@ -179,61 +183,110 @@ Image {
     }
 
     // ========== 状态指示 - header band下方左侧 ==========
+    // ✅ 2026-03-27 [Phase 7.48.88.34]: 扩展为三栏：[状态指示灯+文字] [模式徽章] [连锁徽章]
     Row {
         id: statusRow
         x: 24
         y: 55
         z: 3
-        spacing: 6
+        spacing: 8
 
-        // 状态指示灯（外发光效果）
-        Item {
-            width: 16
-            height: 16
+        // --- 第1元素：状态指示灯 + 状态文字（保留现有） ---
+        Row {
+            spacing: 4
             anchors.verticalCenter: parent.verticalCenter
 
-            // 外发光
-            Rectangle {
-                anchors.centerIn: parent
-                width: 22
-                height: 22
-                radius: 11
-                color: statusColor()
-                opacity: 0.3
-                visible: deviceStatus === "运行" || deviceStatus === "故障"
+            // 状态指示灯（外发光效果）
+            Item {
+                width: 16
+                height: 16
+                anchors.verticalCenter: parent.verticalCenter
+
+                // 外发光
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 22
+                    height: 22
+                    radius: 11
+                    color: statusColor()
+                    opacity: 0.3
+                    visible: deviceStatus === "运行" || deviceStatus === "故障"
+                }
+
+                // 核心指示灯
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 14
+                    height: 14
+                    radius: 7
+                    color: statusColor()
+
+                    // 运行时呼吸灯
+                    SequentialAnimation on opacity {
+                        loops: Animation.Infinite
+                        running: deviceStatus === "运行"
+                        NumberAnimation { to: 0.4; duration: 1000; easing.type: Easing.InOutSine }
+                        NumberAnimation { to: 1.0; duration: 1000; easing.type: Easing.InOutSine }
+                    }
+                    // 故障时快速闪烁
+                    SequentialAnimation on opacity {
+                        loops: Animation.Infinite
+                        running: deviceStatus === "故障"
+                        NumberAnimation { to: 0; duration: 250 }
+                        NumberAnimation { to: 1; duration: 250 }
+                    }
+                }
             }
 
-            // 核心指示灯
-            Rectangle {
-                anchors.centerIn: parent
-                width: 14
-                height: 14
-                radius: 7
+            Text {
+                text: iN_Data.deviceStatus
+                font.pixelSize: 18
+                font.bold: true
                 color: statusColor()
-
-                // 运行时呼吸灯
-                SequentialAnimation on opacity {
-                    loops: Animation.Infinite
-                    running: deviceStatus === "运行"
-                    NumberAnimation { to: 0.4; duration: 1000; easing.type: Easing.InOutSine }
-                    NumberAnimation { to: 1.0; duration: 1000; easing.type: Easing.InOutSine }
-                }
-                // 故障时快速闪烁
-                SequentialAnimation on opacity {
-                    loops: Animation.Infinite
-                    running: deviceStatus === "故障"
-                    NumberAnimation { to: 0; duration: 250 }
-                    NumberAnimation { to: 1; duration: 250 }
-                }
+                anchors.verticalCenter: parent.verticalCenter
             }
         }
 
-        Text {
-            text: iN_Data.deviceStatus
-            font.pixelSize: 18
-            font.bold: true
-            color: statusColor()
+        // --- 第2元素：模式徽章 ---
+        Rectangle {
+            width: modeText.implicitWidth + 12
+            height: 20
+            radius: 3
+            // 旧代码：无模式徽章
+            color: workMode === 0 ? "#33F59E0B" : "#3322C55E"
+            border.color: workMode === 0 ? "#F59E0B" : "#22C55E"
+            border.width: 1
             anchors.verticalCenter: parent.verticalCenter
+
+            Text {
+                id: modeText
+                anchors.centerIn: parent
+                text: workMode === 0 ? "检修" : "就地"
+                font.pixelSize: 12
+                font.family: "Microsoft YaHei"
+                color: workMode === 0 ? "#F59E0B" : "#22C55E"
+            }
+        }
+
+        // --- 第3元素：连锁徽章 ---
+        Rectangle {
+            width: lockText.implicitWidth + 12
+            height: 20
+            radius: 3
+            // 旧代码：无连锁徽章
+            color: interlockActive ? "#333B82F6" : "#33EF4444"
+            border.color: interlockActive ? "#3B82F6" : "#EF4444"
+            border.width: 1
+            anchors.verticalCenter: parent.verticalCenter
+
+            Text {
+                id: lockText
+                anchors.centerIn: parent
+                text: interlockActive ? "连锁" : "解锁"
+                font.pixelSize: 12
+                font.family: "Microsoft YaHei"
+                color: interlockActive ? "#3B82F6" : "#EF4444"
+            }
         }
     }
 

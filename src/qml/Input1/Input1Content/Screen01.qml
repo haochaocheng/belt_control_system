@@ -315,6 +315,15 @@ Item {
                 dataItems[j].isLocalDevice = (j === localDeviceId - 1)
             }
         }
+
+        // ✅ 2026-03-27 [Phase 7.48.88.34]: 设置工作模式和连锁状态
+        var currentWorkMode = (typeof systemConfig !== "undefined" && systemConfig) ? systemConfig.workMode : 1
+        for (var k = 0; k < beltCardCount; k++) {
+            if (dataItems[k]) {
+                dataItems[k].workMode = currentWorkMode
+                dataItems[k].interlockActive = (currentWorkMode !== 0)  // 检修模式=解锁
+            }
+        }
     }
 
     function refreshDeviceCards() {
@@ -689,6 +698,24 @@ Item {
             var item = dataItems[idx]
             if (!item) return
             item.deviceStatus = running ? "运行" : "停止"
+        }
+    }
+
+    // ✅ 2026-03-27 [Phase 7.48.88.34]: 监听工作模式变化，更新卡片模式/连锁显示
+    Connections {
+        target: typeof systemConfig !== "undefined" ? systemConfig : null
+        enabled: target !== null
+
+        function onWorkModeChanged() {
+            var dataItems = getDataItems()
+            var mode = systemConfig.workMode
+            for (var i = 0; i < beltCardCount; i++) {
+                if (dataItems[i]) {
+                    dataItems[i].workMode = mode
+                    dataItems[i].interlockActive = (mode !== 0)
+                }
+            }
+            console.log("[Screen01] 📋 工作模式变化:", mode, "连锁:", (mode !== 0))
         }
     }
 
