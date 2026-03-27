@@ -253,44 +253,46 @@ Item {
         item[percentKey] = percent
     }
 
+    // ✅ 2026-03-27 [Phase 7.48.88.41]: AI模拟量数据来自本机传感器，只更新本机卡片
+    // 旧代码：遍历所有8个卡片匹配通道，导致所有卡片显示相同数据
     function applyAnalogChannelUpdate(moduleIndex, channelIndex, data) {
         var dataItems = getDataItems()
+        var localIdx = getLocalDeviceId() - 1
+        if (localIdx < 0 || localIdx >= beltCardCount) return
+        var item = dataItems[localIdx]
+        var mappingGroup = beltSensorMappings[localIdx]
+        if (!item || !mappingGroup) return
 
-        for (var cardIndex = 0; cardIndex < beltCardCount; cardIndex++) {
-            var item = dataItems[cardIndex]
-            var mappingGroup = beltSensorMappings[cardIndex]
-            if (!item || !mappingGroup) continue
+        if (mappingGroup.speed &&
+            mappingGroup.speed.moduleIndex === moduleIndex &&
+            mappingGroup.speed.channelIndex === channelIndex) {
+            applyMappedValue(item, mappingGroup.speed, data)
+        }
 
-            if (mappingGroup.speed &&
-                mappingGroup.speed.moduleIndex === moduleIndex &&
-                mappingGroup.speed.channelIndex === channelIndex) {
-                applyMappedValue(item, mappingGroup.speed, data)
-            }
-
-            if (mappingGroup.tension &&
-                mappingGroup.tension.moduleIndex === moduleIndex &&
-                mappingGroup.tension.channelIndex === channelIndex) {
-                applyMappedValue(item, mappingGroup.tension, data)
-            }
+        if (mappingGroup.tension &&
+            mappingGroup.tension.moduleIndex === moduleIndex &&
+            mappingGroup.tension.channelIndex === channelIndex) {
+            applyMappedValue(item, mappingGroup.tension, data)
         }
     }
 
+    // ✅ 2026-03-27 [Phase 7.48.88.41]: 只刷新本机卡片的模拟量
+    // 旧代码：遍历所有8个卡片刷新，导致非本机卡片也显示数据
     function refreshMappedAnalogValues() {
         if (typeof aiDataManager === "undefined" || !aiDataManager) return
+        var localIdx = getLocalDeviceId() - 1
+        if (localIdx < 0 || localIdx >= beltCardCount) return
+        var mappingGroup = beltSensorMappings[localIdx]
+        if (!mappingGroup) return
 
-        for (var cardIndex = 0; cardIndex < beltCardCount; cardIndex++) {
-            var mappingGroup = beltSensorMappings[cardIndex]
-            if (!mappingGroup) continue
+        if (mappingGroup.speed) {
+            var speedData = aiDataManager.getChannel(mappingGroup.speed.moduleIndex, mappingGroup.speed.channelIndex)
+            applyAnalogChannelUpdate(mappingGroup.speed.moduleIndex, mappingGroup.speed.channelIndex, speedData)
+        }
 
-            if (mappingGroup.speed) {
-                var speedData = aiDataManager.getChannel(mappingGroup.speed.moduleIndex, mappingGroup.speed.channelIndex)
-                applyAnalogChannelUpdate(mappingGroup.speed.moduleIndex, mappingGroup.speed.channelIndex, speedData)
-            }
-
-            if (mappingGroup.tension) {
-                var tensionData = aiDataManager.getChannel(mappingGroup.tension.moduleIndex, mappingGroup.tension.channelIndex)
-                applyAnalogChannelUpdate(mappingGroup.tension.moduleIndex, mappingGroup.tension.channelIndex, tensionData)
-            }
+        if (mappingGroup.tension) {
+            var tensionData = aiDataManager.getChannel(mappingGroup.tension.moduleIndex, mappingGroup.tension.channelIndex)
+            applyAnalogChannelUpdate(mappingGroup.tension.moduleIndex, mappingGroup.tension.channelIndex, tensionData)
         }
     }
 
@@ -876,10 +878,14 @@ Item {
         target: typeof mqttProtectionMonitor !== "undefined" ? mqttProtectionMonitor : null
         enabled: target !== null
 
+        // ✅ 2026-03-27 [Phase 7.48.88.41]: 电机数据来自本机Modbus，只更新本机卡片
+        // 旧代码：用motorIndex当卡片索引 dataItems[motorIndex]，导致数据写到错误卡片
         function onMotorValueUpdated(motorIndex, tabIndex, engineeringValue, unit, protectionName, exceeded) {
             if (motorIndex < 0 || motorIndex >= 8) return
             var dataItems = getDataItems()
-            var item = dataItems[motorIndex]
+            var localIdx = getLocalDeviceId() - 1
+            if (localIdx < 0 || localIdx >= beltCardCount) return
+            var item = dataItems[localIdx]
             if (!item) return
 
             // 根据tabIndex映射到卡片参数
