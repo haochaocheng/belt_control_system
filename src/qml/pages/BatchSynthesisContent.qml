@@ -302,6 +302,8 @@ Rectangle {
                             GridLayout {
                                 columns: 1
                                 rowSpacing: 2
+                                // ✅ 2026-03-27 [Phase 7.48.88.30]: 顶部对齐，与左侧选择分类一致
+                                Layout.alignment: Qt.AlignTop
 
                                 CheckBox {
                                     id: chkClearSwitchInput
@@ -415,16 +417,22 @@ Rectangle {
                                 }
                             }
 
-                            // ✅ 2026-03-27 [Phase 7.48.88.29]: 清除操作独立设备选择
+                            // ✅ 2026-03-27 [Phase 7.48.88.29→30]: 清除操作独立设备选择（紧凑布局）
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 1
+                                color: "#4a3a3a"
+                            }
                             Text {
                                 text: "清除设备:"
                                 color: "#ffaaaa"
-                                font.pixelSize: 12
-                                Layout.fillWidth: true
+                                font.pixelSize: 11
                             }
-                            Flow {
+                            GridLayout {
                                 Layout.fillWidth: true
-                                spacing: 2
+                                columns: 6
+                                columnSpacing: 0
+                                rowSpacing: 0
                                 Repeater {
                                     model: 8
                                     CheckBox {
@@ -439,36 +447,37 @@ Rectangle {
                                         }
                                         contentItem: Text {
                                             text: parent.text
-                                            color: parent.checked ? "#ff8888" : "#888888"
-                                            font.pixelSize: 12
+                                            color: parent.checked ? "#ff8888" : "#666666"
+                                            font.pixelSize: 11
                                             font.bold: parent.checked
-                                            leftPadding: parent.indicator.width + 2
+                                            leftPadding: parent.indicator.width + 1
                                         }
                                     }
                                 }
+                                // 全选/清空紧凑按钮
                                 Button {
                                     text: "全选"
-                                    width: 40; height: 28
+                                    implicitWidth: 36; implicitHeight: 24
                                     onClicked: setAllClearBelts(true)
                                     background: Rectangle {
-                                        color: parent.hovered ? "#554444" : "#333344"
-                                        radius: 3
+                                        color: parent.hovered ? "#554444" : "#3a3344"
+                                        radius: 3; border.color: "#5a4a4a"; border.width: 1
                                     }
                                     contentItem: Text {
-                                        text: parent.text; color: "#ffffff"; font.pixelSize: 11
+                                        text: parent.text; color: "#ffaaaa"; font.pixelSize: 10
                                         horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                                     }
                                 }
                                 Button {
                                     text: "清空"
-                                    width: 40; height: 28
+                                    implicitWidth: 36; implicitHeight: 24
                                     onClicked: setAllClearBelts(false)
                                     background: Rectangle {
-                                        color: parent.hovered ? "#554444" : "#333344"
-                                        radius: 3
+                                        color: parent.hovered ? "#554444" : "#3a3344"
+                                        radius: 3; border.color: "#5a4a4a"; border.width: 1
                                     }
                                     contentItem: Text {
-                                        text: parent.text; color: "#ffffff"; font.pixelSize: 11
+                                        text: parent.text; color: "#ffaaaa"; font.pixelSize: 10
                                         horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                                     }
                                 }
@@ -523,6 +532,8 @@ Rectangle {
                                 Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignHCenter
                             }
+                            // ✅ 2026-03-27 [Phase 7.48.88.30]: spacer推到顶部对齐，防止居中
+                            Item { Layout.fillHeight: true }
                         }
                     }
                 }
@@ -663,8 +674,10 @@ Rectangle {
 
             // 右侧：预览和进度区
             // ✅ 2026-02-26 22:45 [Phase 7.47.19]: 修复对齐问题，添加顶部对齐
+            // ✅ 2026-03-27 [Phase 7.48.88.30]: 固定宽度比例，防止日志内容撑宽
             ColumnLayout {
-                Layout.fillWidth: true
+                Layout.preferredWidth: 350
+                Layout.maximumWidth: 400
                 Layout.fillHeight: true
                 Layout.alignment: Qt.AlignTop
                 spacing: 10
@@ -829,12 +842,15 @@ Rectangle {
 
                     ScrollView {
                         anchors.fill: parent
+                        clip: true
                         TextArea {
                             id: logArea
                             readOnly: true
                             color: "#cccccc"
                             font.family: "Consolas"
                             font.pixelSize: 12
+                            // ✅ 2026-03-27 [Phase 7.48.88.30]: 自动换行，防止长文本撑宽日志区
+                            wrapMode: TextArea.Wrap
                             background: Rectangle {
                                 color: "transparent"
                             }
