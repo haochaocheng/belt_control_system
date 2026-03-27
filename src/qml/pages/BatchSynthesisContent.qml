@@ -22,8 +22,12 @@ Rectangle {
     property bool showHeader: true
 
     // ✅ 2026-03-26 [Phase 7.48.88.28]: 按设备选择（替代原"皮带数量"SpinBox）
-    // 每个元素对应1#~8#设备是否选中，true=选中参与生成/清除
+    // 每个元素对应1#~8#设备是否选中，true=选中参与生成
     property var beltChecked: [true, true, true, true, true, true, true, true]
+
+    // ✅ 2026-03-27 [Phase 7.48.88.29]: 清除旧语音独立设备选择
+    // 清除操作有独立的设备选择，不与生成范围共用
+    property var clearBeltChecked: [true, true, true, true, true, true, true, true]
 
     function setAllBelts(checked) {
         var arr = []
@@ -31,10 +35,26 @@ Rectangle {
         beltChecked = arr
     }
 
+    // ✅ 2026-03-27 [Phase 7.48.88.29]: 清除设备全选/清空
+    function setAllClearBelts(checked) {
+        var arr = []
+        for (var i = 0; i < 8; i++) arr.push(checked)
+        clearBeltChecked = arr
+    }
+
     function getSelectedBeltNumbers() {
         var result = []
         for (var i = 0; i < 8; i++) {
             if (beltChecked[i]) result.push(i + 1)
+        }
+        return result
+    }
+
+    // ✅ 2026-03-27 [Phase 7.48.88.29]: 获取清除操作选中的设备号列表
+    function getClearSelectedBeltNumbers() {
+        var result = []
+        for (var i = 0; i < 8; i++) {
+            if (clearBeltChecked[i]) result.push(i + 1)
         }
         return result
     }
@@ -395,6 +415,65 @@ Rectangle {
                                 }
                             }
 
+                            // ✅ 2026-03-27 [Phase 7.48.88.29]: 清除操作独立设备选择
+                            Text {
+                                text: "清除设备:"
+                                color: "#ffaaaa"
+                                font.pixelSize: 12
+                                Layout.fillWidth: true
+                            }
+                            Flow {
+                                Layout.fillWidth: true
+                                spacing: 2
+                                Repeater {
+                                    model: 8
+                                    CheckBox {
+                                        text: (index + 1) + "#"
+                                        checked: clearBeltChecked[index]
+                                        onCheckedChanged: {
+                                            if (clearBeltChecked[index] !== checked) {
+                                                var arr = clearBeltChecked.slice()
+                                                arr[index] = checked
+                                                clearBeltChecked = arr
+                                            }
+                                        }
+                                        contentItem: Text {
+                                            text: parent.text
+                                            color: parent.checked ? "#ff8888" : "#888888"
+                                            font.pixelSize: 12
+                                            font.bold: parent.checked
+                                            leftPadding: parent.indicator.width + 2
+                                        }
+                                    }
+                                }
+                                Button {
+                                    text: "全选"
+                                    width: 40; height: 28
+                                    onClicked: setAllClearBelts(true)
+                                    background: Rectangle {
+                                        color: parent.hovered ? "#554444" : "#333344"
+                                        radius: 3
+                                    }
+                                    contentItem: Text {
+                                        text: parent.text; color: "#ffffff"; font.pixelSize: 11
+                                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
+                                Button {
+                                    text: "清空"
+                                    width: 40; height: 28
+                                    onClicked: setAllClearBelts(false)
+                                    background: Rectangle {
+                                        color: parent.hovered ? "#554444" : "#333344"
+                                        radius: 3
+                                    }
+                                    contentItem: Text {
+                                        text: parent.text; color: "#ffffff"; font.pixelSize: 11
+                                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
+                            }
+
                             Button {
                                 text: "清除选中分类的旧语音"
                                 Layout.fillWidth: true
@@ -413,8 +492,11 @@ Rectangle {
                                 }
                                 onClicked: {
                                     if (!batchGenerator) return
-                                    // 先设置配置（确保引擎和路径正确）
-                                    batchGenerator.setConfig(buildConfig())
+                                    // 旧：batchGenerator.setConfig(buildConfig()) — 使用生成范围的设备选择
+                                    // ✅ 2026-03-27 [Phase 7.48.88.29]: 使用清除专用的设备选择列表
+                                    var clearConfig = buildConfig()
+                                    clearConfig.beltNumbers = getClearSelectedBeltNumbers()
+                                    batchGenerator.setConfig(clearConfig)
                                     var cats = []
                                     if (chkClearSwitchInput.checked) cats.push("switchInput")
                                     if (chkClearAnalogInput.checked) cats.push("analogInput")
@@ -1148,6 +1230,8 @@ Rectangle {
         // 旧：TTSConfig.setValue("batch/beltCount", spinBeltCount.value)
         // ✅ 2026-03-26 [Phase 7.48.88.28]: 保存设备选择状态（JSON数组）
         TTSConfig.setValue("batch/beltChecked", JSON.stringify(beltChecked))
+        // ✅ 2026-03-27 [Phase 7.48.88.29]: 保存清除设备选择状态
+        TTSConfig.setValue("batch/clearBeltChecked", JSON.stringify(clearBeltChecked))
         TTSConfig.setValue("batch/motorCount", spinMotorCount.value)
         TTSConfig.setValue("batch/brakeCount", spinBrakeCount.value)
         TTSConfig.setValue("batch/tensionCount", spinTensionCount.value)
@@ -1182,6 +1266,13 @@ Rectangle {
         if (savedBelts !== "" && savedBelts !== undefined && savedBelts !== null) {
             try { beltChecked = JSON.parse(savedBelts) } catch(e) {
                 console.warn("⚠️ 解析beltChecked失败:", e)
+            }
+        }
+        // ✅ 2026-03-27 [Phase 7.48.88.29]: 恢复清除设备选择状态
+        var savedClearBelts = TTSConfig.getValue("batch/clearBeltChecked", "")
+        if (savedClearBelts !== "" && savedClearBelts !== undefined && savedClearBelts !== null) {
+            try { clearBeltChecked = JSON.parse(savedClearBelts) } catch(e) {
+                console.warn("⚠️ 解析clearBeltChecked失败:", e)
             }
         }
         // 旧：spinMotorCount.value = TTSConfig.getValue("batch/motorCount", 4)
@@ -1249,6 +1340,8 @@ Rectangle {
     // 旧：Connections { target: spinBeltCount; function onValueChanged() { saveBatchConfig() } }
     // ✅ 2026-03-26 [Phase 7.48.88.28]: 监听设备选择变化自动保存
     onBeltCheckedChanged: saveBatchConfig()
+    // ✅ 2026-03-27 [Phase 7.48.88.29]: 监听清除设备选择变化自动保存
+    onClearBeltCheckedChanged: saveBatchConfig()
     Connections {
         target: spinMotorCount
         function onValueChanged() { saveBatchConfig() }
