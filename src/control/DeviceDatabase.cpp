@@ -18,8 +18,9 @@ void DeviceDatabase::initializeDefaultDevices()
 {
     m_devices.clear();
 
-    // 初始化默认设备列表（与OutputDevicePanel保持一致）
-    // 通道号从0-15，默认使用输出模块（寄存器10）
+    // ✅ 2026-03-27 [Phase 7.48.88.35]: 默认设备列表（历史遗留，仅用于DeviceDatabase初始化）
+    // 旧注释：与OutputDevicePanel保持一致（OutputDevicePanel已于Phase 7.48.88.35移除）
+    // 实际设备配置现由各独立面板管理：逻辑控制、电机控制、制动器控制、张紧控制
     QStringList defaultDevices = {
         "张紧", "抱闸", "洒水", "1号电机", "2号电机",
         "破碎机", "转载机", "前刮板", "后刮板",

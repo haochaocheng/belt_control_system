@@ -47,8 +47,9 @@ qt_add_qml_module(qml_module
         components/control_panel/StateInputField.qml  # 2026-02-11: 状态显示输入框组件
         components/control_panel/ProtectionPanel.qml
         components/control_panel/ProtectionSettingsPopup.qml
-        components/control_panel/OutputDevicePanel.qml
-        components/control_panel/OutputDeviceSettingsPopup.qml
+        # ❌ 2026-03-27 [Phase 7.48.88.35]: 移除已废弃的OutputDevicePanel相关文件
+        # 旧代码：components/control_panel/OutputDevicePanel.qml
+        # 旧代码：components/control_panel/OutputDeviceSettingsPopup.qml
         components/control_panel/DeviceStatusBar.qml
         components/control_panel/OperationLogPanel.qml
         components/control_panel/ModuleConnectionPanel.qml

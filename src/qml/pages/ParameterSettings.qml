@@ -3,7 +3,9 @@ import QtQuick.Controls 6.5
 import QtQuick.Layouts 6.5
 import "../components/common"
 import "../components/parameter_settings"
-import "../components/control_panel"
+// ❌ 2026-03-27 [Phase 7.48.88.35]: 移除 OutputDevicePanel 导入
+// 旧代码：import "../components/control_panel"
+// 原因：OutputDevicePanel 已废弃，设备配置已分散到各独立配置面板
 import "../Input1/Input1Content"  // ✅ 2026-01-20 [FIX 100.255]
 
 Item {
@@ -16,112 +18,94 @@ Item {
     // ✅ 2026-01-20 [FIX 100.255]
     property int currentPageIndex: 0
 
-    // 监听设备状态改变信号
-    Connections {
-        target: commonControl
-        function onDeviceStatusChanged(deviceName, isRunning) {
-            console.log("🔗 ParameterSettings: 收到设备状态改变信号 -", deviceName, isRunning ? "运行" : "停止")
-            outputDevicePanel.setDeviceStatus(deviceName, isRunning)
-        }
-    }
+    // ❌ 2026-03-27 [Phase 7.48.88.35]: 移除旧的设备状态监听
+    // 旧代码：outputDevicePanel.setDeviceStatus(deviceName, isRunning)
+    // 原因：OutputDevicePanel 已废弃，设备状态由各独立面板管理
+    // Connections {
+    //     target: commonControl
+    //     function onDeviceStatusChanged(deviceName, isRunning) {
+    //         console.log("🔗 ParameterSettings: 收到设备状态改变信号 -", deviceName, isRunning ? "运行" : "停止")
+    //         outputDevicePanel.setDeviceStatus(deviceName, isRunning)
+    //     }
+    // }
 
     // 初始化时同步设备反馈配置到 CommonControl
     Component.onCompleted: {
         syncDeviceFeedbackConfigs()
     }
 
-    // 同步所有设备的反馈配置
-    // ✅ 2026-03-21 [Phase 7.48.65]: 从数据库加载张紧/制动器/电机的反馈通道和延时
-    // 原因：OutputDevicePanel.qml 的 ListElement 硬编码值（channel=0-15, delay=3）与
-    //       device_tension_config / device_brake_config / device_motor_config 数据库表中
-    //       用户配置的反馈通道不一致，统一改为从DB读取
+    // ✅ 2026-03-27 [Phase 7.48.88.35]: 重写反馈配置同步
+    // 旧代码：从 OutputDevicePanel.getAllDevices() 读取设备列表，设备名与启动序列不匹配
+    // 新代码：直接从DB按设备类型读取，设备名与启动序列（LogicControlPanel）一致
     function syncDeviceFeedbackConfigs() {
         if (!commonControl) {
             console.warn("⚠️ ParameterSettings: commonControl 未初始化")
             return
         }
 
-        var deviceId = 1  // 主设备ID（当前系统固定为1）
-        var devices = outputDevicePanel.getAllDevices()
+        var deviceId = (typeof systemConfig !== "undefined" && systemConfig && systemConfig.machineNumber > 0)
+            ? systemConfig.machineNumber : 1
         var dbLoaded = 0
 
-        for (var i = 0; i < devices.length; i++) {
-            var device = devices[i]
-            var name = device.name
-            var useFeedback = device.useFeedback
-            var feedbackChannel = device.feedbackChannel
-            var feedbackDelay = device.feedbackDelay
-
-            // ——— 张紧控制 ———
-            if (name === "张紧控制" || name === "张紧") {
-                if (typeof deviceConfigMgr !== "undefined" && deviceConfigMgr !== null) {
-                    var tensionCfg = deviceConfigMgr.loadTensionConfig(deviceId, 0)
-                    if (tensionCfg && tensionCfg["feedback_channel"] !== undefined) {
-                        // ✅ 2026-03-21 [Phase 7.48.66]: 使用 Number() 确保 QVariant 类型正确转换
-                        // 原因：DB的 use_feedback 为 INTEGER，QVariant 转到 QML 后 === 比较可能失败
-                        useFeedback    = (Number(tensionCfg["use_feedback"]) === 1)
-                        feedbackChannel = tensionCfg["feedback_channel"]
-                        feedbackDelay   = tensionCfg["feedback_timeout"] || 10
-                        dbLoaded++
-                        console.log("📋 ParameterSettings: 张紧反馈参数来自DB - 通道:", feedbackChannel, "延时:", feedbackDelay)
-                    } else {
-                        // ✅ 2026-03-21 [Phase 7.48.68]: DB加载失败时保守默认关闭反馈
-                        // 原因：OutputDevicePanel硬编码useFeedback:true会导致未配置的设备误检反馈
-                        useFeedback = false
-                        console.warn("⚠️ ParameterSettings:", name, "DB加载失败，默认关闭反馈检测")
-                    }
-                }
-            }
-            // ——— N号制动器 / 抱闸 ———
-            // ✅ 2026-03-21 [Phase 7.48.66]: 新增 "抱闸" 名称匹配
-            // 原因：启动序列使用 "抱闸" 而非 "N号制动器"，导致制动器配置从未加载
-            else if (name === "抱闸" || name.indexOf("制动器") >= 0) {
-                if (typeof deviceConfigMgr !== "undefined" && deviceConfigMgr !== null) {
-                    // "抱闸" → brakeIdx=0, "1号制动器" → brakeIdx=0, "2号制动器" → brakeIdx=1
-                    var brakeNumMatch = name.match(/(\d+)/)
-                    var brakeIdx = name === "抱闸" ? 0 : (brakeNumMatch ? parseInt(brakeNumMatch[1]) - 1 : 0)
-                    var brakeCfg = deviceConfigMgr.loadBrakeConfig(deviceId, brakeIdx)
-                    if (brakeCfg && brakeCfg["release_feedback_channel"] !== undefined) {
-                        // ✅ 2026-03-21 [Phase 7.48.66]: 使用 Number() 确保 QVariant 类型正确转换
-                        useFeedback    = (Number(brakeCfg["use_release_feedback"]) === 1)
-                        feedbackChannel = brakeCfg["release_feedback_channel"]
-                        feedbackDelay   = brakeCfg["release_feedback_timeout"] || 10
-                        dbLoaded++
-                        console.log("📋 ParameterSettings:", name, "反馈参数来自DB - 通道:", feedbackChannel, "延时:", feedbackDelay)
-                    } else {
-                        // ✅ 2026-03-21 [Phase 7.48.68]: DB加载失败时保守默认关闭反馈
-                        useFeedback = false
-                        console.warn("⚠️ ParameterSettings:", name, "DB加载失败，默认关闭反馈检测")
-                    }
-                }
-            }
-            // ——— N号电机 ———
-            else if (name.indexOf("电机") >= 0) {
-                if (typeof deviceConfigMgr !== "undefined" && deviceConfigMgr !== null) {
-                    var motorNumMatch = name.match(/(\d+)/)
-                    var motorIdx = motorNumMatch ? parseInt(motorNumMatch[1]) - 1 : 0
-                    var motorCfg = deviceConfigMgr.loadMotorConfig(deviceId, motorIdx, 0)
-                    if (motorCfg && motorCfg["feedback_channel"] !== undefined && motorCfg["feedback_channel"] >= 0) {
-                        // ✅ 2026-03-21 [Phase 7.48.68]: 从DB读取use_feedback，不再硬编码true
-                        // 原因：电机反馈关闭时仍被检查，因为此处硬编码 useFeedback = true
-                        // 旧代码：useFeedback = true
-                        useFeedback    = motorCfg["use_feedback"] !== undefined ? (Number(motorCfg["use_feedback"]) === 1) : true
-                        feedbackChannel = motorCfg["feedback_channel"]
-                        // feedbackDelay 沿用 OutputDevicePanel 默认值（3秒）
-                        dbLoaded++
-                        console.log("📋 ParameterSettings:", name, "反馈通道来自DB - 通道:", feedbackChannel, "useFeedback:", useFeedback)
-                    } else {
-                        // ✅ 2026-03-21 [Phase 7.48.68]: DB加载失败时保守默认关闭反馈
-                        useFeedback = false
-                        console.warn("⚠️ ParameterSettings:", name, "DB加载失败，默认关闭反馈检测")
-                    }
-                }
-            }
-            // 其余设备（洒水、破碎机等）保留 OutputDevicePanel 硬编码默认值
-
-            commonControl.setDeviceFeedbackConfig(name, useFeedback, feedbackChannel, feedbackDelay)
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) {
+            console.warn("⚠️ ParameterSettings: deviceConfigMgr 未初始化，跳过反馈配置同步")
+            return
         }
-        console.log("✅ ParameterSettings: 已同步", devices.length, "个设备的反馈配置（其中", dbLoaded, "个来自DB）")
+
+        // ——— 张紧控制 ———
+        // 启动序列设备名："张紧控制"（LogicControlPanel.deviceGroups）
+        var tensionCfg = deviceConfigMgr.loadTensionConfig(deviceId, 0)
+        if (tensionCfg && tensionCfg["feedback_channel"] !== undefined) {
+            var tensionUseFeedback = (Number(tensionCfg["use_feedback"]) === 1)
+            var tensionChannel = tensionCfg["feedback_channel"]
+            var tensionDelay = tensionCfg["feedback_timeout"] || 10
+            commonControl.setDeviceFeedbackConfig("张紧控制", tensionUseFeedback, tensionChannel, tensionDelay)
+            dbLoaded++
+            console.log("📋 ParameterSettings: 张紧控制 反馈参数 - 通道:", tensionChannel, "延时:", tensionDelay, "启用:", tensionUseFeedback)
+        }
+
+        // ——— 制动器（1-8号） ———
+        // 启动序列设备名："1号制动器"..."8号制动器"
+        for (var bi = 0; bi < 8; bi++) {
+            var brakeCfg = deviceConfigMgr.loadBrakeConfig(deviceId, bi)
+            if (brakeCfg && Object.keys(brakeCfg).length > 0) {
+                var brakeName = (bi + 1) + "号制动器"
+                var brakeUseFeedback = (Number(brakeCfg["use_release_feedback"]) === 1)
+                var brakeChannel = brakeCfg["release_feedback_channel"] || 0
+                var brakeDelay = brakeCfg["release_feedback_timeout"] || 10
+                commonControl.setDeviceFeedbackConfig(brakeName, brakeUseFeedback, brakeChannel, brakeDelay)
+                dbLoaded++
+            }
+        }
+
+        // ——— 电机（1-8号） ———
+        // 启动序列设备名："1号电机"..."8号电机"
+        for (var mi = 0; mi < 8; mi++) {
+            var motorCfg = deviceConfigMgr.loadMotorConfig(deviceId, mi, 0)
+            if (motorCfg && motorCfg["feedback_channel"] !== undefined) {
+                var motorName = (mi + 1) + "号电机"
+                var motorUseFeedback = motorCfg["use_feedback"] !== undefined
+                    ? (Number(motorCfg["use_feedback"]) === 1) : false
+                commonControl.setDeviceFeedbackConfig(motorName, motorUseFeedback, motorCfg["feedback_channel"], 3)
+                dbLoaded++
+            }
+        }
+
+        // ——— 洒水（1-8号） ———
+        // 启动序列设备名："洒水1"..."洒水8"
+        for (var si = 0; si < 8; si++) {
+            var sprinklerCfg = deviceConfigMgr.loadSprinklerConfig(si + 1)
+            if (sprinklerCfg && sprinklerCfg["use_feedback"] !== undefined) {
+                var sprinklerName = "洒水" + (si + 1)
+                commonControl.setDeviceFeedbackConfig(sprinklerName,
+                    (Number(sprinklerCfg["use_feedback"]) === 1),
+                    sprinklerCfg["feedback_channel"] || 0,
+                    sprinklerCfg["feedback_delay"] || 3)
+                dbLoaded++
+            }
+        }
+
+        console.log("✅ ParameterSettings: 已从数据库同步", dbLoaded, "个设备的反馈配置")
     }
 
     // ✅ 2026-01-20 [FIX 100.271]: 使用 Back 组件作为背景（与模块状态页面一致）
@@ -308,27 +292,9 @@ Item {
                             Layout.preferredHeight: 300
                         }
 
-                        // Row 3 Right - Output Device Settings
-                        OutputDevicePanel {
-                            id: outputDevicePanel
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 300
-
-                            onDeviceClicked: function(deviceName, sourceItem) {
-                                console.log("Device clicked:", deviceName)
-                                // 获取设备的所有反馈参数
-                                var channel = outputDevicePanel.getDeviceChannel(deviceName)
-                                var feedbackChannel = outputDevicePanel.getDeviceFeedbackChannel(deviceName)
-                                var useFeedback = outputDevicePanel.getDeviceUseFeedback(deviceName)
-                                var feedbackDelay = outputDevicePanel.getDeviceFeedbackDelay(deviceName)
-                                deviceSettingsPopup.openForDevice(deviceName, sourceItem, channel, feedbackChannel, useFeedback, feedbackDelay)
-                            }
-
-                            onAddDeviceClicked: function(sourceItem) {
-                                console.log("Add device clicked")
-                                deviceSettingsPopup.openForNew(sourceItem)
-                            }
-                        }
+                        // ❌ 2026-03-27 [Phase 7.48.88.35]: 移除 OutputDevicePanel
+                        // 原因：输出设备配置已分散到各独立配置面板（逻辑控制、电机控制、制动器控制、张紧控制）
+                        // 旧代码：OutputDevicePanel { id: outputDevicePanel ... }
                     }
                 }
             }
@@ -407,43 +373,9 @@ Item {
         id: dateTimePopup
     }
 
-    // Output Device Settings Popup
-    OutputDeviceSettingsPopup {
-        id: deviceSettingsPopup
-
-        onAccepted: {
-            if (deviceSettingsPopup.isNewDevice) {
-                outputDevicePanel.addDevice(deviceSettingsPopup.deviceName)
-                console.log("新增设备:", deviceSettingsPopup.deviceName,
-                           "[输出:", deviceSettingsPopup.outputModule,
-                           "通道:", deviceSettingsPopup.channelNumber, "]")
-            } else {
-                console.log("修改设备参数:", deviceSettingsPopup.deviceName,
-                           "[输出:", deviceSettingsPopup.outputModule,
-                           "通道:", deviceSettingsPopup.channelNumber,
-                           "继电器:", deviceSettingsPopup.relayType, "]")
-            }
-
-            // 同步反馈配置到 CommonControl
-            if (commonControl) {
-                commonControl.setDeviceFeedbackConfig(
-                    deviceSettingsPopup.deviceName,
-                    deviceSettingsPopup.useFeedback,
-                    deviceSettingsPopup.feedbackChannel,
-                    deviceSettingsPopup.feedbackDelay
-                )
-            }
-        }
-
-        onRejected: {
-            console.log("取消操作")
-        }
-
-        onDeleteRequested: {
-            outputDevicePanel.removeDevice(deviceSettingsPopup.deviceName)
-            console.log("删除设备:", deviceSettingsPopup.deviceName)
-        }
-    }
+    // ❌ 2026-03-27 [Phase 7.48.88.35]: 移除 OutputDeviceSettingsPopup
+    // 原因：OutputDevicePanel 已废弃，设备参数配置在各独立面板中完成
+    // 旧代码：OutputDeviceSettingsPopup { id: deviceSettingsPopup ... }
 
     // ✅ Click on empty area (outside input fields) to close keyboard
     // IMPORTANT: Must be AFTER mainFlickable to be on top of it
