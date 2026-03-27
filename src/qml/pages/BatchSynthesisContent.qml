@@ -135,9 +135,10 @@ Rectangle {
 
                     // 分类选择（左）
                     // ✅ 2026-03-25 [Phase 7.48.88.13]: 左右GroupBox等宽等高对齐
+                    // ✅ 2026-03-27 [Phase 7.48.88.30]: 去掉fillHeight，让内容自适应高度
                     GroupBox {
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
+                        Layout.alignment: Qt.AlignTop
                         title: "选择分类"
                         background: Rectangle {
                             color: "#252540"
@@ -277,7 +278,9 @@ Rectangle {
                     // 新布局：右侧等宽等高 [Phase 7.48.88.13]
                     GroupBox {
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
+                        // 旧：Layout.fillHeight: true — 导致内容溢出底部重叠
+                        // ✅ 2026-03-27 [Phase 7.48.88.30]: 去掉fillHeight，让内容自适应高度
+                        Layout.alignment: Qt.AlignTop
                         title: "清除旧语音（名称变更后先清除再生成）"
                         background: Rectangle {
                             color: "#252540"
@@ -294,7 +297,10 @@ Rectangle {
 
                         ColumnLayout {
                             spacing: 4
-                            anchors.fill: parent
+                            // 旧：anchors.fill: parent — 强制填满导致内容溢出
+                            // ✅ 2026-03-27 [Phase 7.48.88.30]: 只填宽度，高度自适应内容
+                            anchors.left: parent.left
+                            anchors.right: parent.right
 
                             // 旧：提示文字 "名称变更后先清除再重新生成" 已移到GroupBox标题
                             // ✅ 2026-03-25 [Phase 7.48.88.13]: 移除独立提示文字，减少高度差异
@@ -532,8 +538,6 @@ Rectangle {
                                 Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignHCenter
                             }
-                            // ✅ 2026-03-27 [Phase 7.48.88.30]: spacer推到顶部对齐，防止居中
-                            Item { Layout.fillHeight: true }
                         }
                     }
                 }
