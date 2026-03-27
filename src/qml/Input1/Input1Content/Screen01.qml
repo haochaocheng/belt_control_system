@@ -791,8 +791,14 @@ Item {
         var localIdx = getLocalDeviceId() - 1
         var hasFault = (typeof runtimeTracker !== "undefined" && runtimeTracker && runtimeTracker.isFault)
         var faultList = hasFault ? runtimeTracker.faultDevices : []
-        // 故障设备名已是"张紧控制"等，直接用空格拼接
-        var faultText = faultList.length > 0 ? faultList.join(" ") : ""
+        // ✅ 2026-03-27 [Phase 7.48.88.40]: 去掉"N号皮带 "前缀（卡片已标识皮带）
+        // runtimeTracker.faultDevices 可能包含 "2号皮带 急停" 等格式
+        var cleanList = []
+        for (var fi = 0; fi < faultList.length; fi++) {
+            var name = faultList[fi].replace(/^\d+号皮带\s*/, "")
+            if (name !== "") cleanList.push(name)
+        }
+        var faultText = cleanList.length > 0 ? cleanList.join(" ") : ""
 
         for (var i = 0; i < beltCardCount; i++) {
             if (dataItems[i]) {
