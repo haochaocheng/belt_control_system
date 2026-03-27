@@ -167,9 +167,11 @@ Item {
             }
 
             // Toggle逻辑：按皮带号判断运行状态
-            if (commonControl.isBeltRunning(keyNumber)) {
-                // 该皮带正在运行 → 停止
-                console.log("  ➡️ " + keyNumber + "号皮带正在运行，执行停止")
+            // ✅ 2026-03-27 [Phase 7.48.88.32]: 增加启动中状态检测
+            // 安全修复：启动过程中（预警播放/设备序列执行中）按停止键必须能中断启动
+            if (commonControl.isBeltRunning(keyNumber) || commonControl.isBeltStarting(keyNumber)) {
+                // 该皮带正在运行或正在启动中 → 停止
+                console.log("  ➡️ " + keyNumber + "号皮带" + (commonControl.isBeltRunning(keyNumber) ? "正在运行" : "正在启动中") + "，执行停止")
                 commonControl.stopBelt(keyNumber)
             } else {
                 // 该皮带未运行 → 启动（startBelt内部有防重入保护）

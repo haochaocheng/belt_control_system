@@ -581,6 +581,58 @@ void CommonControl::stopBelt(int beltNumber)
         qDebug() << "  🧹 已清除" << removedCount << "个" << beltNumber << "号皮带的重复停止请求";
     }
 
+    // ✅ 2026-03-27 [Phase 7.48.88.32]: 安全修复 - 启动过程中允许中断停止
+    // 场景：用户按2号键启动→再按2号键停止，此时正在播放起车预警或执行启动序列
+    // 旧行为：音频忙时排队等待，但如果是本皮带的起车预警，需要立即中断
+    bool isThisBeltWarning = m_isWarningPlaying && m_currentBeltNumber == beltNumber;
+    BeltSequenceState *startupState = m_beltSequences.value(beltNumber, nullptr);
+    bool isThisBeltStarting = startupState && startupState->isRunning && startupState->isStartup;
+
+    if (isThisBeltWarning) {
+        // 正在播放本皮带的起车预警 → 立即中断预警，然后直接停止
+        qDebug() << "⚡ CommonControl:" << beltNumber << "号皮带起车预警中，紧急中断！";
+        // 清除该皮带在待处理队列中的所有启动请求
+        for (int i = m_pendingBeltOps.size() - 1; i >= 0; --i) {
+            if (m_pendingBeltOps[i].first == beltNumber) {
+                m_pendingBeltOps.removeAt(i);
+            }
+        }
+        stopWarningPlayback();
+        // 预警停止后不需要继续执行启动序列，直接标记为已停止
+        m_beltRunning[beltNumber] = false;
+        emit beltRunningChanged(beltNumber, false);
+        emit beltSequenceProgress(beltNumber, "停止", 0, 0, 0);
+        qDebug() << "🔴 CommonControl:" << beltNumber << "号皮带已从预警中紧急停止";
+
+        if (m_runtimeTracker) {
+            m_runtimeTracker->onStopped();
+        }
+        // 记录操作
+        if (m_operationLogDB && m_systemConfig) {
+            QString workModeName = getWorkModeName();
+            m_operationLogDB->logOperation(workModeName, "按键", "紧急停止（预警中断）",
+                                          QString("%1号皮带").arg(beltNumber), "");
+        }
+        return;
+    }
+
+    if (isThisBeltStarting) {
+        // 启动序列执行�� → 中断启动序列，执行紧急停止
+        qDebug() << "⚡ CommonControl:" << beltNumber << "号皮带启动序列中，紧急中断！";
+        startupState->isRunning = false;
+        startupState->timer->stop();
+        // 清除该皮带的待处理操作
+        for (int i = m_pendingBeltOps.size() - 1; i >= 0; --i) {
+            if (m_pendingBeltOps[i].first == beltNumber) {
+                m_pendingBeltOps.removeAt(i);
+            }
+        }
+        // 使用紧急停车，跳过停车音频直接执行停止序列
+        m_currentBeltNumber = beltNumber;
+        emergencyStopBelt(beltNumber);
+        return;
+    }
+
     // ✅ 2026-03-25 [Phase 7.48.88.22]: 音频忙 → 入待处理队列
     if (m_isWarningPlaying || m_isStopAudioPlaying) {
         qDebug() << "🔄 CommonControl:" << beltNumber << "号皮带停止排队等待（音频忙）";
@@ -1113,6 +1165,31 @@ QVariantMap CommonControl::getSequenceState(int beltNumber) const
 bool CommonControl::isBeltRunning(int beltNumber) const
 {
     return m_beltRunning.value(beltNumber, false);
+}
+
+// ✅ 2026-03-27 [Phase 7.48.88.32]: 检查皮带是否正在启动中（预警播放或启动序列执行中）
+// 安全修复：启动过程中按停止键必须能中断启动
+bool CommonControl::isBeltStarting(int beltNumber) const
+{
+    // 1. 检查是否正在播放该皮带的起车预警
+    if (m_isWarningPlaying && m_currentBeltNumber == beltNumber) {
+        return true;
+    }
+
+    // 2. 检查是否有该皮带的启动序列正在执行
+    BeltSequenceState *state = m_beltSequences.value(beltNumber, nullptr);
+    if (state && state->isRunning && state->isStartup) {
+        return true;
+    }
+
+    // 3. 检查待处理队列中是否有该皮带的启动操作
+    for (const auto &op : m_pendingBeltOps) {
+        if (op.first == beltNumber && op.second) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // ✅ 2026-03-25 [Phase 7.48.88.22]: 重构为per-belt并行序列执行

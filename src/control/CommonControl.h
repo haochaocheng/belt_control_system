@@ -261,6 +261,10 @@ public slots:
     // ✅ 2026-03-25 [Phase 7.48.88.21]: 按皮带号查询运行状态（用于数字键toggle判断）
     Q_INVOKABLE bool isBeltRunning(int beltNumber) const;
 
+    // ✅ 2026-03-27 [Phase 7.48.88.32]: 按皮带号查询是否正在启动中（预警播放或启动序列执行中）
+    // 安全修复：启动过程中按停止键必须能中断启动，否则有安全隐患
+    Q_INVOKABLE bool isBeltStarting(int beltNumber) const;
+
     // 设置设备反馈参数（从QML调用）
     Q_INVOKABLE void setDeviceFeedbackConfig(const QString &deviceName, bool useFeedback, int feedbackChannel, int feedbackDelay);
 
