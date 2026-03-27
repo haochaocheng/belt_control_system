@@ -1868,14 +1868,34 @@ QString CommonControl::getDeviceFailureAudioPath(const QString &deviceName)
     // 构建音频文件名列表
     QStringList possibleNames;
 
-    // 特殊处理：抱闸对应"1号松闸运行失败"（所有皮带都用同样的文件名）
+    // ✅ 2026-03-27 [Phase 7.48.88.36]: 统一文件名命名规则
+    // 标准格式："{deviceName}运行失败.wav"（与启动序列设备名一致）
+    // 旧代码：特殊处理 "抱闸" → "1号松闸运行失败"（Phase 7.48.88.35后设备名已改为"N号制动器"）
+    possibleNames << QString("%1运行失败.mp3").arg(deviceName);
+    possibleNames << QString("%1运行失败.wav").arg(deviceName);
+
+    // 兼容旧版BatchAudioGenerator生成的文件名（设备上可能存在旧文件）
+    // 电机: "1号电机" → 旧文件名 "电机1失败.wav"
+    if (deviceName.endsWith("号电机")) {
+        QString num = deviceName.left(deviceName.indexOf("号电机"));
+        possibleNames << QString("电机%1失败.mp3").arg(num);
+        possibleNames << QString("电机%1失败.wav").arg(num);
+    }
+    // 制动器: "1号制动器" → 旧文件名 "制动器1松闸失败.wav"、"1号松闸运行失败.wav"
+    if (deviceName.endsWith("号制动器")) {
+        QString num = deviceName.left(deviceName.indexOf("号制动器"));
+        possibleNames << QString("制动器%1松闸失败.mp3").arg(num);
+        possibleNames << QString("制动器%1松闸失败.wav").arg(num);
+        possibleNames << QString("%1号松闸运行失败.mp3").arg(num);
+        possibleNames << QString("%1号松闸运行失败.wav").arg(num);
+    }
+    // 张紧: "张紧控制" → 旧文件名 "1号张紧运行失败.wav"
+    if (deviceName == "张紧控制") {
+        possibleNames << "1号张紧运行失败.mp3" << "1号张紧运行失败.wav";
+    }
+    // 旧设备名兼容: "抱闸" → "1号松闸运行失败.wav"
     if (deviceName == "抱闸") {
-        possibleNames << "1号松闸运行失败.mp3";
-        possibleNames << "1号松闸运行失败.wav";
-    } else {
-        // 格式1: "设备名称运行失败.mp3" (例如: "张紧运行失败.mp3", "1号电机运行失败.mp3")
-        possibleNames << QString("%1运行失败.mp3").arg(deviceName);
-        possibleNames << QString("%1运行失败.wav").arg(deviceName);
+        possibleNames << "1号松闸运行失败.mp3" << "1号松闸运行失败.wav";
     }
 
     // ✅ 2026-03-21 [Phase 7.48.69]: TTS合成路径优先（与getAudioPath()对齐）

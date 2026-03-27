@@ -520,7 +520,10 @@ void BatchAudioGenerator::generateMotorTasks(const EngineConfig &engine)
         // 旧："%1号皮带%2号电机启动预警" → "1号电机启动预警.wav"
         // 新：TTS文字="X号皮带X号电机准备启动，请注意安全" → 文件名="电机X启动.wav"
         {"%1号皮带%2号电机准备启动，请注意安全",  "电机%1启动"},    // ✅ 2026-03-11 [Phase 7.48.37]: 修改
-        {"%1号皮带%2号电机运行失败",              "电机%1失败"},    // ✅ 2026-03-11 [Phase 7.48.37]: 修改
+        // ✅ 2026-03-27 [Phase 7.48.88.36]: 统一文件名与CommonControl.getDeviceFailureAudioPath()一致
+        // 旧代码：{"%1号皮带%2号电机运行失败", "电机%1失败"}  → 生成"电机1失败.wav"
+        // 新代码：生成"1号电机运行失败.wav"，与设备名"1号电机"+"运行失败"匹配
+        {"%1号皮带%2号电机运行失败",              "%1号电机运行失败"},
     };
 
     for (int beltNum : m_beltNumbers) {
@@ -569,6 +572,9 @@ void BatchAudioGenerator::generateBrakeTasks(const EngineConfig &engine)
         {"%1号皮带%2号制动器准备松闸，请注意安全", "制动器%1松闸"},
         {"%1号皮带%2号制动器松闸失败",             "制动器%1松闸失败"},
         {"%1号皮带%2号制动器抱闸失败",             "制动器%1抱闸失败"},
+        // ✅ 2026-03-27 [Phase 7.48.88.36]: 新增通用运行失败音频
+        // 与CommonControl.getDeviceFailureAudioPath()一致：设备名"1号制动器"+"运行失败"
+        {"%1号皮带%2号制动器运行失败",             "%1号制动器运行失败"},
     };
 
     for (int beltNum : m_beltNumbers) {
@@ -655,11 +661,14 @@ void BatchAudioGenerator::generateTensionTasks(const EngineConfig &engine)
             // 张紧运行失败：每台张紧1个
             // 旧：task.text = QString("%1号张紧运行失败").arg(tensionNum);  // 缺少皮带号
             // ✅ 2026-03-18 [Phase 7.48.53]: 修复TTS文本包含皮带号，如"1号皮带1号张紧运行失败"
+            // ✅ 2026-03-27 [Phase 7.48.88.36]: 统一文件名与CommonControl一致
+            // 旧代码：task.outputPath = QString("%1%2号张紧运行失败.wav").arg(outputDir).arg(tensionNum);
+            // 新代码：生成"张紧控制运行失败.wav"，与设备名"张紧控制"+"运行失败"匹配
             {
                 FileTask task;
                 task.category = "tension";
                 task.text = QString("%1号皮带%2号张紧运行失败").arg(beltNum).arg(tensionNum);
-                task.outputPath = QString("%1%2号张紧运行失败.wav").arg(outputDir).arg(tensionNum);
+                task.outputPath = QString("%1张紧控制运行失败.wav").arg(outputDir);
                 task.engineName = engine.engineName;
                 task.modelName = engine.modelName;
                 task.speakerId = engine.speakerId;
