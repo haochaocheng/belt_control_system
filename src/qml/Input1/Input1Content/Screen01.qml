@@ -679,11 +679,12 @@ Item {
             } else if (phase === "起车预警" || phase === "停车预警") {
                 item.deviceStatus = phase
             } else {
-                // ✅ 2026-03-26 [Phase 7.48.88.27]: 根据之前的阶段判断是启动中还是停止中
-                // 原因：停止序列中的phase是设备名如"3号电机"，不含"停"字
-                // 旧代码：phase.indexOf("停") >= 0 ? "停止中" : "启动中"
-                // 修复：检查之前的deviceStatus是否为"停车预警"或"停止中"
-                var isStopSequence = (item.deviceStatus === "停车预警" || item.deviceStatus === "停止中")
+                // ✅ 2026-03-27 [Phase 7.48.88.37]: 修复故障停止时卡片仍显示"启动中"
+                // 原因：故障停止跳过停车预警，deviceStatus为"运行"而非"停车预警"/"停止中"
+                //       导致isStopSequence=false，停止序列进度误显示为"启动中"
+                // 旧代码：var isStopSequence = (item.deviceStatus === "停车预警" || item.deviceStatus === "停止中")
+                // 修复：当前状态为"运行"时，收到序列进度也说明正在停止（故障停车场景）
+                var isStopSequence = (item.deviceStatus === "停车预警" || item.deviceStatus === "停止中" || item.deviceStatus === "运行")
                 item.deviceStatus = current > 0 ? (isStopSequence ? "停止中" : "启动中") : item.deviceStatus
             }
 
