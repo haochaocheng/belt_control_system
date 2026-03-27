@@ -826,58 +826,53 @@ Rectangle {
                 font.pixelSize: 14
             }
 
-            GridLayout {
-                columns: 8
-                columnSpacing: 10
-                rowSpacing: 4
+            RowLayout {
                 anchors.left: parent.left
                 anchors.right: parent.right
+                spacing: 15
 
                 Text { text: "电机数量:"; color: "#cccccc"; font.pixelSize: 12 }
                 SpinBox {
                     id: spinMotorCount
                     from: 1; to: 8; value: 8
                     editable: true
-                    Layout.preferredWidth: 100
+                    Layout.fillWidth: true
                     Layout.preferredHeight: 30
                 }
 
-                Text { text: "制动器数量:"; color: "#cccccc"; font.pixelSize: 12 }
+                Text { text: "制动器:"; color: "#cccccc"; font.pixelSize: 12 }
                 SpinBox {
                     id: spinBrakeCount
                     from: 1; to: 8; value: 8
                     editable: true
-                    Layout.preferredWidth: 100
+                    Layout.fillWidth: true
                     Layout.preferredHeight: 30
                 }
 
-                Text { text: "张紧数量:"; color: "#cccccc"; font.pixelSize: 12 }
+                Text { text: "张紧:"; color: "#cccccc"; font.pixelSize: 12 }
                 SpinBox {
                     id: spinTensionCount
                     from: 1; to: 2; value: 2
                     editable: true
-                    Layout.preferredWidth: 100
+                    Layout.fillWidth: true
                     Layout.preferredHeight: 30
                 }
 
-                Text { text: "点位范围:"; color: "#cccccc"; font.pixelSize: 12 }
-                RowLayout {
-                    spacing: 5
-                    SpinBox {
-                        id: spinLineStart
-                        from: 1; to: 64; value: 1
-                        editable: true
-                        Layout.preferredWidth: 80
-                        Layout.preferredHeight: 30
-                    }
-                    Text { text: "-"; color: "#cccccc" }
-                    SpinBox {
-                        id: spinLineEnd
-                        from: 1; to: 64; value: 64
-                        editable: true
-                        Layout.preferredWidth: 80
-                        Layout.preferredHeight: 30
-                    }
+                Text { text: "点位:"; color: "#cccccc"; font.pixelSize: 12 }
+                SpinBox {
+                    id: spinLineStart
+                    from: 1; to: 64; value: 1
+                    editable: true
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 30
+                }
+                Text { text: "-"; color: "#cccccc" }
+                SpinBox {
+                    id: spinLineEnd
+                    from: 1; to: 64; value: 64
+                    editable: true
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 30
                 }
             }
         }
