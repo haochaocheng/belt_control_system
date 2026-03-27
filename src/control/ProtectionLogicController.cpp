@@ -163,6 +163,14 @@ void ProtectionLogicController::executeProtectionAction(int beltNumber, const QS
         if (m_beltStopped.value(beltNumber, false)) {
             qDebug() << "⚠️ ProtectionLogicController: 皮带" << beltNumber
                      << "已因保护触发停车，忽略重复停车请求";
+            // ✅ 2026-03-27 [Phase 7.48.88.33]: 即使忽略重复停车，仍需记录故障到列表
+            // 旧行为：直接return，导致第二个及后续故障不会出现在故障弹窗中
+            if (m_runtimeTracker) {
+                QString deviceName = (m_deviceRoleManager) ? m_deviceRoleManager->localDeviceName()
+                                                           : QString("%1号皮带").arg(beltNumber);
+                QString faultDesc = QString("%1 %2").arg(deviceName).arg(protectionName);
+                m_runtimeTracker->onDeviceFault(faultDesc);
+            }
             return;
         }
         m_beltStopped[beltNumber] = true;
@@ -183,7 +191,11 @@ void ProtectionLogicController::executeProtectionAction(int beltNumber, const QS
         // ✅ 2026-03-23 [Phase 7.48.86]: 设置故障状态 → R键被阻止，必须按F键复位
         if (m_runtimeTracker) {
             m_runtimeTracker->setFault();
-            QString faultDesc = QString("%1号皮带 %2").arg(beltNumber).arg(protectionName);
+            // ✅ 2026-03-27 [Phase 7.48.88.33]: 使用本机自定义名称（如"1108顺槽皮带"）
+            // 旧代码：QString faultDesc = QString("%1号皮带 %2").arg(beltNumber).arg(protectionName);
+            QString deviceName = (m_deviceRoleManager) ? m_deviceRoleManager->localDeviceName()
+                                                       : QString("%1号皮带").arg(beltNumber);
+            QString faultDesc = QString("%1 %2").arg(deviceName).arg(protectionName);
             m_runtimeTracker->onDeviceFault(faultDesc);
         }
         break;
@@ -196,6 +208,13 @@ void ProtectionLogicController::executeProtectionAction(int beltNumber, const QS
         if (m_beltStopped.value(beltNumber, false)) {
             qDebug() << "⚠️ ProtectionLogicController: 皮带" << beltNumber
                      << "已因保护触发停车，忽略重复停车请求";
+            // ✅ 2026-03-27 [Phase 7.48.88.33]: 即使忽略重复停车，仍需记录故障到列表
+            if (m_runtimeTracker) {
+                QString deviceName = (m_deviceRoleManager) ? m_deviceRoleManager->localDeviceName()
+                                                           : QString("%1号皮带").arg(beltNumber);
+                QString faultDesc = QString("%1 %2").arg(deviceName).arg(protectionName);
+                m_runtimeTracker->onDeviceFault(faultDesc);
+            }
             return;
         }
         m_beltStopped[beltNumber] = true;
@@ -217,7 +236,11 @@ void ProtectionLogicController::executeProtectionAction(int beltNumber, const QS
         // ✅ 2026-03-23 [Phase 7.48.86]: 设置故障状态 → R键被阻止，必须按F键复位
         if (m_runtimeTracker) {
             m_runtimeTracker->setFault();
-            QString faultDesc = QString("%1号皮带 %2").arg(beltNumber).arg(protectionName);
+            // ✅ 2026-03-27 [Phase 7.48.88.33]: 使用本机自定义名称（如"1108顺槽皮带"）
+            // 旧代码：QString faultDesc = QString("%1号皮带 %2").arg(beltNumber).arg(protectionName);
+            QString deviceName = (m_deviceRoleManager) ? m_deviceRoleManager->localDeviceName()
+                                                       : QString("%1号皮带").arg(beltNumber);
+            QString faultDesc = QString("%1 %2").arg(deviceName).arg(protectionName);
             m_runtimeTracker->onDeviceFault(faultDesc);
         }
         break;

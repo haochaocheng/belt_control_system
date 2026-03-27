@@ -589,8 +589,10 @@ void CommonControl::stopBelt(int beltNumber)
     bool isThisBeltStarting = startupState && startupState->isRunning && startupState->isStartup;
 
     if (isThisBeltWarning) {
-        // 正在播放本皮带的起车预警 → 立即中断预警，然后直接停止
-        qDebug() << "⚡ CommonControl:" << beltNumber << "号皮带起车预警中，紧急中断！";
+        // ✅ 2026-03-27 [Phase 7.48.88.33]: 起车预警中按停止 → 中断预警 + 播放停车预警音频
+        // 旧行为：静默取消预警，无任何音频反馈
+        // 新行为：中断起车预警 → 播放停车预警音频 → 设备未激活无需执行停止序列
+        qDebug() << "⚡ CommonControl:" << beltNumber << "号皮带起车预警中，中断并播放停车预警！";
         // 清除该皮带在待处理队列中的所有启动请求
         for (int i = m_pendingBeltOps.size() - 1; i >= 0; --i) {
             if (m_pendingBeltOps[i].first == beltNumber) {
@@ -598,20 +600,37 @@ void CommonControl::stopBelt(int beltNumber)
             }
         }
         stopWarningPlayback();
-        // 预警停止后不需要继续执行启动序列，直接标记为已停止
+        // 预警停止后设备尚未激活，标记为已停止
         m_beltRunning[beltNumber] = false;
         emit beltRunningChanged(beltNumber, false);
-        emit beltSequenceProgress(beltNumber, "停止", 0, 0, 0);
-        qDebug() << "🔴 CommonControl:" << beltNumber << "号皮带已从预警中紧急停止";
 
+        // 更新RuntimeTracker和UI：停车预警阶段
         if (m_runtimeTracker) {
-            m_runtimeTracker->onStopped();
+            m_runtimeTracker->onStopWarning();
         }
+        emit stopWarningStarted();
+        emit beltSequenceProgress(beltNumber, "停车预警", 0, 0, 0);
+
         // 记录操作
         if (m_operationLogDB && m_systemConfig) {
             QString workModeName = getWorkModeName();
-            m_operationLogDB->logOperation(workModeName, "按键", "紧急停止（预警中断）",
+            m_operationLogDB->logOperation(workModeName, "按键", "停止（预警中断）",
                                           QString("%1号皮带").arg(beltNumber), "");
+        }
+
+        // 播放停车预警音频（设备未激活，onPlaybackFinished中不会执行停止序列）
+        m_currentBeltNumber = beltNumber;
+        QString stopAudioPath = getAudioPath(beltNumber, "停车");
+        if (!stopAudioPath.isEmpty()) {
+            m_isStopAudioPlaying = true;
+            qDebug() << "🔊 CommonControl: 播放停车预警音频（预警中断后）";
+            playAudio(stopAudioPath);
+        } else {
+            // 无停车音频，直接标记停止
+            emit beltSequenceProgress(beltNumber, "停止", 0, 0, 0);
+            if (m_runtimeTracker) {
+                m_runtimeTracker->onStopped();
+            }
         }
         return;
     }
@@ -835,6 +854,18 @@ void CommonControl::onPlaybackFinished()
         //       下次按R键 playAudio() 只入队不播放，导致第2/3次R键无声音
         m_isPlayingFromQueue = false;
         m_audioQueue.clear();
+
+        // ✅ 2026-03-27 [Phase 7.48.88.33]: 如果皮带已标记为未运行（起车预警中断），
+        // 设备尚未激活，无需执行停止序列
+        if (!m_beltRunning.value(m_currentBeltNumber, false)) {
+            qDebug() << "🔴 CommonControl:" << m_currentBeltNumber << "号皮带停车预警播放完成（设备未激活，无需停止序列）";
+            emit beltSequenceProgress(m_currentBeltNumber, "停止", 0, 0, 0);
+            if (m_runtimeTracker) {
+                m_runtimeTracker->onStopped();
+            }
+            processPendingBeltOps();
+            return;
+        }
 
         // 自动停止设备序列
         qDebug() << "🔄 CommonControl: 停车音频结束，自动停止" << m_currentBeltNumber << "号设备序列";
