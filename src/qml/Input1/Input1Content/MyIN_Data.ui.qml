@@ -316,8 +316,9 @@ Image {
 
         // --- 第5元素：故障详情徽章（仅故障时显示） ---
         // ✅ 2026-03-27 [Phase 7.48.88.38]: 具体故障原因指示
+        // ✅ 2026-03-27 [Phase 7.48.88.39]: 限制最大宽度防止溢出，文字截断
         Rectangle {
-            width: faultDetailText.implicitWidth + 12
+            width: Math.min(faultDetailText.implicitWidth + 12, parent.width - x - 8)
             height: 20
             radius: 3
             color: "#33DC2626"
@@ -329,11 +330,14 @@ Image {
             Text {
                 id: faultDetailText
                 anchors.centerIn: parent
+                width: parent.width - 8
                 text: faultDetail
                 font.pixelSize: 12
                 font.bold: true
                 font.family: "Microsoft YaHei"
                 color: "#DC2626"
+                elide: Text.ElideRight
+                maximumLineCount: 1
             }
 
             // 故障时闪烁

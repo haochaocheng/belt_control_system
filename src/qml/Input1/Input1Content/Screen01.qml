@@ -721,32 +721,31 @@ Item {
     }
 
     // ✅ 2026-03-26 [Phase 7.48.88.25]: 监听DI开关量保护状态
+    // ✅ 2026-03-27 [Phase 7.48.88.39]: DI保护只应用于本机设备卡片（不是所有8张）
     Connections {
         target: typeof diDataManager !== "undefined" ? diDataManager : null
         enabled: target !== null
 
         function onBitChanged(moduleIndex, bitIndex, value) {
-            // DI模块0对应1号皮带的保护，DI模块1对应2号皮带的保护（简化映射）
-            // 实际映射需要根据保护配置来确定，这里先用模块索引
             if (moduleIndex < 0 || moduleIndex >= 2) return
             var dataItems = getDataItems()
-            // 暂时将DI模块0映射给所有皮带卡片（后续可按保护配置精确映射）
-            for (var i = 0; i < 8; i++) {
-                var item = dataItems[i]
-                if (item && moduleIndex === 0) {
-                    if (value) {
-                        item.protectionBits = item.protectionBits | (1 << bitIndex)
-                        // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护触发时同时设置锁存位
-                        item.latchedProtectionBits = item.latchedProtectionBits | (1 << bitIndex)
-                    } else {
-                        // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护物理恢复时只清实时位，保留锁存位
-                        // 锁存位仅在F键复位时清除
-                        item.protectionBits = item.protectionBits & ~(1 << bitIndex)
-                    }
-                    // ✅ 2026-03-27 [Phase 7.48.88.38]: 保护位变化时更新允许运行状态
-                    var hasFault = (typeof runtimeTracker !== "undefined" && runtimeTracker && runtimeTracker.isFault)
-                    item.allowRun = !hasFault && (item.protectionBits === 0)
+            var localIdx = getLocalDeviceId() - 1
+            // DI数据来自本机物理模块，只应用于本机设备对应的卡片
+            // 旧代码：for (var i = 0; i < 8; i++) 应用到所有卡片
+            if (localIdx < 0 || localIdx >= beltCardCount) return
+            var item = dataItems[localIdx]
+            if (item && moduleIndex === 0) {
+                if (value) {
+                    item.protectionBits = item.protectionBits | (1 << bitIndex)
+                    // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护触发时同时设置锁存位
+                    item.latchedProtectionBits = item.latchedProtectionBits | (1 << bitIndex)
+                } else {
+                    // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护物理恢复时只清实时位，保留锁存位
+                    item.protectionBits = item.protectionBits & ~(1 << bitIndex)
                 }
+                // ✅ 2026-03-27 [Phase 7.48.88.38]: 保护位变化时更新允许运行状态
+                var hasFault = (typeof runtimeTracker !== "undefined" && runtimeTracker && runtimeTracker.isFault)
+                item.allowRun = !hasFault && (item.protectionBits === 0)
             }
         }
     }
@@ -784,35 +783,45 @@ Item {
         }
     }
 
-    // ✅ 2026-03-27 [Phase 7.48.88.38]: 更新故障显示到卡片
+    // ✅ 2026-03-27 [Phase 7.48.88.39]: 更新故障显示到卡片（仅本机卡片）
+    // 修复：故障/允许运行只应用于本机设备对应的卡片，而非所有8张卡片
+    // 修复：faultDetail不显示皮带号（卡片本身已标识皮带）
     function updateFaultDisplay() {
         var dataItems = getDataItems()
+        var localIdx = getLocalDeviceId() - 1
         var hasFault = (typeof runtimeTracker !== "undefined" && runtimeTracker && runtimeTracker.isFault)
         var faultList = hasFault ? runtimeTracker.faultDevices : []
+        // 故障设备名已是"张紧控制"等，直接用空格拼接
         var faultText = faultList.length > 0 ? faultList.join(" ") : ""
 
         for (var i = 0; i < beltCardCount; i++) {
             if (dataItems[i]) {
-                dataItems[i].faultDetail = faultText
-                // 允许运行：无故障且无保护触发（急停/跑偏/撕裂等）
-                dataItems[i].allowRun = !hasFault && (dataItems[i].protectionBits === 0)
+                if (i === localIdx) {
+                    // 本机卡片：显示故障详情和允许运行状态
+                    dataItems[i].faultDetail = faultText
+                    dataItems[i].allowRun = !hasFault && (dataItems[i].protectionBits === 0)
+                } else {
+                    // 非本机卡片：不显示本机的故障信息
+                    dataItems[i].faultDetail = ""
+                    dataItems[i].allowRun = true  // 远程设备状态未知，默认允许
+                }
             }
         }
     }
 
     // ✅ 2026-03-26 [Phase 7.48.88.25]: 监听MQTT通讯状态
+    // ✅ 2026-03-27 [Phase 7.48.88.39]: MQTT通讯状态只应用于本机卡片
     Connections {
         target: typeof mqttAutoManager !== "undefined" ? mqttAutoManager : null
         enabled: target !== null
 
         function onModuleStatusChanged(moduleIndex, status) {
-            // 只要有任一模块在线，卡片就显示在线
             var dataItems = getDataItems()
+            var localIdx = getLocalDeviceId() - 1
             var online = (status === "正常" || status === "已连接")
-            for (var i = 0; i < dataItems.length; i++) {
-                if (dataItems[i]) {
-                    dataItems[i].commOnline = online
-                }
+            // 旧代码：所有卡片都设置commOnline（本机MQTT状态不代表远程设备状态）
+            if (localIdx >= 0 && localIdx < beltCardCount && dataItems[localIdx]) {
+                dataItems[localIdx].commOnline = online
             }
         }
     }
