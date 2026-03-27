@@ -743,6 +743,9 @@ Item {
                         // 锁存位仅在F键复位时清除
                         item.protectionBits = item.protectionBits & ~(1 << bitIndex)
                     }
+                    // ✅ 2026-03-27 [Phase 7.48.88.38]: 保护位变化时更新允许运行状态
+                    var hasFault = (typeof runtimeTracker !== "undefined" && runtimeTracker && runtimeTracker.isFault)
+                    item.allowRun = !hasFault && (item.protectionBits === 0)
                 }
             }
         }
@@ -760,7 +763,39 @@ Item {
             for (var i = 0; i < dataItems.length; i++) {
                 if (dataItems[i]) {
                     dataItems[i].latchedProtectionBits = 0
+                    // ✅ 2026-03-27 [Phase 7.48.88.38]: F键复位时更新允许运行
+                    dataItems[i].allowRun = (dataItems[i].protectionBits === 0)
                 }
+            }
+        }
+    }
+
+    // ✅ 2026-03-27 [Phase 7.48.88.38]: 监听故障状态变化，更新卡片故障详情和允许运行
+    Connections {
+        target: typeof runtimeTracker !== "undefined" ? runtimeTracker : null
+        enabled: target !== null
+
+        function onIsFaultChanged() {
+            updateFaultDisplay()
+        }
+
+        function onFaultDevicesChanged() {
+            updateFaultDisplay()
+        }
+    }
+
+    // ✅ 2026-03-27 [Phase 7.48.88.38]: 更新故障显示到卡片
+    function updateFaultDisplay() {
+        var dataItems = getDataItems()
+        var hasFault = (typeof runtimeTracker !== "undefined" && runtimeTracker && runtimeTracker.isFault)
+        var faultList = hasFault ? runtimeTracker.faultDevices : []
+        var faultText = faultList.length > 0 ? faultList.join(" ") : ""
+
+        for (var i = 0; i < beltCardCount; i++) {
+            if (dataItems[i]) {
+                dataItems[i].faultDetail = faultText
+                // 允许运行：无故障且无保护触发（急停/跑偏/撕裂等）
+                dataItems[i].allowRun = !hasFault && (dataItems[i].protectionBits === 0)
             }
         }
     }

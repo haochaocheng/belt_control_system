@@ -32,6 +32,10 @@ Image {
     property int workMode: 1              // 0=检修, 1=就地, 2=点动, 3=集控
     property bool interlockActive: true   // 连锁状态（检修=false, 其他=true）
 
+    // ✅ 2026-03-27 [Phase 7.48.88.38]: 允许运行与故障详情
+    property bool allowRun: true          // 允许运行（所有保护正常且无故障）
+    property string faultDetail: ""       // 故障详情（如"张紧控制运行失败"，空字符串=无故障）
+
     // ✅ 序列执行阶段（核心显示区域）
     property string sequencePhase: ""          // 当前阶段: "起车预警"/"1号制动器"/"1号电机"/"运行"/"停车预警"/"停止"
     property int sequenceCurrent: 0            // 当前步骤
@@ -286,6 +290,58 @@ Image {
                 font.pixelSize: 12
                 font.family: "Microsoft YaHei"
                 color: interlockActive ? "#3B82F6" : "#EF4444"
+            }
+        }
+
+        // --- 第4元素：允许运行徽章 ---
+        // ✅ 2026-03-27 [Phase 7.48.88.38]: 允许运行指示
+        Rectangle {
+            width: allowRunText.implicitWidth + 12
+            height: 20
+            radius: 3
+            color: allowRun ? "#3322C55E" : "#33DC2626"
+            border.color: allowRun ? "#22C55E" : "#DC2626"
+            border.width: 1
+            anchors.verticalCenter: parent.verticalCenter
+
+            Text {
+                id: allowRunText
+                anchors.centerIn: parent
+                text: allowRun ? "允许" : "禁止"
+                font.pixelSize: 12
+                font.family: "Microsoft YaHei"
+                color: allowRun ? "#22C55E" : "#DC2626"
+            }
+        }
+
+        // --- 第5元素：故障详情徽章（仅故障时显示） ---
+        // ✅ 2026-03-27 [Phase 7.48.88.38]: 具体故障原因指示
+        Rectangle {
+            width: faultDetailText.implicitWidth + 12
+            height: 20
+            radius: 3
+            color: "#33DC2626"
+            border.color: "#DC2626"
+            border.width: 1
+            anchors.verticalCenter: parent.verticalCenter
+            visible: faultDetail !== ""
+
+            Text {
+                id: faultDetailText
+                anchors.centerIn: parent
+                text: faultDetail
+                font.pixelSize: 12
+                font.bold: true
+                font.family: "Microsoft YaHei"
+                color: "#DC2626"
+            }
+
+            // 故障时闪烁
+            SequentialAnimation on opacity {
+                loops: Animation.Infinite
+                running: faultDetail !== ""
+                NumberAnimation { to: 0.5; duration: 600 }
+                NumberAnimation { to: 1.0; duration: 600 }
             }
         }
     }
