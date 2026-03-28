@@ -572,15 +572,17 @@ Image {
             }
         }
 
-        // ========== 分隔线（设备与保护之间） ==========
+        // ========== 分隔线（参数区与设备/保护之间） ==========
+        // ✅ 2026-03-28 [Phase 7.48.88.49.5]: 加粗分割线+提高透明度，确保QDS中可见
         Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: deviceRow.visible ? deviceRow.top : protectionRow.top
-            anchors.bottomMargin: 1
-            height: 1
+            anchors.bottomMargin: 2
+            height: 2
             color: "#4A90E2"
-            opacity: 0.4
+            opacity: 0.6
+            z: 1
         }
 
         // ========== ③ 参数区 - 填充上方剩余空间 ==========
@@ -601,16 +603,20 @@ Image {
             }
 
             // ---- 模式A: 参数显示（2行×2列水平） ----
+            // ✅ 2026-03-28 [Phase 7.48.88.49.5]: 改为固定行高+小间距，消除两行间空白
             Column {
-                anchors.fill: parent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
                 anchors.margins: 6
-                spacing: 6
+                spacing: 2
                 visible: sequencePhase === "" || sequencePhase === "运行" || sequencePhase === "停止"
 
                 // 第1行: 速度 + 电流
+                // ✅ 2026-03-28 [Phase 7.48.88.49.5]: 固定行高48px，避免动态拉伸
                 Row {
                     width: parent.width
-                    height: (parent.height - 6) / 2
+                    height: 48
                     spacing: 10
 
                     // 参数1: 速度
@@ -766,9 +772,10 @@ Image {
                 }
 
                 // 第2行: 温度 + 张力
+                // ✅ 2026-03-28 [Phase 7.48.88.49.5]: 固定行高48px
                 Row {
                     width: parent.width
-                    height: (parent.height - 6) / 2
+                    height: 48
                     spacing: 10
 
                     // 参数3: 温度
