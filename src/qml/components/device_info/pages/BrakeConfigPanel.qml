@@ -524,7 +524,10 @@ Rectangle {
         // 原因：ParameterSettings.syncDeviceFeedbackConfigs() 只在启动时调用一次，
         //       修改 use_release_feedback 后 CommonControl 内存中仍是旧值
         if (success && typeof commonControl !== "undefined") {
-            var brakeName = root.brakeIndex === 0 ? "抱闸" : ((root.brakeIndex + 1) + "号制动器")
+            // ❌ 2026-03-28 [Phase 7.48.88.45]: 旧代码 brakeIndex=0 使用"抱闸"，与 ParameterSettings.syncDeviceFeedbackConfigs() 的"1号制动器"不匹配
+            // 原因：启动同步和启动序列都使用"X号制动器"格式，保存时却用"抱闸"，导致CommonControl中存在两条不同名称的记录，用户保存的配置不被启动序列读取
+            // var brakeName = root.brakeIndex === 0 ? "抱闸" : ((root.brakeIndex + 1) + "号制动器")
+            var brakeName = (root.brakeIndex + 1) + "号制动器"  // ✅ 统一使用"X号制动器"格式，与启动同步一致
             var useFeedback = config["use_release_feedback"] !== undefined ? (Number(config["use_release_feedback"]) === 1) : false
             var feedbackChannel = config["release_feedback_channel"] !== undefined ? config["release_feedback_channel"] : 0
             var feedbackDelay = config["release_feedback_timeout"] || 10
