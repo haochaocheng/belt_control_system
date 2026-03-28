@@ -517,6 +517,14 @@ Item {
                 }
                 console.log("[Screen01] ✅ 设备名称已设置")
 
+                // ✅ 2026-03-28 [Phase 7.48.88.47]: 初始化本机卡片的今日运行时间
+                var localIdx = getLocalDeviceId() - 1
+                if (localIdx >= 0 && localIdx < beltCardCount && dataItems[localIdx]) {
+                    if (typeof runtimeTracker !== "undefined" && runtimeTracker) {
+                        dataItems[localIdx].dailyRuntime = runtimeTracker.dailyRuntime
+                    }
+                }
+
                 // ✅ 2026-01-28 [FIX 100.300.67]: 设置鼠标交互
                 console.log("[Screen01] 🖱️ 设置鼠标交互...")
                 refreshDeviceCards()
@@ -786,6 +794,15 @@ Item {
 
         function onFaultDevicesChanged() {
             updateFaultDisplay()
+        }
+
+        // ✅ 2026-03-28 [Phase 7.48.88.47]: 监听今日运行时间变化，更新本机卡片
+        function onDailyRuntimeChanged() {
+            var dataItems = getDataItems()
+            var localIdx = getLocalDeviceId() - 1
+            if (localIdx >= 0 && localIdx < beltCardCount && dataItems[localIdx]) {
+                dataItems[localIdx].dailyRuntime = runtimeTracker.dailyRuntime
+            }
         }
     }
 
