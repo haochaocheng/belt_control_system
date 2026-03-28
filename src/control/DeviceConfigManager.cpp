@@ -3109,7 +3109,7 @@ bool DeviceConfigManager::saveBrakeConfig(int deviceId, int brakeIndex, const QV
          enabled, release_output_channel, brake_output_channel,
          use_release_feedback, release_feedback_channel, release_feedback_timeout,
          use_brake_feedback, brake_feedback_channel, brake_feedback_timeout,
-         hold_time, release_time, brake_delay_time, release_delay,
+         hold_time, release_time, release_delay,
          detect_delay, fault_delay, brake_current, release_current,
          brake_voltage, release_voltage,
          release_warning_voice, release_failure_voice, brake_failure_voice,
@@ -3117,9 +3117,9 @@ bool DeviceConfigManager::saveBrakeConfig(int deviceId, int brakeIndex, const QV
          release_stop_delay, brake_stop_delay)
         -- 旧：VALUES占位符38个，与42列不匹配导致Parameter count mismatch
         -- ✅ 2026-03-22 [Phase 7.48.74.2]: 修正VALUES占位符为42个
-        -- ✅ 2026-03-28 [Phase 7.48.88.42]: 修正VALUES占位符44到42个(第2行多2个)
+        -- ✅ 2026-03-28 [Phase 7.48.88.42]: 移除brake_delay_time(表中不存在)，41列41占位符
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?)
     )");
 
@@ -3151,7 +3151,7 @@ bool DeviceConfigManager::saveBrakeConfig(int deviceId, int brakeIndex, const QV
     query.addBindValue(config.value("brake_feedback_timeout", 10).toInt());
     query.addBindValue(config.value("hold_time", 0).toDouble());
     query.addBindValue(config.value("release_time", 0).toDouble());
-    query.addBindValue(config.value("brake_delay", 0).toDouble());
+    // ✅ 2026-03-28 [Phase 7.48.88.42]: 移除brake_delay_time绑定(表中无此列,brake_delay已在上方绑定)
     query.addBindValue(config.value("release_delay", 0).toDouble());
     query.addBindValue(config.value("detect_delay", 0).toDouble());
     query.addBindValue(config.value("fault_delay", 0).toDouble());
