@@ -3819,12 +3819,20 @@ Item {
             console.log("✅ [导航] 触发：保存")
             // ✅ 2026-03-03 [Phase 7.47.77]: 代理到当前页面的保存函数，消除顶部保存无效问题
             // 旧：// 保存逻辑（待实现）
+            // ✅ 2026-03-28 [Phase 7.48.88.43]: 补全制动器/张紧/洒水/基本配置的导航保存
+            // 旧：只检查saveProtectionData和saveMotorConfig，导致制动器等页面导航保存无效
             var p1 = getCurrentPage(currentCategory)
             if (p1) {
                 if (typeof p1.saveProtectionData === "function") {
                     p1.saveProtectionData()
                 } else if (typeof p1.saveMotorConfig === "function") {
                     p1.saveMotorConfig()
+                } else if (typeof p1.saveBrakeConfig === "function") {
+                    p1.saveBrakeConfig()
+                } else if (typeof p1.saveTensionControlConfig === "function") {
+                    p1.saveTensionControlConfig()
+                } else if (typeof p1.saveAllConfig === "function") {
+                    p1.saveAllConfig()
                 }
             }
             break
