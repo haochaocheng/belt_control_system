@@ -621,8 +621,8 @@ Image {
 
                         Row {
                             id: p1ValRow
-                            anchors.right: parent.right
-                            anchors.rightMargin: 2
+                            anchors.left: parent.left
+                            anchors.leftMargin: 2
                             anchors.top: parent.top
                             anchors.topMargin: 2
                             spacing: 2
@@ -646,8 +646,8 @@ Image {
                             id: p1Name
                             anchors.left: parent.left
                             anchors.leftMargin: 2
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 4
+                            anchors.top: p1ValRow.bottom
+                            anchors.topMargin: 4
                             text: iN_Data.param1Name
                             font.pixelSize: 14
                             color: "#64748B"
@@ -658,8 +658,7 @@ Image {
                             anchors.leftMargin: 6
                             anchors.right: parent.right
                             anchors.rightMargin: 2
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 4
+                            anchors.verticalCenter: p1Name.verticalCenter
                             height: 10
 
                             Rectangle {
@@ -697,8 +696,8 @@ Image {
 
                         Row {
                             id: p2ValRow
-                            anchors.right: parent.right
-                            anchors.rightMargin: 2
+                            anchors.left: parent.left
+                            anchors.leftMargin: 2
                             anchors.top: parent.top
                             anchors.topMargin: 2
                             spacing: 2
@@ -722,8 +721,8 @@ Image {
                             id: p2Name
                             anchors.left: parent.left
                             anchors.leftMargin: 2
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 4
+                            anchors.top: p2ValRow.bottom
+                            anchors.topMargin: 4
                             text: iN_Data.param2Name
                             font.pixelSize: 14
                             color: "#64748B"
@@ -734,8 +733,7 @@ Image {
                             anchors.leftMargin: 6
                             anchors.right: parent.right
                             anchors.rightMargin: 2
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 4
+                            anchors.verticalCenter: p2Name.verticalCenter
                             height: 10
 
                             Rectangle {
@@ -781,8 +779,8 @@ Image {
 
                         Row {
                             id: p3ValRow
-                            anchors.right: parent.right
-                            anchors.rightMargin: 2
+                            anchors.left: parent.left
+                            anchors.leftMargin: 2
                             anchors.top: parent.top
                             anchors.topMargin: 2
                             spacing: 2
@@ -806,8 +804,8 @@ Image {
                             id: p3Name
                             anchors.left: parent.left
                             anchors.leftMargin: 2
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 4
+                            anchors.top: p3ValRow.bottom
+                            anchors.topMargin: 4
                             text: iN_Data.param3Name
                             font.pixelSize: 14
                             color: "#64748B"
@@ -818,8 +816,7 @@ Image {
                             anchors.leftMargin: 6
                             anchors.right: parent.right
                             anchors.rightMargin: 2
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 4
+                            anchors.verticalCenter: p3Name.verticalCenter
                             height: 10
 
                             Rectangle {
@@ -858,8 +855,8 @@ Image {
 
                         Row {
                             id: p4ValRow
-                            anchors.right: parent.right
-                            anchors.rightMargin: 2
+                            anchors.left: parent.left
+                            anchors.leftMargin: 2
                             anchors.top: parent.top
                             anchors.topMargin: 2
                             spacing: 2
@@ -883,8 +880,8 @@ Image {
                             id: p4Name
                             anchors.left: parent.left
                             anchors.leftMargin: 2
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 4
+                            anchors.top: p4ValRow.bottom
+                            anchors.topMargin: 4
                             text: iN_Data.param4Name
                             font.pixelSize: 14
                             color: "#64748B"
@@ -895,8 +892,7 @@ Image {
                             anchors.leftMargin: 6
                             anchors.right: parent.right
                             anchors.rightMargin: 2
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 4
+                            anchors.verticalCenter: p4Name.verticalCenter
                             height: 10
 
                             Rectangle {
