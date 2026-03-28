@@ -30,6 +30,9 @@ Item {
 
     property var beltSensorMappings: ({})
 
+    // ✅ 2026-03-28 [Phase 7.48.88.50]: 飞行动画状态
+    property int flyingCardIndex: -1  // 当前飞行中的卡片索引（-1=无）
+
     focus: true
     activeFocusOnTab: true
 
@@ -158,6 +161,88 @@ Item {
 
         dataItems[localIdx].outputDevices = devices
         console.log("[Screen01] 📋 输出设备列表:", JSON.stringify(devices))
+    }
+
+    // ✅ 2026-03-28 [Phase 7.48.88.50]: 飞行动画函数
+
+    // 初始化：保存每张卡片的原始位置
+    function initCardOriginalPositions() {
+        var dataItems = getDataItems()
+        for (var i = 0; i < dataItems.length; i++) {
+            if (dataItems[i]) {
+                dataItems[i].originalX = dataItems[i].x
+                dataItems[i].originalY = dataItems[i].y
+            }
+        }
+        console.log("[Screen01] 📐 卡片原始位置已保存")
+    }
+
+    // 卡片飞到中央
+    function flyCardToCenter(cardIndex) {
+        if (flyingCardIndex >= 0) return  // 已有卡片在飞行
+        var dataItems = getDataItems()
+        var card = dataItems[cardIndex]
+        if (!card) return
+
+        flyingCardIndex = cardIndex
+
+        // 启用动画 → 改变属性
+        card.flyAnimating = true
+        card.z = 100
+
+        // 目标位置：屏幕中央（scale从center展开，只需中心点对齐）
+        var targetX = (1920 - card.width) / 2
+        var targetY = (1080 - card.height) / 2
+        card.x = targetX
+        card.y = targetY
+        card.scale = 2
+
+        // 显示遮罩
+        screen01Form.flyDimOverlay.opacity = 0.6
+
+        console.log("[Screen01] ✈️ 卡片", cardIndex + 1, "飞到中央 →",
+                    "x:", targetX, "y:", targetY, "scale: 2")
+    }
+
+    // 卡片飞回原位
+    function flyCardBack() {
+        if (flyingCardIndex < 0) return
+        var dataItems = getDataItems()
+        var card = dataItems[flyingCardIndex]
+        if (!card) return
+
+        console.log("[Screen01] ✈️ 卡片", flyingCardIndex + 1, "飞回原位 →",
+                    "x:", card.originalX, "y:", card.originalY)
+
+        // 恢复位置和缩放
+        card.x = card.originalX
+        card.y = card.originalY
+        card.scale = 1
+
+        // 隐藏遮罩
+        screen01Form.flyDimOverlay.opacity = 0
+
+        // 动画结束后清理状态（延时等动画播完）
+        flyBackCleanupTimer.start()
+    }
+
+    // 飞回动画结束后的清理定时器
+    Timer {
+        id: flyBackCleanupTimer
+        interval: 650  // 略大于动画时长600ms
+        repeat: false
+        onTriggered: {
+            if (flyingCardIndex >= 0) {
+                var dataItems = getDataItems()
+                var card = dataItems[flyingCardIndex]
+                if (card) {
+                    card.flyAnimating = false
+                    card.z = 0
+                }
+                console.log("[Screen01] ✈️ 卡片", flyingCardIndex + 1, "飞行动画清理完成")
+                flyingCardIndex = -1
+            }
+        }
     }
 
     function qmlModuleIndex(moduleType) {
@@ -556,6 +641,9 @@ Item {
                 // ✅ 2026-03-28 [Phase 7.48.88.48]: 加载输出设备列表到本机卡片
                 loadOutputDeviceList()
 
+                // ✅ 2026-03-28 [Phase 7.48.88.50]: 保存每张卡片的原始位置（飞行动画用）
+                initCardOriginalPositions()
+
                 // ✅ 2026-01-28 [FIX 100.300.67]: 设置鼠标交互
                 console.log("[Screen01] 🖱️ 设置鼠标交互...")
                 refreshDeviceCards()
@@ -735,6 +823,17 @@ Item {
 
             console.log("[Screen01] 📊 卡片", beltNumber, "阶段:", phase,
                         "进度:", current + "/" + total, "倒计时:", delayMs + "ms")
+
+            // ✅ 2026-03-28 [Phase 7.48.88.50]: 飞行动画触发
+            // 仅启动序列触发，停车序列不触发
+            if (phase === "起车预警" && flyingCardIndex < 0) {
+                // 启动序列开始 → 卡片飞到中央放大2倍
+                flyCardToCenter(idx)
+            } else if ((phase === "运行" || phase === "停止" || phase === "故障停止")
+                       && flyingCardIndex === idx) {
+                // 启动完成/失败 → 卡片飞回原位
+                flyCardBack()
+            }
         }
 
         function onBeltRunningChanged(beltNumber, running) {

@@ -37,6 +37,8 @@ Rectangle {
     property alias data_row3_col2: data_row3_col2
     property alias data_row3_col3: data_row3_col3
     property alias data_row3_col4: data_row3_col4
+    // ✅ 2026-03-28 [Phase 7.48.88.50]: 暗色遮罩层（飞行动画时覆盖其他卡片）
+    property alias flyDimOverlay: flyDimOverlay
 
     // ✅ 背景层
     Back {
@@ -158,5 +160,20 @@ Rectangle {
         y: 746
         width: 480
         height: 334
+    }
+
+    // ✅ 2026-03-28 [Phase 7.48.88.50]: 暗色遮罩层
+    // 飞行卡片时覆盖其他卡片，z=50（普通卡片z=0，飞行卡片z=100）
+    Rectangle {
+        id: flyDimOverlay
+        anchors.fill: parent
+        color: "#000000"
+        opacity: 0
+        z: 50
+        visible: opacity > 0
+
+        Behavior on opacity {
+            NumberAnimation { duration: 400; easing.type: Easing.InOutQuad }
+        }
     }
 }

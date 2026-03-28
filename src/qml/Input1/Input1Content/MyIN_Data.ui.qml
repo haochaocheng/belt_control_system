@@ -72,6 +72,25 @@ Image {
     property var outputDevices: []        // 设备名列表，从启动序列+洒水同步
     property var outputDeviceStates: ({}) // 设备名→是否运行 映射
 
+    // ✅ 2026-03-28 [Phase 7.48.88.50]: 飞行动画支持
+    property bool flyAnimating: false   // 是否正在飞行动画中
+    property real originalX: 0          // 原始X位置（初始化时保存）
+    property real originalY: 0          // 原始Y位置（初始化时保存）
+
+    // Behavior 动画（仅在 flyAnimating 为 true 时启用，避免初始化时触发）
+    Behavior on x {
+        enabled: iN_Data.flyAnimating
+        NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+    }
+    Behavior on y {
+        enabled: iN_Data.flyAnimating
+        NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+    }
+    Behavior on scale {
+        enabled: iN_Data.flyAnimating
+        NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+    }
+
     // 内部：倒计时定时器
     Timer {
         id: countdownTimer
