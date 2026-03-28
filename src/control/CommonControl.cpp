@@ -1350,6 +1350,10 @@ void CommonControl::stopDeviceSequence(int beltNumber)
 
     if (m_isFaultStop) {
         qDebug() << "🛑 CommonControl: 故障停止" << actualBelt << "号皮带（跳过停车预警）";
+        // ✅ 2026-03-28 [Phase 7.48.88.46]: 故障停止时通知QML切换到"停止中"状态
+        // 原因：故障停止跳过停车预警，deviceStatus可能仍为"启动中"，
+        //       导致QML卡片在停止序列进度中仍显示"启动中"
+        emit beltSequenceProgress(actualBelt, "故障停止", 0, 0, 0);
         m_isFaultStop = false;
     } else {
         qDebug() << "🛑 CommonControl:" << actualBelt << "号皮带执行停止顺序:" << sequence.join(" → ");

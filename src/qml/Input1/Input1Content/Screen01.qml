@@ -680,6 +680,10 @@ Item {
                 item.sequencePhase = ""  // 清空阶段，回到参数显示
             } else if (phase === "起车预警" || phase === "停车预警") {
                 item.deviceStatus = phase
+            } else if (phase === "故障停止") {
+                // ✅ 2026-03-28 [Phase 7.48.88.46]: 故障停止时直接设为"停止中"
+                // 原因：故障停止跳过停车预警，deviceStatus可能仍为"启动中"
+                item.deviceStatus = "停止中"
             } else {
                 // ✅ 2026-03-27 [Phase 7.48.88.37]: 修复故障停止时卡片仍显示"启动中"
                 // 原因：故障停止跳过停车预警，deviceStatus为"运行"而非"停车预警"/"停止中"
