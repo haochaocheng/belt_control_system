@@ -54,7 +54,10 @@ Item {
 
         // ——— 张紧控制 ———
         // 启动序列设备名："张紧控制"（LogicControlPanel.deviceGroups）
-        var tensionCfg = deviceConfigMgr.loadTensionConfig(deviceId, 0)
+        // ❌ 2026-03-28 [Phase 7.48.88.44]: 旧代码使用tensionIndex=0(张力传感器)，与TensionControlConfigPanel的controlIndex=1(张紧控制)不匹配
+        // 原因：用户在张紧控制面板修改use_feedback保存到tension_index=1，但启动同步读取tension_index=0，导致设置永远不生效
+        // var tensionCfg = deviceConfigMgr.loadTensionConfig(deviceId, 0)
+        var tensionCfg = deviceConfigMgr.loadTensionConfig(deviceId, 1)  // ✅ 1=张紧控制（与TensionControlConfigPanel.controlIndex一致）
         if (tensionCfg && tensionCfg["feedback_channel"] !== undefined) {
             var tensionUseFeedback = (Number(tensionCfg["use_feedback"]) === 1)
             var tensionChannel = tensionCfg["feedback_channel"]
