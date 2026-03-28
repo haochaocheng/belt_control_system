@@ -3,14 +3,13 @@ import QtQuick
 // ✅ 2026-01-27 [FIX 100.300.54]: 添加选中状态支持
 // ✅ 2026-02-02 [FIX 100.300.112.8.19.3]: 重新设计组件布局
 // ✅ 2026-03-26 [Phase 7.48.88.25]: 重新设计卡片 - 显示实时数据+序列阶段+保护状态
-// ✅ 2026-03-26 [Phase 7.48.88.26]: 修复5个UI问题：
-//   问题1: 标题文字与背景图装饰线重合 → 标题放入header band内(y:6,h:50)，内容区从y:62开始
-//   问题2: 参数值"--"条件 → 添加数据绑定接口说明
-//   问题3: 布局不均匀/底部空白 → 重新计算各区域高度分配
-//   问题4: 字体像素与卡片尺寸不匹配 → 加大核心数据字号，优化视觉层次
-//   问题5: 设计过于简单 → 添加工业SCADA深色科技风元素（渐变背景/发光效果/进度条/科技感分隔线）
-//   设计风格: 工业SCADA深色科技风 (ui-ux-pro-max: Real-Time Monitoring + Dark Mode OLED)
-//   颜色方案: #22C55E(正常) / #F59E0B(预警) / #DC2626(报警) 三级状态指示
+// ✅ 2026-03-26 [Phase 7.48.88.26]: 修复5个UI问题
+// ✅ 2026-03-28 [Phase 7.48.88.49]: 卡片布局重设计 - 水平排列优先
+//   - 参数区: 2行×2列，每个参数名+进度条+数值同行
+//   - 顶部状态栏: 合并在线/离线、今日运行时间
+//   - 设备LED: 放大，LED+文字同行水平排列
+//   - 保护指示: 移到底部，LED+文字同行
+//   设计原则: 高度受限宽度充裕，全面水平化布局
 Image {
     id: iN_Data
     source: "images/IN_Data.png"
@@ -64,8 +63,6 @@ Image {
     // ✅ 保护状态（DI开关量位图）
     property int protectionBits: 0x00  // 8位: bit0=急停 bit1=跑偏 bit2=撕裂 bit3=烟雾 bit4=温度 bit5=护网 bit6=堆煤
     // ✅ 2026-03-26 [Phase 7.48.88.27]: 保护锁存位图（三态指示）
-    // 保护触发时设置，保护物理恢复后保持，仅F键复位时清除
-    // 三态：绿(正常) / 红(保护触发中) / 琥珀(已恢复待确认)
     property int latchedProtectionBits: 0x00
 
     // ✅ 运行时间
@@ -93,7 +90,7 @@ Image {
         }
     }
 
-    // 状态颜色函数
+    // ========== 工具函数 ==========
     function statusColor() {
         if (deviceStatus === "故障") return "#DC2626"
         if (deviceStatus === "运行") return "#22C55E"
@@ -119,10 +116,7 @@ Image {
     }
 
     function valueColor(valueText, percentValue) {
-        if (valueText === "--") {
-            return isLocalDevice ? "#7DD3FC99" : "#475569"
-        }
-
+        if (valueText === "--") return isLocalDevice ? "#7DD3FC99" : "#475569"
         var percent = normalizedPercent(percentValue)
         if (percent >= 0.9) return "#DC2626"
         if (percent >= 0.7) return "#F59E0B"
@@ -143,7 +137,10 @@ Image {
         return isLocalDevice ? "#7DD3FC" : "#4ADE80"
     }
 
-    // ✅ 2026-03-28 [Phase 7.48.88.48]: 输出设备名缩写
+    function progressTrackColor() {
+        return isLocalDevice ? "#10273A" : "#1E293B"
+    }
+
     function shortDeviceName(name) {
         if (name === "张紧控制") return "张紧"
         var m = name.match(/(\d+)号制动器/)
@@ -153,10 +150,6 @@ Image {
         m = name.match(/洒水(\d+)/)
         if (m) return "水" + m[1]
         return name.substring(0, 2)
-    }
-
-    function progressTrackColor() {
-        return isLocalDevice ? "#10273A" : "#1E293B"
     }
 
     // ========== 故障时红色半透明遮罩 ==========
@@ -174,11 +167,7 @@ Image {
         }
     }
 
-    // ========== ① 标题栏 - 放在背景图header band中央 ==========
-    // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 设备名移到header band中央（装饰线之间）
-    // 原因：用户反馈"放在顶部中央的位置，放在背景图片线条之间的位置更好看"
-    // 背景图header band: y:0~55, 中央六边形区域约 x:80~400, y:5~45
-    // 设备名：居中在header band中央
+    // ========== ① 标题栏 - 背景图header band中央 ==========
     Item {
         id: titleBar
         x: 0
@@ -187,7 +176,6 @@ Image {
         height: 45
         z: 3
 
-        // 设备名称（居中显示在header band中央）
         Text {
             id: deviceNameText
             anchors.horizontalCenter: parent.horizontalCenter
@@ -202,53 +190,49 @@ Image {
         }
     }
 
-    // ========== 状态指示 - header band下方左侧 ==========
-    // ✅ 2026-03-27 [Phase 7.48.88.34]: 扩展为三栏：[状态指示灯+文字] [模式徽章] [连锁徽章]
+    // ========== ② 顶部状态栏 - 合并所有状态信息到一行 ==========
+    // ✅ 2026-03-28 [Phase 7.48.88.49]: 合并在线/离线、今日运行时间到顶部
     Row {
         id: statusRow
-        x: 24
+        x: 12
         y: 55
+        width: parent.width - 24
         z: 3
-        spacing: 8
+        spacing: 6
 
-        // --- 第1元素：状态指示灯 + 状态文字（保留现有） ---
+        // --- 状态指示灯 + 文字 ---
         Row {
-            spacing: 4
+            spacing: 3
             anchors.verticalCenter: parent.verticalCenter
 
-            // 状态指示灯（外发光效果）
             Item {
-                width: 16
-                height: 16
+                width: 14
+                height: 14
                 anchors.verticalCenter: parent.verticalCenter
 
-                // 外发光
                 Rectangle {
                     anchors.centerIn: parent
-                    width: 22
-                    height: 22
-                    radius: 11
+                    width: 20
+                    height: 20
+                    radius: 10
                     color: statusColor()
                     opacity: 0.3
                     visible: deviceStatus === "运行" || deviceStatus === "故障"
                 }
 
-                // 核心指示灯
                 Rectangle {
                     anchors.centerIn: parent
-                    width: 14
-                    height: 14
-                    radius: 7
+                    width: 12
+                    height: 12
+                    radius: 6
                     color: statusColor()
 
-                    // 运行时呼吸灯
                     SequentialAnimation on opacity {
                         loops: Animation.Infinite
                         running: deviceStatus === "运行"
                         NumberAnimation { to: 0.4; duration: 1000; easing.type: Easing.InOutSine }
                         NumberAnimation { to: 1.0; duration: 1000; easing.type: Easing.InOutSine }
                     }
-                    // 故障时快速闪烁
                     SequentialAnimation on opacity {
                         loops: Animation.Infinite
                         running: deviceStatus === "故障"
@@ -260,19 +244,18 @@ Image {
 
             Text {
                 text: iN_Data.deviceStatus
-                font.pixelSize: 18
+                font.pixelSize: 16
                 font.bold: true
                 color: statusColor()
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
 
-        // --- 第2元素：模式徽章 ---
+        // --- 模式徽章 ---
         Rectangle {
-            width: modeText.implicitWidth + 12
-            height: 20
+            width: modeText.implicitWidth + 10
+            height: 18
             radius: 3
-            // 旧代码：无模式徽章
             color: workMode === 0 ? "#33F59E0B" : "#3322C55E"
             border.color: workMode === 0 ? "#F59E0B" : "#22C55E"
             border.width: 1
@@ -282,18 +265,17 @@ Image {
                 id: modeText
                 anchors.centerIn: parent
                 text: workMode === 0 ? "检修" : "就地"
-                font.pixelSize: 12
+                font.pixelSize: 11
                 font.family: "Microsoft YaHei"
                 color: workMode === 0 ? "#F59E0B" : "#22C55E"
             }
         }
 
-        // --- 第3元素：连锁徽章 ---
+        // --- 连锁徽章 ---
         Rectangle {
-            width: lockText.implicitWidth + 12
-            height: 20
+            width: lockText.implicitWidth + 10
+            height: 18
             radius: 3
-            // 旧代码：无连锁徽章
             color: interlockActive ? "#333B82F6" : "#33EF4444"
             border.color: interlockActive ? "#3B82F6" : "#EF4444"
             border.width: 1
@@ -303,17 +285,16 @@ Image {
                 id: lockText
                 anchors.centerIn: parent
                 text: interlockActive ? "连锁" : "解锁"
-                font.pixelSize: 12
+                font.pixelSize: 11
                 font.family: "Microsoft YaHei"
                 color: interlockActive ? "#3B82F6" : "#EF4444"
             }
         }
 
-        // --- 第4元素：允许运行徽章 ---
-        // ✅ 2026-03-27 [Phase 7.48.88.38]: 允许运行指示
+        // --- 允许运行徽章 ---
         Rectangle {
-            width: allowRunText.implicitWidth + 12
-            height: 20
+            width: allowRunText.implicitWidth + 10
+            height: 18
             radius: 3
             color: allowRun ? "#3322C55E" : "#33DC2626"
             border.color: allowRun ? "#22C55E" : "#DC2626"
@@ -324,19 +305,67 @@ Image {
                 id: allowRunText
                 anchors.centerIn: parent
                 text: allowRun ? "允许" : "禁止"
-                font.pixelSize: 12
+                font.pixelSize: 11
                 font.family: "Microsoft YaHei"
                 color: allowRun ? "#22C55E" : "#DC2626"
             }
         }
 
-        // --- 第5元素：故障详情徽章（仅故障时显示） ---
-        // ✅ 2026-03-27 [Phase 7.48.88.38]: 具体故障原因指示
-        // ✅ 2026-03-27 [Phase 7.48.88.39]: 限制最大宽度防止溢出，文字截断
-        // ✅ 2026-03-27 [Phase 7.48.88.40]: 使用固定最大宽度，避免parent.width-x循环依赖导致polish()循环
+        // --- 通讯在线/离线 ---
+        Row {
+            spacing: 3
+            anchors.verticalCenter: parent.verticalCenter
+
+            Rectangle {
+                width: 8
+                height: 8
+                radius: 4
+                color: commOnline ? "#22C55E" : "#DC2626"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+                text: commOnline ? "在线" : "离线"
+                font.pixelSize: 11
+                font.bold: true
+                color: commOnline ? "#22C55E" : "#DC2626"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
+        // --- 分隔竖线 ---
         Rectangle {
-            width: Math.min(faultDetailText.implicitWidth + 12, 180)
-            height: 20
+            width: 1
+            height: 12
+            color: "#334155"
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        // --- 今日运行时间 ---
+        Row {
+            spacing: 3
+            anchors.verticalCenter: parent.verticalCenter
+
+            Text {
+                text: "今日"
+                font.pixelSize: 11
+                color: "#64748B"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+                text: dailyRuntime
+                font.pixelSize: 12
+                font.bold: true
+                color: "#94A3B8"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
+        // --- 故障详情徽章（仅故障时显示） ---
+        Rectangle {
+            width: Math.min(faultDetailText.implicitWidth + 12, 140)
+            height: 18
             radius: 3
             color: "#33DC2626"
             border.color: "#DC2626"
@@ -349,7 +378,7 @@ Image {
                 anchors.centerIn: parent
                 width: parent.width - 8
                 text: faultDetail
-                font.pixelSize: 12
+                font.pixelSize: 11
                 font.bold: true
                 font.family: "Microsoft YaHei"
                 color: "#DC2626"
@@ -357,7 +386,6 @@ Image {
                 maximumLineCount: 1
             }
 
-            // 故障时闪烁
             SequentialAnimation on opacity {
                 loops: Animation.Infinite
                 running: faultDetail !== ""
@@ -368,28 +396,26 @@ Image {
     }
 
     // ========== 主内容区域 ==========
-    // ✅ 2026-03-26 [Phase 7.48.88.26.3]: y从100改为78（状态指示y:55+h:20=75，留3px间距）
-    // 起始y: 78, 结束y: 310 (底部装饰上方)
-    // 可用高度: 232px
+    // ✅ 2026-03-28 [Phase 7.48.88.49]: 全面水平化布局
+    // 内容区起始y:78, 可用高度~232px
     Column {
         id: contentArea
-        x: 18
+        x: 14
         y: 78
-        width: parent.width - 36
+        width: parent.width - 28
         height: parent.height - 78 - 22
-        // ✅ 2026-03-28 [Phase 7.48.88.48]: spacing从4缩减到2，为输出设备LED腾出空间
-        spacing: 2
+        spacing: 3
         z: 2
 
-        // ========== ② 核心数据区 ==========
-        // 序列空闲时: 2×2参数网格 + 微型进度条
-        // 序列执行时: 大字体阶段名 + 倒计时
-        // ✅ 2026-03-28 [Phase 7.48.88.48]: 从140→130→118，配合spacing缩减避免Column溢出
+        // ========== ③ 参数区 - 2行×2列水平排列 ==========
+        // 序列空闲时: 每个参数 [名称] [进度条] [数值单位] 同一行
+        // 序列执行时: 大字体阶段名 + 倒计时覆盖
         Item {
+            id: paramArea
             width: parent.width
-            height: 118
+            height: 70
 
-            // 暗色半透明背景（增加层次感和可读性）
+            // 暗色半透明背景
             Rectangle {
                 anchors.fill: parent
                 color: "#0D1B2A"
@@ -397,92 +423,51 @@ Image {
                 radius: 4
             }
 
-            // ---- 模式A: 参数显示（空闲/运行/停止时） ----
-            Grid {
+            // ---- 模式A: 参数显示（2行×2列水平） ----
+            Column {
                 anchors.fill: parent
-                anchors.margins: 6
-                columns: 2
-                rowSpacing: 4
-                columnSpacing: 10
+                anchors.margins: 4
+                spacing: 4
                 visible: sequencePhase === "" || sequencePhase === "运行" || sequencePhase === "停止"
 
-                // 参数1
-                // ✅ 2026-03-26 [Phase 7.48.88.26.2]: h:64→52, 数值字体32→26（修复Grid溢出重叠）
-                Item {
-                    width: (parent.width - 10) / 2
-                    height: 56
+                // 第1行: 速度 + 电流
+                Row {
+                    width: parent.width
+                    height: (parent.height - 4) / 2
+                    spacing: 8
 
-                    Column {
-                        anchors.fill: parent
-                        anchors.leftMargin: 4
-                        spacing: 1
+                    // 参数1: 速度
+                    Item {
+                        width: (parent.width - 8) / 2
+                        height: parent.height
 
-                        // 标签行
+                        // 参数名
                         Text {
+                            id: p1Name
+                            anchors.left: parent.left
+                            anchors.leftMargin: 2
+                            anchors.verticalCenter: parent.verticalCenter
                             text: iN_Data.param1Name
-                            font.pixelSize: 14
+                            font.pixelSize: 13
                             color: "#64748B"
+                            width: 28
                         }
 
-                        // 数值行
+                        // 进度条
                         Item {
-                            width: parent.width - 8
-                            height: 30
+                            anchors.left: p1Name.right
+                            anchors.leftMargin: 4
+                            anchors.right: p1ValRow.left
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: 8
 
-                            Text {
-                                id: param1ValueText
-                                anchors.left: parent.left
-                                anchors.bottom: parent.bottom
-                                text: iN_Data.param1Value
-                                font.pixelSize: 26
-                                font.bold: true
-                                color: valueColor(iN_Data.param1Value, iN_Data.param1Percent)
-                            }
-
-                            Text {
-                                anchors.left: param1ValueText.right
-                                anchors.leftMargin: 4
-                                anchors.bottom: param1ValueText.bottom
-                                anchors.bottomMargin: 3
-                                text: iN_Data.param1Unit
-                                font.pixelSize: 14
-                                color: "#64748B"
-                            }
-                        }
-
-                        // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 增强进度条 - 工业仪表风格
-                        // 分段刻度 + 渐变填充 + 发光球 + 光晕
-                        Item {
-                            width: parent.width - 8
-                            height: 10
-
-                            // 轨道背景（带分段刻度线）
                             Rectangle {
                                 anchors.fill: parent
                                 radius: 3
                                 color: progressTrackColor()
-
-                                // 分段刻度线（10等分）
-                                Row {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 1
-                                    anchors.rightMargin: 1
-                                    spacing: 0
-
-                                    Repeater {
-                                        model: 9
-                                        Rectangle {
-                                            x: (index + 1) * (parent.width / 10) - 0.5
-                                            width: 1
-                                            height: parent.height
-                                            color: "#334155"
-                                            opacity: 0.5
-                                        }
-                                    }
-                                }
                             }
 
-                            // 填充条（带渐变效果）
                             Rectangle {
                                 width: parent.width * normalizedPercent(iN_Data.param1Percent)
                                 height: parent.height
@@ -490,125 +475,64 @@ Image {
                                 color: progressColor(iN_Data.param1Percent)
                                 visible: iN_Data.param1Value !== "--"
 
-                                // 顶部高光线
-                                Rectangle {
-                                    width: parent.width
-                                    height: 2
-                                    radius: 1
-                                    color: "#FFFFFF"
-                                    opacity: 0.15
-                                }
-
                                 Behavior on width {
                                     NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
                                 }
                             }
+                        }
 
-                            // 发光球（在填充条末端）
-                            Rectangle {
-                                width: 14
-                                height: 14
-                                radius: 7
-                                x: Math.max(0, Math.min(parent.width - width,
-                                    parent.width * normalizedPercent(iN_Data.param1Percent) - width / 2))
-                                y: (parent.height - height) / 2
-                                color: progressGlowColor(iN_Data.param1Percent)
-                                visible: iN_Data.param1Value !== "--" && normalizedPercent(iN_Data.param1Percent) > 0
-                                opacity: 0.85
+                        // 数值+单位
+                        Row {
+                            id: p1ValRow
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 2
 
-                                // 内核高亮
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 6
-                                    height: 6
-                                    radius: 3
-                                    color: "#FFFFFF"
-                                    opacity: 0.6
-                                }
+                            Text {
+                                text: iN_Data.param1Value
+                                font.pixelSize: 18
+                                font.bold: true
+                                color: valueColor(iN_Data.param1Value, iN_Data.param1Percent)
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-
-                            // 底部光晕
-                            Rectangle {
-                                width: parent.width * normalizedPercent(iN_Data.param1Percent)
-                                height: parent.height + 6
-                                radius: 5
-                                x: 0
-                                y: -3
-                                color: progressGlowColor(iN_Data.param1Percent)
-                                opacity: 0.12
-                                visible: iN_Data.param1Value !== "--"
+                            Text {
+                                text: iN_Data.param1Unit
+                                font.pixelSize: 10
+                                color: "#64748B"
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
-                }
 
-                // 参数2
-                // ✅ 2026-03-26 [Phase 7.48.88.26.2]: h:64→52, 字体32→26
-                Item {
-                    width: (parent.width - 10) / 2
-                    height: 56
-
-                    Column {
-                        anchors.fill: parent
-                        anchors.leftMargin: 4
-                        spacing: 1
+                    // 参数2: 电流
+                    Item {
+                        width: (parent.width - 8) / 2
+                        height: parent.height
 
                         Text {
+                            id: p2Name
+                            anchors.left: parent.left
+                            anchors.leftMargin: 2
+                            anchors.verticalCenter: parent.verticalCenter
                             text: iN_Data.param2Name
-                            font.pixelSize: 14
+                            font.pixelSize: 13
                             color: "#64748B"
+                            width: 28
                         }
-                        Item {
-                            width: parent.width - 8
-                            height: 30
 
-                            Text {
-                                id: param2ValueText
-                                anchors.left: parent.left
-                                anchors.bottom: parent.bottom
-                                text: iN_Data.param2Value
-                                font.pixelSize: 26
-                                font.bold: true
-                                color: valueColor(iN_Data.param2Value, iN_Data.param2Percent)
-                            }
-
-                            Text {
-                                anchors.left: param2ValueText.right
-                                anchors.leftMargin: 4
-                                anchors.bottom: param2ValueText.bottom
-                                anchors.bottomMargin: 3
-                                text: iN_Data.param2Unit
-                                font.pixelSize: 14
-                                color: "#64748B"
-                            }
-                        }
-                        // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 增强进度条 - 工业仪表风格
                         Item {
-                            width: parent.width - 8
-                            height: 10
+                            anchors.left: p2Name.right
+                            anchors.leftMargin: 4
+                            anchors.right: p2ValRow.left
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: 8
 
                             Rectangle {
                                 anchors.fill: parent
                                 radius: 3
                                 color: progressTrackColor()
-
-                                Row {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 1
-                                    anchors.rightMargin: 1
-                                    spacing: 0
-
-                                    Repeater {
-                                        model: 9
-                                        Rectangle {
-                                            x: (index + 1) * (parent.width / 10) - 0.5
-                                            width: 1
-                                            height: parent.height
-                                            color: "#334155"
-                                            opacity: 0.5
-                                        }
-                                    }
-                                }
                             }
 
                             Rectangle {
@@ -618,121 +542,70 @@ Image {
                                 color: progressColor(iN_Data.param2Percent)
                                 visible: iN_Data.param2Value !== "--"
 
-                                Rectangle {
-                                    width: parent.width
-                                    height: 2
-                                    radius: 1
-                                    color: "#FFFFFF"
-                                    opacity: 0.15
-                                }
-
                                 Behavior on width {
                                     NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
                                 }
                             }
+                        }
 
-                            Rectangle {
-                                width: 14
-                                height: 14
-                                radius: 7
-                                x: Math.max(0, Math.min(parent.width - width,
-                                    parent.width * normalizedPercent(iN_Data.param2Percent) - width / 2))
-                                y: (parent.height - height) / 2
-                                color: progressGlowColor(iN_Data.param2Percent)
-                                visible: iN_Data.param2Value !== "--" && normalizedPercent(iN_Data.param2Percent) > 0
-                                opacity: 0.85
+                        Row {
+                            id: p2ValRow
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 2
 
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 6
-                                    height: 6
-                                    radius: 3
-                                    color: "#FFFFFF"
-                                    opacity: 0.6
-                                }
+                            Text {
+                                text: iN_Data.param2Value
+                                font.pixelSize: 18
+                                font.bold: true
+                                color: valueColor(iN_Data.param2Value, iN_Data.param2Percent)
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-
-                            Rectangle {
-                                width: parent.width * normalizedPercent(iN_Data.param2Percent)
-                                height: parent.height + 6
-                                radius: 5
-                                x: 0
-                                y: -3
-                                color: progressGlowColor(iN_Data.param2Percent)
-                                opacity: 0.12
-                                visible: iN_Data.param2Value !== "--"
+                            Text {
+                                text: iN_Data.param2Unit
+                                font.pixelSize: 10
+                                color: "#64748B"
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
                 }
 
-                // 参数3
-                // ✅ 2026-03-26 [Phase 7.48.88.26.2]: h:64→52, 字体32→26
-                Item {
-                    width: (parent.width - 10) / 2
-                    height: 56
+                // 第2行: 温度 + 张力
+                Row {
+                    width: parent.width
+                    height: (parent.height - 4) / 2
+                    spacing: 8
 
-                    Column {
-                        anchors.fill: parent
-                        anchors.leftMargin: 4
-                        spacing: 1
+                    // 参数3: 温度
+                    Item {
+                        width: (parent.width - 8) / 2
+                        height: parent.height
 
                         Text {
+                            id: p3Name
+                            anchors.left: parent.left
+                            anchors.leftMargin: 2
+                            anchors.verticalCenter: parent.verticalCenter
                             text: iN_Data.param3Name
-                            font.pixelSize: 14
+                            font.pixelSize: 13
                             color: "#64748B"
+                            width: 28
                         }
-                        Item {
-                            width: parent.width - 8
-                            height: 30
 
-                            Text {
-                                id: param3ValueText
-                                anchors.left: parent.left
-                                anchors.bottom: parent.bottom
-                                text: iN_Data.param3Value
-                                font.pixelSize: 26
-                                font.bold: true
-                                color: valueColor(iN_Data.param3Value, iN_Data.param3Percent)
-                            }
-
-                            Text {
-                                anchors.left: param3ValueText.right
-                                anchors.leftMargin: 4
-                                anchors.bottom: param3ValueText.bottom
-                                anchors.bottomMargin: 3
-                                text: iN_Data.param3Unit
-                                font.pixelSize: 14
-                                color: "#64748B"
-                            }
-                        }
-                        // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 增强进度条 - 工业仪表风格
                         Item {
-                            width: parent.width - 8
-                            height: 10
+                            anchors.left: p3Name.right
+                            anchors.leftMargin: 4
+                            anchors.right: p3ValRow.left
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: 8
 
                             Rectangle {
                                 anchors.fill: parent
                                 radius: 3
                                 color: progressTrackColor()
-
-                                Row {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 1
-                                    anchors.rightMargin: 1
-                                    spacing: 0
-
-                                    Repeater {
-                                        model: 9
-                                        Rectangle {
-                                            x: (index + 1) * (parent.width / 10) - 0.5
-                                            width: 1
-                                            height: parent.height
-                                            color: "#334155"
-                                            opacity: 0.5
-                                        }
-                                    }
-                                }
                             }
 
                             Rectangle {
@@ -742,121 +615,63 @@ Image {
                                 color: progressColor(iN_Data.param3Percent)
                                 visible: iN_Data.param3Value !== "--"
 
-                                Rectangle {
-                                    width: parent.width
-                                    height: 2
-                                    radius: 1
-                                    color: "#FFFFFF"
-                                    opacity: 0.15
-                                }
-
                                 Behavior on width {
                                     NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
                                 }
                             }
+                        }
 
-                            Rectangle {
-                                width: 14
-                                height: 14
-                                radius: 7
-                                x: Math.max(0, Math.min(parent.width - width,
-                                    parent.width * normalizedPercent(iN_Data.param3Percent) - width / 2))
-                                y: (parent.height - height) / 2
-                                color: progressGlowColor(iN_Data.param3Percent)
-                                visible: iN_Data.param3Value !== "--" && normalizedPercent(iN_Data.param3Percent) > 0
-                                opacity: 0.85
+                        Row {
+                            id: p3ValRow
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 2
 
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 6
-                                    height: 6
-                                    radius: 3
-                                    color: "#FFFFFF"
-                                    opacity: 0.6
-                                }
+                            Text {
+                                text: iN_Data.param3Value
+                                font.pixelSize: 18
+                                font.bold: true
+                                color: valueColor(iN_Data.param3Value, iN_Data.param3Percent)
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-
-                            Rectangle {
-                                width: parent.width * normalizedPercent(iN_Data.param3Percent)
-                                height: parent.height + 6
-                                radius: 5
-                                x: 0
-                                y: -3
-                                color: progressGlowColor(iN_Data.param3Percent)
-                                opacity: 0.12
-                                visible: iN_Data.param3Value !== "--"
+                            Text {
+                                text: iN_Data.param3Unit
+                                font.pixelSize: 10
+                                color: "#64748B"
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
-                }
 
-                // 参数4
-                // ✅ 2026-03-26 [Phase 7.48.88.26.2]: h:64→52, 字体32→26
-                Item {
-                    width: (parent.width - 10) / 2
-                    height: 56
-
-                    Column {
-                        anchors.fill: parent
-                        anchors.leftMargin: 4
-                        spacing: 1
+                    // 参数4: 张力
+                    Item {
+                        width: (parent.width - 8) / 2
+                        height: parent.height
 
                         Text {
+                            id: p4Name
+                            anchors.left: parent.left
+                            anchors.leftMargin: 2
+                            anchors.verticalCenter: parent.verticalCenter
                             text: iN_Data.param4Name
-                            font.pixelSize: 14
+                            font.pixelSize: 13
                             color: "#64748B"
+                            width: 28
                         }
-                        Item {
-                            width: parent.width - 8
-                            height: 30
 
-                            Text {
-                                id: param4ValueText
-                                anchors.left: parent.left
-                                anchors.bottom: parent.bottom
-                                text: iN_Data.param4Value
-                                font.pixelSize: 26
-                                font.bold: true
-                                color: valueColor(iN_Data.param4Value, iN_Data.param4Percent)
-                            }
-
-                            Text {
-                                anchors.left: param4ValueText.right
-                                anchors.leftMargin: 4
-                                anchors.bottom: param4ValueText.bottom
-                                anchors.bottomMargin: 3
-                                text: iN_Data.param4Unit
-                                font.pixelSize: 14
-                                color: "#64748B"
-                            }
-                        }
-                        // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 增强进度条 - 工业仪表风格
                         Item {
-                            width: parent.width - 8
-                            height: 10
+                            anchors.left: p4Name.right
+                            anchors.leftMargin: 4
+                            anchors.right: p4ValRow.left
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: 8
 
                             Rectangle {
                                 anchors.fill: parent
                                 radius: 3
                                 color: progressTrackColor()
-
-                                Row {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 1
-                                    anchors.rightMargin: 1
-                                    spacing: 0
-
-                                    Repeater {
-                                        model: 9
-                                        Rectangle {
-                                            x: (index + 1) * (parent.width / 10) - 0.5
-                                            width: 1
-                                            height: parent.height
-                                            color: "#334155"
-                                            opacity: 0.5
-                                        }
-                                    }
-                                }
                             }
 
                             Rectangle {
@@ -866,49 +681,31 @@ Image {
                                 color: progressColor(iN_Data.param4Percent)
                                 visible: iN_Data.param4Value !== "--"
 
-                                Rectangle {
-                                    width: parent.width
-                                    height: 2
-                                    radius: 1
-                                    color: "#FFFFFF"
-                                    opacity: 0.15
-                                }
-
                                 Behavior on width {
                                     NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
                                 }
                             }
+                        }
 
-                            Rectangle {
-                                width: 14
-                                height: 14
-                                radius: 7
-                                x: Math.max(0, Math.min(parent.width - width,
-                                    parent.width * normalizedPercent(iN_Data.param4Percent) - width / 2))
-                                y: (parent.height - height) / 2
-                                color: progressGlowColor(iN_Data.param4Percent)
-                                visible: iN_Data.param4Value !== "--" && normalizedPercent(iN_Data.param4Percent) > 0
-                                opacity: 0.85
+                        Row {
+                            id: p4ValRow
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 2
 
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 6
-                                    height: 6
-                                    radius: 3
-                                    color: "#FFFFFF"
-                                    opacity: 0.6
-                                }
+                            Text {
+                                text: iN_Data.param4Value
+                                font.pixelSize: 18
+                                font.bold: true
+                                color: valueColor(iN_Data.param4Value, iN_Data.param4Percent)
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-
-                            Rectangle {
-                                width: parent.width * normalizedPercent(iN_Data.param4Percent)
-                                height: parent.height + 6
-                                radius: 5
-                                x: 0
-                                y: -3
-                                color: progressGlowColor(iN_Data.param4Percent)
-                                opacity: 0.12
-                                visible: iN_Data.param4Value !== "--"
+                            Text {
+                                text: iN_Data.param4Unit
+                                font.pixelSize: 10
+                                color: "#64748B"
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
@@ -918,20 +715,18 @@ Image {
             // ---- 模式B: 序列执行中 - 大字体阶段+倒计时 ----
             Column {
                 anchors.centerIn: parent
-                spacing: 8
+                spacing: 4
                 visible: sequencePhase !== "" && sequencePhase !== "运行" && sequencePhase !== "停止"
 
-                // 阶段名称（超大字体）
                 Text {
                     text: sequencePhase
-                    font.pixelSize: 42
+                    font.pixelSize: 36
                     font.bold: true
                     color: phaseColor()
                     anchors.horizontalCenter: parent.horizontalCenter
                     style: Text.Outline
                     styleColor: "#00000060"
 
-                    // 预警阶段文字闪烁
                     SequentialAnimation on opacity {
                         loops: Animation.Infinite
                         running: sequencePhase === "起车预警" || sequencePhase === "停车预警"
@@ -940,33 +735,27 @@ Image {
                     }
                 }
 
-                // 进度和倒计时
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 16
+                    spacing: 12
 
-                    // 进度指示: [2/4]
                     Text {
                         text: sequenceTotal > 0 ? "[" + sequenceCurrent + "/" + sequenceTotal + "]" : ""
-                        font.pixelSize: 26
+                        font.pixelSize: 20
                         font.bold: true
                         color: "#94A3B8"
                         visible: sequenceTotal > 0
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
-                    // 倒计时（醒目橙色）
                     Text {
                         text: countdownSeconds > 0 ? countdownSeconds.toFixed(1) + "s" : ""
-                        font.pixelSize: 36
+                        font.pixelSize: 28
                         font.bold: true
                         color: "#F59E0B"
                         visible: countdownSeconds > 0
                         anchors.verticalCenter: parent.verticalCenter
-                        style: Text.Outline
-                        styleColor: "#00000040"
 
-                        // 倒计时数字脉冲效果
                         SequentialAnimation on scale {
                             loops: Animation.Infinite
                             running: countdownSeconds > 0
@@ -975,102 +764,14 @@ Image {
                         }
                     }
                 }
-
-                // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 增强序列进度条 - 工业仪表风格
-                Item {
-                    width: 320
-                    height: 12
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    visible: sequenceTotal > 0
-
-                    // 轨道背景（带分段刻度线）
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 4
-                        color: progressTrackColor()
-
-                        Row {
-                            anchors.fill: parent
-                            anchors.leftMargin: 1
-                            anchors.rightMargin: 1
-                            spacing: 0
-
-                            Repeater {
-                                model: Math.max(0, sequenceTotal - 1)
-                                Rectangle {
-                                    x: (index + 1) * (parent.width / sequenceTotal) - 0.5
-                                    width: 1
-                                    height: parent.height
-                                    color: "#4A90E2"
-                                    opacity: 0.4
-                                }
-                            }
-                        }
-                    }
-
-                    // 填充条
-                    Rectangle {
-                        width: sequenceTotal > 0 ? parent.width * (sequenceCurrent / sequenceTotal) : 0
-                        height: parent.height
-                        radius: 4
-                        color: phaseColor()
-
-                        Rectangle {
-                            width: parent.width
-                            height: 2
-                            radius: 1
-                            color: "#FFFFFF"
-                            opacity: 0.2
-                        }
-
-                        Behavior on width {
-                            NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
-                        }
-                    }
-
-                    // 发光球
-                    Rectangle {
-                        width: 16
-                        height: 16
-                        radius: 8
-                        x: Math.max(0, Math.min(parent.width - width,
-                            (sequenceTotal > 0 ? parent.width * (sequenceCurrent / sequenceTotal) : 0) - width / 2))
-                        y: (parent.height - height) / 2
-                        color: phaseColor()
-                        opacity: 0.88
-                        visible: sequenceTotal > 0 && sequenceCurrent > 0
-
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 6
-                            height: 6
-                            radius: 3
-                            color: "#FFFFFF"
-                            opacity: 0.6
-                        }
-                    }
-
-                    // 底部光晕
-                    Rectangle {
-                        width: sequenceTotal > 0 ? parent.width * (sequenceCurrent / sequenceTotal) : 0
-                        height: parent.height + 8
-                        radius: 6
-                        x: 0
-                        y: -4
-                        color: phaseColor()
-                        opacity: 0.16
-                        visible: sequenceTotal > 0 && sequenceCurrent > 0
-                    }
-                }
             }
         }
 
         // ========== 科技感分隔线 ==========
         Item {
             width: parent.width
-            height: 6
+            height: 4
 
-            // 中心发光线
             Rectangle {
                 anchors.centerIn: parent
                 width: parent.width
@@ -1078,27 +779,15 @@ Image {
                 color: "#4A90E2"
                 opacity: 0.6
             }
-
-            // 发光效果
-            Rectangle {
-                anchors.centerIn: parent
-                width: parent.width * 0.6
-                height: 3
-                radius: 1
-                color: "#4A90E2"
-                opacity: 0.15
-            }
         }
 
-        // ========== ⑤ 输出设备运行状态LED ==========
-        // ✅ 2026-03-28 [Phase 7.48.88.48]: 方形LED显示启动序列中设备的运行状态
-        // 设备列表从LogicControlPanel启动序列+洒水设备同步
+        // ========== ④ 输出设备运行状态LED - 水平排列 ==========
+        // ✅ 2026-03-28 [Phase 7.48.88.49]: LED放大+文字同行
         Item {
             width: parent.width
-            height: outputDevices.length > 0 ? 32 : 0
+            height: outputDevices.length > 0 ? 28 : 0
             visible: outputDevices.length > 0
 
-            // 暗色半透明背景
             Rectangle {
                 anchors.fill: parent
                 color: "#0D1B2A"
@@ -1108,59 +797,60 @@ Image {
 
             Row {
                 anchors.centerIn: parent
-                spacing: 2
+                spacing: 6
 
                 Repeater {
                     model: outputDevices
 
-                    Item {
-                        width: Math.min(55, (contentArea.width - 8) / Math.max(outputDevices.length, 1))
-                        height: 30
+                    Row {
+                        spacing: 3
 
                         property bool isOn: {
                             var states = outputDeviceStates
                             return states && states[modelData] === true
                         }
 
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 2
+                        // 方形LED (放大到14×14)
+                        Item {
+                            width: 14
+                            height: 14
+                            anchors.verticalCenter: parent.verticalCenter
 
-                            // 方形LED
+                            // 运行时外发光
                             Rectangle {
-                                width: 10
-                                height: 10
+                                anchors.centerIn: parent
+                                width: 20
+                                height: 20
+                                radius: 4
+                                color: "#22C55E"
+                                opacity: 0.25
+                                visible: isOn
+                                z: -1
+                            }
+
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 14
+                                height: 14
                                 radius: 2
                                 color: isOn ? "#22C55E" : "#4B5563"
-                                anchors.horizontalCenter: parent.horizontalCenter
-
-                                // 运行时外发光
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 16
-                                    height: 16
-                                    radius: 3
-                                    color: "#22C55E"
-                                    opacity: 0.3
-                                    visible: isOn
-                                    z: -1
-                                }
                             }
+                        }
 
-                            // 设备缩写名
-                            Text {
-                                text: shortDeviceName(modelData)
-                                font.pixelSize: 11
-                                color: isOn ? "#22C55E" : "#64748B"
-                                anchors.horizontalCenter: parent.horizontalCenter
-                            }
+                        // 设备缩写名（同行）
+                        Text {
+                            text: shortDeviceName(modelData)
+                            font.pixelSize: 13
+                            font.bold: isOn
+                            color: isOn ? "#22C55E" : "#64748B"
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                 }
             }
         }
 
-        // 细分隔线（输出设备与保护栏之间）
+        // 细分隔线
         Rectangle {
             width: parent.width
             height: 1
@@ -1169,14 +859,12 @@ Image {
             visible: outputDevices.length > 0
         }
 
-        // ========== ③ 保护状态栏 ==========
-        // ✅ 2026-03-28 [Phase 7.48.88.48]: 从46缩减到38，为输出设备LED腾出空间
-        // ✅ 2026-03-26 [Phase 7.48.88.26.1]: 从54缩减到46
+        // ========== ⑤ 保护状态栏 - 底部，水平LED+文字同行 ==========
+        // ✅ 2026-03-28 [Phase 7.48.88.49]: 移到底部，LED+名称同行水平排列
         Item {
             width: parent.width
-            height: 38
+            height: 28
 
-            // 暗色半透明背景
             Rectangle {
                 anchors.fill: parent
                 color: "#0D1B2A"
@@ -1204,42 +892,32 @@ Image {
                         width: (parent.width - 8) / 6
                         height: parent.height
 
-                        // ✅ 2026-03-26 [Phase 7.48.88.27]: 三态保护指示
-                        // triggered: 保护当前触发中（DI位=1）→ 红色
-                        // latched: 保护曾触发已恢复，未F键确认 → 琥珀色闪烁
-                        // 正常: 绿色
                         property bool triggered: (protectionBits & (1 << modelData.bit)) !== 0
                         property bool latched: !triggered && ((latchedProtectionBits & (1 << modelData.bit)) !== 0)
-
-                        // 三态颜色
                         property color indicatorColor: triggered ? (modelData.bit <= 2 ? "#DC2626" : "#F59E0B")
-                                                     : latched ? "#FF8C00"  // 琥珀色（待确认）
-                                                     : "#22C55E"            // 绿色（正常）
+                                                     : latched ? "#FF8C00"
+                                                     : "#22C55E"
 
-                        Column {
+                        // 水平排列: LED + 名称同行
+                        Row {
                             anchors.centerIn: parent
-                            spacing: 2
+                            spacing: 3
 
-                            // 保护指示灯（带外发光）
-                            // ✅ 2026-03-28 [Phase 7.48.88.48]: 从22缩减到16，spacing从4到2
                             Item {
-                                width: 16
-                                height: 16
-                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: 14
+                                height: 14
+                                anchors.verticalCenter: parent.verticalCenter
 
-                                // 外发光（触发或待确认时）
-                                // ✅ 2026-03-28 [Phase 7.48.88.48]: 从30缩减到22
                                 Rectangle {
                                     anchors.centerIn: parent
-                                    width: 22
-                                    height: 22
-                                    radius: 11
+                                    width: 20
+                                    height: 20
+                                    radius: 10
                                     color: indicatorColor
                                     opacity: 0.3
                                     visible: triggered || latched
                                 }
 
-                                // ✅ 2026-03-28 [Phase 7.48.88.48]: 从18缩减到14
                                 Rectangle {
                                     anchors.centerIn: parent
                                     width: 14
@@ -1247,7 +925,6 @@ Image {
                                     radius: 7
                                     color: indicatorColor
 
-                                    // 触发时快速脉冲
                                     SequentialAnimation on scale {
                                         loops: Animation.Infinite
                                         running: triggered
@@ -1255,7 +932,6 @@ Image {
                                         NumberAnimation { to: 1.0; duration: 500 }
                                     }
 
-                                    // ✅ 2026-03-26 [Phase 7.48.88.27]: 待确认时慢速闪烁
                                     SequentialAnimation on opacity {
                                         loops: Animation.Infinite
                                         running: latched && !triggered
@@ -1265,96 +941,14 @@ Image {
                                 }
                             }
 
-                            // 标签
-                            // ✅ 2026-03-28 [Phase 7.48.88.48]: 从14缩减到12
                             Text {
                                 text: modelData.name
-                                font.pixelSize: 12
+                                font.pixelSize: 13
                                 font.bold: triggered || latched
                                 color: indicatorColor
-                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
-                    }
-                }
-            }
-        }
-
-        // ========== ④ 底部信息栏 ==========
-        // ✅ 2026-03-28 [Phase 7.48.88.48]: 从26缩减到20，为输出设备LED腾出空间
-        // ✅ 2026-03-26 [Phase 7.48.88.26.1]: 从30缩减到26
-        Item {
-            width: parent.width
-            height: 20
-
-            Row {
-                anchors.fill: parent
-                spacing: 12
-
-                // 通讯状态
-                Row {
-                    height: parent.height
-                    spacing: 6
-
-                    // 状态灯（带发光）
-                    // ✅ 2026-03-28 [Phase 7.48.88.48]: 缩减尺寸
-                    Item {
-                        width: 12
-                        height: 12
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 16
-                            height: 16
-                            radius: 8
-                            color: commOnline ? "#22C55E" : "#DC2626"
-                            opacity: 0.25
-                        }
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 10
-                            height: 10
-                            radius: 5
-                            color: commOnline ? "#22C55E" : "#DC2626"
-                        }
-                    }
-
-                    Text {
-                        text: commOnline ? "在线" : "离线"
-                        font.pixelSize: 13
-                        font.bold: true
-                        color: commOnline ? "#22C55E" : "#DC2626"
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-
-                // 分隔竖线
-                Rectangle {
-                    width: 1
-                    height: 12
-                    color: "#334155"
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                // 今日运行时间
-                Row {
-                    height: parent.height
-                    spacing: 4
-
-                    Text {
-                        text: "今日"
-                        font.pixelSize: 12
-                        color: "#64748B"
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Text {
-                        text: dailyRuntime
-                        font.pixelSize: 14
-                        font.bold: true
-                        color: "#94A3B8"
-                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
             }
@@ -1362,7 +956,6 @@ Image {
     }
 
     // ========== 运行时左侧状态指示条 ==========
-    // ✅ 2026-03-26 [Phase 7.48.88.26.3]: y从100改为78（与contentArea同步）
     Rectangle {
         x: 3
         y: 78
@@ -1373,7 +966,6 @@ Image {
         z: 3
         opacity: deviceStatus === "停止" ? 0.3 : 0.8
 
-        // 运行时呼吸
         SequentialAnimation on opacity {
             loops: Animation.Infinite
             running: deviceStatus === "运行"
