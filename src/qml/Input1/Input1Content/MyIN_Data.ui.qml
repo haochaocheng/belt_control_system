@@ -508,7 +508,8 @@ Image {
             anchors.right: parent.right
             anchors.bottom: protectionRow.top
             anchors.bottomMargin: 3
-            height: outputDevices.length > 0 ? 32 : 0
+            // ✅ 2026-03-28 [Phase 7.48.88.49.2]: 增大设备LED行高度
+            height: outputDevices.length > 0 ? 40 : 0
             visible: outputDevices.length > 0
 
             Rectangle {
@@ -533,16 +534,17 @@ Image {
                             return states && states[modelData] === true
                         }
 
+                        // ✅ 2026-03-28 [Phase 7.48.88.49.2]: 放大设备方形LED 16→22px，字体14→18px
                         Item {
-                            width: 16
-                            height: 16
+                            width: 22
+                            height: 22
                             anchors.verticalCenter: parent.verticalCenter
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: 22
-                                height: 22
-                                radius: 4
+                                width: 30
+                                height: 30
+                                radius: 5
                                 color: "#22C55E"
                                 opacity: 0.25
                                 visible: isOn
@@ -551,16 +553,16 @@ Image {
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: 16
-                                height: 16
-                                radius: 3
+                                width: 22
+                                height: 22
+                                radius: 4
                                 color: isOn ? "#22C55E" : "#4B5563"
                             }
                         }
 
                         Text {
                             text: shortDeviceName(modelData)
-                            font.pixelSize: 14
+                            font.pixelSize: 18
                             font.bold: isOn
                             color: isOn ? "#22C55E" : "#64748B"
                             anchors.verticalCenter: parent.verticalCenter
@@ -612,28 +614,52 @@ Image {
                     spacing: 10
 
                     // 参数1: 速度
+                    // ✅ 2026-03-28 [Phase 7.48.88.49.2]: 数值移到右上角，名称+进度条在底部
                     Item {
                         width: (parent.width - 10) / 2
                         height: parent.height
+
+                        Row {
+                            id: p1ValRow
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.top: parent.top
+                            anchors.topMargin: 2
+                            spacing: 2
+
+                            Text {
+                                text: iN_Data.param1Value
+                                font.pixelSize: 22
+                                font.bold: true
+                                color: valueColor(iN_Data.param1Value, iN_Data.param1Percent)
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: iN_Data.param1Unit
+                                font.pixelSize: 11
+                                color: "#64748B"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
 
                         Text {
                             id: p1Name
                             anchors.left: parent.left
                             anchors.leftMargin: 2
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 4
                             text: iN_Data.param1Name
                             font.pixelSize: 14
                             color: "#64748B"
-                            width: 30
                         }
 
-                        // 进度条 - 填充中间空间
                         Item {
                             anchors.left: p1Name.right
                             anchors.leftMargin: 6
-                            anchors.right: p1ValRow.left
-                            anchors.rightMargin: 6
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 4
                             height: 10
 
                             Rectangle {
@@ -662,28 +688,6 @@ Image {
                                 }
                             }
                         }
-
-                        Row {
-                            id: p1ValRow
-                            anchors.right: parent.right
-                            anchors.rightMargin: 2
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 2
-
-                            Text {
-                                text: iN_Data.param1Value
-                                font.pixelSize: 22
-                                font.bold: true
-                                color: valueColor(iN_Data.param1Value, iN_Data.param1Percent)
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                            Text {
-                                text: iN_Data.param1Unit
-                                font.pixelSize: 11
-                                color: "#64748B"
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
                     }
 
                     // 参数2: 电流
@@ -691,23 +695,47 @@ Image {
                         width: (parent.width - 10) / 2
                         height: parent.height
 
+                        Row {
+                            id: p2ValRow
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.top: parent.top
+                            anchors.topMargin: 2
+                            spacing: 2
+
+                            Text {
+                                text: iN_Data.param2Value
+                                font.pixelSize: 22
+                                font.bold: true
+                                color: valueColor(iN_Data.param2Value, iN_Data.param2Percent)
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: iN_Data.param2Unit
+                                font.pixelSize: 11
+                                color: "#64748B"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
                         Text {
                             id: p2Name
                             anchors.left: parent.left
                             anchors.leftMargin: 2
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 4
                             text: iN_Data.param2Name
                             font.pixelSize: 14
                             color: "#64748B"
-                            width: 30
                         }
 
                         Item {
                             anchors.left: p2Name.right
                             anchors.leftMargin: 6
-                            anchors.right: p2ValRow.left
-                            anchors.rightMargin: 6
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 4
                             height: 10
 
                             Rectangle {
@@ -736,28 +764,6 @@ Image {
                                 }
                             }
                         }
-
-                        Row {
-                            id: p2ValRow
-                            anchors.right: parent.right
-                            anchors.rightMargin: 2
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 2
-
-                            Text {
-                                text: iN_Data.param2Value
-                                font.pixelSize: 22
-                                font.bold: true
-                                color: valueColor(iN_Data.param2Value, iN_Data.param2Percent)
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                            Text {
-                                text: iN_Data.param2Unit
-                                font.pixelSize: 11
-                                color: "#64748B"
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
                     }
                 }
 
@@ -768,27 +774,52 @@ Image {
                     spacing: 10
 
                     // 参数3: 温度
+                    // ✅ 2026-03-28 [Phase 7.48.88.49.2]: 数值移到右上角
                     Item {
                         width: (parent.width - 10) / 2
                         height: parent.height
+
+                        Row {
+                            id: p3ValRow
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.top: parent.top
+                            anchors.topMargin: 2
+                            spacing: 2
+
+                            Text {
+                                text: iN_Data.param3Value
+                                font.pixelSize: 22
+                                font.bold: true
+                                color: valueColor(iN_Data.param3Value, iN_Data.param3Percent)
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: iN_Data.param3Unit
+                                font.pixelSize: 11
+                                color: "#64748B"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
 
                         Text {
                             id: p3Name
                             anchors.left: parent.left
                             anchors.leftMargin: 2
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 4
                             text: iN_Data.param3Name
                             font.pixelSize: 14
                             color: "#64748B"
-                            width: 30
                         }
 
                         Item {
                             anchors.left: p3Name.right
                             anchors.leftMargin: 6
-                            anchors.right: p3ValRow.left
-                            anchors.rightMargin: 6
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 4
                             height: 10
 
                             Rectangle {
@@ -817,52 +848,55 @@ Image {
                                 }
                             }
                         }
+                    }
+
+                    // 参数4: 张力
+                    // ✅ 2026-03-28 [Phase 7.48.88.49.2]: 数值移到右上角
+                    Item {
+                        width: (parent.width - 10) / 2
+                        height: parent.height
 
                         Row {
-                            id: p3ValRow
+                            id: p4ValRow
                             anchors.right: parent.right
                             anchors.rightMargin: 2
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.top: parent.top
+                            anchors.topMargin: 2
                             spacing: 2
 
                             Text {
-                                text: iN_Data.param3Value
+                                text: iN_Data.param4Value
                                 font.pixelSize: 22
                                 font.bold: true
-                                color: valueColor(iN_Data.param3Value, iN_Data.param3Percent)
+                                color: valueColor(iN_Data.param4Value, iN_Data.param4Percent)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
-                                text: iN_Data.param3Unit
+                                text: iN_Data.param4Unit
                                 font.pixelSize: 11
                                 color: "#64748B"
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
-                    }
-
-                    // 参数4: 张力
-                    Item {
-                        width: (parent.width - 10) / 2
-                        height: parent.height
 
                         Text {
                             id: p4Name
                             anchors.left: parent.left
                             anchors.leftMargin: 2
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 4
                             text: iN_Data.param4Name
                             font.pixelSize: 14
                             color: "#64748B"
-                            width: 30
                         }
 
                         Item {
                             anchors.left: p4Name.right
                             anchors.leftMargin: 6
-                            anchors.right: p4ValRow.left
-                            anchors.rightMargin: 6
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.right: parent.right
+                            anchors.rightMargin: 2
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 4
                             height: 10
 
                             Rectangle {
@@ -889,28 +923,6 @@ Image {
                                 Behavior on width {
                                     NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
                                 }
-                            }
-                        }
-
-                        Row {
-                            id: p4ValRow
-                            anchors.right: parent.right
-                            anchors.rightMargin: 2
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 2
-
-                            Text {
-                                text: iN_Data.param4Value
-                                font.pixelSize: 22
-                                font.bold: true
-                                color: valueColor(iN_Data.param4Value, iN_Data.param4Percent)
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                            Text {
-                                text: iN_Data.param4Unit
-                                font.pixelSize: 11
-                                color: "#64748B"
-                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
