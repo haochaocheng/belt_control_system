@@ -204,7 +204,9 @@ signals:
     void warningPlaybackFinished();           // 预警播放完成
     // ✅ 2026-03-21 [Phase 7.48.66]: 预警开始信号（用于时间轴实时可视化）
     void warningStarted();                    // 预警播放开始（运行键按下后立即发出）
-    void deviceStatusChanged(const QString &deviceName, bool isRunning);  // 设备状态改变
+    // ✅ 2026-03-28 [Phase 7.48.88.52]: 增加beltNumber参数，防止跨皮带LED污染
+    // 旧签名：void deviceStatusChanged(const QString &deviceName, bool isRunning);
+    void deviceStatusChanged(int beltNumber, const QString &deviceName, bool isRunning);  // 设备状态改变
     // ✅ 2026-03-21 [Phase 7.48.70]: 停止序列开始信号（用于时间轴实时可视化停车过程）
     void stopSequenceStarted();   // 停止序列开始执行
     // ✅ 2026-03-21 [Phase 7.48.72]: 停车预警开始信号（S键按下时立即发出）
@@ -401,7 +403,9 @@ private:
     BeltSequenceState* getOrCreateBeltState(int beltNumber);
 
     // 激活/停用指定设备
-    void activateDevice(const QString &deviceName, bool activate);
+    // ✅ 2026-03-28 [Phase 7.48.88.52]: 增加beltNumber参数
+    // 旧签名：void activateDevice(const QString &deviceName, bool activate);
+    void activateDevice(int beltNumber, const QString &deviceName, bool activate);
 
     // ❌ 2026-03-24 [Phase 7.48.88.5]: 废弃，输出通道由各设备配置面板设置
     // int getDeviceChannel(const QString &deviceName);

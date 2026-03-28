@@ -1450,7 +1450,8 @@ void CommonControl::onBeltSequenceTimer(int beltNumber)
                     .arg(deviceName);
 
     // 激活/停用设备
-    activateDevice(deviceName, state->isStartup);
+    // ✅ 2026-03-28 [Phase 7.48.88.52]: 传递beltNumber
+    activateDevice(beltNumber, deviceName, state->isStartup);
     state->currentIndex++;
 
     // 继续执行下一个
@@ -1541,7 +1542,9 @@ void CommonControl::processPendingBeltOps()
 // ❌ 2026-03-25 [Phase 7.48.88.22]: 废弃旧的全局executeNextDeviceInSequence和onDeviceSequenceTimer
 // 原因：已被per-belt版本替代（带beltNumber参数的版本 + onBeltSequenceTimer）
 
-void CommonControl::activateDevice(const QString &deviceName, bool activate)
+// ✅ 2026-03-28 [Phase 7.48.88.52]: 增加beltNumber参数
+// 旧签名：void CommonControl::activateDevice(const QString &deviceName, bool activate)
+void CommonControl::activateDevice(int beltNumber, const QString &deviceName, bool activate)
 {
     qDebug() << QString("  %1 设备: %2").arg(activate ? "✅ 启动" : "⏹️  停止").arg(deviceName);
 
@@ -1556,7 +1559,8 @@ void CommonControl::activateDevice(const QString &deviceName, bool activate)
     }
 
     // 发送设备状态改变信号（更新UI）
-    emit deviceStatusChanged(deviceName, activate);
+    // ✅ 2026-03-28 [Phase 7.48.88.52]: 带皮带编号，QML可区分是哪条皮带的设备
+    emit deviceStatusChanged(beltNumber, deviceName, activate);
 
     // 更新RuntimeTracker状态（识别电机停止）
     if (m_runtimeTracker && !activate) {
@@ -1574,7 +1578,8 @@ void CommonControl::activateDevice(const QString &deviceName, bool activate)
     // 原因：速度保护启动延时需要知道电机何时启动/停止
     // notifyMotorStarted/Stopped 之前从未被调用，m_motorRunning 始终为 false
     if (deviceName.contains("电机") || deviceName.contains("号电机")) {
-        int beltNumber = m_currentBeltNumber;
+        // ✅ 2026-03-28 [Phase 7.48.88.52]: 使用参数beltNumber替代m_currentBeltNumber
+        // 旧代码：int beltNumber = m_currentBeltNumber;  // 全局变量在多皮带并行时不可靠
         if (activate) {
             // 电机启动 → 通知速度保护延时计时开始
             emit motorActivated(beltNumber);

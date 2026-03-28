@@ -220,8 +220,10 @@ Item {
         // 显示遮罩
         screen01Form.flyDimOverlay.opacity = 0.6
 
-        // P0: 启动心跳计时
-        flyHeartbeatTimer.restart()
+        // P0: 心跳计时由调用方控制（起车预警不启动，设备阶段才启动）
+        // ✅ 2026-03-28 [Phase 7.48.88.52]: 移除此处的heartbeat启动
+        // 原因：起车预警期间音频播放约9秒，3秒心跳超时会导致卡片提前飞回
+        // flyHeartbeatTimer.restart()  // 已移至onBeltSequenceProgress的设备阶段分支
 
         console.log("[Screen01] ✈️ 卡片", cardIndex + 1, "飞到中央 →",
                     "x:", targetX, "y:", targetY, "scale: 2")
@@ -286,14 +288,15 @@ Item {
         }
     }
 
-    // P0: 心跳超时定时器（3秒无信号 → 强制飞回）
+    // P0: 心跳超时定时器（动态interval，默认3秒，设备阶段根据delayMs调整）
+    // ✅ 2026-03-28 [Phase 7.48.88.52]: interval由设备阶段动态设置
     Timer {
         id: flyHeartbeatTimer
-        interval: 3000
+        interval: 5000
         repeat: false
         onTriggered: {
             if (flyingCardIndex >= 0) {
-                console.warn("[Screen01] ⏰ 飞行心跳超时(3s无信号)，卡片", flyingCardIndex + 1, "强制飞回")
+                console.warn("[Screen01] ⏰ 飞行心跳超时(" + interval + "ms无信号)，卡片", flyingCardIndex + 1, "强制飞回")
                 flyCardBack()
             }
         }
@@ -859,6 +862,10 @@ Item {
             } else if (phase === "停止") {
                 item.deviceStatus = "停止"
                 item.sequencePhase = ""  // 清空阶段，回到参数显示
+                // ✅ 2026-03-28 [Phase 7.48.88.52]: 停止时清空所有输出设备LED状态
+                // 原因：其他皮带的deviceStatusChanged信号会污染本机卡片LED
+                // 修复：停止时强制清空，确保所有LED变为灰色
+                item.outputDeviceStates = {}
             } else if (phase === "起车预警" || phase === "停车预警") {
                 item.deviceStatus = phase
             } else if (phase === "故障停止") {
@@ -878,18 +885,24 @@ Item {
             console.log("[Screen01] 📊 卡片", beltNumber, "阶段:", phase,
                         "进度:", current + "/" + total, "倒计时:", delayMs + "ms")
 
-            // ✅ 2026-03-28 [Phase 7.48.88.51]: 飞行动画触发（冲突处理增强版）
-            // P2: 起车预警 → 飞出（最后启动的优先，前一个自动退回）
+            // ✅ 2026-03-28 [Phase 7.48.88.52]: 飞行动画触发（冲突处理增强版v2）
+            // 修复：起车预警阶段不启动心跳计时器（音频播放约9秒，3秒超时会提前飞回）
+            // 修复：设备阶段心跳超时=delayMs+3000ms（适配不同设备延时）
             if (phase === "起车预警") {
                 flyCardToCenter(idx)
+                // 起车预警期间不启动心跳（音频可能播放多次，时间不确定）
+                flyHeartbeatTimer.stop()
             }
             // P1: 停车预警/运行/停止/故障 → 飞回
             else if ((phase === "运行" || phase === "停止" || phase === "故障停止" || phase === "停车预警")
                        && flyingCardIndex === idx) {
                 flyCardBack()
             }
-            // P0: 飞行中收到中间阶段信号 → 重置心跳计时（证明信号未丢失）
+            // P0: 飞行中收到设备阶段信号 → 设置心跳超时=设备延时+3秒
             else if (flyingCardIndex === idx) {
+                // 设备延时可能5-8秒，心跳超时 = max(delayMs + 3000, 5000)
+                var heartbeatMs = Math.max((delayMs || 0) + 3000, 5000)
+                flyHeartbeatTimer.interval = heartbeatMs
                 flyHeartbeatTimer.restart()
             }
         }
@@ -903,11 +916,16 @@ Item {
             item.deviceStatus = running ? "运行" : "停止"
         }
 
-        // ✅ 2026-03-28 [Phase 7.48.88.48]: 监听设备激活/停用信号，更新本机卡片输出设备LED
-        function onDeviceStatusChanged(deviceName, isRunning) {
+        // ✅ 2026-03-28 [Phase 7.48.88.52]: 监听设备激活/停用信号，更新本机卡片输出设备LED
+        // 修复：增加beltNumber参数，仅更新对应皮带的卡片LED
+        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
             var dataItems = getDataItems()
             var localIdx = getLocalDeviceId() - 1
             if (localIdx < 0 || localIdx >= beltCardCount || !dataItems[localIdx]) return
+
+            // ✅ 仅接受本机皮带的设备状态信号
+            if (beltNumber !== getLocalDeviceId()) return
+
             // 必须创建新对象才能触发QML的property binding更新
             var oldStates = dataItems[localIdx].outputDeviceStates || {}
             var newStates = {}

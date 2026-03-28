@@ -25,8 +25,10 @@ Item {
     // 监听设备状态改变信号
     Connections {
         target: commonControl
-        function onDeviceStatusChanged(deviceName, isRunning) {
-            console.log("🔗 ControlPanel: 收到设备状态改变信号 -", deviceName, isRunning ? "运行" : "停止")
+        // ✅ 2026-03-28 [Phase 7.48.88.52]: 增加beltNumber参数
+        // 旧签名：function onDeviceStatusChanged(deviceName, isRunning)
+        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+            console.log("🔗 ControlPanel: 收到设备状态改变信号 -", beltNumber, "号皮带", deviceName, isRunning ? "运行" : "停止")
             // Update device running state
             var states = root.deviceRunningStates
             states[deviceName] = isRunning

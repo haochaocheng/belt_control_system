@@ -379,7 +379,9 @@ Rectangle {
             rtRefreshTimer.start()
         }
 
-        function onDeviceStatusChanged(deviceName, isRunning) {
+        // ✅ 2026-03-28 [Phase 7.48.88.52]: 增加beltNumber参数
+        // ��签名：function onDeviceStatusChanged(deviceName, isRunning)
+        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
             if (!root.isRealtimeActive || root.rtPhase < 2) return
             if (!isRunning) {
                 // ✅ 2026-03-21 [Phase 7.48.70]: 处理停止序列设备停用事件
