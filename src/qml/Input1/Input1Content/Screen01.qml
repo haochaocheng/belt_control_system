@@ -132,6 +132,34 @@ Item {
         return localDeviceId + "号皮带"
     }
 
+    // ✅ 2026-03-28 [Phase 7.48.88.48]: 从DB加载启动序列+洒水设备到本机卡片的outputDevices
+    function loadOutputDeviceList() {
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
+        var deviceId = getLocalDeviceId()
+        var localIdx = deviceId - 1
+        if (localIdx < 0 || localIdx >= beltCardCount) return
+        var dataItems = getDataItems()
+        if (!dataItems[localIdx]) return
+
+        // 读取启动序列
+        var config = deviceConfigMgr.loadDeviceLogicConfig(deviceId)
+        var startupStr = config["startup_sequence"] || "[]"
+        var devices = JSON.parse(startupStr)
+        if (devices.length === 0) devices = ["张紧控制", "1号制动器", "1号电机", "2号电机"]
+
+        // 追加已启用的洒水设备（不重复）
+        for (var si = 1; si <= 8; si++) {
+            var cfg = deviceConfigMgr.loadSprinklerConfig(si)
+            if (cfg && Number(cfg["enabled"]) === 1) {
+                var spName = "洒水" + si
+                if (devices.indexOf(spName) === -1) devices.push(spName)
+            }
+        }
+
+        dataItems[localIdx].outputDevices = devices
+        console.log("[Screen01] 📋 输出设备列表:", JSON.stringify(devices))
+    }
+
     function qmlModuleIndex(moduleType) {
         if (moduleType === "模拟量模块1") return 2
         if (moduleType === "模拟量模块2") return 3
@@ -525,6 +553,9 @@ Item {
                     }
                 }
 
+                // ✅ 2026-03-28 [Phase 7.48.88.48]: 加载输出设备列表到本机卡片
+                loadOutputDeviceList()
+
                 // ✅ 2026-01-28 [FIX 100.300.67]: 设置鼠标交互
                 console.log("[Screen01] 🖱️ 设置鼠标交互...")
                 refreshDeviceCards()
@@ -713,6 +744,21 @@ Item {
             var item = dataItems[idx]
             if (!item) return
             item.deviceStatus = running ? "运行" : "停止"
+        }
+
+        // ✅ 2026-03-28 [Phase 7.48.88.48]: 监听设备激活/停用信号，更新本机卡片输出设备LED
+        function onDeviceStatusChanged(deviceName, isRunning) {
+            var dataItems = getDataItems()
+            var localIdx = getLocalDeviceId() - 1
+            if (localIdx < 0 || localIdx >= beltCardCount || !dataItems[localIdx]) return
+            // 必须创建新对象才能触发QML的property binding更新
+            var oldStates = dataItems[localIdx].outputDeviceStates || {}
+            var newStates = {}
+            for (var key in oldStates) {
+                newStates[key] = oldStates[key]
+            }
+            newStates[deviceName] = isRunning
+            dataItems[localIdx].outputDeviceStates = newStates
         }
     }
 

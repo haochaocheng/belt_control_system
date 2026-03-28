@@ -71,6 +71,10 @@ Image {
     // ✅ 运行时间
     property string dailyRuntime: "--"
 
+    // ✅ 2026-03-28 [Phase 7.48.88.48]: 输出设备运行状态LED
+    property var outputDevices: []        // 设备名列表，从启动序列+洒水同步
+    property var outputDeviceStates: ({}) // 设备名→是否运行 映射
+
     // 内部：倒计时定时器
     Timer {
         id: countdownTimer
@@ -137,6 +141,18 @@ Image {
         if (percent >= 0.9) return "#F87171"
         if (percent >= 0.7) return "#FCD34D"
         return isLocalDevice ? "#7DD3FC" : "#4ADE80"
+    }
+
+    // ✅ 2026-03-28 [Phase 7.48.88.48]: 输出设备名缩写
+    function shortDeviceName(name) {
+        if (name === "张紧控制") return "张紧"
+        var m = name.match(/(\d+)号制动器/)
+        if (m) return "闸" + m[1]
+        m = name.match(/(\d+)号电机/)
+        if (m) return "机" + m[1]
+        m = name.match(/洒水(\d+)/)
+        if (m) return "水" + m[1]
+        return name.substring(0, 2)
     }
 
     function progressTrackColor() {
@@ -367,10 +383,10 @@ Image {
         // ========== ② 核心数据区 ==========
         // 序列空闲时: 2×2参数网格 + 微型进度条
         // 序列执行时: 大字体阶段名 + 倒计时
-        // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 恢复到140（header band内放标题释放了空间）
+        // ✅ 2026-03-28 [Phase 7.48.88.48]: 从140缩减到130，为输出设备LED腾出空间
         Item {
             width: parent.width
-            height: 140
+            height: 130
 
             // 暗色半透明背景（增加层次感和可读性）
             Rectangle {
@@ -1073,11 +1089,91 @@ Image {
             }
         }
 
+        // ========== ⑤ 输出设备运行状态LED ==========
+        // ✅ 2026-03-28 [Phase 7.48.88.48]: 方形LED显示启动序列中设备的运行状态
+        // 设备列表从LogicControlPanel启动序列+洒水设备同步
+        Item {
+            width: parent.width
+            height: outputDevices.length > 0 ? 32 : 0
+            visible: outputDevices.length > 0
+
+            // 暗色半透明背景
+            Rectangle {
+                anchors.fill: parent
+                color: "#0D1B2A"
+                opacity: 0.25
+                radius: 3
+            }
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 2
+
+                Repeater {
+                    model: outputDevices
+
+                    Item {
+                        width: Math.min(55, (contentArea.width - 8) / Math.max(outputDevices.length, 1))
+                        height: 30
+
+                        property bool isOn: {
+                            var states = outputDeviceStates
+                            return states && states[modelData] === true
+                        }
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 2
+
+                            // 方形LED
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 2
+                                color: isOn ? "#22C55E" : "#4B5563"
+                                anchors.horizontalCenter: parent.horizontalCenter
+
+                                // 运行时外发光
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 16
+                                    height: 16
+                                    radius: 3
+                                    color: "#22C55E"
+                                    opacity: 0.3
+                                    visible: isOn
+                                    z: -1
+                                }
+                            }
+
+                            // 设备缩写名
+                            Text {
+                                text: shortDeviceName(modelData)
+                                font.pixelSize: 11
+                                color: isOn ? "#22C55E" : "#64748B"
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 细分隔线（输出设备与保护栏之间）
+        Rectangle {
+            width: parent.width
+            height: 1
+            color: "#4A90E2"
+            opacity: outputDevices.length > 0 ? 0.3 : 0
+            visible: outputDevices.length > 0
+        }
+
         // ========== ③ 保护状态栏 ==========
+        // ✅ 2026-03-28 [Phase 7.48.88.48]: 从46缩减到38，为输出设备LED腾出空间
         // ✅ 2026-03-26 [Phase 7.48.88.26.1]: 从54缩减到46
         Item {
             width: parent.width
-            height: 46
+            height: 38
 
             // 暗色半透明背景
             Rectangle {
@@ -1121,30 +1217,33 @@ Image {
 
                         Column {
                             anchors.centerIn: parent
-                            spacing: 4
+                            spacing: 2
 
                             // 保护指示灯（带外发光）
+                            // ✅ 2026-03-28 [Phase 7.48.88.48]: 从22缩减到16，spacing从4到2
                             Item {
-                                width: 22
-                                height: 22
+                                width: 16
+                                height: 16
                                 anchors.horizontalCenter: parent.horizontalCenter
 
                                 // 外发光（触发或待确认时）
+                                // ✅ 2026-03-28 [Phase 7.48.88.48]: 从30缩减到22
                                 Rectangle {
                                     anchors.centerIn: parent
-                                    width: 30
-                                    height: 30
-                                    radius: 15
+                                    width: 22
+                                    height: 22
+                                    radius: 11
                                     color: indicatorColor
                                     opacity: 0.3
                                     visible: triggered || latched
                                 }
 
+                                // ✅ 2026-03-28 [Phase 7.48.88.48]: 从18缩减到14
                                 Rectangle {
                                     anchors.centerIn: parent
-                                    width: 18
-                                    height: 18
-                                    radius: 9
+                                    width: 14
+                                    height: 14
+                                    radius: 7
                                     color: indicatorColor
 
                                     // 触发时快速脉冲
@@ -1166,9 +1265,10 @@ Image {
                             }
 
                             // 标签
+                            // ✅ 2026-03-28 [Phase 7.48.88.48]: 从14缩减到12
                             Text {
                                 text: modelData.name
-                                font.pixelSize: 14
+                                font.pixelSize: 12
                                 font.bold: triggered || latched
                                 color: indicatorColor
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -1180,10 +1280,11 @@ Image {
         }
 
         // ========== ④ 底部信息栏 ==========
+        // ✅ 2026-03-28 [Phase 7.48.88.48]: 从26缩减到20，为输出设备LED腾出空间
         // ✅ 2026-03-26 [Phase 7.48.88.26.1]: 从30缩减到26
         Item {
             width: parent.width
-            height: 26
+            height: 20
 
             Row {
                 anchors.fill: parent
@@ -1195,31 +1296,32 @@ Image {
                     spacing: 6
 
                     // 状态灯（带发光）
+                    // ✅ 2026-03-28 [Phase 7.48.88.48]: 缩减尺寸
                     Item {
-                        width: 14
-                        height: 14
+                        width: 12
+                        height: 12
                         anchors.verticalCenter: parent.verticalCenter
 
                         Rectangle {
                             anchors.centerIn: parent
-                            width: 20
-                            height: 20
-                            radius: 10
+                            width: 16
+                            height: 16
+                            radius: 8
                             color: commOnline ? "#22C55E" : "#DC2626"
                             opacity: 0.25
                         }
                         Rectangle {
                             anchors.centerIn: parent
-                            width: 12
-                            height: 12
-                            radius: 6
+                            width: 10
+                            height: 10
+                            radius: 5
                             color: commOnline ? "#22C55E" : "#DC2626"
                         }
                     }
 
                     Text {
                         text: commOnline ? "在线" : "离线"
-                        font.pixelSize: 16
+                        font.pixelSize: 13
                         font.bold: true
                         color: commOnline ? "#22C55E" : "#DC2626"
                         anchors.verticalCenter: parent.verticalCenter
@@ -1229,7 +1331,7 @@ Image {
                 // 分隔竖线
                 Rectangle {
                     width: 1
-                    height: 16
+                    height: 12
                     color: "#334155"
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -1241,14 +1343,14 @@ Image {
 
                     Text {
                         text: "今日"
-                        font.pixelSize: 14
+                        font.pixelSize: 12
                         color: "#64748B"
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
                     Text {
                         text: dailyRuntime
-                        font.pixelSize: 18
+                        font.pixelSize: 14
                         font.bold: true
                         color: "#94A3B8"
                         anchors.verticalCenter: parent.verticalCenter
