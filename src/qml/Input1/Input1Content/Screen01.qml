@@ -164,6 +164,12 @@ Item {
     }
 
     // ✅ 2026-03-28 [Phase 7.48.88.50]: 飞行动画函数
+    // ✅ 2026-03-28 [Phase 7.48.88.51]: 冲突处理增强
+    //   P0: 心跳超时3秒，无信号强制飞回
+    //   P1: 停车预警也触发飞回；飞回动画期间允许新飞行
+    //   P2: 最后启动的卡片优��飞出，前一个自动退回
+
+    property int flyCleanupIndex: -1  // 等待清理的卡片索引
 
     // 初始化：保存每张卡片的原始位置
     function initCardOriginalPositions() {
@@ -177,12 +183,26 @@ Item {
         console.log("[Screen01] 📐 卡片原始位置已保存")
     }
 
-    // 卡片飞到中央
+    // 卡片飞到中央（P2: 如有其他卡片在飞，自动退回前一个）
     function flyCardToCenter(cardIndex) {
-        if (flyingCardIndex >= 0) return  // 已有卡片在飞行
+        // 同一张卡片重复飞出 → 忽略
+        if (flyingCardIndex === cardIndex) return
+
         var dataItems = getDataItems()
         var card = dataItems[cardIndex]
         if (!card) return
+
+        // P2: 如果有其他卡片在飞行，先强制退回
+        if (flyingCardIndex >= 0) {
+            var oldCard = dataItems[flyingCardIndex]
+            if (oldCard) {
+                console.log("[Screen01] ✈️ 卡片", flyingCardIndex + 1, "被新启动抢占，强制退回")
+                oldCard.x = oldCard.originalX
+                oldCard.y = oldCard.originalY
+                oldCard.scale = 1
+                scheduleCardCleanup(flyingCardIndex)
+            }
+        }
 
         flyingCardIndex = cardIndex
 
@@ -200,11 +220,14 @@ Item {
         // 显示遮罩
         screen01Form.flyDimOverlay.opacity = 0.6
 
+        // P0: 启动心跳计时
+        flyHeartbeatTimer.restart()
+
         console.log("[Screen01] ✈️ 卡片", cardIndex + 1, "飞到中央 →",
                     "x:", targetX, "y:", targetY, "scale: 2")
     }
 
-    // 卡片飞回原位
+    // 卡片飞回原位（P1: 立即释放flyingCardIndex，允许新飞行）
     function flyCardBack() {
         if (flyingCardIndex < 0) return
         var dataItems = getDataItems()
@@ -222,8 +245,26 @@ Item {
         // 隐藏遮罩
         screen01Form.flyDimOverlay.opacity = 0
 
-        // 动画结束后清理状态（延时等动画播完）
-        flyBackCleanupTimer.start()
+        // P0: 停止心跳计时
+        flyHeartbeatTimer.stop()
+
+        // P1: 立即释放flyingCardIndex（不等cleanup），允许新飞行
+        scheduleCardCleanup(flyingCardIndex)
+        flyingCardIndex = -1
+    }
+
+    // 延迟清理卡片动画状态（等Behavior动画播完再重置z和flyAnimating）
+    function scheduleCardCleanup(cardIndex) {
+        // 如果有上一个还没清理的卡片，先立即清理（动画肯定已播完）
+        if (flyCleanupIndex >= 0 && flyCleanupIndex !== flyingCardIndex) {
+            var prevCard = getDataItems()[flyCleanupIndex]
+            if (prevCard) {
+                prevCard.flyAnimating = false
+                prevCard.z = 0
+            }
+        }
+        flyCleanupIndex = cardIndex
+        flyBackCleanupTimer.restart()
     }
 
     // 飞回动画结束后的清理定时器
@@ -232,15 +273,28 @@ Item {
         interval: 650  // 略大于动画时长600ms
         repeat: false
         onTriggered: {
-            if (flyingCardIndex >= 0) {
+            if (flyCleanupIndex >= 0 && flyCleanupIndex !== flyingCardIndex) {
                 var dataItems = getDataItems()
-                var card = dataItems[flyingCardIndex]
+                var card = dataItems[flyCleanupIndex]
                 if (card) {
                     card.flyAnimating = false
                     card.z = 0
                 }
-                console.log("[Screen01] ✈️ 卡片", flyingCardIndex + 1, "飞行动画清理完成")
-                flyingCardIndex = -1
+                console.log("[Screen01] ✈️ 卡片", flyCleanupIndex + 1, "飞行动画清理完成")
+            }
+            flyCleanupIndex = -1
+        }
+    }
+
+    // P0: 心跳超时定时器（3秒无信号 → 强制飞回）
+    Timer {
+        id: flyHeartbeatTimer
+        interval: 3000
+        repeat: false
+        onTriggered: {
+            if (flyingCardIndex >= 0) {
+                console.warn("[Screen01] ⏰ 飞行心跳超时(3s无信号)，卡片", flyingCardIndex + 1, "强制飞回")
+                flyCardBack()
             }
         }
     }
@@ -824,15 +878,19 @@ Item {
             console.log("[Screen01] 📊 卡片", beltNumber, "阶段:", phase,
                         "进度:", current + "/" + total, "倒计时:", delayMs + "ms")
 
-            // ✅ 2026-03-28 [Phase 7.48.88.50]: 飞行动画触发
-            // 仅启动序列触发，停车序列不触发
-            if (phase === "起车预警" && flyingCardIndex < 0) {
-                // 启动序列开始 → 卡片飞到中央放大2倍
+            // ✅ 2026-03-28 [Phase 7.48.88.51]: 飞行动画触发（冲突处理增强版）
+            // P2: 起车预警 → 飞出（最后启动的优先，前一个自动退回）
+            if (phase === "起车预警") {
                 flyCardToCenter(idx)
-            } else if ((phase === "运行" || phase === "停止" || phase === "故障停止")
+            }
+            // P1: 停车预警/运行/停止/故障 → 飞回
+            else if ((phase === "运行" || phase === "停止" || phase === "故障停止" || phase === "停车预警")
                        && flyingCardIndex === idx) {
-                // 启动完成/失败 → 卡片飞回原位
                 flyCardBack()
+            }
+            // P0: 飞行中收到中间阶段信号 → 重置心跳计时（证明信号未丢失）
+            else if (flyingCardIndex === idx) {
+                flyHeartbeatTimer.restart()
             }
         }
 
