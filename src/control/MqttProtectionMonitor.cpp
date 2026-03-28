@@ -800,6 +800,10 @@ void MqttProtectionMonitor::publishSprinklerCommand(int sprinklerIndex, bool act
                               : "🚿 [MqttProtectionMonitor] 洒水停止命令已发布")
                  << "洒水:" << sprinklerIndex
                  << "topic:" << topic << "channel:" << channel;
+
+        // ✅ 2026-03-28 [Phase 7.48.88.49.4]: 通知QML卡片更新洒水LED状态
+        QString deviceName = QString("洒水%1").arg(sprinklerIndex);
+        emit sprinklerStatusChanged(deviceName, activate);
     } else {
         qWarning() << "⚠️ [MqttProtectionMonitor] 洒水" << sprinklerIndex
                    << "命令发布失败 topic:" << topic;

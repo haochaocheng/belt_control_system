@@ -231,6 +231,9 @@ signals:
                                    int protectionLevel, int source);
     void protectionActionCleared(int beltNumber, const QString &protectionName, int source);
 
+    // ✅ 2026-03-28 [Phase 7.48.88.49.4]: 洒水设备状态变化信号（供卡片LED更新）
+    void sprinklerStatusChanged(const QString &deviceName, bool active);
+
 private slots:
     /**
      * @brief DI位变化槽函数

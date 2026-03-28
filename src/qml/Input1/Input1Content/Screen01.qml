@@ -981,6 +981,20 @@ Item {
                 // 前轴承温度 → 暂时不显示（param3已被电机温度占用）
             }
         }
+
+        // ✅ 2026-03-28 [Phase 7.48.88.49.4]: 洒水设备状态变化→更新卡片LED
+        function onSprinklerStatusChanged(deviceName, active) {
+            var dataItems = getDataItems()
+            var localIdx = getLocalDeviceId() - 1
+            if (localIdx < 0 || localIdx >= beltCardCount || !dataItems[localIdx]) return
+            var oldStates = dataItems[localIdx].outputDeviceStates || {}
+            var newStates = {}
+            for (var key in oldStates) {
+                newStates[key] = oldStates[key]
+            }
+            newStates[deviceName] = active
+            dataItems[localIdx].outputDeviceStates = newStates
+        }
     }
 
     // ✅ 2026-03-26 [Phase 7.48.88.26.3]: 改用channelUpdatedMap信号（QVariantMap）
