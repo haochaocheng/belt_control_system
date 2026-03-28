@@ -3117,10 +3117,10 @@ bool DeviceConfigManager::saveBrakeConfig(int deviceId, int brakeIndex, const QV
          release_stop_delay, brake_stop_delay)
         -- 旧：VALUES占位符38个，与42列不匹配导致Parameter count mismatch
         -- ✅ 2026-03-22 [Phase 7.48.74.2]: 修正VALUES占位符为42个
+        -- ✅ 2026-03-28 [Phase 7.48.88.42]: 修正VALUES占位符44→42个(第2行多2个?)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?)
+                ?, ?, ?, ?)
     )");
 
     query.addBindValue(deviceId);
