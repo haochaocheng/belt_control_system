@@ -377,16 +377,17 @@ Image {
         y: 78
         width: parent.width - 36
         height: parent.height - 78 - 22
-        spacing: 4
+        // ✅ 2026-03-28 [Phase 7.48.88.48]: spacing从4缩减到2，为输出设备LED腾出空间
+        spacing: 2
         z: 2
 
         // ========== ② 核心数据区 ==========
         // 序列空闲时: 2×2参数网格 + 微型进度条
         // 序列执行时: 大字体阶段名 + 倒计时
-        // ✅ 2026-03-28 [Phase 7.48.88.48]: 从140缩减到130，为输出设备LED腾出空间
+        // ✅ 2026-03-28 [Phase 7.48.88.48]: 从140→130→118，配合spacing缩减避免Column溢出
         Item {
             width: parent.width
-            height: 130
+            height: 118
 
             // 暗色半透明背景（增加层次感和可读性）
             Rectangle {

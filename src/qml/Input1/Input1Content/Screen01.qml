@@ -842,8 +842,18 @@ Item {
             updateFaultDisplay()
         }
 
-        // ✅ 2026-03-28 [Phase 7.48.88.47]: 监听今日运行时间变化，更新本机卡片
-        function onDailyRuntimeChanged() {
+        // ✅ 2026-03-28 [Phase 7.48.88.48]: 改用Timer轮询更新今日运行时间
+        // 原因：onDailyRuntimeChanged信号方式在某些情况下不触发更新，Timer更可靠
+        // function onDailyRuntimeChanged() { ... }
+    }
+
+    // ✅ 2026-03-28 [Phase 7.48.88.48]: 每秒轮询runtimeTracker.dailyRuntime
+    Timer {
+        interval: 1000
+        repeat: true
+        running: typeof runtimeTracker !== "undefined" && runtimeTracker !== null
+        onTriggered: {
+            if (typeof runtimeTracker === "undefined" || !runtimeTracker) return
             var dataItems = getDataItems()
             var localIdx = getLocalDeviceId() - 1
             if (localIdx >= 0 && localIdx < beltCardCount && dataItems[localIdx]) {
