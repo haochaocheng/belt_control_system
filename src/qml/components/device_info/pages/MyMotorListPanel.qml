@@ -26,7 +26,10 @@ Rectangle {
 
     // ✅ 2026-03-29 [Phase 7.48.88.57]: 参数已修改的电机索引（-1=无修改）
     // 当某电机参数被修改但未保存时，在其名称左侧显示 ● 标记
-    property int modifiedMotorIndex: -1
+    // ✅ 2026-03-29 [Phase 7.48.88.57]: 修改标记索引
+    // ✅ 2026-03-29 [Phase 7.48.88.60]: 改为数组，支持多电机同时显示修改标记
+    // 旧代码: property int modifiedMotorIndex: -1
+    property var modifiedMotorIndices: []
 
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加调试日志
     onCurrentMotorIndexChanged: {
@@ -160,7 +163,9 @@ Rectangle {
                 text: "●"
                 font.pixelSize: 12
                 color: "#FFC107"  // 黄色警示
-                visible: root.modifiedMotorIndex === index
+                // ✅ 2026-03-29 [Phase 7.48.88.60]: 改为数组查找，支持多电机修改标记
+                // 旧代码: visible: root.modifiedMotorIndex === index
+                visible: root.modifiedMotorIndices.indexOf(index) >= 0
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.right: motorNameText.left
                 anchors.rightMargin: 4

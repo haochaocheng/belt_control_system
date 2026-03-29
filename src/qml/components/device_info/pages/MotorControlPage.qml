@@ -27,7 +27,9 @@ Rectangle {
     property var motorStatusList: []
 
     // ✅ 2026-03-29 [Phase 7.48.88.57]: 当前正在编辑的电机修改标记（-1=无修改）
-    property int modifiedMotorIndex: -1
+    // ✅ 2026-03-29 [Phase 7.48.88.60]: 改为数组，支持多电机同时标记修改（类似VSCode多文件修改标记）
+    // 旧代码: property int modifiedMotorIndex: -1
+    property var modifiedMotorIndices: []
 
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引
     // ✅ 2026-01-30 [FIX 100.300.106.2]: 修正 focusSubArea 定义
@@ -125,7 +127,8 @@ Rectangle {
             console.log("  - 更新后 currentMotorIndex:", root.currentMotorIndex)
             console.log("  - 更新后 focusItemIndex:", root.focusItemIndex)
             // ✅ 2026-03-29 [Phase 7.48.88.57]: 切换电机时清除修改标记（未保存的修改丢弃）
-            root.modifiedMotorIndex = -1
+            // ✅ 2026-03-29 [Phase 7.48.88.60]: 切换电机时不再清除修改标记，保留多电机修改追踪（类似VSCode）
+            // 旧代码: root.modifiedMotorIndex = -1
             // ✅ 2026-02-02 [参数持久化]: 切换电机时加载配置
             Qt.callLater(root.loadMotorConfig)
         }
@@ -403,7 +406,9 @@ Rectangle {
                     // ✅ 2026-03-29 [Phase 7.48.88.56]: 传递电机状态列表
                     item.motorStatusList = Qt.binding(function() { return root.motorStatusList })
                     // ✅ 2026-03-29 [Phase 7.48.88.57]: 传递修改标记索引
-                    item.modifiedMotorIndex = Qt.binding(function() { return root.modifiedMotorIndex })
+                    // ✅ 2026-03-29 [Phase 7.48.88.60]: 改为数组绑定
+                    // 旧代码: item.modifiedMotorIndex = Qt.binding(function() { return root.modifiedMotorIndex })
+                    item.modifiedMotorIndices = Qt.binding(function() { return root.modifiedMotorIndices })
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.17]: 鼠标点击时同步更新 focusItemIndex 和 NavigationManager
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加详细调试日志和 currentArea 检查
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.20]: 添加强制恢复焦点
@@ -498,9 +503,19 @@ Rectangle {
                     })
 
                     // ✅ 2026-03-29 [Phase 7.48.88.57]: 连接参数修改状态信号
-                    // 修改时在电机列表显示标记，保存后清除
+                    // ✅ 2026-03-29 [Phase 7.48.88.60]: 改为数组操作，支持多电机修改追踪
+                    // 旧代码: root.modifiedMotorIndex = modified ? root.currentMotorIndex : -1
                     item.configModifiedStateChanged.connect(function(modified) {
-                        root.modifiedMotorIndex = modified ? root.currentMotorIndex : -1
+                        var idx = root.currentMotorIndex
+                        var arr = root.modifiedMotorIndices.slice()
+                        var pos = arr.indexOf(idx)
+                        if (modified && pos < 0) {
+                            arr.push(idx)
+                            root.modifiedMotorIndices = arr
+                        } else if (!modified && pos >= 0) {
+                            arr.splice(pos, 1)
+                            root.modifiedMotorIndices = arr
+                        }
                     })
 
                     // ✅ 2026-03-29 [Phase 7.48.88.59]: 连接输出通道冲突检查信号
@@ -687,7 +702,15 @@ Rectangle {
             }
 
             // ✅ 2026-03-29 [Phase 7.48.88.57]: 保存成功，清除修改标记
-            root.modifiedMotorIndex = -1
+            // ✅ 2026-03-29 [Phase 7.48.88.60]: 从数组中移除已保存电机的修改标记
+            // 旧代码: root.modifiedMotorIndex = -1
+            var savedIdx = root.currentMotorIndex
+            var arrSave = root.modifiedMotorIndices.slice()
+            var posSave = arrSave.indexOf(savedIdx)
+            if (posSave >= 0) {
+                arrSave.splice(posSave, 1)
+                root.modifiedMotorIndices = arrSave
+            }
             // 同时通知 BasicConfigTab 重置 configModified
             var currentTab2 = motorConfigPanel.item ? motorConfigPanel.item.getCurrentTab() : null
             if (currentTab2 && currentTab2.configModified !== undefined) {
