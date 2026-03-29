@@ -480,6 +480,19 @@ Rectangle {
                         }
                     })
 
+                    // ✅ 2026-03-29 [Phase 7.48.88.57]: 连接输出通道实时预览信号
+                    item.outputChannelPreviewChanged.connect(function(channel) {
+                        console.log("✅ [MotorControlPage] 输出通道预览:", channel, "电机:", root.currentMotorIndex)
+                        var newList = root.motorStatusList.slice()
+                        if (root.currentMotorIndex < newList.length) {
+                            newList[root.currentMotorIndex] = {
+                                enabled: newList[root.currentMotorIndex].enabled,
+                                outputChannel: channel
+                            }
+                            root.motorStatusList = newList
+                        }
+                    })
+
                     // ✅ 2026-03-29 [Phase 7.48.88.57]: 连接参数修改状态信号
                     // 修改时在电机列表显示标记，保存后清除
                     item.configModifiedStateChanged.connect(function(modified) {

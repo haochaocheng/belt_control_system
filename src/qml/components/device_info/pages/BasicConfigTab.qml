@@ -56,6 +56,9 @@ Rectangle {
     // ✅ 2026-03-29 [Phase 7.48.88.57]: 运行状态实时预览信号（不等保存，立即同步到电机列表）
     signal motorEnabledPreviewChanged(bool enabled)
 
+    // ✅ 2026-03-29 [Phase 7.48.88.57]: 输出通道实时预览信号
+    signal outputChannelPreviewChanged(int channel)
+
     // ✅ 2026-03-29 [Phase 7.48.88.57]: 参数修改状态变化信号
     signal configModifiedStateChanged(bool modified)
 
@@ -460,7 +463,8 @@ Rectangle {
                     value: root.motorIndex < 5 ? root.motorIndex + 1 : -1
                     editable: true
                     keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
-                    onValueChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
+                    // ✅ 2026-03-29 [Phase 7.48.88.57]: 修改检测+输出通道实时预览
+                    onValueChanged: { root.markModified(); if (!root._suppressModified) root.outputChannelPreviewChanged(value) }
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引

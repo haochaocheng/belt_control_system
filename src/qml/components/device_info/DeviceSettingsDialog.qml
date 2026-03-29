@@ -80,6 +80,28 @@ Item {
     property bool hasPermission: true             // 是否有修改权限（默认true，在打开时更新）
     property bool isReadOnly: false               // 是否只读模式
 
+    // ✅ 2026-03-29 [Phase 7.48.88.57]: 未保存修改提示
+    property int _pendingCategory: -1  // 待切换的目标类别（-1=无待切换）
+
+    // 检查当前电机控制是否有未保存修改
+    function hasMotorUnsavedChanges() {
+        if (currentCategory !== 3) return false  // 不在电机控制
+        var motorPage = motorControlPageLoader.item
+        if (!motorPage) return false
+        return motorPage.modifiedMotorIndex >= 0
+    }
+
+    // 尝试切换类别（带未保存修改检查）
+    function tryChangeCategory(newIndex) {
+        if (newIndex === currentCategory) return
+        if (hasMotorUnsavedChanges()) {
+            _pendingCategory = newIndex
+            unsavedChangesDialog.open()
+        } else {
+            currentCategory = newIndex
+        }
+    }
+
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统
     property int currentFocusArea: 1              // 当前焦点区域 (0:顶部 1:左侧类别 2:右侧内容 3:底部)
     property int currentTopButtonIndex: 0         // 顶部按钮索引 (0:关闭 1:保存 2:重置)
@@ -459,7 +481,9 @@ Item {
             break
         case 1:  // 左侧类别
             if (currentCategory > 0) {
-                currentCategory--
+                // ✅ 2026-03-29 [Phase 7.48.88.57]: 使用 tryChangeCategory 检查未保存修改
+                // ❌ 旧代码: currentCategory--
+                tryChangeCategory(currentCategory - 1)
             }
             break
         case 2:  // 右侧内容 - 检查子区域
@@ -881,7 +905,9 @@ Item {
             // 旧：if (currentCategory < 9) — 最大只能到TCP控制(9)，无法到达MQTT(10)/逻辑控制(11)/沿线点位保护(12)
             // ✅ 2026-03-25 [Phase 7.48.88.10]: 修改最大值为12（匹配全部13个分类）
             if (currentCategory < 12) {
-                currentCategory++
+                // ✅ 2026-03-29 [Phase 7.48.88.57]: 使用 tryChangeCategory 检查未保存修改
+                // ❌ 旧代码: currentCategory++
+                tryChangeCategory(currentCategory + 1)
             }
             break
         case 2:  // 右侧内容 - 检查子区域
@@ -2455,8 +2481,10 @@ Item {
                         }
 
                         // ✅ 2026-01-24 [FIX]: 点击时更新类别和重置底部按钮索引
+                        // ✅ 2026-03-29 [Phase 7.48.88.57]: 使用 tryChangeCategory 检查未保存修改
                         onClicked: {
-                            root.currentCategory = index
+                            // ❌ 旧代码: root.currentCategory = index
+                            root.tryChangeCategory(index)
                             root.currentBottomButtonIndex = 0
                         }
                     }
@@ -3899,6 +3927,135 @@ Item {
             return null
         }
     }
+
+    // ✅ 2026-03-29 [Phase 7.48.88.57]: 未保存修改提示对话框
+    Rectangle {
+        id: unsavedChangesDialog
+        anchors.fill: parent
+        color: "#80000000"  // 半透明黑色遮罩
+        visible: false
+        z: 1000
+
+        function open() { visible = true; dialogFocusItem.forceActiveFocus() }
+        function close() { visible = false; root.forceActiveFocus() }
+
+        // 拦截所有鼠标事件，防止穿透
+        MouseArea { anchors.fill: parent; onClicked: {} }
+
+        // 对话框焦点项（接收键盘事件）
+        Item {
+            id: dialogFocusItem
+            focus: unsavedChangesDialog.visible
+            Keys.onReturnPressed: { unsavedChangesDialog.doSave(); event.accepted = true }
+            Keys.onEscapePressed: { unsavedChangesDialog.doDiscard(); event.accepted = true }
+            Keys.onLeftPressed: { dialogSaveBtn.focus = true; event.accepted = true }
+            Keys.onRightPressed: { dialogDiscardBtn.focus = true; event.accepted = true }
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: 420
+            height: 200
+            color: "#1e2336"
+            border.color: "#00d4ff"
+            border.width: 2
+            radius: 8
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 20
+
+                Text {
+                    text: "电机控制有未保存的修改"
+                    font.pixelSize: 18
+                    font.weight: Font.Bold
+                    color: "#FFC107"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                Text {
+                    text: "是否保存当前修改？"
+                    font.pixelSize: 15
+                    color: "#E0E0E0"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                Row {
+                    spacing: 30
+                    anchors.horizontalCenter: parent.horizontalCenter
+
+                    Button {
+                        id: dialogSaveBtn
+                        text: "保存 (Enter)"
+                        width: 150
+                        height: 40
+                        background: Rectangle {
+                            color: dialogSaveBtn.activeFocus || dialogSaveBtn.hovered ? "#2ecc71" : "#27ae60"
+                            radius: 4
+                            border.color: dialogSaveBtn.activeFocus ? "#2196F3" : "transparent"
+                            border.width: dialogSaveBtn.activeFocus ? 3 : 0
+                        }
+                        contentItem: Text {
+                            text: parent.text; font.pixelSize: 14; font.bold: true; color: "white"
+                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: unsavedChangesDialog.doSave()
+                    }
+
+                    Button {
+                        id: dialogDiscardBtn
+                        text: "放弃 (Esc)"
+                        width: 150
+                        height: 40
+                        background: Rectangle {
+                            color: dialogDiscardBtn.activeFocus || dialogDiscardBtn.hovered ? "#e74c3c" : "#c0392b"
+                            radius: 4
+                            border.color: dialogDiscardBtn.activeFocus ? "#2196F3" : "transparent"
+                            border.width: dialogDiscardBtn.activeFocus ? 3 : 0
+                        }
+                        contentItem: Text {
+                            text: parent.text; font.pixelSize: 14; font.bold: true; color: "white"
+                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: unsavedChangesDialog.doDiscard()
+                    }
+                }
+            }
+        }
+
+        // 保存并切换
+        function doSave() {
+            var motorPage = motorControlPageLoader.item
+            if (motorPage) {
+                motorPage.saveMotorConfig()
+                console.log("✅ [DeviceSettingsDialog] 未保存修改已保存")
+            }
+            close()
+            if (root._pendingCategory >= 0) {
+                root.currentCategory = root._pendingCategory
+                root._pendingCategory = -1
+            }
+        }
+
+        // 放弃修改并切换
+        function doDiscard() {
+            var motorPage = motorControlPageLoader.item
+            if (motorPage) {
+                // 重新加载配置（恢复到修改前的值）
+                motorPage.modifiedMotorIndex = -1
+                motorPage.loadMotorConfig()
+                // 刷新电机��表状态（恢复到数据库值）
+                motorPage.loadAllMotorStatuses()
+                console.log("✅ [DeviceSettingsDialog] 未保存修改已放弃")
+            }
+            close()
+            if (root._pendingCategory >= 0) {
+                root.currentCategory = root._pendingCategory
+                root._pendingCategory = -1
+            }
+        }
+    }
+
         }  // Rectangle (root)
     }  // FocusScope (dialogFocusScope)
 }  // Item (modalContainer)

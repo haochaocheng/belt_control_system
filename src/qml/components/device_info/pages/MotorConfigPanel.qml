@@ -34,6 +34,7 @@ Rectangle {
 
     // ✅ 2026-03-29 [Phase 7.48.88.57]: 转发 BasicConfigTab 的实时预览和修改状态信号
     signal motorEnabledPreviewChanged(bool enabled)
+    signal outputChannelPreviewChanged(int channel)
     signal configModifiedStateChanged(bool modified)
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.3]: 移除旧的键盘导航支持
@@ -292,6 +293,9 @@ Rectangle {
                         // ✅ 2026-03-29 [Phase 7.48.88.57]: 转发运行状态预览和修改状态信号
                         item.motorEnabledPreviewChanged.connect(function(enabled) {
                             root.motorEnabledPreviewChanged(enabled)
+                        })
+                        item.outputChannelPreviewChanged.connect(function(channel) {
+                            root.outputChannelPreviewChanged(channel)
                         })
                         item.configModifiedStateChanged.connect(function(modified) {
                             root.configModifiedStateChanged(modified)
