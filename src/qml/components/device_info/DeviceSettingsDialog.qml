@@ -88,7 +88,9 @@ Item {
         if (currentCategory !== 3) return false  // 不在电机控制
         var motorPage = motorControlPageLoader.item
         if (!motorPage) return false
-        return motorPage.modifiedMotorIndex >= 0
+        // ✅ 2026-03-29 [Phase 7.48.88.60]: 适配数组追踪
+        // 旧代码: return motorPage.modifiedMotorIndex >= 0
+        return motorPage.modifiedMotorIndices && motorPage.modifiedMotorIndices.length > 0
     }
 
     // 尝试切换类别（带未保存修改检查）
@@ -4042,7 +4044,9 @@ Item {
             var motorPage = motorControlPageLoader.item
             if (motorPage) {
                 // 重新加载配置（恢复到修改前的值）
-                motorPage.modifiedMotorIndex = -1
+                // ✅ 2026-03-29 [Phase 7.48.88.60]: 适配数组追踪，清除所有修改标记
+                // 旧代码: motorPage.modifiedMotorIndex = -1
+                motorPage.modifiedMotorIndices = []
                 motorPage.loadMotorConfig()
                 // 刷新电机��表状态（恢复到数据库值）
                 motorPage.loadAllMotorStatuses()
