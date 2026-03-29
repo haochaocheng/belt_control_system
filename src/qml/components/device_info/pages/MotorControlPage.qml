@@ -694,7 +694,6 @@ Rectangle {
                 currentTab2.configModified = false
                 currentTab2.configModifiedStateChanged(false)
             }
-            }
         } else {
             console.log("❌ [MotorControlPage] 保存失败")
         }
