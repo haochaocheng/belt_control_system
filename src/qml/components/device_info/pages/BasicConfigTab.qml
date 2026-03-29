@@ -46,8 +46,35 @@ Rectangle {
     // default模式：{baseDir}/{belt}#PD/{filename}.wav
     // tts模式：{baseDir}/paddlespeech-{model}-spk{id}/{belt}#PD/{filename}.wav
 
-    // ✅ 2026-03-29 [Phase 7.48.88.56]: ���机投入/禁用状态
+    // ✅ 2026-03-29 [Phase 7.48.88.56]: 电机投入/禁用状态
     property bool motorEnabled: true  // true=投入, false=禁用
+
+    // ✅ 2026-03-29 [Phase 7.48.88.57]: 参数修改检测
+    property bool configModified: false  // 参数是否被修改（未保存）
+    property bool _suppressModified: false  // applyConfig期间抑制修改检测
+
+    // ✅ 2026-03-29 [Phase 7.48.88.57]: 运行状态实时预览信号（不等保存，立即同步到电机列表）
+    signal motorEnabledPreviewChanged(bool enabled)
+
+    // ✅ 2026-03-29 [Phase 7.48.88.57]: 参数修改状态变化信号
+    signal configModifiedStateChanged(bool modified)
+
+    onMotorEnabledChanged: {
+        if (!_suppressModified) {
+            configModified = true
+            configModifiedStateChanged(true)
+            motorEnabledPreviewChanged(motorEnabled)
+        }
+    }
+
+    // ✅ 2026-03-29 [Phase 7.48.88.57]: 标记参数已修改（各控件 onValueChanged 调用）
+    function markModified() {
+        if (!_suppressModified) {
+            configModified = true
+            configModifiedStateChanged(true)
+        }
+    }
+
     function buildAudioPath(beltNum, filename) {
         if (audioSourceCombo.currentIndex === 0) {
             // 默认音频
@@ -342,6 +369,7 @@ Rectangle {
                     value: 1
                     editable: true
                     keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
+                    onValueChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
@@ -432,6 +460,7 @@ Rectangle {
                     value: root.motorIndex < 5 ? root.motorIndex + 1 : -1
                     editable: true
                     keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
+                    onValueChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                 }
 
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24]: 鼠标点击同步焦点索引
@@ -484,6 +513,7 @@ Rectangle {
                     id: useFeedbackSwitch
                     anchors.verticalCenter: parent.verticalCenter
                     checked: true  // 默认启用反馈
+                    onCheckedChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
 
                     indicator: Rectangle {
                         implicitWidth: 52; implicitHeight: 26
@@ -562,6 +592,7 @@ Rectangle {
                     value: root.motorIndex
                     editable: true
                     keyboardManager: root.keyboardManager
+                    onValueChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                 }
 
                 MouseArea {
@@ -606,6 +637,7 @@ Rectangle {
                     value: 3  // 默认3秒
                     editable: true
                     keyboardManager: root.keyboardManager
+                    onValueChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                     // suffix 不支持，用标签说明单位
                 }
 
@@ -654,6 +686,7 @@ Rectangle {
                     value: 8  // ✅ 2026-03-12: 默认8秒（原5秒）
                     editable: true
                     keyboardManager: root.keyboardManager
+                    onValueChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                 }
 
                 MouseArea {
@@ -700,6 +733,7 @@ Rectangle {
                     value: 8
                     editable: true
                     keyboardManager: root.keyboardManager
+                    onValueChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                 }
 
                 MouseArea {
@@ -738,13 +772,14 @@ Rectangle {
                 DeviceInfo.CustomTextField {
                     id: warningVoiceField
                     anchors.fill: parent
-                    // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名（不含扩展名）
+                    // ✅ 2026-03-11 [Phase 7.48.37]: 改���音频文件名（不含扩展名）
                     // 旧：text: "电机" + (root.motorIndex + 1) + "启动预警"
                     text: "电机" + (root.motorIndex + 1) + "启动"
                     placeholderText: "预警音频文件名"
                     placeholderTextColor: "#6E6E6E"
                     color: "#E0E0E0"
                     keyboardManager: root.keyboardManager
+                    onTextChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                 }
 
                 MouseArea {
@@ -786,6 +821,7 @@ Rectangle {
                     placeholderTextColor: "#6E6E6E"
                     color: "#E0E0E0"
                     keyboardManager: root.keyboardManager
+                    onTextChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                 }
 
                 MouseArea {
@@ -830,6 +866,7 @@ Rectangle {
                             "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
                             "A", "B", "C", "D", "E", "F", "G", "H"]
                     currentIndex: 0
+                    onCurrentIndexChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                 }
 
                 MouseArea {
@@ -868,6 +905,7 @@ Rectangle {
                 // 旧：ComboBox audioSourceCombo
                 // 提供兼容属性，让collectConfig/applyConfig中的audioSourceCombo引用仍然有效
                 property int audioSourceIndex: 1  // 0=默认, 1=TTS合成（默认TTS）
+                onAudioSourceIndexChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                 Item {
                     id: audioSourceCombo
                     property int currentIndex: parent.audioSourceIndex
@@ -1669,6 +1707,9 @@ Rectangle {
             return
         }
 
+        // ✅ 2026-03-29 [Phase 7.48.88.57]: 抑制修改检测（加载配置不算"修改"）
+        root._suppressModified = true
+
         // ✅ 2026-03-29 [Phase 7.48.88.56.2]: 统一使用"先重置默认值，再从配置覆盖"模式
         // 原因：旧代码用 if (config["xxx"] !== undefined) 模式，切换电机时如果新电机无保存配置，
         //       缺失字段会保留上一个电机的值（startup_delay, stop_delay, warning_voice 等6个字段残留）
@@ -1691,5 +1732,10 @@ Rectangle {
 
         // 音频来源
         audioSourceCombo.currentIndex = (config["audio_source"] === "tts") ? 1 : 0
+
+        // ✅ 2026-03-29 [Phase 7.48.88.57]: 恢复修改检测，重置修改标记
+        root._suppressModified = false
+        root.configModified = false
+        root.configModifiedStateChanged(false)
     }
 }

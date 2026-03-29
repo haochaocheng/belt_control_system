@@ -20,9 +20,13 @@ Rectangle {
 
     // ✅ 2026-03-29 [Phase 7.48.88.56]: 电机状态数组（从父组件 MotorControlPage 传入）
     // 每个元素: { enabled: bool, outputChannel: int }
-    // enabled=true: 投入（绿色）, enabled=false: 禁用（灰色）
+    // enabled=true: 投入（绿色）, enabled=false: 禁用（灰���）
     // outputChannel=-1: 未配置（暗灰色）
     property var motorStatusList: []
+
+    // ✅ 2026-03-29 [Phase 7.48.88.57]: 参数已修改的电机索引（-1=无修改）
+    // 当某电机参数被修改但未保存时，在其名称左侧显示 ● 标记
+    property int modifiedMotorIndex: -1
 
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加调试日志
     onCurrentMotorIndexChanged: {
@@ -151,8 +155,21 @@ Rectangle {
                 anchors.left: parent.left
             }
 
+            // ✅ 2026-03-29 [Phase 7.48.88.57]: 参数已修改标记（未保存时显示）
+            Text {
+                text: "●"
+                font.pixelSize: 12
+                color: "#FFC107"  // 黄色警示
+                visible: root.modifiedMotorIndex === index
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.right: motorNameText.left
+                anchors.rightMargin: 4
+                z: 5
+            }
+
             // ✅ 2026-01-26 [FIX 100.300.25.5]: 电机名称居中显示
             Text {
+                id: motorNameText
                 text: (index + 1) + "号电机"
                 // ✅ 2026-01-26 [FIX 100.300.25.14]: 调整字体，使二级标题比一级标题小
                 font.pixelSize: 14  // 从 16 改为 14（与一级标题相同）

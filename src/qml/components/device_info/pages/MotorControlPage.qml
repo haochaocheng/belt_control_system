@@ -26,6 +26,9 @@ Rectangle {
     // ✅ 2026-03-29 [Phase 7.48.88.56]: 电机状态列表（传递给 MyMotorListPanel）
     property var motorStatusList: []
 
+    // ✅ 2026-03-29 [Phase 7.48.88.57]: 当前正在编辑的电机修改标记（-1=无修改）
+    property int modifiedMotorIndex: -1
+
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引
     // ✅ 2026-01-30 [FIX 100.300.106.2]: 修正 focusSubArea 定义
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11]: 添加 focusButtonIndex
@@ -117,6 +120,8 @@ Rectangle {
             root.focusItemIndex = motorListIndex
             console.log("  - 更新后 currentMotorIndex:", root.currentMotorIndex)
             console.log("  - 更新后 focusItemIndex:", root.focusItemIndex)
+            // ✅ 2026-03-29 [Phase 7.48.88.57]: 切换电机时清除修改标记（未保存的修改丢弃）
+            root.modifiedMotorIndex = -1
             // ✅ 2026-02-02 [参数持久化]: 切换电机时加载配置
             Qt.callLater(root.loadMotorConfig)
         }
@@ -393,6 +398,8 @@ Rectangle {
                     item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
                     // ✅ 2026-03-29 [Phase 7.48.88.56]: 传递电机状态列表
                     item.motorStatusList = Qt.binding(function() { return root.motorStatusList })
+                    // ✅ 2026-03-29 [Phase 7.48.88.57]: 传递修改标记索引
+                    item.modifiedMotorIndex = Qt.binding(function() { return root.modifiedMotorIndex })
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.17]: 鼠标点击时同步更新 focusItemIndex 和 NavigationManager
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加详细调试日志和 currentArea 检查
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.20]: 添加强制恢复焦点
@@ -457,6 +464,26 @@ Rectangle {
                         // 更新 NavigationManager 的 paramIndex
                         // NavigationManager 会自动触发 focusParamIndex 的更新
                         navigationManager.paramIndex = paramIndex
+                    })
+
+                    // ✅ 2026-03-29 [Phase 7.48.88.57]: 连接运行状态实时预览信号
+                    // 切换投入/禁用时立即更新电机列表显示（不等保存）
+                    item.motorEnabledPreviewChanged.connect(function(enabled) {
+                        console.log("✅ [MotorControlPage] 运行状态预览:", enabled ? "投入" : "禁用", "电机:", root.currentMotorIndex)
+                        var newList = root.motorStatusList.slice()  // 浅拷贝数组
+                        if (root.currentMotorIndex < newList.length) {
+                            newList[root.currentMotorIndex] = {
+                                enabled: enabled,
+                                outputChannel: newList[root.currentMotorIndex].outputChannel
+                            }
+                            root.motorStatusList = newList  // 赋新数组触发 QML 绑定更新
+                        }
+                    })
+
+                    // ✅ 2026-03-29 [Phase 7.48.88.57]: 连接参数修改状态信号
+                    // 修改时在电机列表显示标记，保存后清除
+                    item.configModifiedStateChanged.connect(function(modified) {
+                        root.modifiedMotorIndex = modified ? root.currentMotorIndex : -1
                     })
 
                     // ✅ 2026-03-22 [Phase 7.48.81]: 首次加载时主动加载电机配置
@@ -777,6 +804,16 @@ Rectangle {
             // ✅ 2026-03-29 [Phase 7.48.88.56]: 保存后刷新电机状态列表
             if (root.focusTabIndex === 0) {
                 root.loadAllMotorStatuses()
+            }
+
+            // ✅ 2026-03-29 [Phase 7.48.88.57]: 保存成功，清除修改标记
+            root.modifiedMotorIndex = -1
+            // 同时通知 BasicConfigTab 重置 configModified
+            var currentTab2 = motorConfigPanel.item ? motorConfigPanel.item.getCurrentTab() : null
+            if (currentTab2 && currentTab2.configModified !== undefined) {
+                currentTab2.configModified = false
+                currentTab2.configModifiedStateChanged(false)
+            }
             }
         } else {
             console.log("❌ [MotorControlPage] 保存失败")
