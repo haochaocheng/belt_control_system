@@ -45,6 +45,9 @@ Rectangle {
     // ✅ 2026-03-12: 根据音频来源构建音频文件路径
     // default模式：{baseDir}/{belt}#PD/{filename}.wav
     // tts模式：{baseDir}/paddlespeech-{model}-spk{id}/{belt}#PD/{filename}.wav
+
+    // ✅ 2026-03-29 [Phase 7.48.88.56]: ���机投入/禁用状态
+    property bool motorEnabled: true  // true=投入, false=禁用
     function buildAudioPath(beltNum, filename) {
         if (audioSourceCombo.currentIndex === 0) {
             // 默认音频
@@ -150,7 +153,7 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 运行状态输入（RadioButton 组）
+            // ✅ 2026-03-29 [Phase 7.48.88.56]: 运行状态输入（可通过回车键切换投入/禁用）
             Item {
                 Layout.column: 1
                 Layout.row: 0
@@ -182,12 +185,15 @@ Rectangle {
                                 radius: 5
                                 color: "#2196F3"
                                 anchors.centerIn: parent
-                                visible: true  // 默认选中
+                                // ✅ 2026-03-29: 绑定到 motorEnabled 属性
+                                // ❌ 旧代码: visible: true  // 硬编码
+                                visible: root.motorEnabled
                             }
 
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: {
+                                    root.motorEnabled = true
                                     console.log((root.motorIndex + 1) + "号电机: 投入")
                                 }
                             }
@@ -196,7 +202,7 @@ Rectangle {
                         Text {
                             text: "投入"
                             font.pixelSize: 21
-                            color: "#E0E0E0"
+                            color: root.motorEnabled ? "#4CAF50" : "#E0E0E0"
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
@@ -220,12 +226,15 @@ Rectangle {
                                 radius: 5
                                 color: "#2196F3"
                                 anchors.centerIn: parent
-                                visible: false  // 默认不选中
+                                // ✅ 2026-03-29: 绑定到 motorEnabled 属性
+                                // ❌ 旧代码: visible: false  // 硬编码
+                                visible: !root.motorEnabled
                             }
 
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: {
+                                    root.motorEnabled = false
                                     console.log((root.motorIndex + 1) + "号电机: 禁用")
                                 }
                             }
@@ -234,7 +243,7 @@ Rectangle {
                         Text {
                             text: "禁用"
                             font.pixelSize: 21
-                            color: "#E0E0E0"
+                            color: !root.motorEnabled ? "#FF5722" : "#E0E0E0"
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
@@ -262,22 +271,28 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // 模块类型输入（只读显示框）
+            // ✅ 2026-03-29 [Phase 7.48.88.56]: 模块类型样式改为与 CustomSpinBox 一致
+            // 原因：旧样式使用纯色背景 Rectangle，与其他参数输入框的 034.png 背景不一致
             Item {
                 Layout.column: 3
                 Layout.row: 0
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: moduleTypeDisplay.implicitHeight  // ✅ 引用 Rectangle 的 implicitHeight
+                implicitHeight: 48  // ✅ 与 CustomSpinBox 高度一致（48px）
 
                 Rectangle {
                     id: moduleTypeDisplay
                     anchors.fill: parent
-                    color: "#2d3548"
-                    border.color: "#3d4556"
-                    border.width: 1
-                    radius: 2
-                    implicitHeight: 60  // ✅ 设置固定高度
+                    color: "transparent"
+                    // ❌ 2026-03-29: 旧样式 color: "#2d3548"; border.color: "#3d4556"; border.width: 1; radius: 2; implicitHeight: 60
+
+                    // ✅ 使用与 CustomSpinBox 相同的 034.png 背景图片
+                    Image {
+                        anchors.fill: parent
+                        source: "../images/034.png"
+                        fillMode: Image.Stretch
+                        z: -1
+                    }
 
                     Text {
                         anchors.centerIn: parent
@@ -1504,8 +1519,10 @@ Rectangle {
 
         switch(paramIndex) {
         case 0:  // 运行状态（RadioButton 组）
-            console.log("✅ [BasicConfigTab] 切换运行状态")
-            // TODO: 切换运行状态
+            // ✅ 2026-03-29 [Phase 7.48.88.56]: 回车键切换投入/禁用
+            // ❌ 旧代码: // TODO: 切换运行状态
+            root.motorEnabled = !root.motorEnabled
+            console.log("✅ [BasicConfigTab] 切换运行状态:", root.motorEnabled ? "投入" : "禁用")
             break
         case 1:  // 模块类型（只读）
             console.log("✅ [BasicConfigTab] 模块类型（只读）")
@@ -1618,7 +1635,7 @@ Rectangle {
 
         // 收集所有参数字段
         // 注意：运行状态使用自定义 RadioButton，需要检查内部 Rectangle 的 visible 属性
-        config["running_state"] = "投入"  // 默认值，实际应该从 RadioButton 状态读取
+        config["running_state"] = root.motorEnabled ? "投入" : "禁用"  // ✅ 2026-03-29 [Phase 7.48.88.56]: 保存实际状态
         // 旧：config["module_type"] = "继电器模块"  // 固定值（不存入数据库）
         // 旧：config["module_address"] = moduleAddressSpin.value || 1
         config["motor_module_address"] = moduleAddressSpin.value || 1
@@ -1653,6 +1670,10 @@ Rectangle {
         }
 
         // 应用所有参数字段
+        // ✅ 2026-03-29 [Phase 7.48.88.56]: 加载运行状态（投入/禁用）
+        if (config["running_state"] !== undefined) {
+            root.motorEnabled = (config["running_state"] === "投入")
+        }
         // 旧：config["module_address"]
         if (config["motor_module_address"] !== undefined) {
             moduleAddressSpin.value = config["motor_module_address"]

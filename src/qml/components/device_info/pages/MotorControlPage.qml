@@ -23,6 +23,9 @@ Rectangle {
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.25.6]: 暴露 navigationManager 供外部访问
     property alias navigationManager: navigationManager
 
+    // ✅ 2026-03-29 [Phase 7.48.88.56]: 电机状态列表（传递给 MyMotorListPanel）
+    property var motorStatusList: []
+
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航焦点索引
     // ✅ 2026-01-30 [FIX 100.300.106.2]: 修正 focusSubArea 定义
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11]: 添加 focusButtonIndex
@@ -95,6 +98,9 @@ Rectangle {
                 }
                 // ✅ 2026-03-22 [Phase 7.48.74]: 更新参数行映射（用于非均匀网格导航）
                 navigationManager.paramRows = root.getParamRows()
+
+                // ✅ 2026-03-29 [Phase 7.48.88.56]: 初始化时加载所有电机状态
+                root.loadAllMotorStatuses()
             })
         }
 
@@ -385,6 +391,8 @@ Rectangle {
                     item.currentMotorIndex = Qt.binding(function() { return root.currentMotorIndex })
                     // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引
                     item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
+                    // ✅ 2026-03-29 [Phase 7.48.88.56]: 传递电机状态列表
+                    item.motorStatusList = Qt.binding(function() { return root.motorStatusList })
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.17]: 鼠标点击时同步更新 focusItemIndex 和 NavigationManager
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加详细调试日志和 currentArea 检查
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.20]: 添加强制恢复焦点
@@ -765,11 +773,35 @@ Rectangle {
                 console.log("✅ [MotorControlPage] 已同步反馈配置到CommonControl -", motorName,
                            "useFeedback:", useFeedback, "channel:", feedbackChannel, "delay:", feedbackDelay)
             }
+
+            // ✅ 2026-03-29 [Phase 7.48.88.56]: 保存后刷新电机状态列表
+            if (root.focusTabIndex === 0) {
+                root.loadAllMotorStatuses()
+            }
         } else {
             console.log("❌ [MotorControlPage] 保存失败")
         }
 
         return success
+    }
+
+    // ✅ 2026-03-29 [Phase 7.48.88.56]: 加载所有8个电机的状态（投入/禁用/未配置）
+    // 用于 MyMotorListPanel 显示每个电机的实际状态
+    function loadAllMotorStatuses() {
+        var statusList = []
+        for (var i = 0; i < 8; i++) {
+            var config = deviceConfigMgr.loadMotorConfig(root.deviceId, i, 0)  // tab 0 = 基本配置
+            if (config && Object.keys(config).length > 0) {
+                var enabled = (config["running_state"] !== "禁用")  // 默认投入
+                var outputChannel = (config["output_channel"] !== undefined) ? config["output_channel"] : -1
+                statusList.push({ enabled: enabled, outputChannel: outputChannel })
+            } else {
+                // 未保存配置：使用默认值（电机1-5默认有通道，6-8无通道）
+                statusList.push({ enabled: true, outputChannel: i < 5 ? i + 1 : -1 })
+            }
+        }
+        root.motorStatusList = statusList
+        console.log("✅ [MotorControlPage] 已加载8个电机状态")
     }
 
     // ✅ 2026-02-02 [参数持久化]: 加载电机配置

@@ -18,6 +18,12 @@ Rectangle {
     // ========== 公开属性 ==========
     property int currentMotorIndex: 0  // 当前选中的电机索引 (0-7)
 
+    // ✅ 2026-03-29 [Phase 7.48.88.56]: 电机状态数组（从父组件 MotorControlPage 传入）
+    // 每个元素: { enabled: bool, outputChannel: int }
+    // enabled=true: 投入（绿色）, enabled=false: 禁用（灰色）
+    // outputChannel=-1: 未配置（暗灰色）
+    property var motorStatusList: []
+
     // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.19]: 添加调试日志
     onCurrentMotorIndexChanged: {
         console.log("🔍 [DEBUG] MyMotorListPanel.currentMotorIndex 变化:", currentMotorIndex)
@@ -155,7 +161,8 @@ Rectangle {
                 anchors.centerIn: parent
             }
 
-            // ✅ 2026-01-26 [FIX 100.300.25.5]: 状态指示放在最右侧
+            // ✅ 2026-03-29 [Phase 7.48.88.56]: 状态指示（从 motorStatusList 获取实际状态）
+            // ❌ 旧代码: 硬编码 color: "#4CAF50" text: "运行中"
             Row {
                 spacing: 8
                 anchors.right: parent.right
@@ -166,12 +173,27 @@ Rectangle {
                     width: 8
                     height: 8
                     radius: 4
-                    color: "#4CAF50"  // 绿色表示运行中
+                    // 绿色=投入, 灰色=禁用/未配置
+                    color: {
+                        if (index < root.motorStatusList.length) {
+                            var status = root.motorStatusList[index]
+                            if (status && status.outputChannel >= 0 && status.enabled) return "#4CAF50"  // 绿色：投入
+                            if (status && status.outputChannel >= 0 && !status.enabled) return "#FF5722"  // 红色：禁用
+                        }
+                        return "#555555"  // 暗灰：未配置
+                    }
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 Text {
-                    text: "运行中"
+                    text: {
+                        if (index < root.motorStatusList.length) {
+                            var status = root.motorStatusList[index]
+                            if (status && status.outputChannel >= 0 && status.enabled) return "投入"
+                            if (status && status.outputChannel >= 0 && !status.enabled) return "禁用"
+                        }
+                        return "未配置"
+                    }
                     font.pixelSize: 12
                     color: "#9E9E9E"
                 }
