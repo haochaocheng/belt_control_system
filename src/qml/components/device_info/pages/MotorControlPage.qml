@@ -637,7 +637,10 @@ Rectangle {
 
     // ✅ 2026-02-02 [参数持久化]: 保存电机配置
     function saveMotorConfig() {
-        console.log("✅ [MotorControlPage] 保存电机配置 - 设备:", root.deviceId, "电机:", root.currentMotorIndex, "Tab:", root.focusTabIndex)
+        // ✅ 2026-03-29 [Phase 7.48.88.63]: 使用实际显示Tab索引，而非导航焦点Tab索引
+        // 旧代码: root.focusTabIndex（焦点在参数区域时为-1，导致保存失败）
+        var actualTabIndex = motorConfigPanel.item ? motorConfigPanel.item.currentTabIndex : root.focusTabIndex
+        console.log("✅ [MotorControlPage] 保存电机配置 - 设备:", root.deviceId, "电机:", root.currentMotorIndex, "Tab:", actualTabIndex, "(focusTabIndex:", root.focusTabIndex, ")")
 
         // 获取当前 Tab 的参数
         var currentTab = motorConfigPanel.item ? motorConfigPanel.item.getCurrentTab() : null
@@ -658,7 +661,9 @@ Rectangle {
             "乙相绕组", "丙相绕组", "电机温度", "水平振动", "垂直振动",
             "堵转保护", "起动超时", "功率保护", "三相不平衡"
         ]
-        config["tab_name"] = tabNames[root.focusTabIndex] || "未知Tab"
+        // ✅ 2026-03-29 [Phase 7.48.88.63]: 使用实际Tab索引
+        // 旧代码: config["tab_name"] = tabNames[root.focusTabIndex] || "未知Tab"
+        config["tab_name"] = tabNames[actualTabIndex] || "未知Tab"
 
         // 调用 Tab 的 collectConfig() 方法收集参数
         if (typeof currentTab.collectConfig === "function") {
@@ -676,7 +681,9 @@ Rectangle {
         var success = deviceConfigMgr.saveMotorConfig(
             root.deviceId,
             root.currentMotorIndex,
-            root.focusTabIndex,
+            // ✅ 2026-03-29 [Phase 7.48.88.63]: 使用实际Tab索引
+            // 旧代码: root.focusTabIndex
+            actualTabIndex,
             config
         )
 
