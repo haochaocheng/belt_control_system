@@ -1670,7 +1670,10 @@ Rectangle {
         }
 
         // 应用所有参数字段
-        // ✅ 2026-03-29 [Phase 7.48.88.56]: 加载运行状态（投入/禁用）
+        // ✅ 2026-03-29 [Phase 7.48.88.56.1]: 先重置 motorEnabled 为默认值，再从配置覆盖
+        // 原因：切换电机时，如果新电机没有保存过配置（无 running_state 字段），
+        //       motorEnabled 会保留上一个电机的值，导致所有电机显示相同状态
+        root.motorEnabled = true  // 默认投入
         if (config["running_state"] !== undefined) {
             root.motorEnabled = (config["running_state"] === "投入")
         }
