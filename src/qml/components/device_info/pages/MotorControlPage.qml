@@ -76,6 +76,10 @@ Rectangle {
     DeviceInfo.NavigationManager {
         id: navigationManager
 
+        // ✅ 2026-03-29 [Phase 7.48.88.59]: 底部按钮已删除，跳过按钮区域导航
+        // 旧代码: skipButtonArea默认false
+        skipButtonArea: true
+
         // 初始化：从电机列表区开始
         Component.onCompleted: {
             currentArea = areaMotorList
@@ -499,6 +503,12 @@ Rectangle {
                         root.modifiedMotorIndex = modified ? root.currentMotorIndex : -1
                     })
 
+                    // ✅ 2026-03-29 [Phase 7.48.88.59]: 连接输出通道冲突检查信号
+                    // 当修改输出通道时，检查是否被其他电机占用，自动将被占用电机通道设为-1
+                    item.requestOutputChannelConflictCheck.connect(function(motorIdx, newChannel) {
+                        root.handleOutputChannelConflict(motorIdx, newChannel)
+                    })
+
                     // ✅ 2026-03-22 [Phase 7.48.81]: 首次加载时主动加载电机配置
                     // 原因：currentMotorIndex 初始值为0，不触发 onCurrentMotorIndexChanged，
                     // 导致首次显示1号电机时使用默认值而非数据库保存的配置
@@ -507,173 +517,30 @@ Rectangle {
             }
         }
 
-        // ========== 底部：按钮区域 ==========
-        // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11]: 添加底部按钮区域
+        // ✅ 2026-03-29 [Phase 7.48.88.59]: 通道冲突提示条（在上部和底部按钮之间）
         Rectangle {
             Layout.fillWidth: true
-            // ✅ 2026-03-10 [Phase 7.48.29]: 从两行按钮改为单行（删除"添加电机保护"和"删除电机保护"）
-            // 旧：Layout.preferredHeight: 90  // 两行按钮，每行35高度 + 间距
-            Layout.preferredHeight: 55  // 单行按钮：35高度 + 上下间距
-            color: "#1a1f2e"
+            Layout.preferredHeight: root.channelConflictMessage.length > 0 ? 32 : 0
+            color: "#FFF3E0"
+            visible: root.channelConflictMessage.length > 0
 
-            // 装饰边框
-            Rectangle {
-                anchors.top: parent.top
-                width: parent.width
-                height: 2
-                color: "#00d4ff"
-                opacity: 0.3
+            Text {
+                anchors.centerIn: parent
+                text: root.channelConflictMessage
+                font.pixelSize: 14
+                font.bold: true
+                color: "#E65100"
             }
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 10
-
-                // ✅ 2026-03-10 [Phase 7.48.29]: 删除第一行按钮（添加电机保护 + 删除电机保护）
-                // 旧：第一行 [0] 添加电机保护 [1] 删除电机保护
-                //     第二行 [2] 保存 [3] 删除 [4] 重置
-                // 新：单行 [0] 保存 [1] 删除 [2] 重置
-
-                // 保存、删除、重置
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
-
-                    Button {
-                        id: saveButton
-                        text: "保存"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
-                            // 焦点时背景色更亮
-                            color: {
-                                // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 2，改为 0
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 0) {
-                                    return "#2ecc71"  // 焦点时：亮绿色
-                                } else if (parent.pressed) {
-                                    return "#27ae60"
-                                } else if (parent.hovered) {
-                                    return "#2ecc71"
-                                } else {
-                                    return "#27ae60"
-                                }
-                            }
-                            radius: 4
-                            // 增加边框宽度：2px → 5px
-                            // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 2，改为 0
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [MotorControlPage] 保存")
-                            // ✅ 2026-02-02 [参数持久化]: 调用保存函数
-                            root.saveMotorConfig()
-                        }
-                    }
-
-                    Button {
-                        id: deleteButton
-                        text: "删除"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
-                            // 焦点时背景色更亮
-                            color: {
-                                // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 3，改为 1
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 1) {
-                                    return "#e74c3c"  // 焦点时：亮橙色
-                                } else if (parent.pressed) {
-                                    return "#c0392b"
-                                } else if (parent.hovered) {
-                                    return "#e74c3c"
-                                } else {
-                                    return "#d35400"
-                                }
-                            }
-                            radius: 4
-                            // 增加边框宽度：2px → 5px
-                            // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 3，改为 1
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 1 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [MotorControlPage] 删除")
-                            // ✅ 2026-03-10 [Phase 7.48.31]: 实现删除功能（恢复默认值）
-                            root.resetMotorConfigToDefaults()
-                        }
-                    }
-
-                    Button {
-                        id: resetButton
-                        text: "重置"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.11.2]: 增强焦点指示器
-                            // 焦点时背景色更亮
-                            color: {
-                                // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 4，改为 2
-                                if (root.focusSubArea === 3 && root.focusButtonIndex === 2) {
-                                    return "#95a5a6"  // 焦点时：亮灰色
-                                } else if (parent.pressed) {
-                                    return "#7f8c8d"
-                                } else if (parent.hovered) {
-                                    return "#95a5a6"
-                                } else {
-                                    return "#7f8c8d"
-                                }
-                            }
-                            radius: 4
-                            // 增加边框宽度：2px → 5px
-                            // ✅ 2026-03-10 [Phase 7.48.29]: 旧 focusButtonIndex === 4，改为 2
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 2 ? 5 : 0
-                            border.color: "#2196F3"
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: {
-                            console.log("✅ [MotorControlPage] 重置")
-                            // ✅ 2026-03-10 [Phase 7.48.31]: 实现重置功能（重新加载数据库值）
-                            root.loadMotorConfig()
-                        }
-                    }
-                }
+            Behavior on Layout.preferredHeight {
+                NumberAnimation { duration: 200 }
             }
         }
+
+        // ✅ 2026-03-29 [Phase 7.48.88.59]: 删除底部按钮区域（保存/删除/重置）
+        // 原因：电机配置底部的保存/删除/重置按钮与DeviceSettingsDialog的保存按钮重复
+        // 保存/删除/重置功能仍可通过DeviceSettingsDialog的按钮和键盘操作触发
+        // 旧代码: Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 55 ... 保存/删除/重置按钮 ... }
     }
 
     // ✅ 2026-01-30 [FIX 100.300.106]: 导航函数
@@ -924,5 +791,52 @@ Rectangle {
         } else {
             console.log("⚠️ [MotorControlPage] 删除配置失败")
         }
+    }
+
+    // ✅ 2026-03-29 [Phase 7.48.88.59]: 通道冲突提示信息
+    property string channelConflictMessage: ""
+
+    // ✅ 2026-03-29 [Phase 7.48.88.59]: 输出通道冲突检查与自动交换
+    // 继电器模块共12个通道，已全部分��。切换通道时检测被占用电机，自动将其通道设为-1
+    function handleOutputChannelConflict(currentMotorIdx, newChannel) {
+        if (newChannel < 0) return  // -1表示未配置，无需检查
+
+        console.log("✅ [MotorControlPage] 检查通道冲突 - 电机:", currentMotorIdx, "新通道:", newChannel)
+
+        // 遍历所有8个电机，查找占用该通道的电机
+        for (var i = 0; i < 8; i++) {
+            if (i === currentMotorIdx) continue  // 跳过自身
+
+            var config = deviceConfigMgr.loadMotorConfig(root.deviceId, i, 0)  // tab 0 = 基本配置
+            if (!config || Object.keys(config).length === 0) continue
+
+            var occupiedChannel = (config["output_channel"] !== undefined) ? config["output_channel"] : -1
+            if (occupiedChannel === newChannel) {
+                // 发现冲突：电机i正在使用该通道
+                console.log("⚠️ [MotorControlPage] 通道", newChannel, "被", (i + 1), "号电机占用，自动释放")
+
+                // 将被占用电机的通道设为-1
+                config["output_channel"] = -1
+                deviceConfigMgr.saveMotorConfig(root.deviceId, i, 0, config)
+
+                // 显示提示信息
+                root.channelConflictMessage = "通道 " + newChannel + " 原被 " + (i + 1) + "号电机占用，已自动释放"
+                conflictMessageTimer.restart()
+
+                // 刷新电机状态列表
+                root.loadAllMotorStatuses()
+
+                console.log("✅ [MotorControlPage] 已将", (i + 1), "号电机通道设为-1")
+                break  // 一个通道只能被一个电机占用
+            }
+        }
+    }
+
+    // ✅ 2026-03-29 [Phase 7.48.88.59]: 冲突提示信息自动隐藏计时器
+    Timer {
+        id: conflictMessageTimer
+        interval: 4000  // 4秒后自动隐藏
+        repeat: false
+        onTriggered: root.channelConflictMessage = ""
     }
 }

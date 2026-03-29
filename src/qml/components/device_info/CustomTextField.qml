@@ -37,6 +37,10 @@ TextField {
     focus: true
     activeFocusOnTab: true
 
+    // ✅ 2026-03-29 [Phase 7.48.88.59]: 文字居中对齐（与CustomSpinBox一致）
+    // 旧代码: 未设置horizontalAlignment，默认左对齐
+    horizontalAlignment: Qt.AlignHCenter
+
     // ✅ 2026-02-05 [FIX 100.300.113 Phase 7.37.13.6.2]: 添加 inputMethodHints 属性
     // 默认使用数字输入法（Qt.ImhDigitsOnly）
     // 如果需要其他输入法，可以在使用时覆盖此属性

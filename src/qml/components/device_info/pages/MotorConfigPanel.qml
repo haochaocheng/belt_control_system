@@ -36,6 +36,8 @@ Rectangle {
     signal motorEnabledPreviewChanged(bool enabled)
     signal outputChannelPreviewChanged(int channel)
     signal configModifiedStateChanged(bool modified)
+    // ✅ 2026-03-29 [Phase 7.48.88.59]: 转发输出通道冲突检查信号
+    signal requestOutputChannelConflictCheck(int motorIndex, int newChannel)
 
     // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.3]: 移除旧的键盘导航支持
     // 原因：与 NavigationManager 冲突，导致导航逻辑不正确
@@ -299,6 +301,10 @@ Rectangle {
                         })
                         item.configModifiedStateChanged.connect(function(modified) {
                             root.configModifiedStateChanged(modified)
+                        })
+                        // ✅ 2026-03-29 [Phase 7.48.88.59]: 转发通道冲突检查信号
+                        item.requestOutputChannelConflictCheck.connect(function(motorIdx, newChannel) {
+                            root.requestOutputChannelConflictCheck(motorIdx, newChannel)
                         })
                     }
                 }

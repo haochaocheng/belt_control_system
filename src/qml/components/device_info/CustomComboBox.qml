@@ -52,7 +52,9 @@ ComboBox {
         font.pixelSize: 21
         color: "#E0E0E0"
         verticalAlignment: Text.AlignVCenter
-        horizontalAlignment: Text.AlignLeft
+        // ✅ 2026-03-29 [Phase 7.48.88.59]: 文字居中对齐（与CustomSpinBox一致）
+        // 旧代码: horizontalAlignment: Text.AlignLeft
+        horizontalAlignment: Text.AlignHCenter
         leftPadding: 15
         rightPadding: root.indicator.width + 15
         elide: Text.ElideRight
