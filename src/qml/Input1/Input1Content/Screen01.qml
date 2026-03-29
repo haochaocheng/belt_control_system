@@ -1025,14 +1025,16 @@ Item {
         // function onDailyRuntimeChanged() { ... }
     }
 
-    // ✅ 2026-03-29 [Phase 7.48.88.54]: 运行时间+开机率更新函数
+    // ✅ 2026-03-29 [Phase 7.48.88.55]: 运行时间+开机率更新函数
     function updateRuntimeDisplay() {
         if (typeof runtimeTracker === "undefined" || !runtimeTracker) return
         var dataItems = getDataItems()
         var localIdx = getLocalDeviceId() - 1
         if (localIdx >= 0 && localIdx < beltCardCount && dataItems[localIdx]) {
-            dataItems[localIdx].dailyRuntime = runtimeTracker.dailyRuntime
-            dataItems[localIdx].dailyUptime = runtimeTracker.dailyUptime
+            var rt = runtimeTracker.dailyRuntime
+            var ut = runtimeTracker.dailyUptime
+            dataItems[localIdx].dailyRuntime = rt
+            dataItems[localIdx].dailyUptime = ut
         }
     }
 

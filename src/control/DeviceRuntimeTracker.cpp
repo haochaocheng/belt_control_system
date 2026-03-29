@@ -63,12 +63,19 @@ void DeviceRuntimeTracker::onMotor1Starting()
 
 void DeviceRuntimeTracker::onMotor2Starting()
 {
+    // ✅ 2026-03-29 [Phase 7.48.88.55]: 2号电机启动也触发计时
+    // 原因：某些皮带无1号电机，仅有2号电机，需要在此启动计时
+    startRunning();  // 内部有 m_isRunning 检查，已在运行则跳过
     updateStatus("运行", "2号电机启动");
-    qDebug() << "⚡ DeviceRuntimeTracker: 2号电机启动";
+    qDebug() << "⚡ DeviceRuntimeTracker: 2号电机启动（开始计时）";
 }
 
 void DeviceRuntimeTracker::onRunning()
 {
+    // ✅ 2026-03-29 [Phase 7.48.88.55]: 进入运行状态时确保计时启动
+    // 原因：某些皮带启动序列无1号电机（如"张紧→制动器→2号电机"），
+    //       onMotor1Starting() 不会被调用，导致 startRunning() 从未执行
+    startRunning();  // 内部有 m_isRunning 检查，已在运行则跳过
     updateStatus("运行", "正在运行");
     qDebug() << "✅ DeviceRuntimeTracker: 正在运行";
 }
@@ -178,12 +185,21 @@ void DeviceRuntimeTracker::setFault()
 
 void DeviceRuntimeTracker::onDeviceStatusChanged(const QString &deviceName, bool isRunning)
 {
-    // 监听电机1的状态变化
+    // ✅ 2026-03-29 [Phase 7.48.88.55]: 监听所有电机的状态变化（原只监听电机1）
+    // 原因：某些皮带无1号电机，仅有2号电机
     if (deviceName.contains("电机1") || deviceName.contains("1号电机")) {
         if (isRunning && !m_isRunning) {
             onMotor1Starting();
         } else if (!isRunning && m_isRunning) {
             onMotor1Stopping();
+        }
+    }
+    // ✅ 2026-03-29 [Phase 7.48.88.55]: 新增2号电机监听
+    if (deviceName.contains("电机2") || deviceName.contains("2号电机")) {
+        if (isRunning && !m_isRunning) {
+            onMotor2Starting();
+        } else if (!isRunning && m_isRunning) {
+            onMotor2Stopping();
         }
     }
 }
