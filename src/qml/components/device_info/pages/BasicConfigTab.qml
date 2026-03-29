@@ -1669,54 +1669,27 @@ Rectangle {
             return
         }
 
-        // 应用所有参数字段
-        // ✅ 2026-03-29 [Phase 7.48.88.56.1]: 先重置 motorEnabled 为默认值，再从配置覆盖
-        // 原因：切换电机时，如果新电机没有保存过配置（无 running_state 字段），
-        //       motorEnabled 会保留上一个电机的值，导致所有电机显示相同状态
-        root.motorEnabled = true  // 默认投入
-        if (config["running_state"] !== undefined) {
-            root.motorEnabled = (config["running_state"] === "投入")
-        }
-        // 旧：config["module_address"]
-        if (config["motor_module_address"] !== undefined) {
-            moduleAddressSpin.value = config["motor_module_address"]
-        }
-        if (config["output_channel"] !== undefined) {
-            outputChannelSpin.value = config["output_channel"]
-        }
-        // ✅ 2026-03-10 [Phase 7.48.34]: 加载是否使用反馈
-        if (config["use_feedback"] !== undefined) {
-            useFeedbackSwitch.checked = (config["use_feedback"] === 1)
-        }
-        if (config["feedback_channel"] !== undefined) {
-            feedbackChannelSpin.value = config["feedback_channel"]
-        }
-        // ✅ 2026-03-10 [Phase 7.48.36]: 加载反馈延时
-        if (config["feedback_delay"] !== undefined) {
-            feedbackDelaySpin.value = config["feedback_delay"]
-        }
-        // ✅ 2026-03-10 [Phase 7.48.37]: 加载新增4个参数
-        if (config["startup_delay"] !== undefined) {
-            startupDelaySpin.value = config["startup_delay"]
-        }
-        // ✅ 2026-03-22 [Phase 7.48.74]: 加载独立停止延时
-        if (config["stop_delay"] !== undefined) {
-            stopDelaySpin.value = config["stop_delay"]
-        }
-        if (config["warning_voice"] !== undefined) {
-            warningVoiceField.text = config["warning_voice"]
-        }
-        if (config["failure_voice"] !== undefined) {
-            failureVoiceField.text = config["failure_voice"]
-        }
-        if (config["startup_key"] !== undefined) {
-            var keyIdx = startupKeyCombo.model.indexOf(config["startup_key"])
-            if (keyIdx >= 0) startupKeyCombo.currentIndex = keyIdx
-        }
-        // ✅ 2026-03-12: 加载音频来源
-        if (config["audio_source"] !== undefined) {
-            audioSourceCombo.currentIndex = (config["audio_source"] === "tts") ? 1 : 0
-        }
-        // 注意：运行状态和模块类型暂时不处理，因为它们是自定义控件
+        // ✅ 2026-03-29 [Phase 7.48.88.56.2]: 统一使用"先重置默认值，再从配置覆盖"模式
+        // 原因：旧代码用 if (config["xxx"] !== undefined) 模式，切换电机时如果新电机无保存配置，
+        //       缺失字段会保留上一个电机的值（startup_delay, stop_delay, warning_voice 等6个字段残留）
+        // 修复：与 MotorProtectionTab.applyConfig 一致，所有字段先重置再覆盖
+        root.motorEnabled = (config["running_state"] !== undefined) ? (config["running_state"] === "投入") : true
+        moduleAddressSpin.value = (config["motor_module_address"] !== undefined) ? config["motor_module_address"] : 1
+        outputChannelSpin.value = (config["output_channel"] !== undefined) ? config["output_channel"] : (root.motorIndex < 5 ? root.motorIndex + 1 : -1)
+        useFeedbackSwitch.checked = (config["use_feedback"] !== undefined) ? (config["use_feedback"] === 1) : true
+        feedbackChannelSpin.value = (config["feedback_channel"] !== undefined) ? config["feedback_channel"] : root.motorIndex
+        feedbackDelaySpin.value = (config["feedback_delay"] !== undefined) ? config["feedback_delay"] : 3
+        startupDelaySpin.value = (config["startup_delay"] !== undefined) ? config["startup_delay"] : 0
+        stopDelaySpin.value = (config["stop_delay"] !== undefined) ? config["stop_delay"] : 0
+        warningVoiceField.text = (config["warning_voice"] !== undefined) ? config["warning_voice"] : ""
+        failureVoiceField.text = (config["failure_voice"] !== undefined) ? config["failure_voice"] : ""
+
+        // 启动键
+        var startupKey = (config["startup_key"] !== undefined) ? config["startup_key"] : "无"
+        var keyIdx = startupKeyCombo.model.indexOf(startupKey)
+        startupKeyCombo.currentIndex = (keyIdx >= 0) ? keyIdx : 0
+
+        // 音频来源
+        audioSourceCombo.currentIndex = (config["audio_source"] === "tts") ? 1 : 0
     }
 }
