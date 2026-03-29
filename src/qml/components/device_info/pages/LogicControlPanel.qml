@@ -53,6 +53,37 @@ Rectangle {
         { name: "洒水", color: "#00d4ff", devices: ["洒水1", "洒水2", "洒水3", "洒水4", "洒水5", "洒水6", "洒水7", "洒水8"] }
     ]
 
+    // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用设备列表（设备池中灰显+不可拖入）
+    // 从数据库加载电机/制动器的运行状态（"禁用"的设备名列表）
+    property var disabledDevices: []
+
+    // ✅ 2026-03-29 [Phase 7.48.88.67]: 判断设备是否被禁用
+    function isDeviceDisabled(deviceName) {
+        return disabledDevices.indexOf(deviceName) >= 0
+    }
+
+    // ✅ 2026-03-29 [Phase 7.48.88.67]: 从数据库加载禁用设备列表
+    function loadDisabledDevices() {
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
+        var disabled = []
+        // 检查8个电机
+        for (var i = 0; i < 8; i++) {
+            var motorCfg = deviceConfigMgr.loadMotorConfig(root.deviceId, i, 0)
+            if (motorCfg && motorCfg["running_state"] === "禁用") {
+                disabled.push((i + 1) + "号电机")
+            }
+        }
+        // 检查8个制动器
+        for (var j = 0; j < 8; j++) {
+            var brakeCfg = deviceConfigMgr.loadBrakeConfig(root.deviceId, j)
+            if (brakeCfg && brakeCfg["running_state"] === "禁用") {
+                disabled.push((j + 1) + "号制动器")
+            }
+        }
+        disabledDevices = disabled
+        console.log("✅ LogicControlPanel: 禁用设备列表:", JSON.stringify(disabled))
+    }
+
     // ✅ 2026-03-24 [Phase 7.48.88.9]: 不在Component.onCompleted中加载配置
     // 旧代码：Component.onCompleted: { loadFromConfig(); syncStateFromTracker() }
     // 问题1：Component.onCompleted时deviceId仍是默认值1（Loader.onLoaded尚未设置）
@@ -129,6 +160,9 @@ Rectangle {
         stopDelays = tmpStop
 
         console.log("✅ 逻辑控制配置已加载 - 设备ID:", root.deviceId, "启动:", startupSeq.length, "停止:", stopSeq.length)
+
+        // ✅ 2026-03-29 [Phase 7.48.88.67]: 加载禁用设备列表
+        loadDisabledDevices()
     }
 
     // ✅ 2026-03-21 [Phase 7.48.68]: 根据设备名读取其启动延时
@@ -1561,28 +1595,75 @@ Rectangle {
                                                 Rectangle {
                                                     property string devName: modelData
                                                     property bool inSeq: root.isDeviceInCurrentSeq(devName)
+                                                    // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用设备灰显
+                                                    property bool isDisabled: root.isDeviceDisabled(devName)
                                                     property color groupColor: root.deviceGroups[parent.gIdx].color
 
                                                     width: 96
                                                     height: 36
                                                     radius: 4
-                                                    color: inSeq ? "#1a1a2e" : (poolItemMa.containsMouse ? groupColor : "#1e3a5f")
-                                                    opacity: inSeq ? 0.4 : 1.0
-                                                    border.color: groupColor
+                                                    // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用设备使用深灰色+红色虚线边框
+                                                    // 旧代码: color: inSeq ? "#1a1a2e" : (poolItemMa.containsMouse ? groupColor : "#1e3a5f")
+                                                    color: isDisabled ? "#1a1a1a" : (inSeq ? "#1a1a2e" : (poolItemMa.containsMouse ? groupColor : "#1e3a5f"))
+                                                    // 旧代码: opacity: inSeq ? 0.4 : 1.0
+                                                    opacity: isDisabled ? 0.5 : (inSeq ? 0.4 : 1.0)
+                                                    // 旧代码: border.color: groupColor
+                                                    border.color: isDisabled ? "#FF5722" : groupColor
                                                     border.width: 1
+
+                                                    // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用标记斜线
+                                                    Canvas {
+                                                        anchors.fill: parent
+                                                        visible: parent.isDisabled
+                                                        onPaint: {
+                                                            var ctx = getContext("2d")
+                                                            ctx.clearRect(0, 0, width, height)
+                                                            ctx.strokeStyle = "#FF5722"
+                                                            ctx.lineWidth = 1.5
+                                                            ctx.globalAlpha = 0.6
+                                                            // 左上到右下斜线
+                                                            ctx.beginPath()
+                                                            ctx.moveTo(4, 4)
+                                                            ctx.lineTo(width - 4, height - 4)
+                                                            ctx.stroke()
+                                                        }
+                                                    }
 
                                                     Text {
                                                         anchors.centerIn: parent
                                                         text: parent.devName
                                                         font.pixelSize: 16
-                                                        color: parent.inSeq ? "#555555" : "white"
+                                                        // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用设备文字红色+删除线
+                                                        // 旧代码: color: parent.inSeq ? "#555555" : "white"
+                                                        color: parent.isDisabled ? "#FF5722" : (parent.inSeq ? "#555555" : "white")
+                                                        font.strikeout: parent.isDisabled
+                                                    }
+
+                                                    // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用设备右上角"禁"标签
+                                                    Rectangle {
+                                                        visible: parent.isDisabled
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        anchors.rightMargin: -2
+                                                        anchors.topMargin: -2
+                                                        width: 16; height: 16; radius: 8
+                                                        color: "#FF5722"
+                                                        Text {
+                                                            anchors.centerIn: parent
+                                                            text: "禁"
+                                                            font.pixelSize: 9
+                                                            font.bold: true
+                                                            color: "white"
+                                                        }
                                                     }
 
                                                     MouseArea {
                                                         id: poolItemMa
                                                         anchors.fill: parent
                                                         hoverEnabled: true
-                                                        enabled: !parent.inSeq && root.currentSeq.length < 10
+                                                        // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用设备不可点击添加
+                                                        // 旧代码: enabled: !parent.inSeq && root.currentSeq.length < 10
+                                                        enabled: !parent.inSeq && !parent.isDisabled && root.currentSeq.length < 10
                                                         onClicked: root.addDevice(parent.devName)
                                                     }
                                                 }

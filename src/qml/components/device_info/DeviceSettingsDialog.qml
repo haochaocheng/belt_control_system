@@ -153,6 +153,11 @@ Item {
         //     console.log("✅ [DeviceSettingsDialog] 重新启用 MotorControlPage 键盘事件")
         //     motorControlPageLoader.item.keysEnabled = true
         // }
+
+        // ✅ 2026-03-29 [Phase 7.48.88.67]: 切换到逻辑控制时刷新禁用设备列表
+        if (currentCategory === 11 && logicControlPageLoader.item) {
+            logicControlPageLoader.item.loadDisabledDevices()
+        }
     }
 
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听内容索引变化，保存到对应类别

@@ -842,7 +842,9 @@ Rectangle {
                     anchors.fill: parent
                     // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名（不含扩展名）
                     // 旧：text: "电机" + (root.motorIndex + 1) + "运行失败"
-                    text: "电机" + (root.motorIndex + 1) + "失败"
+                    // ✅ 2026-03-29 [Phase 7.48.88.66]: 匹配批量生成文件名格式
+                    // 旧代码: text: "电机" + (root.motorIndex + 1) + "失败"
+                    text: (root.motorIndex + 1) + "号电机运行失败"
                     placeholderText: "失败音频文件名"
                     placeholderTextColor: "#6E6E6E"
                     color: "#E0E0E0"
@@ -1751,8 +1753,13 @@ Rectangle {
         feedbackDelaySpin.value = (config["feedback_delay"] !== undefined) ? config["feedback_delay"] : 3
         startupDelaySpin.value = (config["startup_delay"] !== undefined) ? config["startup_delay"] : 0
         stopDelaySpin.value = (config["stop_delay"] !== undefined) ? config["stop_delay"] : 0
-        warningVoiceField.text = (config["warning_voice"] !== undefined) ? config["warning_voice"] : ""
-        failureVoiceField.text = (config["failure_voice"] !== undefined) ? config["failure_voice"] : ""
+        // ✅ 2026-03-29 [Phase 7.48.88.66]: 空值时使用与批量生成一致的默认文件名
+        // 旧代码: warningVoiceField.text = (config["warning_voice"] !== undefined) ? config["warning_voice"] : ""
+        // 旧代码: failureVoiceField.text = (config["failure_voice"] !== undefined) ? config["failure_voice"] : ""
+        var wv = (config["warning_voice"] !== undefined) ? config["warning_voice"] : ""
+        warningVoiceField.text = (wv !== "") ? wv : "电机" + (root.motorIndex + 1) + "启动"
+        var fv = (config["failure_voice"] !== undefined) ? config["failure_voice"] : ""
+        failureVoiceField.text = (fv !== "") ? fv : (root.motorIndex + 1) + "号电机运行失败"
 
         // 启动键
         var startupKey = (config["startup_key"] !== undefined) ? config["startup_key"] : "无"
