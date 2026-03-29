@@ -144,13 +144,15 @@ Item {
             event.accepted = true
         }
         // ✅ 2026-03-25 [Phase 7.48.88.21]: 数字键1-8独立启停设备
-        // 前提条件：界面必须在Input1Page（索引5），防止误触发
+        // 前提条件：界面必须在Input1Page（索引2），防止误触发
+        // ❌ 2026-03-29 [Phase 7.48.88.53]: 索引从5更新为2
         // 交互模式：toggle - 未运行按下启动，已运行按下停止
         else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_8) {
             var keyNumber = event.key - Qt.Key_0  // 1-8
 
-            // 前提条件：必须在 Input1Page（索引5）
-            if (swipeView.currentIndex !== 5) {
+            // 前提条件：必须在 Input1Page（索引2）
+            // ❌ 2026-03-29: 旧索引为5
+            if (swipeView.currentIndex !== 2) {
                 console.log("[Keyboard] 数字键" + keyNumber + "按下，不在Input1页面，忽略")
                 event.accepted = true
                 return
@@ -239,14 +241,16 @@ Item {
 
         // ✅ 2026-01-31 [FIX 100.300.112.8.17]: 监听页面切换，恢复焦点
         // ✅ 2026-02-10 [Phase 7.45.12]: 更新 Input1Page 索引（从 4 变成 5）
+        // ✅ 2026-03-29 [Phase 7.48.88.53]: 更新 Input1Page 索引（从 5 变成 2，移至原 ParameterSettings 位置）
         onCurrentIndexChanged: {
             console.log("[SwipeView] 页面切换到索引:", currentIndex)
 
-            // 当切换到 Input1Page（索引5）时，将焦点转移到 Screen01
-            if (currentIndex === 5) {
+            // 当切换到 Input1Page（索引2）时，将焦点转移到 Screen01
+            // ❌ 2026-03-29: 旧索引为5，现更新为2
+            if (currentIndex === 2) {
                 console.log("[SwipeView] 切换到 Input1Page，恢复 Screen01 焦点")
                 Qt.callLater(function() {
-                    var input1Page = swipeView.itemAt(5)
+                    var input1Page = swipeView.itemAt(2)
                     if (input1Page && input1Page.children[0]) {
                         var screenLoader = input1Page.children[0]
                         if (screenLoader && screenLoader.item) {
@@ -275,8 +279,16 @@ Item {
         DeviceMonitorPage {
         }
 
-        // Page 3: Parameter Settings (unchanged)
-        ParameterSettings {
+        // ❌ 2026-03-29 [Phase 7.48.88.53]: ParameterSettings 已废弃，替换为 Input1Page
+        // 旧代码：
+        // // Page 3: Parameter Settings (unchanged)
+        // ParameterSettings {
+        // }
+        // 原因：参数设置页面不再独立使用，12卡片界面（Input1Page）移至此位置
+
+        // ✅ 2026-03-29 [Phase 7.48.88.53]: Input1Page 从索引5移至索引2
+        // Page 3: Input1 Page - QDS 设计的12卡片监控界面
+        Input1Page {
         }
 
         // Page 4: Alarm Page (unchanged)
@@ -287,13 +299,16 @@ Item {
         DeviceOperationLog {
         }
 
-        // ✅ 2026-01-31 [FIX 100.300.112.8.9]: 添加 Input1Page（第6个页面）
-        // Page 6: Input1 Page - QDS 设计的输入界面
-        Input1Page {
-        }
+        // ❌ 2026-03-29 [Phase 7.48.88.53]: Input1Page 已移至索引2（原 ParameterSettings 位置）
+        // 旧代码：
+        // // ✅ 2026-01-31 [FIX 100.300.112.8.9]: 添加 Input1Page（第6个页面）
+        // // Page 6: Input1 Page - QDS 设计的输入界面
+        // Input1Page {
+        // }
 
         // ✅ 2026-02-11 [Phase 7.45.22]: 添加 VoiceManagement（第7个页面）
-        // Page 7: Voice Management - 语音管理
+        // ✅ 2026-03-29 [Phase 7.48.88.53]: Input1Page移走后，VoiceManagement 从索引6降为索引5
+        // Page 6: Voice Management - 语音管理
         VoiceManagement {
         }
     }

@@ -1,13 +1,15 @@
-import QtQuick 6.5
-import QtQuick.Controls 6.5
-import QtQuick.Layouts 6.5
-import "../components/common"
-import "../components/parameter_settings"
-// ❌ 2026-03-27 [Phase 7.48.88.35]: 移除 OutputDevicePanel 导入
-// 旧代码：import "../components/control_panel"
-// 原因：OutputDevicePanel 已废弃，设备配置已分散到各独立配置面板
-import "../Input1/Input1Content"  // ✅ 2026-01-20 [FIX 100.255]
+// ❌ 2026-03-29 [Phase 7.48.88.53]: 整个 ParameterSettings 页面已废弃
+// 原因：参数设置功能已迁移到 Input1 的12卡片界面中，Input1Page 已移至此页面的 SwipeView 位置（索引2）
+// 原始代码保留在下方 /* */ 注释块中
 
+import QtQuick 6.5
+// import QtQuick.Controls 6.5
+// import QtQuick.Layouts 6.5
+// import "../components/common"
+// import "../components/parameter_settings"
+// import "../Input1/Input1Content"
+
+// ✅ 2026-03-29: 空壳 Item，保持 SwipeView 结构兼容（实际不再加载此页面）
 Item {
     id: root
     // ✅ 2026-02-11 [Phase 7.45.25]: 移除固定尺寸，避免与SwipeView冲突导致polish()循环
@@ -17,6 +19,9 @@ Item {
 
     // ✅ 2026-01-20 [FIX 100.255]
     property int currentPageIndex: 0
+}
+
+/* ❌ 2026-03-29 [Phase 7.48.88.53]: 以下为废弃的参数设置界面原始代码 =========
 
     // ❌ 2026-03-27 [Phase 7.48.88.35]: 移除旧的设备状态监听
     // 旧代码：outputDevicePanel.setDeviceStatus(deviceName, isRunning)
@@ -421,4 +426,5 @@ Item {
         }
     }
 }
+========= 废弃的参数设置界面原始代码结束 */
 
