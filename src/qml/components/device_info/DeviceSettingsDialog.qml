@@ -386,6 +386,8 @@ Item {
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 实现两列交叉导航和底部按钮导航
     Keys.onUpPressed: function(event) {
+        // ✅ 2026-03-29 [Phase 7.48.88.61]: 未保存对话框打开时拦截所有键盘事件
+        if (unsavedChangesDialog.visible) { event.accepted = true; return }
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
         // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 制动器控制页面使用NavigationManager
@@ -833,6 +835,8 @@ Item {
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加参数区域导航支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 实现两列交叉导航和底部按钮导航
     Keys.onDownPressed: function(event) {
+        // ✅ 2026-03-29 [Phase 7.48.88.61]: 未保存对话框打开时拦截所有键盘事件
+        if (unsavedChangesDialog.visible) { event.accepted = true; return }
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
         // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 制动器控制页面使用NavigationManager
@@ -1210,6 +1214,8 @@ Item {
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加子区域切换支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 添加底部按钮区域左右导航
     Keys.onLeftPressed: function(event) {
+        // ✅ 2026-03-29 [Phase 7.48.88.61]: 未保存对话框打开时拦截所有键盘事件
+        if (unsavedChangesDialog.visible) { event.accepted = true; return }
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
         if (currentCategory === 3 && currentFocusArea === 2) {
@@ -1503,6 +1509,8 @@ Item {
     // ✅ 2026-01-29 [FIX 100.300.101 Phase 3]: 添加子区域切换支持
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.31]: 添加底部按钮区域左右导航
     Keys.onRightPressed: function(event) {
+        // ✅ 2026-03-29 [Phase 7.48.88.61]: 未保存对话框打开时拦截所有键盘事件
+        if (unsavedChangesDialog.visible) { event.accepted = true; return }
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.4]: 电机控制页面使用NavigationManager
         // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.10]: 修复 QML 警告 - 声明 event 参数
         // ✅ 2026-01-31 [FIX 100.300.112.7.2]: 制动器控制页面使用NavigationManager
@@ -1804,6 +1812,8 @@ Item {
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统 - 回车键功能
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.32]: 支持子区域的回车键处理
     Keys.onReturnPressed: {
+        // ✅ 2026-03-29 [Phase 7.48.88.61]: 未保存对话框打开时拦截所有键盘事件
+        if (unsavedChangesDialog.visible) { event.accepted = true; return }
         // 回车键：根据当前区域执行不同操作
         console.log("✅ [导航] 回车键 - 当前区域:", currentFocusArea)
 
@@ -2001,6 +2011,8 @@ Item {
     }
 
     Keys.onEscapePressed: {
+        // ✅ 2026-03-29 [Phase 7.48.88.61]: 未保存对话框打开时拦截所有键盘事件
+        if (unsavedChangesDialog.visible) { event.accepted = true; return }
         // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.10]: 检查虚拟键盘是否激活
         // 如果虚拟键盘激活，不关闭对话框（让 InputPanel 的 Shortcut 处理）
         if (Qt.inputMethod.visible) {
@@ -3991,6 +4003,13 @@ Item {
                         text: "保存 (Enter)"
                         width: 150
                         height: 40
+                        // ✅ 2026-03-29 [Phase 7.48.88.61]: 添加按钮间键盘导航
+                        Keys.onRightPressed: { dialogDiscardBtn.forceActiveFocus(); event.accepted = true }
+                        Keys.onLeftPressed: { dialogDiscardBtn.forceActiveFocus(); event.accepted = true }
+                        Keys.onReturnPressed: { unsavedChangesDialog.doSave(); event.accepted = true }
+                        Keys.onEscapePressed: { unsavedChangesDialog.doDiscard(); event.accepted = true }
+                        Keys.onUpPressed: { event.accepted = true }
+                        Keys.onDownPressed: { event.accepted = true }
                         background: Rectangle {
                             color: dialogSaveBtn.activeFocus || dialogSaveBtn.hovered ? "#2ecc71" : "#27ae60"
                             radius: 4
@@ -4009,6 +4028,13 @@ Item {
                         text: "放弃 (Esc)"
                         width: 150
                         height: 40
+                        // ✅ 2026-03-29 [Phase 7.48.88.61]: 添加按钮间键盘导航
+                        Keys.onLeftPressed: { dialogSaveBtn.forceActiveFocus(); event.accepted = true }
+                        Keys.onRightPressed: { dialogSaveBtn.forceActiveFocus(); event.accepted = true }
+                        Keys.onReturnPressed: { unsavedChangesDialog.doDiscard(); event.accepted = true }
+                        Keys.onEscapePressed: { unsavedChangesDialog.doDiscard(); event.accepted = true }
+                        Keys.onUpPressed: { event.accepted = true }
+                        Keys.onDownPressed: { event.accepted = true }
                         background: Rectangle {
                             color: dialogDiscardBtn.activeFocus || dialogDiscardBtn.hovered ? "#e74c3c" : "#c0392b"
                             radius: 4
