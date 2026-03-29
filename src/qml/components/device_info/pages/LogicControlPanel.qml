@@ -57,31 +57,67 @@ Rectangle {
     // 从数据库加载电机/制动器的运行状态（"禁用"的设备名列表）
     property var disabledDevices: []
 
+    // ✅ 2026-03-29 [Phase 7.48.88.68]: 通道未配置设备列表（设备池中琥珀色警告+不可拖入）
+    // 从数据库加载各设备的输出通道状态（未配置通道的设备名列表）
+    property var unconfiguredDevices: []
+
     // ✅ 2026-03-29 [Phase 7.48.88.67]: 判断设备是否被禁用
     function isDeviceDisabled(deviceName) {
         return disabledDevices.indexOf(deviceName) >= 0
     }
 
+    // ✅ 2026-03-29 [Phase 7.48.88.68]: 判断设备通道是否未配置
+    function isDeviceUnconfigured(deviceName) {
+        return unconfiguredDevices.indexOf(deviceName) >= 0
+    }
+
     // ✅ 2026-03-29 [Phase 7.48.88.67]: 从数据库加载禁用设备列表
+    // ✅ 2026-03-29 [Phase 7.48.88.68]: 同时加载通道未配置设备列表
     function loadDisabledDevices() {
         if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
         var disabled = []
-        // 检查8个电机
+        var unconfigured = []
+        // 检查8个电机：禁用状态 + 输出通道未配置(output_channel < 0)
         for (var i = 0; i < 8; i++) {
             var motorCfg = deviceConfigMgr.loadMotorConfig(root.deviceId, i, 0)
+            var motorName = (i + 1) + "号电机"
             if (motorCfg && motorCfg["running_state"] === "禁用") {
-                disabled.push((i + 1) + "号电机")
+                disabled.push(motorName)
+            } else {
+                // 非禁用时检查通道是否配置（output_channel为-1表示未配置）
+                var motorCh = (motorCfg && motorCfg["output_channel"] !== undefined) ? motorCfg["output_channel"] : -1
+                if (motorCh < 0) unconfigured.push(motorName)
             }
         }
-        // 检查8个制动器
+        // 检查8个制动器：禁用状态 + 松闸输出通道未配置(release_output_channel <= 0)
         for (var j = 0; j < 8; j++) {
             var brakeCfg = deviceConfigMgr.loadBrakeConfig(root.deviceId, j)
+            var brakeName = (j + 1) + "号制动器"
             if (brakeCfg && brakeCfg["running_state"] === "禁用") {
-                disabled.push((j + 1) + "号制动器")
+                disabled.push(brakeName)
+            } else {
+                var brakeCh = (brakeCfg && brakeCfg["release_output_channel"] !== undefined) ? brakeCfg["release_output_channel"] : 0
+                if (brakeCh <= 0) unconfigured.push(brakeName)
+            }
+        }
+        // 检查张紧控制：输出通道未配置(output_channel <= 0)
+        var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, 0)
+        if (tensionCfg) {
+            var tensionCh = (tensionCfg["output_channel"] !== undefined) ? tensionCfg["output_channel"] : 0
+            if (tensionCh <= 0) unconfigured.push("张紧控制")
+        }
+        // 检查8个洒水：通道未配置(channel < 0)
+        for (var k = 0; k < 8; k++) {
+            var sprinklerCfg = deviceConfigMgr.loadSprinklerConfig(k + 1)
+            var sprinklerName = "洒水" + (k + 1)
+            if (sprinklerCfg) {
+                var sprinklerCh = (sprinklerCfg["channel"] !== undefined) ? sprinklerCfg["channel"] : -1
+                if (sprinklerCh < 0) unconfigured.push(sprinklerName)
             }
         }
         disabledDevices = disabled
-        console.log("✅ LogicControlPanel: 禁用设备列表:", JSON.stringify(disabled))
+        unconfiguredDevices = unconfigured
+        console.log("✅ LogicControlPanel: 禁用设备:", JSON.stringify(disabled), "未配置通道:", JSON.stringify(unconfigured))
     }
 
     // ✅ 2026-03-24 [Phase 7.48.88.9]: 不在Component.onCompleted中加载配置
@@ -1597,18 +1633,20 @@ Rectangle {
                                                     property bool inSeq: root.isDeviceInCurrentSeq(devName)
                                                     // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用设备灰显
                                                     property bool isDisabled: root.isDeviceDisabled(devName)
+                                                    // ✅ 2026-03-29 [Phase 7.48.88.68]: 通道未配置设备琥珀色警告
+                                                    property bool isUnconfigured: !isDisabled && root.isDeviceUnconfigured(devName)
                                                     property color groupColor: root.deviceGroups[parent.gIdx].color
 
                                                     width: 96
                                                     height: 36
                                                     radius: 4
-                                                    // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用设备使用深灰色+红色虚线边框
-                                                    // 旧代码: color: inSeq ? "#1a1a2e" : (poolItemMa.containsMouse ? groupColor : "#1e3a5f")
-                                                    color: isDisabled ? "#1a1a1a" : (inSeq ? "#1a1a2e" : (poolItemMa.containsMouse ? groupColor : "#1e3a5f"))
-                                                    // 旧代码: opacity: inSeq ? 0.4 : 1.0
-                                                    opacity: isDisabled ? 0.5 : (inSeq ? 0.4 : 1.0)
-                                                    // 旧代码: border.color: groupColor
-                                                    border.color: isDisabled ? "#FF5722" : groupColor
+                                                    // ✅ 2026-03-29 [Phase 7.48.88.68]: 三态样式：禁用(红) > 未配置(琥珀) > 已入序列(���) > 正常(蓝)
+                                                    // 旧代码: color: isDisabled ? "#1a1a1a" : (inSeq ? "#1a1a2e" : (poolItemMa.containsMouse ? groupColor : "#1e3a5f"))
+                                                    color: isDisabled ? "#1a1a1a" : (isUnconfigured ? "#2a2000" : (inSeq ? "#1a1a2e" : (poolItemMa.containsMouse ? groupColor : "#1e3a5f")))
+                                                    // 旧代码: opacity: isDisabled ? 0.5 : (inSeq ? 0.4 : 1.0)
+                                                    opacity: isDisabled ? 0.5 : (isUnconfigured ? 0.6 : (inSeq ? 0.4 : 1.0))
+                                                    // 旧代码: border.color: isDisabled ? "#FF5722" : groupColor
+                                                    border.color: isDisabled ? "#FF5722" : (isUnconfigured ? "#FFC107" : groupColor)
                                                     border.width: 1
 
                                                     // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用标记斜线
@@ -1633,9 +1671,9 @@ Rectangle {
                                                         anchors.centerIn: parent
                                                         text: parent.devName
                                                         font.pixelSize: 16
-                                                        // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用设备文字红色+删除线
-                                                        // 旧代码: color: parent.inSeq ? "#555555" : "white"
-                                                        color: parent.isDisabled ? "#FF5722" : (parent.inSeq ? "#555555" : "white")
+                                                        // ✅ 2026-03-29 [Phase 7.48.88.68]: 三态文字颜色：禁用(红) > 未配置(琥珀) > 已入序列(灰) > 正常(白)
+                                                        // 旧代码: color: parent.isDisabled ? "#FF5722" : (parent.inSeq ? "#555555" : "white")
+                                                        color: parent.isDisabled ? "#FF5722" : (parent.isUnconfigured ? "#FFC107" : (parent.inSeq ? "#555555" : "white"))
                                                         font.strikeout: parent.isDisabled
                                                     }
 
@@ -1657,13 +1695,31 @@ Rectangle {
                                                         }
                                                     }
 
+                                                    // ✅ 2026-03-29 [Phase 7.48.88.68]: 通道未配置设备右上角"未"标签
+                                                    Rectangle {
+                                                        visible: parent.isUnconfigured
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        anchors.rightMargin: -2
+                                                        anchors.topMargin: -2
+                                                        width: 16; height: 16; radius: 8
+                                                        color: "#FFC107"
+                                                        Text {
+                                                            anchors.centerIn: parent
+                                                            text: "未"
+                                                            font.pixelSize: 9
+                                                            font.bold: true
+                                                            color: "#1a1a1a"
+                                                        }
+                                                    }
+
                                                     MouseArea {
                                                         id: poolItemMa
                                                         anchors.fill: parent
                                                         hoverEnabled: true
-                                                        // ✅ 2026-03-29 [Phase 7.48.88.67]: 禁用设备不可点击添加
-                                                        // 旧代码: enabled: !parent.inSeq && root.currentSeq.length < 10
-                                                        enabled: !parent.inSeq && !parent.isDisabled && root.currentSeq.length < 10
+                                                        // ✅ 2026-03-29 [Phase 7.48.88.68]: 禁用和未配置通道设备均不可点击添加
+                                                        // 旧代码: enabled: !parent.inSeq && !parent.isDisabled && root.currentSeq.length < 10
+                                                        enabled: !parent.inSeq && !parent.isDisabled && !parent.isUnconfigured && root.currentSeq.length < 10
                                                         onClicked: root.addDevice(parent.devName)
                                                     }
                                                 }
