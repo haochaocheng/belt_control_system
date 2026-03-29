@@ -67,6 +67,8 @@ Image {
 
     // ✅ 运行时间
     property string dailyRuntime: "--"
+    // ✅ 2026-03-29 [Phase 7.48.88.54]: 开机率
+    property real dailyUptime: 0.0  // 百分比（0.0~100.0）
 
     // ✅ 2026-03-28 [Phase 7.48.88.48]: 输出设备运行状态LED
     property var outputDevices: []        // 设备名列表，从启动序列+洒水同步
@@ -377,6 +379,35 @@ Image {
                 font.pixelSize: 12
                 font.bold: true
                 color: "#94A3B8"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
+        // --- 分隔竖线 ---
+        Rectangle {
+            width: 1
+            height: 12
+            color: "#334155"
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        // ✅ 2026-03-29 [Phase 7.48.88.54]: 今日开机率
+        Row {
+            spacing: 2
+            anchors.verticalCenter: parent.verticalCenter
+
+            Text {
+                text: "率"
+                font.pixelSize: 11
+                color: "#64748B"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+                text: dailyUptime.toFixed(1) + "%"
+                font.pixelSize: 12
+                font.bold: true
+                color: dailyUptime >= 80 ? "#22C55E" : dailyUptime >= 50 ? "#F59E0B" : "#94A3B8"
                 anchors.verticalCenter: parent.verticalCenter
             }
         }

@@ -688,10 +688,12 @@ Item {
                 console.log("[Screen01] ✅ 设备名称已设置")
 
                 // ✅ 2026-03-28 [Phase 7.48.88.47]: 初始化本机卡片的今日运行时间
+                // ✅ 2026-03-29 [Phase 7.48.88.54]: 同时初始化开机率
                 var localIdx = getLocalDeviceId() - 1
                 if (localIdx >= 0 && localIdx < beltCardCount && dataItems[localIdx]) {
                     if (typeof runtimeTracker !== "undefined" && runtimeTracker) {
                         dataItems[localIdx].dailyRuntime = runtimeTracker.dailyRuntime
+                        dataItems[localIdx].dailyUptime = runtimeTracker.dailyUptime
                     }
                 }
 
@@ -1017,23 +1019,48 @@ Item {
             updateFaultDisplay()
         }
 
-        // ✅ 2026-03-28 [Phase 7.48.88.48]: 改用Timer轮询更新今日运行时间
+        // ❌ 2026-03-28 [Phase 7.48.88.48]: 改用Timer轮询更新今日运行时间
         // 原因：onDailyRuntimeChanged信号方式在某些情况下不触发更新，Timer更可靠
+        // ❌ 2026-03-29 [Phase 7.48.88.54]: 信号方式恢复，Timer作为备份
         // function onDailyRuntimeChanged() { ... }
     }
 
-    // ✅ 2026-03-28 [Phase 7.48.88.48]: 每秒轮询runtimeTracker.dailyRuntime
+    // ✅ 2026-03-29 [Phase 7.48.88.54]: 运行时间+开机率更新函数
+    function updateRuntimeDisplay() {
+        if (typeof runtimeTracker === "undefined" || !runtimeTracker) return
+        var dataItems = getDataItems()
+        var localIdx = getLocalDeviceId() - 1
+        if (localIdx >= 0 && localIdx < beltCardCount && dataItems[localIdx]) {
+            dataItems[localIdx].dailyRuntime = runtimeTracker.dailyRuntime
+            dataItems[localIdx].dailyUptime = runtimeTracker.dailyUptime
+        }
+    }
+
+    // ✅ 2026-03-29 [Phase 7.48.88.54]: Connections 直接监听 runtimeTracker 信号
+    // 原因：Phase 7.48.88.48 的 Timer 轮询方式在某些设备上不可靠
+    Connections {
+        target: (typeof runtimeTracker !== "undefined" && runtimeTracker) ? runtimeTracker : null
+
+        function onDailyRuntimeChanged() {
+            updateRuntimeDisplay()
+        }
+
+        function onDailyUptimeChanged() {
+            updateRuntimeDisplay()
+        }
+    }
+
+    // ✅ 2026-03-29 [Phase 7.48.88.54]: Timer 作为备份保障（每2秒轮询一次）
+    // ❌ 2026-03-28 旧代码：每秒轮询，running条件有时不触发
+    // 原因：双保险 - 如果 Connections 信号丢失，Timer 作为兜底
     Timer {
-        interval: 1000
+        interval: 2000
         repeat: true
-        running: typeof runtimeTracker !== "undefined" && runtimeTracker !== null
+        // ❌ 2026-03-29: 旧代码 running: typeof runtimeTracker !== "undefined" && runtimeTracker !== null
+        // 修复：使用布尔属性绑定，避免 typeof 在 QML 中行为不一致
+        running: true
         onTriggered: {
-            if (typeof runtimeTracker === "undefined" || !runtimeTracker) return
-            var dataItems = getDataItems()
-            var localIdx = getLocalDeviceId() - 1
-            if (localIdx >= 0 && localIdx < beltCardCount && dataItems[localIdx]) {
-                dataItems[localIdx].dailyRuntime = runtimeTracker.dailyRuntime
-            }
+            updateRuntimeDisplay()
         }
     }
 
