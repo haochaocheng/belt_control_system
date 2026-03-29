@@ -73,7 +73,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(0); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(0); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -100,7 +101,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(1); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(1); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -130,7 +132,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(2); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(2); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -157,7 +160,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(3); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(3); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -304,7 +308,8 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(4); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(4); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -333,7 +338,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(5); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(5); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -362,7 +368,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(6); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(6); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -394,7 +401,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(7); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(7); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -423,7 +431,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(8); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(8); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -450,7 +459,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(9); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(9); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -479,7 +489,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(10); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(10); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -506,7 +517,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(11); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(11); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -536,7 +548,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(12); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(12); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -563,7 +576,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(13); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(13); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -592,7 +606,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(14); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(14); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -619,7 +634,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(15); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(15); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -649,7 +665,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(16); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(16); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -677,7 +694,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(17); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(17); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -763,7 +781,8 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(18); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(18); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -789,7 +808,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(19); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(19); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"
@@ -817,7 +837,8 @@ Rectangle {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) { root.requestFocusParamIndex(20); mouse.accepted = false }
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) { root.requestFocusParamIndex(20); mouse.accepted = false }
                 }
                 Rectangle {
                     anchors.fill: parent; color: "transparent"

@@ -693,7 +693,9 @@ Rectangle {
             // ✅ 2026-03-22 [Phase 7.48.82]: 保存成功后同步反馈配置到 CommonControl
             // 原因：ParameterSettings.syncDeviceFeedbackConfigs() 只在启动时调用一次，
             //       修改 use_feedback 后 CommonControl 内存中仍是旧值，导致反馈检测不生效
-            if (root.focusTabIndex === 0 && typeof commonControl !== "undefined") {
+            // ✅ 2026-03-29 [Phase 7.48.88.64]: 使用 actualTabIndex 代替 focusTabIndex
+            // 旧代码: if (root.focusTabIndex === 0 && ...)
+            if (actualTabIndex === 0 && typeof commonControl !== "undefined") {
                 var motorName = (root.currentMotorIndex + 1) + "号电机"
                 var useFeedback = config["use_feedback"] !== undefined ? (Number(config["use_feedback"]) === 1) : true
                 var feedbackChannel = config["feedback_channel"] !== undefined ? config["feedback_channel"] : root.currentMotorIndex
@@ -703,8 +705,16 @@ Rectangle {
                            "useFeedback:", useFeedback, "channel:", feedbackChannel, "delay:", feedbackDelay)
             }
 
+            // ✅ 2026-03-29 [Phase 7.48.88.64]: 保存成功后，释放被占用的通道（仅基本配置Tab）
+            if (actualTabIndex === 0) {
+                var savedOutputChannel = (config["output_channel"] !== undefined) ? config["output_channel"] : -1
+                root.releaseConflictingChannels(root.currentMotorIndex, savedOutputChannel)
+            }
+
             // ✅ 2026-03-29 [Phase 7.48.88.56]: 保存后刷新电机状态列表
-            if (root.focusTabIndex === 0) {
+            // ✅ 2026-03-29 [Phase 7.48.88.64]: 使用 actualTabIndex 代替 focusTabIndex
+            // 旧代码: if (root.focusTabIndex === 0)
+            if (actualTabIndex === 0) {
                 root.loadAllMotorStatuses()
             }
 
@@ -826,7 +836,9 @@ Rectangle {
     property string channelConflictMessage: ""
 
     // ✅ 2026-03-29 [Phase 7.48.88.59]: 输出通道冲突检查与自动交换
-    // 继电器模块共12个通道，已全部分��。切换通道时检测被占用电机，自动将其通道设为-1
+    // ✅ 2026-03-29 [Phase 7.48.88.64]: 改为仅提示冲突，不立即释放
+    // 旧行为：修改时立即将被占用电机通道设为-1并保存到数据库
+    // 新行为：修改时只显示提示，保存时才释放被占用通道（见 releaseConflictingChannels）
     function handleOutputChannelConflict(currentMotorIdx, newChannel) {
         if (newChannel < 0) return  // -1表示未配置，无需检查
 
@@ -841,22 +853,40 @@ Rectangle {
 
             var occupiedChannel = (config["output_channel"] !== undefined) ? config["output_channel"] : -1
             if (occupiedChannel === newChannel) {
-                // 发现冲突：电机i正在使用该通道
-                console.log("⚠️ [MotorControlPage] 通道", newChannel, "被", (i + 1), "号电机占用，自动释放")
+                // ✅ 2026-03-29 [Phase 7.48.88.64]: 仅提示冲突，不立即修改数据库
+                // 旧代码: config["output_channel"] = -1; deviceConfigMgr.saveMotorConfig(...)
+                console.log("⚠️ [MotorControlPage] 通道", newChannel, "被", (i + 1), "号电机占用，保存时将自动释放")
 
-                // 将被占用电机的通道设为-1
+                root.channelConflictMessage = "通道 " + newChannel + " 被 " + (i + 1) + "号电机占用，保存后将自动释放"
+                conflictMessageTimer.restart()
+
+                break  // 一个通道只能被一个电机占用
+            }
+        }
+    }
+
+    // ✅ 2026-03-29 [Phase 7.48.88.64]: 保存时执行通道冲突释放
+    // 在 saveMotorConfig 成功后调用，释放被占用电机的通道
+    function releaseConflictingChannels(savedMotorIdx, savedChannel) {
+        if (savedChannel < 0) return
+
+        for (var i = 0; i < 8; i++) {
+            if (i === savedMotorIdx) continue
+
+            var config = deviceConfigMgr.loadMotorConfig(root.deviceId, i, 0)
+            if (!config || Object.keys(config).length === 0) continue
+
+            var occupiedChannel = (config["output_channel"] !== undefined) ? config["output_channel"] : -1
+            if (occupiedChannel === savedChannel) {
+                console.log("✅ [MotorControlPage] 保存后释放冲突 - 将", (i + 1), "号电机通道从", savedChannel, "设为-1")
                 config["output_channel"] = -1
                 deviceConfigMgr.saveMotorConfig(root.deviceId, i, 0, config)
 
-                // 显示提示信息
-                root.channelConflictMessage = "通道 " + newChannel + " 原被 " + (i + 1) + "号电机占用，已自动释放"
+                root.channelConflictMessage = "通道 " + savedChannel + " 原被 " + (i + 1) + "号电机占用，已自动释放"
                 conflictMessageTimer.restart()
 
-                // 刷新电机状态列表
                 root.loadAllMotorStatuses()
-
-                console.log("✅ [MotorControlPage] 已将", (i + 1), "号电机通道设为-1")
-                break  // 一个通道只能被一个电机占用
+                break
             }
         }
     }

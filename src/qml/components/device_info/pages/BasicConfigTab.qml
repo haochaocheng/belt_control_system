@@ -384,14 +384,15 @@ Rectangle {
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 发射信号而不是直接赋值，避免打破 Qt.binding
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         console.log("✅ [BasicConfigTab] 鼠标点击模块地址，发射信号: requestFocusParamIndex(2)")
 
                         // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 发射信号，而不是直接赋值
                         // 避免打破 Qt.binding
                         root.requestFocusParamIndex(2)
 
-                        mouse.accepted = false  // 让事件继续传递给 SpinBox
+                        mouse.accepted = false  // ✅ 2026-03-29 [Phase 7.48.88.65]: onPressed+propagateComposedEvents让事件传递给SpinBox
                     }
                 }
 
@@ -468,11 +469,13 @@ Rectangle {
                     keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
                     // ✅ 2026-03-29 [Phase 7.48.88.57]: 修改检测+输出通道实时预览
                     // ✅ 2026-03-29 [Phase 7.48.88.59]: 新增通道冲突检查
+                    // ✅ 2026-03-29 [Phase 7.48.88.64]: 修改时只提示冲突，不立即释放，等保存时再释放
+                    // 旧代码: root.requestOutputChannelConflictCheck(root.motorIndex, value)
                     onValueChanged: {
                         root.markModified()
                         if (!root._suppressModified) {
                             root.outputChannelPreviewChanged(value)
-                            // 通道≥0时检查是否被其他电机占用
+                            // 通道≥0时检查是否被其他电机占用（仅提示，不释放）
                             if (value >= 0) {
                                 root.requestOutputChannelConflictCheck(root.motorIndex, value)
                             }
@@ -484,10 +487,11 @@ Rectangle {
                 // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 发射信号而不是直接赋值，避免打破 Qt.binding
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         console.log("✅ [BasicConfigTab] 鼠标点击输出通道，发射信号: requestFocusParamIndex(3)")
                         root.requestFocusParamIndex(3)
-                        mouse.accepted = false  // 让事件继续传递给 SpinBox
+                        mouse.accepted = false  // ✅ 2026-03-29 [Phase 7.48.88.65]: onPressed+propagateComposedEvents让事件传递给SpinBox
                     }
                 }
 
@@ -614,7 +618,8 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         root.requestFocusParamIndex(5)
                         mouse.accepted = false
                     }
@@ -660,7 +665,8 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         root.requestFocusParamIndex(6)
                         mouse.accepted = false
                     }
@@ -708,7 +714,8 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         root.requestFocusParamIndex(7)
                         mouse.accepted = false
                     }
@@ -755,7 +762,8 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         root.requestFocusParamIndex(8)
                         mouse.accepted = false
                     }
@@ -801,7 +809,8 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         root.requestFocusParamIndex(9)
                         mouse.accepted = false
                     }
@@ -843,7 +852,8 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         root.requestFocusParamIndex(10)
                         mouse.accepted = false
                     }
@@ -888,7 +898,8 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         // ✅ 2026-03-22 [Phase 7.48.74.1]: 修复索引12→11
                         root.requestFocusParamIndex(11)
                         mouse.accepted = false
@@ -1016,7 +1027,8 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: function(mouse) {
+                    propagateComposedEvents: true
+                    onPressed: function(mouse) {
                         root.requestFocusParamIndex(12)
                         mouse.accepted = false
                     }
