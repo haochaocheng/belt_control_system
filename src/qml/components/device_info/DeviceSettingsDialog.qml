@@ -3943,67 +3943,180 @@ Item {
     }
 
     // ✅ 2026-03-29 [Phase 7.48.88.57]: 未保存修改提示对话框
+    // ✅ 2026-03-29 [Phase 7.48.88.62]: UI重设计 - Dark Mode OLED工业风格
     Rectangle {
         id: unsavedChangesDialog
         anchors.fill: parent
-        color: "#80000000"  // 半透明黑色遮罩
+        color: "#CC020617"  // 深黑遮罩 90%透明度，OLED风格
         visible: false
         z: 1000
+        opacity: 0
 
-        function open() { visible = true; dialogFocusItem.forceActiveFocus() }
-        function close() { visible = false; root.forceActiveFocus() }
+        function open() {
+            visible = true
+            opacity = 1
+            dialogSaveBtn.forceActiveFocus()  // 默认焦点在保存按钮
+        }
+        function close() {
+            opacity = 0
+            closeTimer.start()
+        }
+
+        Timer {
+            id: closeTimer
+            interval: 250
+            onTriggered: {
+                unsavedChangesDialog.visible = false
+                root.forceActiveFocus()
+            }
+        }
+
+        Behavior on opacity {
+            NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+        }
 
         // 拦截所有鼠标事件，防止穿透
         MouseArea { anchors.fill: parent; onClicked: {} }
 
-        // 对话框焦点项（接收键盘事件）
-        Item {
-            id: dialogFocusItem
-            focus: unsavedChangesDialog.visible
-            Keys.onReturnPressed: { unsavedChangesDialog.doSave(); event.accepted = true }
-            Keys.onEscapePressed: { unsavedChangesDialog.doDiscard(); event.accepted = true }
-            Keys.onLeftPressed: { dialogSaveBtn.focus = true; event.accepted = true }
-            Keys.onRightPressed: { dialogDiscardBtn.focus = true; event.accepted = true }
-        }
-
+        // ── 对话框主体 ──
         Rectangle {
+            id: dialogCard
             anchors.centerIn: parent
-            width: 420
-            height: 200
-            color: "#1e2336"
-            border.color: "#00d4ff"
-            border.width: 2
-            radius: 8
+            width: 460
+            height: 240
+            color: "#0F172A"  // 深邃主背景
+            radius: 12
+            // 外发光效果
+            layer.enabled: true
+            layer.effect: null
 
+            // 顶部警告色条
+            Rectangle {
+                id: topAccentBar
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 3
+                radius: 12
+                color: "#F59E0B"  // 琥珀色警告
+                // 底部圆角裁切
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 2
+                    color: parent.color
+                }
+            }
+
+            // 边框 - 微妙的深色边界
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                radius: 12
+                border.color: "#1E293B"
+                border.width: 1
+            }
+
+            // ── 内容布局 ──
             Column {
                 anchors.centerIn: parent
-                spacing: 20
+                anchors.verticalCenterOffset: -4
+                spacing: 0
+                width: parent.width - 60
 
-                Text {
-                    text: "电机控制有未保存的修改"
-                    font.pixelSize: 18
-                    font.weight: Font.Bold
-                    color: "#FFC107"
-                    anchors.horizontalCenter: parent.horizontalCenter
-                }
-
-                Text {
-                    text: "是否保存当前修改？"
-                    font.pixelSize: 15
-                    color: "#E0E0E0"
-                    anchors.horizontalCenter: parent.horizontalCenter
-                }
-
+                // 警告图标 + 标题行
                 Row {
-                    spacing: 30
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 10
+
+                    // 警告三角图标（纯QML绘制）
+                    Item {
+                        width: 28
+                        height: 28
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        // 三角背景
+                        Canvas {
+                            anchors.fill: parent
+                            onPaint: {
+                                var ctx = getContext("2d")
+                                ctx.clearRect(0, 0, width, height)
+                                ctx.beginPath()
+                                ctx.moveTo(width / 2, 2)
+                                ctx.lineTo(width - 2, height - 2)
+                                ctx.lineTo(2, height - 2)
+                                ctx.closePath()
+                                ctx.fillStyle = "#F59E0B"
+                                ctx.fill()
+
+                                // 内三角（镂空效果）
+                                ctx.beginPath()
+                                ctx.moveTo(width / 2, 7)
+                                ctx.lineTo(width - 6, height - 5)
+                                ctx.lineTo(6, height - 5)
+                                ctx.closePath()
+                                ctx.fillStyle = "#0F172A"
+                                ctx.fill()
+
+                                // 感叹号
+                                ctx.fillStyle = "#F59E0B"
+                                ctx.fillRect(width / 2 - 1.5, 12, 3, 7)
+                                ctx.beginPath()
+                                ctx.arc(width / 2, 22, 1.8, 0, Math.PI * 2)
+                                ctx.fill()
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: "未保存的修改"
+                        font.pixelSize: 20
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 1
+                        color: "#F8FAFC"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                // 间距
+                Item { width: 1; height: 12 }
+
+                // 分割线
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: "#1E293B"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                // 间距
+                Item { width: 1; height: 16 }
+
+                // 描述文本
+                Text {
+                    text: "电机控制参数已修改，切换前请选择操作"
+                    font.pixelSize: 14
+                    font.weight: Font.Normal
+                    color: "#94A3B8"
+                    lineHeight: 1.5
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                // 间距
+                Item { width: 1; height: 28 }
+
+                // ── 按钮组 ──
+                Row {
+                    spacing: 16
                     anchors.horizontalCenter: parent.horizontalCenter
 
+                    // 保存按钮（主要操作 - 绿色强调）
                     Button {
                         id: dialogSaveBtn
-                        text: "保存 (Enter)"
-                        width: 150
-                        height: 40
-                        // ✅ 2026-03-29 [Phase 7.48.88.61]: 添加按钮间键盘导航
+                        width: 180
+                        height: 44
+                        // ✅ 2026-03-29 [Phase 7.48.88.61]: 按钮间键盘导航
                         Keys.onRightPressed: { dialogDiscardBtn.forceActiveFocus(); event.accepted = true }
                         Keys.onLeftPressed: { dialogDiscardBtn.forceActiveFocus(); event.accepted = true }
                         Keys.onReturnPressed: { unsavedChangesDialog.doSave(); event.accepted = true }
@@ -4011,24 +4124,51 @@ Item {
                         Keys.onUpPressed: { event.accepted = true }
                         Keys.onDownPressed: { event.accepted = true }
                         background: Rectangle {
-                            color: dialogSaveBtn.activeFocus || dialogSaveBtn.hovered ? "#2ecc71" : "#27ae60"
-                            radius: 4
-                            border.color: dialogSaveBtn.activeFocus ? "#2196F3" : "transparent"
-                            border.width: dialogSaveBtn.activeFocus ? 3 : 0
+                            radius: 8
+                            color: dialogSaveBtn.activeFocus ? "#22C55E" :
+                                   dialogSaveBtn.hovered ? "#1EA34E" : "#16A34A"
+                            border.color: dialogSaveBtn.activeFocus ? "#4ADE80" : "transparent"
+                            border.width: dialogSaveBtn.activeFocus ? 2 : 0
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on border.color { ColorAnimation { duration: 150 } }
                         }
-                        contentItem: Text {
-                            text: parent.text; font.pixelSize: 14; font.bold: true; color: "white"
-                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                        contentItem: Row {
+                            anchors.centerIn: parent
+                            spacing: 8
+                            Text {
+                                text: "保存"
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                color: "#FFFFFF"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            // 快捷键提示标签
+                            Rectangle {
+                                width: enterLabel.width + 12
+                                height: 20
+                                radius: 4
+                                color: "#15803D"
+                                anchors.verticalCenter: parent.verticalCenter
+                                Text {
+                                    id: enterLabel
+                                    text: "Enter"
+                                    font.pixelSize: 11
+                                    font.weight: Font.Medium
+                                    color: "#BBF7D0"
+                                    anchors.centerIn: parent
+                                }
+                            }
                         }
                         onClicked: unsavedChangesDialog.doSave()
                     }
 
+                    // 放弃按钮（次要操作 - 暗色描边）
                     Button {
                         id: dialogDiscardBtn
-                        text: "放弃 (Esc)"
-                        width: 150
-                        height: 40
-                        // ✅ 2026-03-29 [Phase 7.48.88.61]: 添加按钮间键盘导航
+                        width: 180
+                        height: 44
+                        // ✅ 2026-03-29 [Phase 7.48.88.61]: 按钮间键盘导航
                         Keys.onLeftPressed: { dialogSaveBtn.forceActiveFocus(); event.accepted = true }
                         Keys.onRightPressed: { dialogSaveBtn.forceActiveFocus(); event.accepted = true }
                         Keys.onReturnPressed: { unsavedChangesDialog.doDiscard(); event.accepted = true }
@@ -4036,14 +4176,46 @@ Item {
                         Keys.onUpPressed: { event.accepted = true }
                         Keys.onDownPressed: { event.accepted = true }
                         background: Rectangle {
-                            color: dialogDiscardBtn.activeFocus || dialogDiscardBtn.hovered ? "#e74c3c" : "#c0392b"
-                            radius: 4
-                            border.color: dialogDiscardBtn.activeFocus ? "#2196F3" : "transparent"
-                            border.width: dialogDiscardBtn.activeFocus ? 3 : 0
+                            radius: 8
+                            color: dialogDiscardBtn.activeFocus ? "#DC2626" :
+                                   dialogDiscardBtn.hovered ? "#1E293B" : "transparent"
+                            border.color: dialogDiscardBtn.activeFocus ? "#F87171" :
+                                          dialogDiscardBtn.hovered ? "#475569" : "#334155"
+                            border.width: dialogDiscardBtn.activeFocus ? 2 : 1
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on border.color { ColorAnimation { duration: 150 } }
                         }
-                        contentItem: Text {
-                            text: parent.text; font.pixelSize: 14; font.bold: true; color: "white"
-                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                        contentItem: Row {
+                            anchors.centerIn: parent
+                            spacing: 8
+                            Text {
+                                text: "放弃"
+                                font.pixelSize: 15
+                                font.weight: Font.Medium
+                                color: dialogDiscardBtn.activeFocus ? "#FFFFFF" : "#94A3B8"
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Rectangle {
+                                width: escLabel.width + 12
+                                height: 20
+                                radius: 4
+                                color: dialogDiscardBtn.activeFocus ? "#991B1B" : "#1E293B"
+                                border.color: dialogDiscardBtn.activeFocus ? "transparent" : "#334155"
+                                border.width: dialogDiscardBtn.activeFocus ? 0 : 1
+                                anchors.verticalCenter: parent.verticalCenter
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Text {
+                                    id: escLabel
+                                    text: "Esc"
+                                    font.pixelSize: 11
+                                    font.weight: Font.Medium
+                                    color: dialogDiscardBtn.activeFocus ? "#FCA5A5" : "#64748B"
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                    anchors.centerIn: parent
+                                }
+                            }
                         }
                         onClicked: unsavedChangesDialog.doDiscard()
                     }
