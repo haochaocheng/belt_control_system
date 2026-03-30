@@ -17,6 +17,14 @@ Rectangle {
     property string deviceName: "1号皮带"
     property int currentBrakeIndex: 0  // 当前选中的制动器索引 (0-7)
 
+    // ✅ 2026-03-30 [Phase 7.48.88.74]: 制动器状态数组（传递给 BrakeListPanel）
+    // 每个元素: { enabled: bool, releaseOutputChannel: int }
+    property var brakeStatusList: []
+
+    // ✅ 2026-03-30 [Phase 7.48.88.74]: 制动器运行状态数组（全局关联）
+    // true=运行中（亮绿闪烁）, false=已停止
+    property var brakeRunningStates: [false,false,false,false,false,false,false,false]
+
     // ✅ 2026-01-31 [FIX 100.300.112]: 导航焦点索引（从父对话框传递）
     property int focusItemIndex: -1  // -1 表示无焦点
     // 导航子区域（0:制动器列表 1:参数区域 2:底部按钮区域）
@@ -341,6 +349,9 @@ Rectangle {
                 item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
                 // ✅ 2026-01-31 [FIX 100.300.112.6]: 传递焦点子区域
                 item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+                // ✅ 2026-03-30 [Phase 7.48.88.74]: 传递制动器状态和运行状态数据
+                item.brakeStatusList = Qt.binding(function() { return root.brakeStatusList })
+                item.brakeRunningStates = Qt.binding(function() { return root.brakeRunningStates })
                 item.brakeSelected.connect(function(brakeIndex) {
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.15]: 鼠标点击时同步所有焦点状态
                     console.log("🔍 [BrakeControlPage] 鼠标点击制动器:", brakeIndex)
@@ -441,5 +452,47 @@ Rectangle {
         } else {
             console.log("⚠️ [BrakeControlPage] BrakeConfigPanel 不支持按钮触发")
         }
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.74]: 加载所有8个制动器的状态（启用/禁用/未配置）
+    // 用于 BrakeListPanel 显示每个制动器的实际状态
+    function loadAllBrakeStatuses() {
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
+        var statusList = []
+        for (var i = 0; i < 8; i++) {
+            var config = deviceConfigMgr.loadBrakeConfig(root.deviceId, i)
+            if (config && Object.keys(config).length > 0) {
+                var enabled = config.hasOwnProperty("enabled") ? (config["enabled"] === true || config["enabled"] === 1) : true
+                var relCh = config.hasOwnProperty("release_output_channel") ? config["release_output_channel"] : -1
+                statusList.push({ enabled: enabled, releaseOutputChannel: relCh })
+            } else {
+                // 未保存配置：制动器1-5默认有通道(6-10)，6-8无通道
+                statusList.push({ enabled: true, releaseOutputChannel: i < 5 ? i + 6 : -1 })
+            }
+        }
+        root.brakeStatusList = statusList
+        console.log("✅ [BrakeControlPage] 已加载8个制动器状态")
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.74]: 监听全局设备状态变化，更新制动器运行状态
+    Connections {
+        target: typeof commonControl !== "undefined" ? commonControl : null
+        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+            // 解析 "X号制动器" → 提取制动器编号
+            var match = deviceName.match(/(\d+)号制动器/)
+            if (!match) return
+            var brakeIdx = parseInt(match[1]) - 1  // 1-based → 0-based
+            if (brakeIdx < 0 || brakeIdx >= 8) return
+            // 更新运行状态数组（赋新数组触发QML绑定更新）
+            var newStates = root.brakeRunningStates.slice()
+            newStates[brakeIdx] = isRunning
+            root.brakeRunningStates = newStates
+            console.log("✅ [BrakeControlPage] 制动器" + (brakeIdx + 1) + (isRunning ? " 运行中" : " 已停止"))
+        }
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.74]: 初始化时加载制动器状态
+    Component.onCompleted: {
+        loadAllBrakeStatuses()
     }
 }

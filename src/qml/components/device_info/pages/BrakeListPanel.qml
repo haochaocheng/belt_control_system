@@ -24,6 +24,16 @@ Rectangle {
     // ✅ 2026-01-31 [FIX 100.300.112.6]: 导航子区域（从父页面传递）
     property int focusSubArea: 0  // 0:列表区域 1:参数区域 2:按钮区域
 
+    // ✅ 2026-03-30 [Phase 7.48.88.74]: 制动器状态数组（从父组件 BrakeControlPage 传入）
+    // 每个元素: { enabled: bool, releaseOutputChannel: int }
+    // enabled=true: 启用（绿色）, enabled=false: 禁用（红色）
+    // releaseOutputChannel=-1: 未配置（暗灰色）
+    property var brakeStatusList: []
+
+    // ✅ 2026-03-30 [Phase 7.48.88.74]: 制动器运行状态数组（全局关联，从BrakeControlPage传入）
+    // true=运行中（亮绿闪烁）, false=已停止
+    property var brakeRunningStates: [false,false,false,false,false,false,false,false]
+
     // ✅ 2026-02-03 [DEBUG]: 添加调试日志
     onCurrentBrakeIndexChanged: {
         console.log("🔍 [BrakeListPanel] currentBrakeIndex 变化:", currentBrakeIndex)
@@ -171,7 +181,8 @@ Rectangle {
                 anchors.centerIn: parent
             }
 
-            // ✅ 状态指示放在最右侧
+            // ✅ 2026-03-30 [Phase 7.48.88.74]: 动态状态指示（参照 MyMotorListPanel）
+            // 旧代码: 硬编码 color: "#4CAF50" text: "投入"
             Row {
                 spacing: 8
                 anchors.right: parent.right
@@ -179,17 +190,48 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
 
                 Rectangle {
+                    id: brakeStatusLed
                     width: 8
                     height: 8
                     radius: 4
-                    color: "#4CAF50"  // 绿色表示投入
+                    // ✅ 运行中=亮绿, 启用(已停止)=绿色, 禁用=红色, 未配置=暗灰
+                    property bool isRunning: index < root.brakeRunningStates.length ? root.brakeRunningStates[index] : false
+                    color: {
+                        if (brakeStatusLed.isRunning) return "#00E676"  // 亮绿：运行中
+                        if (index < root.brakeStatusList.length) {
+                            var status = root.brakeStatusList[index]
+                            if (status && status.releaseOutputChannel >= 0 && status.enabled) return "#4CAF50"  // 绿色：已停止（启用）
+                            if (status && status.releaseOutputChannel >= 0 && !status.enabled) return "#FF5722"  // 红色：禁用
+                        }
+                        return "#555555"  // 暗灰：未配置
+                    }
                     anchors.verticalCenter: parent.verticalCenter
+
+                    // ✅ 运行中闪烁动画
+                    SequentialAnimation on opacity {
+                        running: brakeStatusLed.isRunning
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1.0; to: 0.3; duration: 600 }
+                        NumberAnimation { from: 0.3; to: 1.0; duration: 600 }
+                    }
+                    // 非运行时恢复完全不透明
+                    onIsRunningChanged: if (!isRunning) opacity = 1.0
                 }
 
                 Text {
-                    text: "投入"
+                    // ✅ 运行中/已停止/禁用/未配置 动态文本
+                    text: {
+                        if (index < root.brakeRunningStates.length && root.brakeRunningStates[index]) return "运行中"
+                        if (index < root.brakeStatusList.length) {
+                            var status = root.brakeStatusList[index]
+                            if (status && status.releaseOutputChannel >= 0 && status.enabled) return "已停止"
+                            if (status && status.releaseOutputChannel >= 0 && !status.enabled) return "禁用"
+                        }
+                        return "未配置"
+                    }
                     font.pixelSize: 12
-                    color: "#9E9E9E"
+                    // ✅ 运行中文字颜色也用亮绿
+                    color: (index < root.brakeRunningStates.length && root.brakeRunningStates[index]) ? "#00E676" : "#9E9E9E"
                 }
             }
 
