@@ -677,6 +677,14 @@ Rectangle {
             return false
         }
 
+        // ✅ 2026-03-30 [Phase 7.48.88.69]: 保存前全局通道冲突检查（仅基本配置Tab）
+        if (actualTabIndex === 0) {
+            var preCheckChannel = (config["output_channel"] !== undefined) ? config["output_channel"] : -1
+            if (!root.checkGlobalConflictBeforeSave(root.currentMotorIndex, preCheckChannel)) {
+                return false  // 通道被其他设备占用，阻止保存
+            }
+        }
+
         // 保存到数据库
         var success = deviceConfigMgr.saveMotorConfig(
             root.deviceId,
@@ -837,58 +845,85 @@ Rectangle {
 
     // ✅ 2026-03-29 [Phase 7.48.88.59]: 输出通道冲突检查与自动交换
     // ✅ 2026-03-29 [Phase 7.48.88.64]: 改为仅提示冲突，不立即释放
-    // 旧行为：修改时立即将被占用电机通道设为-1并保存到数据库
-    // 新行为：修改时只显示提示，保存时才释放被占用通道（见 releaseConflictingChannels）
+    // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局16通道继电器冲突检查，跨设备类型（电机/制动器/张紧/洒水）
+    // 旧行为：仅检查电机之间的通道冲突
+    // 新行为：检查所有设备类型的通道占用情况，被其他类型设备占用时不允许挤占，提示用户先释放
     function handleOutputChannelConflict(currentMotorIdx, newChannel) {
         if (newChannel < 0) return  // -1表示未配置，无需检查
 
-        console.log("✅ [MotorControlPage] 检查通道冲突 - 电机:", currentMotorIdx, "新通道:", newChannel)
+        console.log("✅ [MotorControlPage] 全局通道冲突检查 - 电机:", currentMotorIdx, "新通道:", newChannel)
 
-        // 遍历所有8个电机，查找占用该通道的电机
-        for (var i = 0; i < 8; i++) {
-            if (i === currentMotorIdx) continue  // 跳过自身
-
-            var config = deviceConfigMgr.loadMotorConfig(root.deviceId, i, 0)  // tab 0 = 基本配置
-            if (!config || Object.keys(config).length === 0) continue
-
-            var occupiedChannel = (config["output_channel"] !== undefined) ? config["output_channel"] : -1
-            if (occupiedChannel === newChannel) {
-                // ✅ 2026-03-29 [Phase 7.48.88.64]: 仅提示冲突，不立即修改数据库
-                // 旧代码: config["output_channel"] = -1; deviceConfigMgr.saveMotorConfig(...)
-                console.log("⚠️ [MotorControlPage] 通道", newChannel, "被", (i + 1), "号电机占用，保存时将自动释放")
-
-                root.channelConflictMessage = "通道 " + newChannel + " 被 " + (i + 1) + "号电机占用，保存后将自动释放"
-                conflictMessageTimer.restart()
-
-                break  // 一个通道只能被一个电机占用
-            }
+        // 构建全局通道占用表（排除当前电机自身）
+        var channelMap = buildGlobalChannelMapForMotor(currentMotorIdx)
+        var occupier = channelMap[newChannel]
+        if (occupier) {
+            console.log("⚠️ [MotorControlPage] 通道", newChannel, "被", occupier, "占用")
+            root.channelConflictMessage = "⚠ 通道 " + newChannel + " 已被「" + occupier + "」占用，请先释放原通道"
+            conflictMessageTimer.restart()
         }
     }
 
-    // ✅ 2026-03-29 [Phase 7.48.88.64]: 保存时执行通道冲突释放
-    // 在 saveMotorConfig 成功后调用，释放被占用电机的通道
-    function releaseConflictingChannels(savedMotorIdx, savedChannel) {
-        if (savedChannel < 0) return
+    // ✅ 2026-03-30 [Phase 7.48.88.69]: 构建全局通道占用表（排除指定电机）
+    function buildGlobalChannelMapForMotor(excludeMotorIdx) {
+        var channelMap = {}
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return channelMap
 
-        for (var i = 0; i < 8; i++) {
-            if (i === savedMotorIdx) continue
-
-            var config = deviceConfigMgr.loadMotorConfig(root.deviceId, i, 0)
-            if (!config || Object.keys(config).length === 0) continue
-
-            var occupiedChannel = (config["output_channel"] !== undefined) ? config["output_channel"] : -1
-            if (occupiedChannel === savedChannel) {
-                console.log("✅ [MotorControlPage] 保存后释放冲突 - 将", (i + 1), "号电机通道从", savedChannel, "设为-1")
-                config["output_channel"] = -1
-                deviceConfigMgr.saveMotorConfig(root.deviceId, i, 0, config)
-
-                root.channelConflictMessage = "通道 " + savedChannel + " 原被 " + (i + 1) + "号电机占用，已自动释放"
-                conflictMessageTimer.restart()
-
-                root.loadAllMotorStatuses()
-                break
-            }
+        // 1. 扫描8个电机
+        for (var m = 0; m < 8; m++) {
+            if (m === excludeMotorIdx) continue
+            var motorCfg = deviceConfigMgr.loadMotorConfig(root.deviceId, m, 0)
+            if (!motorCfg || Object.keys(motorCfg).length === 0) continue
+            var mCh = (motorCfg["output_channel"] !== undefined) ? motorCfg["output_channel"] : -1
+            if (mCh >= 0) channelMap[mCh] = (m + 1) + "号电机"
         }
+        // 2. 扫描8个制动器（松闸+抱闸）
+        for (var b = 0; b < 8; b++) {
+            var brakeCfg = deviceConfigMgr.loadBrakeConfig(root.deviceId, b)
+            if (!brakeCfg || Object.keys(brakeCfg).length === 0) continue
+            var relCh = (brakeCfg["release_output_channel"] !== undefined) ? brakeCfg["release_output_channel"] : -1
+            if (relCh >= 0) channelMap[relCh] = (b + 1) + "号制动器松闸"
+            var brkCh = (brakeCfg["brake_output_channel"] !== undefined) ? brakeCfg["brake_output_channel"] : -1
+            if (brkCh >= 0) channelMap[brkCh] = (b + 1) + "号制动器抱闸"
+        }
+        // 3. 扫描2个张紧控制
+        for (var t = 0; t < 2; t++) {
+            var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, t)
+            if (!tensionCfg || Object.keys(tensionCfg).length === 0) continue
+            var tCh = (tensionCfg["output_channel"] !== undefined) ? tensionCfg["output_channel"] : -1
+            if (tCh >= 0) channelMap[tCh] = "张紧控制" + (t + 1)
+        }
+        // 4. 扫描8个洒水
+        for (var s = 0; s < 8; s++) {
+            var sprCfg = deviceConfigMgr.loadSprinklerConfig(s + 1)  // 洒水索引从1开始
+            if (!sprCfg || Object.keys(sprCfg).length === 0) continue
+            var sCh = (sprCfg["channel"] !== undefined) ? sprCfg["channel"] : -1
+            if (sCh >= 0) channelMap[sCh] = "洒水" + (s + 1)
+        }
+        return channelMap
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.69]: 保存时检查全局通道冲突（阻止保存）
+    // 旧行为：保存时自动释放其他电机的通道（releaseConflictingChannels）
+    // 新行为：保存前检查全局冲突，被占用时阻止保存并提示用户
+    function checkGlobalConflictBeforeSave(motorIdx, channel) {
+        if (channel < 0) return true  // 未配置，允许保存
+        var channelMap = buildGlobalChannelMapForMotor(motorIdx)
+        var occupier = channelMap[channel]
+        if (occupier) {
+            root.channelConflictMessage = "⚠ 保存失败：通道 " + channel + " 已被「" + occupier + "」占用，请先释放原通道"
+            conflictMessageTimer.restart()
+            return false  // 阻止保存
+        }
+        return true  // 允许保存
+    }
+
+    // ✅ 2026-03-29 [Phase 7.48.88.64]: 保存时执行通道冲突释放
+    // ✅ 2026-03-30 [Phase 7.48.88.69]: 已废弃自动释放逻辑，改为保存前检查阻止
+    // 保留函数签名兼容，但不再执行释放操作
+    function releaseConflictingChannels(savedMotorIdx, savedChannel) {
+        // 旧代码：自动将冲突电机的通道设为-1
+        // 新行为：通过 checkGlobalConflictBeforeSave 在保存前阻止冲突，不再自动释放
+        console.log("✅ [MotorControlPage] releaseConflictingChannels 已废弃，使用 checkGlobalConflictBeforeSave 替代")
     }
 
     // ✅ 2026-03-29 [Phase 7.48.88.59]: 冲突提示信息自动隐藏计时器

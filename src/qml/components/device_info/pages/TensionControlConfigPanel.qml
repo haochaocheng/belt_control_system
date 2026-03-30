@@ -70,6 +70,21 @@ Rectangle {
         width: paramScrollView.width
         spacing: 6
 
+        // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突提示信息
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.channelConflictMessage !== "" ? 36 : 0
+            visible: root.channelConflictMessage !== ""
+            color: "#80FF5722"
+            radius: 4
+            Text {
+                anchors.centerIn: parent
+                text: root.channelConflictMessage
+                font.pixelSize: 16; font.bold: true; color: "#FFCCBC"
+            }
+            Behavior on Layout.preferredHeight { NumberAnimation { duration: 200 } }
+        }
+
         // ========== GridLayout 8列参数区 ==========
         // ✅ 2026-03-17 [Phase 7.48.52]: 改为4列GridLayout，参照BasicConfigTab布局
         GridLayout {
@@ -476,6 +491,48 @@ Rectangle {
         root.tensionOpened = false
     }
 
+    // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突检查提示
+    property string channelConflictMessage: ""
+    Timer {
+        id: tensionConflictMessageTimer
+        interval: 4000; repeat: false
+        onTriggered: root.channelConflictMessage = ""
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.69]: 构建全局通道占用表（排除当前张紧控制）
+    function buildGlobalChannelMapForTension(excludeTensionIdx) {
+        var channelMap = {}
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return channelMap
+        for (var m = 0; m < 8; m++) {
+            var motorCfg = deviceConfigMgr.loadMotorConfig(root.deviceId, m, 0)
+            if (!motorCfg || Object.keys(motorCfg).length === 0) continue
+            var mCh = (motorCfg["output_channel"] !== undefined) ? motorCfg["output_channel"] : -1
+            if (mCh >= 0) channelMap[mCh] = (m + 1) + "号电机"
+        }
+        for (var b = 0; b < 8; b++) {
+            var brakeCfg = deviceConfigMgr.loadBrakeConfig(root.deviceId, b)
+            if (!brakeCfg || Object.keys(brakeCfg).length === 0) continue
+            var relCh = (brakeCfg["release_output_channel"] !== undefined) ? brakeCfg["release_output_channel"] : -1
+            if (relCh >= 0) channelMap[relCh] = (b + 1) + "号制动器松闸"
+            var brkCh = (brakeCfg["brake_output_channel"] !== undefined) ? brakeCfg["brake_output_channel"] : -1
+            if (brkCh >= 0) channelMap[brkCh] = (b + 1) + "号制动器抱闸"
+        }
+        for (var t = 0; t < 2; t++) {
+            if (t === excludeTensionIdx) continue
+            var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, t)
+            if (!tensionCfg || Object.keys(tensionCfg).length === 0) continue
+            var tCh = (tensionCfg["output_channel"] !== undefined) ? tensionCfg["output_channel"] : -1
+            if (tCh >= 0) channelMap[tCh] = "张紧控制" + (t + 1)
+        }
+        for (var s = 0; s < 8; s++) {
+            var sprCfg = deviceConfigMgr.loadSprinklerConfig(s + 1)  // 洒水索引从1开始
+            if (!sprCfg || Object.keys(sprCfg).length === 0) continue
+            var sCh = (sprCfg["channel"] !== undefined) ? sprCfg["channel"] : -1
+            if (sCh >= 0) channelMap[sCh] = "洒水" + (s + 1)
+        }
+        return channelMap
+    }
+
     function collectConfig() {
         return {
             // ✅ 2026-03-18 [Phase 7.48.53]: 字段名与C++后端saveTensionConfig对应
@@ -514,6 +571,16 @@ Rectangle {
 
     function saveTensionControlConfig() {
         var config = collectConfig()
+
+        // ✅ 2026-03-30 [Phase 7.48.88.69]: 保存前全局通道冲突检查
+        var channelMap = buildGlobalChannelMapForTension(root.controlIndex)
+        var outCh = config["output_channel"]
+        if (outCh >= 0 && channelMap[outCh]) {
+            root.channelConflictMessage = "⚠ 保存失败：通道 " + outCh + " 已被「" + channelMap[outCh] + "」占用，请先释放原通道"
+            tensionConflictMessageTimer.restart()
+            return
+        }
+
         console.log("✅ [TensionControlConfigPanel] 保存张紧控制配置:", JSON.stringify(config))
         if (typeof deviceConfigMgr !== "undefined") {
             // ✅ 2026-03-18 [Phase 7.48.53]: 先加载已有配置再合并，避免覆盖传感器面板的字段

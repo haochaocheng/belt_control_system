@@ -80,6 +80,63 @@ Item {
     property bool hasPermission: true             // 是否有修改权限（默认true，在打开时更新）
     property bool isReadOnly: false               // 是否只读模式
 
+    // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局继电器通道管理（16通道）
+    // 扫描所有设备类型（电机/制动器/张紧/洒水），构建通道→设备名映射表
+    // 返回: { 通道号: "设备名称", ... }  例如 { 1: "1号电机", 6: "1号制动器松闸", 11: "洒水1" }
+    function buildGlobalChannelMap(excludeType, excludeIndex) {
+        var channelMap = {}
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return channelMap
+
+        // 1. 扫描8个电机的output_channel
+        for (var m = 0; m < 8; m++) {
+            if (excludeType === "motor" && excludeIndex === m) continue
+            var motorCfg = deviceConfigMgr.loadMotorConfig(root.deviceId, m, 0)
+            if (!motorCfg || Object.keys(motorCfg).length === 0) continue
+            var mCh = (motorCfg["output_channel"] !== undefined) ? motorCfg["output_channel"] : -1
+            if (mCh >= 0) channelMap[mCh] = (m + 1) + "号电机"
+        }
+
+        // 2. 扫描8个制动器的release_output_channel和brake_output_channel
+        for (var b = 0; b < 8; b++) {
+            if (excludeType === "brake" && excludeIndex === b) continue
+            var brakeCfg = deviceConfigMgr.loadBrakeConfig(root.deviceId, b)
+            if (!brakeCfg || Object.keys(brakeCfg).length === 0) continue
+            var relCh = (brakeCfg["release_output_channel"] !== undefined) ? brakeCfg["release_output_channel"] : -1
+            if (relCh >= 0) channelMap[relCh] = (b + 1) + "号制动器松闸"
+            var brkCh = (brakeCfg["brake_output_channel"] !== undefined) ? brakeCfg["brake_output_channel"] : -1
+            if (brkCh >= 0) channelMap[brkCh] = (b + 1) + "号制动器抱闸"
+        }
+
+        // 3. 扫描2个张紧控制的output_channel
+        for (var t = 0; t < 2; t++) {
+            if (excludeType === "tension" && excludeIndex === t) continue
+            var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, t)
+            if (!tensionCfg || Object.keys(tensionCfg).length === 0) continue
+            var tCh = (tensionCfg["output_channel"] !== undefined) ? tensionCfg["output_channel"] : -1
+            if (tCh >= 0) channelMap[tCh] = "张紧控制" + (t + 1)
+        }
+
+        // 4. 扫描8个洒水的channel
+        for (var s = 0; s < 8; s++) {
+            if (excludeType === "sprinkler" && excludeIndex === s) continue
+            var sprCfg = deviceConfigMgr.loadSprinklerConfig(s + 1)  // 洒水索引从1开始
+            if (!sprCfg || Object.keys(sprCfg).length === 0) continue
+            var sCh = (sprCfg["channel"] !== undefined) ? sprCfg["channel"] : -1
+            if (sCh >= 0) channelMap[sCh] = "洒水" + (s + 1)
+        }
+
+        return channelMap
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突检查
+    // 检查指定通道是否被其他设备占用（排除自身）
+    // 返回: "" 表示无冲突, 否则返回占用该通道的设备名称
+    function checkGlobalChannelConflict(channel, excludeType, excludeIndex) {
+        if (channel < 0) return ""  // -1表示未配置，无需检查
+        var channelMap = buildGlobalChannelMap(excludeType, excludeIndex)
+        return channelMap[channel] || ""
+    }
+
     // ✅ 2026-03-29 [Phase 7.48.88.57]: 未保存修改提示
     property int _pendingCategory: -1  // 待切换的目标类别（-1=无待切换）
 

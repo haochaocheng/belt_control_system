@@ -54,6 +54,21 @@ Rectangle {
         anchors.margins: 15
         spacing: 12
 
+        // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突提示信息
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.channelConflictMessage !== "" ? 36 : 0
+            visible: root.channelConflictMessage !== ""
+            color: "#80FF5722"
+            radius: 4
+            Text {
+                anchors.centerIn: parent
+                text: root.channelConflictMessage
+                font.pixelSize: 16; font.bold: true; color: "#FFCCBC"
+            }
+            Behavior on Layout.preferredHeight { NumberAnimation { duration: 200 } }
+        }
+
         // ========== Row 0: 启用状态 ==========
         RowLayout {
             Layout.fillWidth: true
@@ -232,6 +247,48 @@ Rectangle {
         stopDelaySpin.value = (config.stop_delay !== undefined) ? config.stop_delay : 1
     }
 
+    // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突检查提示
+    property string channelConflictMessage: ""
+    Timer {
+        id: sprinklerConflictMessageTimer
+        interval: 4000; repeat: false
+        onTriggered: root.channelConflictMessage = ""
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.69]: 构建全局通道占用表（排除当前洒水）
+    function buildGlobalChannelMapForSprinkler(excludeSprinklerIdx) {
+        var channelMap = {}
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return channelMap
+        for (var m = 0; m < 8; m++) {
+            var motorCfg = deviceConfigMgr.loadMotorConfig(root.deviceId, m, 0)
+            if (!motorCfg || Object.keys(motorCfg).length === 0) continue
+            var mCh = (motorCfg["output_channel"] !== undefined) ? motorCfg["output_channel"] : -1
+            if (mCh >= 0) channelMap[mCh] = (m + 1) + "号电机"
+        }
+        for (var b = 0; b < 8; b++) {
+            var brakeCfg = deviceConfigMgr.loadBrakeConfig(root.deviceId, b)
+            if (!brakeCfg || Object.keys(brakeCfg).length === 0) continue
+            var relCh = (brakeCfg["release_output_channel"] !== undefined) ? brakeCfg["release_output_channel"] : -1
+            if (relCh >= 0) channelMap[relCh] = (b + 1) + "号制动器松闸"
+            var brkCh = (brakeCfg["brake_output_channel"] !== undefined) ? brakeCfg["brake_output_channel"] : -1
+            if (brkCh >= 0) channelMap[brkCh] = (b + 1) + "号制动器抱闸"
+        }
+        for (var t = 0; t < 2; t++) {
+            var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, t)
+            if (!tensionCfg || Object.keys(tensionCfg).length === 0) continue
+            var tCh = (tensionCfg["output_channel"] !== undefined) ? tensionCfg["output_channel"] : -1
+            if (tCh >= 0) channelMap[tCh] = "张紧控制" + (t + 1)
+        }
+        for (var s = 0; s < 8; s++) {
+            if (s === excludeSprinklerIdx) continue
+            var sprCfg = deviceConfigMgr.loadSprinklerConfig(s + 1)  // 洒水索引从1开始
+            if (!sprCfg || Object.keys(sprCfg).length === 0) continue
+            var sCh = (sprCfg["channel"] !== undefined) ? sprCfg["channel"] : -1
+            if (sCh >= 0) channelMap[sCh] = "洒水" + (s + 1)
+        }
+        return channelMap
+    }
+
     function saveSprinklerConfig() {
         if (typeof deviceConfigMgr === "undefined") {
             console.log("⚠️ [SprinklerConfigPanel] deviceConfigMgr 未定义")
@@ -247,6 +304,15 @@ Rectangle {
             // ✅ 2026-03-22 [Phase 7.48.74]: 新增启动延时+停止延时
             "startup_delay": startupDelaySpin.value,
             "stop_delay": stopDelaySpin.value
+        }
+
+        // ✅ 2026-03-30 [Phase 7.48.88.69]: 保存前全局通道冲突检查
+        var channelMap = buildGlobalChannelMapForSprinkler(root.sprinklerIndex)
+        var ch = config["channel"]
+        if (ch >= 0 && channelMap[ch]) {
+            root.channelConflictMessage = "⚠ 保存失败：通道 " + ch + " 已被「" + channelMap[ch] + "」占用，请先释放原通道"
+            sprinklerConflictMessageTimer.restart()
+            return
         }
 
         var success = deviceConfigMgr.saveSprinklerConfig(root.sprinklerIndex + 1, config)
