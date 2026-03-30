@@ -55,16 +55,28 @@ Rectangle {
         spacing: 12
 
         // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突提示信息
+        // ✅ 2026-03-30 [Phase 7.48.88.70]: 增加可用通道列表显示
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: root.channelConflictMessage !== "" ? 36 : 0
+            // 旧代码：Layout.preferredHeight: root.channelConflictMessage !== "" ? 36 : 0
+            Layout.preferredHeight: root.channelConflictMessage !== "" ? 56 : 0
             visible: root.channelConflictMessage !== ""
             color: "#80FF5722"
             radius: 4
-            Text {
+            Column {
                 anchors.centerIn: parent
-                text: root.channelConflictMessage
-                font.pixelSize: 16; font.bold: true; color: "#FFCCBC"
+                spacing: 2
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: root.channelConflictMessage
+                    font.pixelSize: 16; font.bold: true; color: "#FFCCBC"
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: root.availableChannelsText
+                    font.pixelSize: 12; color: "#4CAF50"
+                    visible: root.availableChannelsText !== ""
+                }
             }
             Behavior on Layout.preferredHeight { NumberAnimation { duration: 200 } }
         }
@@ -105,8 +117,9 @@ Rectangle {
             DeviceInfo.CustomSpinBox {
                 id: channelSpin
                 // ✅ 2026-03-24 [Phase 7.48.88.7]: 洒水1-5通道11-15，洒水6-8通道-1
-                // 旧代码：from: 0; to: 15; value: root.sprinklerIndex + 11
-                from: -1; to: 15; value: root.sprinklerIndex < 5 ? root.sprinklerIndex + 11 : -1
+                // ✅ 2026-03-30 [Phase 7.48.88.70]: 洒水1-4通道11-14，洒水5-8通道-1（只占用4个通道，剩余4个为未分配）
+                // 旧代码：from: -1; to: 15; value: root.sprinklerIndex < 5 ? root.sprinklerIndex + 11 : -1
+                from: -1; to: 15; value: root.sprinklerIndex < 4 ? root.sprinklerIndex + 11 : -1
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 keyboardManager: root.keyboardManager
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
@@ -239,8 +252,9 @@ Rectangle {
         enabledSwitch.checked = (config.enabled === 1 || config.enabled === true)
         sprinklerNameField.text = config.sprinkler_name || ("洒水" + (root.sprinklerIndex + 1))
         // ✅ 2026-03-24 [Phase 7.48.88.7]: 洒水1-5默认通道11-15，洒水6-8通道-1
-        // 旧代码：channelSpin.value = ... : (root.sprinklerIndex + 11)
-        var defaultChannel = root.sprinklerIndex < 5 ? (root.sprinklerIndex + 11) : -1
+        // ✅ 2026-03-30 [Phase 7.48.88.70]: 洒水1-4默认通道11-14，洒水5-8通道-1（只占用4个通道）
+        // 旧代码：var defaultChannel = root.sprinklerIndex < 5 ? (root.sprinklerIndex + 11) : -1
+        var defaultChannel = root.sprinklerIndex < 4 ? (root.sprinklerIndex + 11) : -1
         channelSpin.value = (config.channel !== undefined) ? config.channel : defaultChannel
         // ✅ 2026-03-22 [Phase 7.48.74]: 加载启动延时+停止延时
         startupDelaySpin.value = (config.startup_delay !== undefined) ? config.startup_delay : 1
@@ -249,10 +263,22 @@ Rectangle {
 
     // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突检查提示
     property string channelConflictMessage: ""
+    // ✅ 2026-03-30 [Phase 7.48.88.70]: 可用通道列表提示
+    property string availableChannelsText: ""
     Timer {
         id: sprinklerConflictMessageTimer
         interval: 4000; repeat: false
-        onTriggered: root.channelConflictMessage = ""
+        // ✅ 2026-03-30 [Phase 7.48.88.70]: 同时清除可用通道提示
+        onTriggered: { root.channelConflictMessage = ""; root.availableChannelsText = "" }
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.70]: 计算可用通道列表文本
+    function getAvailableChannelsText(channelMap) {
+        var available = []
+        for (var ch = 0; ch <= 15; ch++) {
+            if (!channelMap[ch]) available.push(ch)
+        }
+        return available.length > 0 ? "可用通道: " + available.join(", ") : "所有通道已被占用"
     }
 
     // ✅ 2026-03-30 [Phase 7.48.88.69]: 构建全局通道占用表（排除当前洒水）
@@ -311,6 +337,8 @@ Rectangle {
         var ch = config["channel"]
         if (ch >= 0 && channelMap[ch]) {
             root.channelConflictMessage = "⚠ 保存失败：通道 " + ch + " 已被「" + channelMap[ch] + "」占用，请先释放原通道"
+            // ✅ 2026-03-30 [Phase 7.48.88.70]: 列出可用通道
+            root.availableChannelsText = getAvailableChannelsText(channelMap)
             sprinklerConflictMessageTimer.restart()
             return
         }

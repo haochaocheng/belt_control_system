@@ -71,16 +71,28 @@ Rectangle {
         spacing: 6
 
         // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突提示信息
+        // ✅ 2026-03-30 [Phase 7.48.88.70]: 增加可用通道列表显示
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: root.channelConflictMessage !== "" ? 36 : 0
+            // 旧代码：Layout.preferredHeight: root.channelConflictMessage !== "" ? 36 : 0
+            Layout.preferredHeight: root.channelConflictMessage !== "" ? 56 : 0
             visible: root.channelConflictMessage !== ""
             color: "#80FF5722"
             radius: 4
-            Text {
+            Column {
                 anchors.centerIn: parent
-                text: root.channelConflictMessage
-                font.pixelSize: 16; font.bold: true; color: "#FFCCBC"
+                spacing: 2
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: root.channelConflictMessage
+                    font.pixelSize: 16; font.bold: true; color: "#FFCCBC"
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: root.availableChannelsText
+                    font.pixelSize: 12; color: "#4CAF50"
+                    visible: root.availableChannelsText !== ""
+                }
             }
             Behavior on Layout.preferredHeight { NumberAnimation { duration: 200 } }
         }
@@ -493,10 +505,22 @@ Rectangle {
 
     // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突检查提示
     property string channelConflictMessage: ""
+    // ✅ 2026-03-30 [Phase 7.48.88.70]: 可用通道列表提示
+    property string availableChannelsText: ""
     Timer {
         id: tensionConflictMessageTimer
         interval: 4000; repeat: false
-        onTriggered: root.channelConflictMessage = ""
+        // ✅ 2026-03-30 [Phase 7.48.88.70]: 同时清除可用通道提示
+        onTriggered: { root.channelConflictMessage = ""; root.availableChannelsText = "" }
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.70]: 计算可用通道列表文本
+    function getAvailableChannelsText(channelMap) {
+        var available = []
+        for (var ch = 0; ch <= 15; ch++) {
+            if (!channelMap[ch]) available.push(ch)
+        }
+        return available.length > 0 ? "可用通道: " + available.join(", ") : "所有通道已被占用"
     }
 
     // ✅ 2026-03-30 [Phase 7.48.88.69]: 构建全局通道占用表（排除当前张紧控制）
@@ -577,6 +601,8 @@ Rectangle {
         var outCh = config["output_channel"]
         if (outCh >= 0 && channelMap[outCh]) {
             root.channelConflictMessage = "⚠ 保存失败：通道 " + outCh + " 已被「" + channelMap[outCh] + "」占用，请先释放原通道"
+            // ✅ 2026-03-30 [Phase 7.48.88.70]: 列出可用通道
+            root.availableChannelsText = getAvailableChannelsText(channelMap)
             tensionConflictMessageTimer.restart()
             return
         }
