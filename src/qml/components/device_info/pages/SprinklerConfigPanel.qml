@@ -19,6 +19,8 @@ Rectangle {
     property int focusParamIndex: 0
     property int focusButtonIndex: 0
     property var virtualKeyboard: null
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中参数冻结
+    property bool beltIsRunning: false
 
     // ========== 布局常量（参照TensionControlConfigPanel） ==========
     readonly property int lblFs: 21
@@ -54,7 +56,18 @@ Rectangle {
         anchors.margins: 15
         spacing: 12
 
-        // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突提示信息
+        // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中参数冻结提示横幅
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.beltIsRunning ? 36 : 0
+            visible: root.beltIsRunning
+            color: "#80FF9800"
+            radius: 4
+            Text { anchors.centerIn: parent; text: "\u26A0 皮带运行中，参数修改已锁定"; font.pixelSize: 16; font.bold: true; color: "#FFFFFF" }
+            Behavior on Layout.preferredHeight { NumberAnimation { duration: 200 } }
+        }
+
+        // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突��示信息
         // ✅ 2026-03-30 [Phase 7.48.88.70]: 增加可用通道列表显示
         Rectangle {
             Layout.fillWidth: true
@@ -89,7 +102,8 @@ Rectangle {
             Item {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: enabledSwitch.implicitHeight
-                Switch { id: enabledSwitch; checked: true; anchors.verticalCenter: parent.verticalCenter }
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                Switch { id: enabledSwitch; checked: true; anchors.verticalCenter: parent.verticalCenter; enabled: !root.beltIsRunning }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
@@ -105,6 +119,8 @@ Rectangle {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 placeholderText: "洒水" + (root.sprinklerIndex + 1)
                 keyboardManager: root.keyboardManager
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                enabled: !root.beltIsRunning
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
@@ -122,6 +138,8 @@ Rectangle {
                 from: -1; to: 15; value: root.sprinklerIndex < 4 ? root.sprinklerIndex + 11 : -1
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 keyboardManager: root.keyboardManager
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                enabled: !root.beltIsRunning
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
@@ -135,7 +153,8 @@ Rectangle {
             Item {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: startupDelaySpin.implicitHeight
-                DeviceInfo.CustomSpinBox { id: startupDelaySpin; from: 0; to: 60; value: 1; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                DeviceInfo.CustomSpinBox { id: startupDelaySpin; from: 0; to: 60; value: 1; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager; enabled: !root.beltIsRunning }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
@@ -148,7 +167,8 @@ Rectangle {
             Item {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: stopDelaySpin.implicitHeight
-                DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 1; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager }
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 1; editable: true; anchors.fill: parent; keyboardManager: root.keyboardManager; enabled: !root.beltIsRunning }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         }
@@ -177,11 +197,15 @@ Rectangle {
                     radius: 6
                     color: startBtnMa.pressed ? "#2E7D32" : (startBtnMa.containsMouse ? "#43A047" : "#388E3C")
                     border.color: "#4CAF50"; border.width: 1
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结启动按钮
+                    opacity: root.beltIsRunning ? 0.5 : 1.0
                     Text { anchors.centerIn: parent; text: "启 动"; font.pixelSize: 16; font.weight: Font.Bold; color: "#FFFFFF" }
                     MouseArea {
                         id: startBtnMa
                         anchors.fill: parent
                         hoverEnabled: true
+                        // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                        enabled: !root.beltIsRunning
                         onClicked: root.sendSprinklerCommand(true)
                     }
                     Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 6; z: 10 }
@@ -378,7 +402,23 @@ Rectangle {
         loadSprinklerConfig()
     }
 
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 监听皮带运行状态，冻结参数修改
+    Connections {
+        target: typeof commonControl !== "undefined" ? commonControl : null
+        function onBeltRunningChanged(beltNumber, running) {
+            var currentBelt = (typeof systemConfig !== "undefined" && systemConfig) ? systemConfig.machineNumber : 1
+            if (beltNumber === currentBelt) {
+                root.beltIsRunning = running
+            }
+        }
+    }
+
     Component.onCompleted: {
         loadSprinklerConfig()
+        // ✅ 2026-03-30 [Phase 7.48.88.72]: 初始化皮带运行状态
+        if (typeof commonControl !== "undefined" && commonControl) {
+            var beltNum = (typeof systemConfig !== "undefined" && systemConfig) ? systemConfig.machineNumber : 1
+            root.beltIsRunning = commonControl.isBeltRunning(beltNum)
+        }
     }
 }

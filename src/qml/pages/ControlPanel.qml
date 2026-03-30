@@ -65,6 +65,82 @@ Item {
         }
     }
 
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 启动时同步设备反馈配置到 CommonControl
+    // 原因：ParameterSettings 在 Phase 7.48.88.53 废弃后，syncDeviceFeedbackConfigs() 不再执行
+    // 导致 CommonControl.m_deviceFeedbackConfigs 为空，反馈检测（运行失败语音）完全失效
+    // 旧位置：ParameterSettings.qml Component.onCompleted
+    Component.onCompleted: {
+        syncDeviceFeedbackConfigs()
+    }
+
+    function syncDeviceFeedbackConfigs() {
+        if (typeof commonControl === "undefined" || !commonControl) {
+            console.warn("⚠️ [ControlPanel] commonControl 未初始化，跳过反馈配置同步")
+            return
+        }
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) {
+            console.warn("⚠️ [ControlPanel] deviceConfigMgr 未初始化，跳过反馈配置同步")
+            return
+        }
+
+        var deviceId = (typeof systemConfig !== "undefined" && systemConfig && systemConfig.machineNumber > 0)
+            ? systemConfig.machineNumber : 1
+        var dbLoaded = 0
+
+        // ——— 张紧控制 ———
+        var tensionCfg = deviceConfigMgr.loadTensionConfig(deviceId, 1)  // 1=张紧控制
+        if (tensionCfg && tensionCfg["feedback_channel"] !== undefined) {
+            var tensionUseFeedback = (Number(tensionCfg["use_feedback"]) === 1)
+            var tensionChannel = tensionCfg["feedback_channel"]
+            var tensionDelay = tensionCfg["feedback_timeout"] || 10
+            commonControl.setDeviceFeedbackConfig("张紧控制", tensionUseFeedback, tensionChannel, tensionDelay)
+            dbLoaded++
+        }
+
+        // ——— 制动器（1-8号） ———
+        for (var bi = 0; bi < 8; bi++) {
+            var brakeCfg = deviceConfigMgr.loadBrakeConfig(deviceId, bi)
+            if (brakeCfg && Object.keys(brakeCfg).length > 0) {
+                var brakeName = (bi + 1) + "号制动器"
+                var brakeUseFeedback = (Number(brakeCfg["use_release_feedback"]) === 1)
+                var brakeChannel = brakeCfg["release_feedback_channel"] || 0
+                var brakeDelay = brakeCfg["release_feedback_timeout"] || 10
+                commonControl.setDeviceFeedbackConfig(brakeName, brakeUseFeedback, brakeChannel, brakeDelay)
+                dbLoaded++
+            }
+        }
+
+        // ——— 电机（1-8号） ———
+        for (var mi = 0; mi < 8; mi++) {
+            var motorCfg = deviceConfigMgr.loadMotorConfig(deviceId, mi, 0)
+            if (motorCfg && motorCfg["feedback_channel"] !== undefined) {
+                var motorName = (mi + 1) + "号电机"
+                var motorUseFeedback = motorCfg["use_feedback"] !== undefined
+                    ? (Number(motorCfg["use_feedback"]) === 1) : false
+                // ✅ 2026-03-30: 读取实际反馈延时，不再硬编码3秒
+                // 旧代码：commonControl.setDeviceFeedbackConfig(motorName, motorUseFeedback, motorCfg["feedback_channel"], 3)
+                var motorFeedbackDelay = motorCfg["feedback_delay"] || 3
+                commonControl.setDeviceFeedbackConfig(motorName, motorUseFeedback, motorCfg["feedback_channel"], motorFeedbackDelay)
+                dbLoaded++
+            }
+        }
+
+        // ——— 洒水（1-8号） ———
+        for (var si = 0; si < 8; si++) {
+            var sprinklerCfg = deviceConfigMgr.loadSprinklerConfig(si + 1)
+            if (sprinklerCfg && sprinklerCfg["use_feedback"] !== undefined) {
+                var sprinklerName = "洒水" + (si + 1)
+                commonControl.setDeviceFeedbackConfig(sprinklerName,
+                    (Number(sprinklerCfg["use_feedback"]) === 1),
+                    sprinklerCfg["feedback_channel"] || 0,
+                    sprinklerCfg["feedback_delay"] || 3)
+                dbLoaded++
+            }
+        }
+
+        console.log("✅ [ControlPanel] 已从数据库同步", dbLoaded, "个设备的反馈配置")
+    }
+
     // ✅ 2026-01-20 [FIX 100.271]: 使用 Back 组件作为背景（与模块状态页面一致）
     // ✅ 2026-01-20 [FIX 100.272]: 禁用鼠标交互，避免拦截其他组件的鼠标事件
     Back {

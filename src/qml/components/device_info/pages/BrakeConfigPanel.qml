@@ -19,6 +19,9 @@ Rectangle {
     property bool waitingForRelease: false
     property bool waitingForBrake: false
 
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行状态（用于冻结参数编辑）
+    property bool beltIsRunning: false
+
     // 统一尺寸常量（匹配SwitchInputPage样式）
     readonly property int lblFs: 21       // 标签字号（与开关量输入一致）
     readonly property string lblC: "#9E9E9E"  // 标签颜色
@@ -134,6 +137,17 @@ Rectangle {
             width: paramScrollView.width
             spacing: 6
 
+        // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中参数冻结提示横幅
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.beltIsRunning ? 36 : 0
+            visible: root.beltIsRunning
+            color: "#80FF9800"
+            radius: 4
+            Text { anchors.centerIn: parent; text: "⚠ 皮带运行中，参数修改已锁定"; font.pixelSize: 16; font.bold: true; color: "#FFFFFF" }
+            Behavior on Layout.preferredHeight { NumberAnimation { duration: 200 } }
+        }
+
         // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突提示信息
         // ✅ 2026-03-30 [Phase 7.48.88.70]: 增加可用通道列表显示
         Rectangle {
@@ -170,7 +184,7 @@ Rectangle {
 
             // ---- 行0：使用状态(Switch) + 输出通道（与行1反馈通道对齐） ----
             Text { text: "制动器启用:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
-            Switch { id: enabledSwitch; checked: true }
+            Switch { id: enabledSwitch; checked: true; enabled: !root.beltIsRunning }
             Text { text: "松闸输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             // ✅ 2026-03-24 [Phase 7.48.88.5]: 松闸默认通道=brakeIndex+1，避免与张紧(0)冲突
@@ -193,7 +207,7 @@ Rectangle {
             // ---- 行1：松闸反馈 ----
             Text { text: "使用松闸反馈:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            Switch { id: useReleaseFeedbackSwitch; checked: false; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Switch { id: useReleaseFeedbackSwitch; checked: false; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "反馈通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: (enabledSwitch.checked && useReleaseFeedbackSwitch.checked) ? 1.0 : 0.4 }
             DeviceInfo.CustomSpinBox { id: releasePositionChannelSpin; Layout.preferredWidth: root.fldW; from: 0; to: 15; value: 0
@@ -207,7 +221,7 @@ Rectangle {
             // ---- 行2：抱闸反馈 ----
             Text { text: "使用抱闸反馈:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            Switch { id: useBrakeFeedbackSwitch; checked: false; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            Switch { id: useBrakeFeedbackSwitch; checked: false; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "反馈通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: (enabledSwitch.checked && useBrakeFeedbackSwitch.checked) ? 1.0 : 0.4 }
             DeviceInfo.CustomSpinBox { id: brakePositionChannelSpin; Layout.preferredWidth: root.fldW; from: 0; to: 15; value: 0
@@ -223,30 +237,30 @@ Rectangle {
 
             // ---- 行3：抱闸保持 | 松闸保持 | 抱闸动作延时 | 抱闸释放延时 ----
             Text { text: "抱闸保持:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: holdTimeField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: holdTimeField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "松闸保持:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: releaseTimeField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseTimeField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸动作延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: brakeDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: brakeDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸释放延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: releaseDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
 
             // ---- 行4：抱闸检测延时 | 抱闸故障延时 | 抱闸动作电流 | 抱闸释放电流 ----
             Text { text: "抱闸检测延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: detectDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: detectDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸故障延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: faultDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: faultDelayField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸动作电流:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: brakeCurrentField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: brakeCurrentField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸释放电流:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: releaseCurrentField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseCurrentField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
 
             // ---- 行5：抱闸动作电压 | 抱闸释放电压 ----
             // ✅ 2026-03-22 [Phase 7.48.74.2]: 电压行独立（旧：与启动延时同行）
             Text { text: "抱闸动作电压:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: brakeVoltageField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: brakeVoltageField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸释放电压:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: releaseVoltageField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseVoltageField; text: "0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Item { Layout.columnSpan: 4; Layout.fillWidth: true }
 
             // ---- 分隔线：电压与延时区域分割 ----
@@ -256,17 +270,17 @@ Rectangle {
             // ---- 行6：松闸启动延时 | 抱闸启动延时 ----
             // ✅ 2026-03-22 [Phase 7.48.74.2]: 启动延时独立行（旧：与电压同行）
             Text { text: "松闸启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: releaseStartupDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseStartupDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: brakeStartupDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: brakeStartupDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Item { Layout.columnSpan: 4; Layout.fillWidth: true }
 
             // ---- 行7：松闸停止延时 | 抱闸停止延时 ----
             // ✅ 2026-03-22 [Phase 7.48.74.2]: 停止延时独立行
             Text { text: "松闸停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: releaseStopDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: releaseStopDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Text { text: "抱闸停止延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
-            DeviceInfo.CustomTextField { id: brakeStopDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
+            DeviceInfo.CustomTextField { id: brakeStopDelayField; text: "1.0"; Layout.preferredWidth: root.fldW; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning; opacity: enabledSwitch.checked ? 1.0 : 0.4 }
             Item { Layout.columnSpan: 4; Layout.fillWidth: true }
         }
 
@@ -276,11 +290,11 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true; spacing: 8; opacity: enabledSwitch.checked ? 1.0 : 0.4
             Text { text: "松闸预警:"; font.pixelSize: root.lblFs; color: root.lblC }
-            DeviceInfo.CustomTextField { id: releaseWarningVoiceField; Layout.fillWidth: true; text: "制动器" + (root.brakeIndex + 1) + "松闸"; readOnly: true; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked }
+            DeviceInfo.CustomTextField { id: releaseWarningVoiceField; Layout.fillWidth: true; text: "制动器" + (root.brakeIndex + 1) + "松闸"; readOnly: true; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning }
             Text { text: "松闸失败:"; font.pixelSize: root.lblFs; color: root.lblC }
-            DeviceInfo.CustomTextField { id: releaseFailureVoiceField; Layout.fillWidth: true; text: "制动器" + (root.brakeIndex + 1) + "松闸失败"; readOnly: true; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked }
+            DeviceInfo.CustomTextField { id: releaseFailureVoiceField; Layout.fillWidth: true; text: "制动器" + (root.brakeIndex + 1) + "松闸失败"; readOnly: true; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning }
             Text { text: "抱闸失败:"; font.pixelSize: root.lblFs; color: root.lblC }
-            DeviceInfo.CustomTextField { id: brakeFailureVoiceField; Layout.fillWidth: true; text: "制动器" + (root.brakeIndex + 1) + "抱闸失败"; readOnly: true; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked }
+            DeviceInfo.CustomTextField { id: brakeFailureVoiceField; Layout.fillWidth: true; text: "制动器" + (root.brakeIndex + 1) + "抱闸失败"; readOnly: true; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning }
         }
 
         // ========== 行7：LED指示 + 操作按钮 ==========
@@ -306,6 +320,8 @@ Rectangle {
             // 操作按钮
             Button {
                 id: releaseBtn; text: "松闸"; Layout.preferredWidth: 100; Layout.preferredHeight: 40
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结松闸按钮
+                enabled: !root.beltIsRunning
                 font.pixelSize: 16; font.weight: Font.Bold
                 background: Rectangle {
                     color: releaseBtn.pressed ? "#1a7a3a" : (releaseBtn.hovered ? "#2ecc71" : "#27ae60"); radius: 6
@@ -333,6 +349,8 @@ Rectangle {
             }
             Button {
                 id: brakeBtn; text: "抱闸"; Layout.preferredWidth: 100; Layout.preferredHeight: 40
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结抱闸按钮
+                enabled: !root.beltIsRunning
                 font.pixelSize: 16; font.weight: Font.Bold
                 background: Rectangle {
                     color: brakeBtn.pressed ? "#1a5276" : (brakeBtn.hovered ? "#3498db" : "#2980b9"); radius: 6
@@ -713,7 +731,25 @@ Rectangle {
         if (config.hasOwnProperty("brake_stop_delay")) brakeStopDelayField.text = config["brake_stop_delay"].toString()
         return true
     }
-    Component.onCompleted: { loadBrakeConfig() }
+    Component.onCompleted: {
+        loadBrakeConfig()
+        // ✅ 2026-03-30 [Phase 7.48.88.72]: 初始化时查询皮带运行状态
+        if (typeof commonControl !== "undefined" && commonControl) {
+            var beltNum = (typeof systemConfig !== "undefined" && systemConfig) ? systemConfig.machineNumber : 1
+            root.beltIsRunning = commonControl.isBeltRunning(beltNum)
+        }
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 监听皮带运行状态变化
+    Connections {
+        target: typeof commonControl !== "undefined" ? commonControl : null
+        function onBeltRunningChanged(beltNumber, running) {
+            var currentBelt = (typeof systemConfig !== "undefined" && systemConfig) ? systemConfig.machineNumber : 1
+            if (beltNumber === currentBelt) {
+                root.beltIsRunning = running
+            }
+        }
+    }
     // ✅ 2026-03-23 [Phase 7.48.83]: deviceId由Loader.onLoaded设置，变化时重新加载（修复所有设备共用deviceId=1的问题）
     onDeviceIdChanged: {
         if (deviceId > 0) loadBrakeConfig()

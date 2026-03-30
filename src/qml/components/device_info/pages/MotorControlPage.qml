@@ -30,6 +30,9 @@ Rectangle {
     // true=运行中, false=已停止。通过监听 commonControl.deviceStatusChanged 信号更新
     property var motorRunningStates: [false,false,false,false,false,false,false,false]
 
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行状态（用于冻结参数编辑）
+    property bool beltIsRunning: false
+
     // ✅ 2026-03-29 [Phase 7.48.88.57]: 当前正在编辑的电机修改标记（-1=无修改）
     // ✅ 2026-03-29 [Phase 7.48.88.60]: 改为数组，支持多电机同时标记修改（类似VSCode多文件修改标记）
     // 旧代码: property int modifiedMotorIndex: -1
@@ -464,6 +467,8 @@ Rectangle {
 
                 onLoaded: {
                     item.motorIndex = Qt.binding(function() { return root.currentMotorIndex })
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 传递皮带运行状态（冻结参数编辑）
+                    item.beltIsRunning = Qt.binding(function() { return root.beltIsRunning })
                     // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
                     // ✅ 2026-01-30 [FIX 100.300.106.2]: 直接传递 focusSubArea
                     item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
@@ -983,6 +988,23 @@ Rectangle {
             newStates[motorIdx] = isRunning
             root.motorRunningStates = newStates
             console.log("✅ [MotorControlPage] 电机" + (motorIdx + 1) + (isRunning ? " 运行中" : " 已停止"))
+        }
+        // ✅ 2026-03-30 [Phase 7.48.88.72]: 监听皮带运行状态变化，冻结参数编辑
+        function onBeltRunningChanged(beltNumber, running) {
+            var currentBelt = (typeof systemConfig !== "undefined" && systemConfig) ? systemConfig.machineNumber : 1
+            if (beltNumber === currentBelt) {
+                root.beltIsRunning = running
+                console.log("✅ [MotorControlPage] 皮带" + beltNumber + (running ? " 运行中 → 冻结参数" : " 已停止 → 解锁参数"))
+            }
+        }
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 初始化时查询皮带运行状态
+    Component.onCompleted: {
+        if (typeof commonControl !== "undefined" && commonControl) {
+            var beltNum = (typeof systemConfig !== "undefined" && systemConfig) ? systemConfig.machineNumber : 1
+            root.beltIsRunning = commonControl.isBeltRunning(beltNum)
+            if (root.beltIsRunning) console.log("✅ [MotorControlPage] 初始化：皮带运行中，参数已冻结")
         }
     }
 }

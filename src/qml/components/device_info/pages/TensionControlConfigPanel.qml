@@ -20,6 +20,8 @@ Rectangle {
     property var virtualKeyboard: null
     property var keyboardManager: null  // ✅ 2026-03-17 [Phase 7.48.52]: 键盘管理器（CustomSpinBox/CustomTextField需要）
     property bool tensionOpened: false  // 张紧打开状态
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中参数冻结
+    property bool beltIsRunning: false
 
     // ========== 布局常量 ==========
     // ✅ 2026-03-17 [Phase 7.48.52]: 参照 BasicConfigTab 调整布局常量
@@ -70,6 +72,17 @@ Rectangle {
         width: paramScrollView.width
         spacing: 6
 
+        // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中参数冻结提示横幅
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.beltIsRunning ? 36 : 0
+            visible: root.beltIsRunning
+            color: "#80FF9800"
+            radius: 4
+            Text { anchors.centerIn: parent; text: "\u26A0 皮带运行中，参数修改已锁定"; font.pixelSize: 16; font.bold: true; color: "#FFFFFF" }
+            Behavior on Layout.preferredHeight { NumberAnimation { duration: 200 } }
+        }
+
         // ✅ 2026-03-30 [Phase 7.48.88.69]: 全局通道冲突提示信息
         // ✅ 2026-03-30 [Phase 7.48.88.70]: 增加可用通道列表显示
         Rectangle {
@@ -117,7 +130,9 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: tensionEnabledSwitch.implicitHeight
-                Switch { id: tensionEnabledSwitch; checked: true; anchors.verticalCenter: parent.verticalCenter }
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                // 旧：Switch { id: tensionEnabledSwitch; checked: true; anchors.verticalCenter: parent.verticalCenter }
+                Switch { id: tensionEnabledSwitch; checked: true; anchors.verticalCenter: parent.verticalCenter; enabled: !root.beltIsRunning }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 0 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
@@ -126,7 +141,9 @@ Rectangle {
                 implicitHeight: outputChannelSpin.implicitHeight
                 // ✅ 2026-03-24 [Phase 7.48.88.5]: 通道范围扩展到0-15（16通道继电器模块）
                 // 旧代码：to: 7
-                DeviceInfo.CustomSpinBox { id: outputChannelSpin; from: 0; to: 15; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                // 旧：enabled: tensionEnabledSwitch.checked
+                DeviceInfo.CustomSpinBox { id: outputChannelSpin; from: 0; to: 15; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && !root.beltIsRunning; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 1 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
@@ -136,14 +153,18 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: useFeedbackSwitch.implicitHeight
-                Switch { id: useFeedbackSwitch; checked: false; anchors.verticalCenter: parent.verticalCenter; enabled: tensionEnabledSwitch.checked }
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                // 旧：enabled: tensionEnabledSwitch.checked
+                Switch { id: useFeedbackSwitch; checked: false; anchors.verticalCenter: parent.verticalCenter; enabled: tensionEnabledSwitch.checked && !root.beltIsRunning }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 2 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "反馈通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 1; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 1; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: feedbackChannelSpin.implicitHeight
-                DeviceInfo.CustomSpinBox { id: feedbackChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked; keyboardManager: root.keyboardManager }
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                // 旧：enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked
+                DeviceInfo.CustomSpinBox { id: feedbackChannelSpin; from: 0; to: 7; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked && !root.beltIsRunning; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 3 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
@@ -152,14 +173,18 @@ Rectangle {
             Item {
                 Layout.column: 1; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: feedbackTimeoutSpin.implicitHeight
-                DeviceInfo.CustomSpinBox { id: feedbackTimeoutSpin; from: 1; to: 60; value: 10; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked; keyboardManager: root.keyboardManager }
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                // 旧：enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked
+                DeviceInfo.CustomSpinBox { id: feedbackTimeoutSpin; from: 1; to: 60; value: 10; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && useFeedbackSwitch.checked && !root.beltIsRunning; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 4 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
             Text { text: "启动延时:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 2; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 3; Layout.row: 2; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: startupDelaySpin.implicitHeight
-                DeviceInfo.CustomSpinBox { id: startupDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                // 旧：enabled: tensionEnabledSwitch.checked
+                DeviceInfo.CustomSpinBox { id: startupDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && !root.beltIsRunning; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 5 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
 
@@ -177,13 +202,17 @@ Rectangle {
                     RadioButton {
                         id: audioDefaultRadio; text: "默认"
                         ButtonGroup.group: audioSourceGroup
-                        enabled: tensionEnabledSwitch.checked
+                        // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                        // 旧：enabled: tensionEnabledSwitch.checked
+                        enabled: tensionEnabledSwitch.checked && !root.beltIsRunning
                         contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
                     }
                     RadioButton {
                         id: audioTtsRadio; text: "TTS"; checked: true
                         ButtonGroup.group: audioSourceGroup
-                        enabled: tensionEnabledSwitch.checked
+                        // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                        // 旧：enabled: tensionEnabledSwitch.checked
+                        enabled: tensionEnabledSwitch.checked && !root.beltIsRunning
                         contentItem: Text { text: parent.text; font.pixelSize: 21; color: "#E0E0E0"; leftPadding: parent.indicator.width + 4 }
                     }
                 }
@@ -193,7 +222,9 @@ Rectangle {
             Item {
                 Layout.column: 3; Layout.row: 3; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: stopDelaySpin.implicitHeight
-                DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked; keyboardManager: root.keyboardManager }
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                // 旧：enabled: tensionEnabledSwitch.checked
+                DeviceInfo.CustomSpinBox { id: stopDelaySpin; from: 0; to: 60; value: 0; editable: true; anchors.fill: parent; enabled: tensionEnabledSwitch.checked && !root.beltIsRunning; keyboardManager: root.keyboardManager }
                 Rectangle { anchors.fill: parent; color: "transparent"; border.color: root.focusSubArea === 1 && root.focusParamIndex === 7 ? "#2196F3" : "transparent"; border.width: 3; radius: 4; z: 10 }
             }
         } // GridLayout end
@@ -210,7 +241,9 @@ Rectangle {
                 text: root.controlIndex + "号张紧启动"
                 Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 placeholderText: root.controlIndex + "号张紧启动"
-                enabled: tensionEnabledSwitch.checked
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                // 旧：enabled: tensionEnabledSwitch.checked
+                enabled: tensionEnabledSwitch.checked && !root.beltIsRunning
                 keyboardManager: root.keyboardManager
             }
             Text { text: "失败语音:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 2; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
@@ -219,7 +252,9 @@ Rectangle {
                 text: root.controlIndex + "号张紧运行失败"
                 Layout.column: 3; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 placeholderText: root.controlIndex + "号张紧运行失败"
-                enabled: tensionEnabledSwitch.checked
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结
+                // 旧：enabled: tensionEnabledSwitch.checked
+                enabled: tensionEnabledSwitch.checked && !root.beltIsRunning
                 keyboardManager: root.keyboardManager
             }
         }
@@ -252,7 +287,9 @@ Rectangle {
                 Button {
                     id: startBtn
                     width: 140; height: parent.height
-                    enabled: tensionEnabledSwitch.checked
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中冻结启动按钮
+                    // 旧：enabled: tensionEnabledSwitch.checked
+                    enabled: tensionEnabledSwitch.checked && !root.beltIsRunning
                     onClicked: startTensionControl()
                     background: Item {}
                     contentItem: Row {
@@ -675,9 +712,25 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 监听皮带运行状态，冻结参数修改
+    Connections {
+        target: typeof commonControl !== "undefined" ? commonControl : null
+        function onBeltRunningChanged(beltNumber, running) {
+            var currentBelt = (typeof systemConfig !== "undefined" && systemConfig) ? systemConfig.machineNumber : 1
+            if (beltNumber === currentBelt) {
+                root.beltIsRunning = running
+            }
+        }
+    }
+
     Component.onCompleted: {
         console.log("✅ [TensionControlConfigPanel] 初始化完成, deviceId:", root.deviceId)
         loadTensionControlConfig()
+        // ✅ 2026-03-30 [Phase 7.48.88.72]: 初始化皮带运行状态
+        if (typeof commonControl !== "undefined" && commonControl) {
+            var beltNum = (typeof systemConfig !== "undefined" && systemConfig) ? systemConfig.machineNumber : 1
+            root.beltIsRunning = commonControl.isBeltRunning(beltNum)
+        }
     }
     // ✅ 2026-03-23 [Phase 7.48.83]: deviceId由Loader.onLoaded设置，变化时重新加载（修复所有设备共用deviceId=1的问题）
     onDeviceIdChanged: {

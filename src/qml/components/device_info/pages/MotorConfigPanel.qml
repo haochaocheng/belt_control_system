@@ -28,6 +28,9 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property var virtualKeyboard: null  // Qt 虚拟键盘引用
 
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行状态（从MotorControlPage传入，用于冻结参数编辑）
+    property bool beltIsRunning: false
+
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 信号 - 请求更新焦点索引
     // 从子组件（BasicConfigTab 等）转发到父组件（MotorControlPage）
     signal requestFocusParamIndex(int paramIndex)
@@ -287,6 +290,8 @@ Rectangle {
                         // 旧：item.motorIndex = root.motorIndex（赋值，不跟踪变化）
                         item.motorIndex = Qt.binding(function() { return root.motorIndex })
                         item.deviceId = 1  // ✅ 2026-03-10 [Phase 7.48.33]: 传递设备ID
+                        // ✅ 2026-03-30 [Phase 7.48.88.72]: 传递皮带运行状态
+                        item.beltIsRunning = Qt.binding(function() { return root.beltIsRunning })
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                         item.requestFocusParamIndex.connect(function(paramIndex) {

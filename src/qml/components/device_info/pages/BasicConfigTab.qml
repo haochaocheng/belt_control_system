@@ -25,6 +25,9 @@ Rectangle {
     property int focusParamIndex: 0  // 参数区域焦点索引
     property var virtualKeyboard: null  // Qt 虚拟键盘引用
 
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行状态（从MotorConfigPanel传入，用于冻结参数编辑）
+    property bool beltIsRunning: false
+
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.7]: 监听 focusParamIndex 变化，确认属性传递
     onFocusParamIndexChanged: {
         console.log("🟢 [BasicConfigTab] focusParamIndex 变化:", focusParamIndex)
@@ -158,10 +161,35 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中参数冻结提示横幅
+    Rectangle {
+        id: runningLockBanner
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.margins: 4
+        height: root.beltIsRunning ? 36 : 0
+        visible: root.beltIsRunning
+        color: "#80FF9800"
+        radius: 4
+        z: 100
+        Text {
+            anchors.centerIn: parent
+            text: "⚠ 皮带运行中，参数修改已锁定"
+            font.pixelSize: 16; font.bold: true; color: "#FFFFFF"
+        }
+        Behavior on height { NumberAnimation { duration: 200 } }
+    }
+
     // ========== 滚动区域 ==========
     ScrollView {
         id: paramScrollView  // ✅ 2026-01-30 [FIX 100.300.107]: 添加 ID，用于 GridLayout 宽度计算
-        anchors.fill: parent
+        // ✅ 2026-03-30 [Phase 7.48.88.72]: 横幅显示时下移
+        // 旧代码：anchors.fill: parent
+        anchors.top: runningLockBanner.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
         clip: true
 
         // ✅ 2026-01-30 [FIX 100.300.107]: 改为 GridLayout，参考 SwitchInputPage
@@ -173,7 +201,7 @@ Rectangle {
             columnSpacing: 10
             rowSpacing: 12
 
-            // ========== 第一行：运行状态（左侧，索引0）、模块类型（右侧，索引1）==========
+            // ========== 第一行：��行状态（左侧，索引0）、模块类型（右侧，索引1）==========
 
             // 运行状态标签
             Text {
@@ -198,6 +226,8 @@ Rectangle {
                     id: runningStateRow
                     anchors.fill: parent
                     spacing: 30
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结
+                    enabled: !root.beltIsRunning
 
                     // 投入选项
                     Row {
@@ -374,6 +404,8 @@ Rectangle {
                     to: 8
                     value: 1
                     editable: true
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结
+                    enabled: !root.beltIsRunning
                     keyboardManager: root.keyboardManager  // ✅ 2026-02-02 [FIX 100.300.112.8.23]: 添加键盘管理器
                     onValueChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
                 }
@@ -462,6 +494,8 @@ Rectangle {
                     anchors.fill: parent
                     from: -1
                     to: 15
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结
+                    enabled: !root.beltIsRunning
                     // ✅ 2026-03-24 [Phase 7.48.88.7]: 电机1-5通道1-5，电机6-8通道-1（不使用）
                     // 旧代码：value: root.motorIndex + 1  // 8个电机都分配了通道，6-8与制动器冲突
                     value: root.motorIndex < 5 ? root.motorIndex + 1 : -1
@@ -533,6 +567,8 @@ Rectangle {
                 Switch {
                     id: useFeedbackSwitch
                     anchors.verticalCenter: parent.verticalCenter
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结
+                    enabled: !root.beltIsRunning
                     checked: true  // 默认启用反馈
                     onCheckedChanged: root.markModified()  // ✅ 2026-03-29 [Phase 7.48.88.57]
 
@@ -603,7 +639,9 @@ Rectangle {
                 Layout.maximumWidth: 300
                 implicitHeight: feedbackChannelSpin.implicitHeight
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
-                enabled: useFeedbackSwitch.checked
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 增加运行中冻结条件
+                // 旧代码：enabled: useFeedbackSwitch.checked
+                enabled: useFeedbackSwitch.checked && !root.beltIsRunning
 
                 DeviceInfo.CustomSpinBox {
                     id: feedbackChannelSpin
@@ -649,7 +687,9 @@ Rectangle {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: feedbackDelaySpin.implicitHeight
                 opacity: useFeedbackSwitch.checked ? 1.0 : 0.4
-                enabled: useFeedbackSwitch.checked
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 增加运行中冻结条件
+                // 旧代码：enabled: useFeedbackSwitch.checked
+                enabled: useFeedbackSwitch.checked && !root.beltIsRunning
 
                 DeviceInfo.CustomSpinBox {
                     id: feedbackDelaySpin
@@ -704,6 +744,8 @@ Rectangle {
                 DeviceInfo.CustomSpinBox {
                     id: startupDelaySpin
                     anchors.fill: parent
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结
+                    enabled: !root.beltIsRunning
                     from: 0
                     to: 60
                     value: 8  // ✅ 2026-03-12: 默认8秒（原5秒）
@@ -752,6 +794,8 @@ Rectangle {
                 DeviceInfo.CustomSpinBox {
                     id: stopDelaySpin
                     anchors.fill: parent
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结
+                    enabled: !root.beltIsRunning
                     from: 0
                     to: 60
                     value: 8
@@ -797,6 +841,8 @@ Rectangle {
                 DeviceInfo.CustomTextField {
                     id: warningVoiceField
                     anchors.fill: parent
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结
+                    enabled: !root.beltIsRunning
                     // ✅ 2026-03-11 [Phase 7.48.37]: 改���音频文件名（不含扩展名）
                     // 旧：text: "电机" + (root.motorIndex + 1) + "启动预警"
                     text: "电机" + (root.motorIndex + 1) + "启动"
@@ -840,6 +886,8 @@ Rectangle {
                 DeviceInfo.CustomTextField {
                     id: failureVoiceField
                     anchors.fill: parent
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结
+                    enabled: !root.beltIsRunning
                     // ✅ 2026-03-11 [Phase 7.48.37]: 改为音频文件名（不含扩展名）
                     // 旧：text: "电机" + (root.motorIndex + 1) + "运行失败"
                     // ✅ 2026-03-29 [Phase 7.48.88.66]: 匹配批量生成文件名格式
@@ -890,6 +938,8 @@ Rectangle {
                 DeviceInfo.CustomComboBox {
                     id: startupKeyCombo
                     anchors.fill: parent
+                    // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结
+                    enabled: !root.beltIsRunning
                     keyboardManager: root.keyboardManager
                     model: ["无", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
                             "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
@@ -930,6 +980,8 @@ Rectangle {
                 Layout.column: 3; Layout.row: 6
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 50
+                // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结音频来源按钮
+                enabled: !root.beltIsRunning
 
                 // ✅ 2026-03-12 [Phase 7.48.40]: 从ComboBox改为ButtonGroup双按钮（参照AnalogInputPage音频来源风格）
                 // 旧：ComboBox audioSourceCombo
@@ -1444,6 +1496,8 @@ Rectangle {
                         id: motorStartBtn
                         text: "启 动"
                         width: 120; height: 48
+                        // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结启动按钮
+                        enabled: !root.beltIsRunning
 
                         background: Rectangle {
                             color: motorStartBtn.pressed ? "#166534" :
