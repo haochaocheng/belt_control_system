@@ -468,21 +468,22 @@ Rectangle {
     }
 
     // ✅ 2026-03-30 [Phase 7.48.88.75]: 监听设备运行状态信号
-    Connections {
-        target: typeof commonControl !== "undefined" ? commonControl : null
-        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
-            // 匹配"张力传感器"或"张紧控制"
-            if (deviceName === "张力传感器") {
-                var newStates = root.tensionRunningStates.slice()
-                newStates[0] = isRunning
-                root.tensionRunningStates = newStates
-            } else if (deviceName === "张紧控制") {
-                var newStates2 = root.tensionRunningStates.slice()
-                newStates2[1] = isRunning
-                root.tensionRunningStates = newStates2
-            }
-        }
-    }
+    // ✅ 2026-03-30 [Phase 7.48.88.76]: 已迁移到 DeviceSettingsDialog 层级持久化
+    // 问题：切换类别时Loader销毁组件导致runningStates重置，现由Dialog层级统一监听并通过Qt.binding()传递
+    // Connections {
+    //     target: typeof commonControl !== "undefined" ? commonControl : null
+    //     function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+    //         if (deviceName === "张力传感器") {
+    //             var newStates = root.tensionRunningStates.slice()
+    //             newStates[0] = isRunning
+    //             root.tensionRunningStates = newStates
+    //         } else if (deviceName === "张紧控制") {
+    //             var newStates2 = root.tensionRunningStates.slice()
+    //             newStates2[1] = isRunning
+    //             root.tensionRunningStates = newStates2
+    //         }
+    //     }
+    // }
 
     Component.onCompleted: {
         loadAllTensionStatuses()

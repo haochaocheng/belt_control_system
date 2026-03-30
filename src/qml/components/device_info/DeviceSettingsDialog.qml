@@ -189,6 +189,14 @@ Item {
         12: 0   // 沿线点位保护（预留）
     })
 
+    // ✅ 2026-03-30 [Phase 7.48.88.76]: 设备运行状态持久化（跨类别切换不丢失）
+    // 问题：各页面用Loader按需加载，切换类别时组件销毁导致runningStates重置为默认值
+    // 解决：将运行状态提升到Dialog层级，Loader加载时通过Qt.binding()传递给子页面
+    property var motorRunningStates: [false,false,false,false,false,false,false,false]
+    property var brakeRunningStates: [false,false,false,false,false,false,false,false]
+    property var tensionRunningStates: [false, false]
+    property var sprinklerRunningStates: [false,false,false,false,false,false,false,false]
+
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听类别切换，保存和恢复内容索引
     onCurrentCategoryChanged: {
         // 保存旧类别的内容索引（如果有的话）
@@ -2903,6 +2911,9 @@ Item {
                             // ✅ 2026-01-30 [FIX 100.300.106]: 传递虚拟键盘引用
                             item.virtualKeyboard = qtVirtualKeyboard
 
+                            // ✅ 2026-03-30 [Phase 7.48.88.76]: 传递持久化的运行状态（跨类别切换不丢失）
+                            item.motorRunningStates = Qt.binding(function() { return root.motorRunningStates })
+
                             // ✅ 2026-01-30 [FIX 100.300.106]: 设置初始焦点状态
                             if (root.currentFocusArea === 2 && root.currentCategory === 3) {
                                 item.focusSubArea = 0  // 默认焦点在电机列表区域
@@ -3022,6 +3033,9 @@ Item {
                             // ✅ 2026-01-31 [FIX 100.300.112.4]: 传递虚拟键盘引用
                             item.virtualKeyboard = qtVirtualKeyboard
 
+                            // ✅ 2026-03-30 [Phase 7.48.88.76]: 传递持久化的运行状态（跨类别切换不丢失）
+                            item.brakeRunningStates = Qt.binding(function() { return root.brakeRunningStates })
+
                             // ✅ 2026-01-31 [FIX 100.300.112.4]: 设置初始焦点状态
                             if (root.currentFocusArea === 2 && root.currentCategory === 4) {
                                 item.focusSubArea = 0  // 默认焦点在制动器列表区域
@@ -3113,6 +3127,9 @@ Item {
                             // ✅ 2026-01-30 [FIX 100.300.105.1]: keyboardManager 已废弃，注释掉
                             // item.keyboardManager = keyboardManager
 
+                            // ✅ 2026-03-30 [Phase 7.48.88.76]: 传递持久化的运行状态（跨类别切换不丢失）
+                            item.tensionRunningStates = Qt.binding(function() { return root.tensionRunningStates })
+
                             // ✅ 2026-01-31 [FIX 100.300.112.8]: 初始化焦点状态
                             if (root.currentFocusArea === 2 && root.currentCategory === 5) {
                                 item.focusSubArea = 0  // 默认焦点在控制列表区域
@@ -3200,6 +3217,8 @@ Item {
                             console.log("✅ [DeviceSettingsDialog] SprinklerControlPage 加载成功")
                             item.deviceId = root.deviceId
                             item.deviceName = root.deviceName
+                            // ✅ 2026-03-30 [Phase 7.48.88.76]: 传递持久化的运行状态（跨类别切换不丢失）
+                            item.sprinklerRunningStates = Qt.binding(function() { return root.sprinklerRunningStates })
                             if (root.currentFocusArea === 2 && root.currentCategory === 6) {
                                 item.focusSubArea = 0
                                 item.focusItemIndex = root.currentContentItemIndex
@@ -4316,6 +4335,62 @@ Item {
             if (root._pendingCategory >= 0) {
                 root.currentCategory = root._pendingCategory
                 root._pendingCategory = -1
+            }
+        }
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.76]: 全局设备运行状态监听
+    // 在Dialog层级持久化跟踪，不受Loader加载/卸载影响
+    // 各页面通过Qt.binding()从此处获取运行状态
+    Connections {
+        target: typeof commonControl !== "undefined" ? commonControl : null
+        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+            // 电机: "X号电机"
+            var motorMatch = deviceName.match(/(\d+)号电机/)
+            if (motorMatch) {
+                var mIdx = parseInt(motorMatch[1]) - 1
+                if (mIdx >= 0 && mIdx < 8) {
+                    var mStates = root.motorRunningStates.slice()
+                    mStates[mIdx] = isRunning
+                    root.motorRunningStates = mStates
+                }
+                return
+            }
+            // 制动器: "X号制动器"
+            var brakeMatch = deviceName.match(/(\d+)号制动器/)
+            if (brakeMatch) {
+                var bIdx = parseInt(brakeMatch[1]) - 1
+                if (bIdx >= 0 && bIdx < 8) {
+                    var bStates = root.brakeRunningStates.slice()
+                    bStates[bIdx] = isRunning
+                    root.brakeRunningStates = bStates
+                }
+                return
+            }
+            // 张力传感器
+            if (deviceName === "张力传感器") {
+                var tStates = root.tensionRunningStates.slice()
+                tStates[0] = isRunning
+                root.tensionRunningStates = tStates
+                return
+            }
+            // 张紧控制
+            if (deviceName === "张紧控制") {
+                var tStates2 = root.tensionRunningStates.slice()
+                tStates2[1] = isRunning
+                root.tensionRunningStates = tStates2
+                return
+            }
+            // 洒水: "X号洒水"
+            var sprMatch = deviceName.match(/(\d+)号洒水/)
+            if (sprMatch) {
+                var sIdx = parseInt(sprMatch[1]) - 1
+                if (sIdx >= 0 && sIdx < 8) {
+                    var sStates = root.sprinklerRunningStates.slice()
+                    sStates[sIdx] = isRunning
+                    root.sprinklerRunningStates = sStates
+                }
+                return
             }
         }
     }

@@ -338,18 +338,20 @@ Rectangle {
     }
 
     // ✅ 2026-03-30 [Phase 7.48.88.75]: 监听设备运行状态信号
-    Connections {
-        target: typeof commonControl !== "undefined" ? commonControl : null
-        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
-            var match = deviceName.match(/(\d+)号洒水/)
-            if (!match) return
-            var sprIdx = parseInt(match[1]) - 1
-            if (sprIdx < 0 || sprIdx >= 8) return
-            var newStates = root.sprinklerRunningStates.slice()
-            newStates[sprIdx] = isRunning
-            root.sprinklerRunningStates = newStates
-        }
-    }
+    // ✅ 2026-03-30 [Phase 7.48.88.76]: 已迁移到 DeviceSettingsDialog 层级持久化
+    // 问题：切换类别时Loader销毁组件导致runningStates重置，现由Dialog层级统一监听并通过Qt.binding()传递
+    // Connections {
+    //     target: typeof commonControl !== "undefined" ? commonControl : null
+    //     function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+    //         var match = deviceName.match(/(\d+)号洒水/)
+    //         if (!match) return
+    //         var sprIdx = parseInt(match[1]) - 1
+    //         if (sprIdx < 0 || sprIdx >= 8) return
+    //         var newStates = root.sprinklerRunningStates.slice()
+    //         newStates[sprIdx] = isRunning
+    //         root.sprinklerRunningStates = newStates
+    //     }
+    // }
 
     Component.onCompleted: {
         loadAllSprinklerStatuses()

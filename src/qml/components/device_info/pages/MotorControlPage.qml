@@ -975,20 +975,21 @@ Rectangle {
     }
 
     // ✅ 2026-03-30 [Phase 7.48.88.71]: 监听全局设备状态变化，更新电机运行状态
+    // ✅ 2026-03-30 [Phase 7.48.88.76]: onDeviceStatusChanged 已迁移到 DeviceSettingsDialog 层级持久化
+    // 问题：切换类别时Loader销毁组件导致runningStates重置，现由Dialog层��统一监听并通过Qt.binding()传递
     Connections {
         target: typeof commonControl !== "undefined" ? commonControl : null
-        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
-            // 解析 "X号电机" → 提取电机编号
-            var match = deviceName.match(/(\d+)号电机/)
-            if (!match) return
-            var motorIdx = parseInt(match[1]) - 1  // 1-based → 0-based
-            if (motorIdx < 0 || motorIdx >= 8) return
-            // 更新运行状态数组（赋新数组触发QML绑定更新）
-            var newStates = root.motorRunningStates.slice()
-            newStates[motorIdx] = isRunning
-            root.motorRunningStates = newStates
-            console.log("✅ [MotorControlPage] 电机" + (motorIdx + 1) + (isRunning ? " 运行中" : " 已停止"))
-        }
+        // 旧代码 [Phase 7.48.88.76 迁移]: onDeviceStatusChanged 已由 DeviceSettingsDialog 统一处理
+        // function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+        //     var match = deviceName.match(/(\d+)号电机/)
+        //     if (!match) return
+        //     var motorIdx = parseInt(match[1]) - 1
+        //     if (motorIdx < 0 || motorIdx >= 8) return
+        //     var newStates = root.motorRunningStates.slice()
+        //     newStates[motorIdx] = isRunning
+        //     root.motorRunningStates = newStates
+        //     console.log("✅ [MotorControlPage] 电机" + (motorIdx + 1) + (isRunning ? " 运行中" : " 已停止"))
+        // }
         // ✅ 2026-03-30 [Phase 7.48.88.72]: 监听皮带运行状态变化，冻结参数编辑
         function onBeltRunningChanged(beltNumber, running) {
             var currentBelt = (typeof systemConfig !== "undefined" && systemConfig) ? systemConfig.machineNumber : 1

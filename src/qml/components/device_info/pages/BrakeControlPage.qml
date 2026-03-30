@@ -475,21 +475,21 @@ Rectangle {
     }
 
     // ✅ 2026-03-30 [Phase 7.48.88.74]: 监听全局设备状态变化，更新制动器运行状态
-    Connections {
-        target: typeof commonControl !== "undefined" ? commonControl : null
-        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
-            // 解析 "X号制动器" → 提取制动器编号
-            var match = deviceName.match(/(\d+)号制动器/)
-            if (!match) return
-            var brakeIdx = parseInt(match[1]) - 1  // 1-based → 0-based
-            if (brakeIdx < 0 || brakeIdx >= 8) return
-            // 更新运行状态数组（赋新数组触发QML绑定更新）
-            var newStates = root.brakeRunningStates.slice()
-            newStates[brakeIdx] = isRunning
-            root.brakeRunningStates = newStates
-            console.log("✅ [BrakeControlPage] 制动器" + (brakeIdx + 1) + (isRunning ? " 运行中" : " 已停止"))
-        }
-    }
+    // ✅ 2026-03-30 [Phase 7.48.88.76]: 已迁移到 DeviceSettingsDialog 层级持久化
+    // 问题：切换类别时Loader销毁组件导致runningStates重置，现由Dialog层级统一监听并通过Qt.binding()传递
+    // Connections {
+    //     target: typeof commonControl !== "undefined" ? commonControl : null
+    //     function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+    //         var match = deviceName.match(/(\d+)号制动器/)
+    //         if (!match) return
+    //         var brakeIdx = parseInt(match[1]) - 1
+    //         if (brakeIdx < 0 || brakeIdx >= 8) return
+    //         var newStates = root.brakeRunningStates.slice()
+    //         newStates[brakeIdx] = isRunning
+    //         root.brakeRunningStates = newStates
+    //         console.log("✅ [BrakeControlPage] 制动器" + (brakeIdx + 1) + (isRunning ? " 运行中" : " 已停止"))
+    //     }
+    // }
 
     // ✅ 2026-03-30 [Phase 7.48.88.74]: 初始化时加载制动器状态
     Component.onCompleted: {
