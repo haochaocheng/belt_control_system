@@ -440,21 +440,28 @@ Rectangle {
     }
 
     // ✅ 2026-03-30 [Phase 7.48.88.75]: 从数据库加载张紧控制状态
+    // ✅ 2026-03-30 [Phase 7.48.88.77]: 修复 loadTensionSensorConfig 不存在导致张力传感器始终显示"未配置"
+    // 原因：DeviceConfigManager 没有 loadTensionSensorConfig 方法，张力传感器和张紧控制都在同一个 device_tension_config 表
+    // 修复：统一使用 loadTensionConfig(deviceId, index)，张力传感器用 channel_number 判断配置状态
     function loadAllTensionStatuses() {
         if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
         var statusList = []
 
-        // index 0: 张力传感器
-        var sensorCfg = deviceConfigMgr.loadTensionSensorConfig(root.deviceId)
+        // index 0: 张力传感器（tension_index=0）
+        // 旧代码 [Phase 7.48.88.77]: loadTensionSensorConfig 在 DeviceConfigManager 中不存在
+        // var sensorCfg = deviceConfigMgr.loadTensionSensorConfig(root.deviceId)
+        var sensorCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, 0)
         if (sensorCfg && Object.keys(sensorCfg).length > 0) {
-            var sEnabled = sensorCfg.hasOwnProperty("sensor_enabled") ? (sensorCfg["sensor_enabled"] === true || sensorCfg["sensor_enabled"] === 1) : true
-            var sCh = sensorCfg.hasOwnProperty("channel") ? sensorCfg["channel"] : -1
+            var sEnabled = sensorCfg.hasOwnProperty("enabled") ? (sensorCfg["enabled"] === true || sensorCfg["enabled"] === 1) : true
+            // 旧代码 [Phase 7.48.88.77]: key "channel" 不存在，数据库列名是 "channel_number"
+            // var sCh = sensorCfg.hasOwnProperty("channel") ? sensorCfg["channel"] : -1
+            var sCh = sensorCfg.hasOwnProperty("channel_number") ? sensorCfg["channel_number"] : -1
             statusList.push({ enabled: sEnabled, outputChannel: sCh })
         } else {
             statusList.push({ enabled: true, outputChannel: -1 })
         }
 
-        // index 1: 张紧控制
+        // index 1: 张紧控制（tension_index=1）
         var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, 1)
         if (tensionCfg && Object.keys(tensionCfg).length > 0) {
             var tEnabled = tensionCfg.hasOwnProperty("enabled") ? (tensionCfg["enabled"] === true || tensionCfg["enabled"] === 1) : true
