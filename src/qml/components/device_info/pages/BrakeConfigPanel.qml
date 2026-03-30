@@ -183,7 +183,9 @@ Rectangle {
             rowSpacing: 8
 
             // ---- 行0：使用状态(Switch) + 输出通道（与行1反馈通道对齐） ----
-            Text { text: "制动器启用:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            // ✅ 2026-03-30 [Phase 7.48.88.73]: 统一启用开关标签
+            // 旧：Text { text: "制动器启用:"; ... }
+            Text { text: "是否启用:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Switch { id: enabledSwitch; checked: true; enabled: !root.beltIsRunning }
             Text { text: "松闸输出通道:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight
                 opacity: enabledSwitch.checked ? 1.0 : 0.4 }

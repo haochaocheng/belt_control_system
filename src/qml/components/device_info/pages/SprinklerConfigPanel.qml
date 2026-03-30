@@ -98,7 +98,9 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             spacing: 16
-            Text { text: "启用状态:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            // ✅ 2026-03-30 [Phase 7.48.88.73]: 统一启用开关标签
+            // 旧：Text { text: "启用状态:"; ... }
+            Text { text: "是否启用:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: enabledSwitch.implicitHeight

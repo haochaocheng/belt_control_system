@@ -126,7 +126,9 @@ Rectangle {
 
             // ===== Row 0: 张紧启用(0) | 输出通道(1) =====
             // ✅ 2026-03-22 [Phase 7.48.74]: 张紧启用加入导航(paramIndex 0)
-            Text { text: "张紧启用:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+            // ✅ 2026-03-30 [Phase 7.48.88.73]: 统一启用开关标签
+            // 旧：Text { text: "张紧启用:"; ... }
+            Text { text: "是否启用:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.column: 0; Layout.row: 0; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
             Item {
                 Layout.column: 1; Layout.row: 0; Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: tensionEnabledSwitch.implicitHeight

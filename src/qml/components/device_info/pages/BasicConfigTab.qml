@@ -203,9 +203,10 @@ Rectangle {
 
             // ========== 第一行：��行状态（左侧，索引0）、模块类型（右侧，索引1）==========
 
-            // 运行状态标签
+            // ✅ 2026-03-30 [Phase 7.48.88.73]: 统一启用开关 - 标签改为"是否启用"
+            // 旧：Text { text: "运行状态:"; ... }
             Text {
-                text: "运行状态:"
+                text: "是否启用:"
                 font.pixelSize: 21
                 color: "#9E9E9E"
                 Layout.column: 0
@@ -214,101 +215,24 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            // ✅ 2026-03-29 [Phase 7.48.88.56]: 运行状态输入（可通过回车键切换投入/禁用）
+            // ✅ 2026-03-30 [Phase 7.48.88.73]: 从RadioButton"投入/禁用"改为Switch控件
+            // 旧：Row { id: runningStateRow; ... RadioButton "投入" / "禁用" } （约100行）
             Item {
                 Layout.column: 1
                 Layout.row: 0
                 Layout.fillWidth: true
                 Layout.maximumWidth: 300
-                implicitHeight: runningStateRow.implicitHeight  // ✅ 引用 Row 的 implicitHeight
+                implicitHeight: enabledSwitch.implicitHeight
 
-                Row {
-                    id: runningStateRow
-                    anchors.fill: parent
-                    spacing: 30
+                Switch {
+                    id: enabledSwitch
+                    checked: root.motorEnabled
+                    anchors.verticalCenter: parent.verticalCenter
                     // ✅ 2026-03-30 [Phase 7.48.88.72]: 运行中冻结
                     enabled: !root.beltIsRunning
-
-                    // 投入选项
-                    Row {
-                        spacing: 8
-
-                        Rectangle {
-                            width: 20
-                            height: 20
-                            radius: 10
-                            border.color: "#2196F3"
-                            border.width: 2
-                            color: "transparent"
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: "#2196F3"
-                                anchors.centerIn: parent
-                                // ✅ 2026-03-29: 绑定到 motorEnabled 属性
-                                // ❌ 旧代码: visible: true  // 硬编码
-                                visible: root.motorEnabled
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    root.motorEnabled = true
-                                    console.log((root.motorIndex + 1) + "号电机: 投入")
-                                }
-                            }
-                        }
-
-                        Text {
-                            text: "投入"
-                            font.pixelSize: 21
-                            color: root.motorEnabled ? "#4CAF50" : "#E0E0E0"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    // 禁用选项
-                    Row {
-                        spacing: 8
-
-                        Rectangle {
-                            width: 20
-                            height: 20
-                            radius: 10
-                            border.color: "#2196F3"
-                            border.width: 2
-                            color: "transparent"
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: "#2196F3"
-                                anchors.centerIn: parent
-                                // ✅ 2026-03-29: 绑定到 motorEnabled 属性
-                                // ❌ 旧代码: visible: false  // 硬编码
-                                visible: !root.motorEnabled
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    root.motorEnabled = false
-                                    console.log((root.motorIndex + 1) + "号电机: 禁用")
-                                }
-                            }
-                        }
-
-                        Text {
-                            text: "禁用"
-                            font.pixelSize: 21
-                            color: !root.motorEnabled ? "#FF5722" : "#E0E0E0"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                    onCheckedChanged: {
+                        root.motorEnabled = checked
+                        console.log((root.motorIndex + 1) + "号电机:", checked ? "启用" : "禁用")
                     }
                 }
 
@@ -1657,11 +1581,11 @@ Rectangle {
         var inputField = null
 
         switch(paramIndex) {
-        case 0:  // 运行状态（RadioButton 组）
-            // ✅ 2026-03-29 [Phase 7.48.88.56]: 回车键切换投入/禁用
-            // ❌ 旧代码: // TODO: 切换运行状态
-            root.motorEnabled = !root.motorEnabled
-            console.log("✅ [BasicConfigTab] 切换运行状态:", root.motorEnabled ? "投入" : "禁用")
+        case 0:  // 是否启用（Switch）
+            // ✅ 2026-03-30 [Phase 7.48.88.73]: 改为toggle Switch
+            // 旧：root.motorEnabled = !root.motorEnabled  // RadioButton切换
+            enabledSwitch.toggle()
+            console.log("✅ [BasicConfigTab] 切换启用状态:", root.motorEnabled ? "启用" : "禁用")
             break
         case 1:  // 模块类型（只读）
             console.log("✅ [BasicConfigTab] 模块类型（只读）")
