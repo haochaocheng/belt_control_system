@@ -21,6 +21,13 @@ Rectangle {
     property int focusItemIndex: -1  // -1 表示无焦点
     property int focusSubArea: 0  // 0:列表区域 1:参数区域 2:按钮区域
 
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 洒水状态数组（从父组件传入）
+    // 每个元素: { enabled: bool, outputChannel: int }
+    property var sprinklerStatusList: []
+
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 洒水运行状态数组
+    property var sprinklerRunningStates: [false,false,false,false,false,false,false,false]
+
     // ========== 信号 ==========
     signal sprinklerSelected(int sprinklerIndex)
 
@@ -72,14 +79,14 @@ Rectangle {
         clip: true
 
         model: ListModel {
-            ListElement { name: "洒水1"; status: "待配置" }
-            ListElement { name: "洒水2"; status: "待配置" }
-            ListElement { name: "洒水3"; status: "待配置" }
-            ListElement { name: "洒水4"; status: "待配置" }
-            ListElement { name: "洒水5"; status: "待配置" }
-            ListElement { name: "洒水6"; status: "待配置" }
-            ListElement { name: "洒水7"; status: "待配置" }
-            ListElement { name: "洒水8"; status: "待配置" }
+            ListElement { name: "洒水1" }
+            ListElement { name: "洒水2" }
+            ListElement { name: "洒水3" }
+            ListElement { name: "洒水4" }
+            ListElement { name: "洒水5" }
+            ListElement { name: "洒水6" }
+            ListElement { name: "洒水7" }
+            ListElement { name: "洒水8" }
         }
         currentIndex: root.currentSprinklerIndex
 
@@ -137,34 +144,62 @@ Rectangle {
                 anchors.left: parent.left
             }
 
-            // 洒水名称居中显示
+            // 洒水名称（居中偏左，给右侧状态留空间）
             Text {
                 text: model.name
                 font.pixelSize: 14
                 font.weight: root.currentSprinklerIndex === index ? Font.Bold : Font.Normal
                 color: root.currentSprinklerIndex === index ? "#E0E0E0" : "#9E9E9E"
                 anchors.centerIn: parent
+                anchors.horizontalCenterOffset: -12
             }
 
-            // 状态指示
+            // ✅ 2026-03-30 [Phase 7.48.88.75]: 动态状态指示（参照 BrakeListPanel）
+            // 旧代码: 硬编码 model.status "待配置"
             Row {
-                spacing: 8
+                spacing: 4
                 anchors.right: parent.right
-                anchors.rightMargin: 20
+                anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
 
                 Rectangle {
+                    id: sprinklerStatusLed
                     width: 8
                     height: 8
                     radius: 4
-                    color: "#95a5a6"
+                    property bool isRunning: index < root.sprinklerRunningStates.length ? root.sprinklerRunningStates[index] : false
+                    color: {
+                        if (sprinklerStatusLed.isRunning) return "#00E676"  // 亮绿：运行中
+                        if (index < root.sprinklerStatusList.length) {
+                            var status = root.sprinklerStatusList[index]
+                            if (status && status.outputChannel >= 0 && status.enabled) return "#4CAF50"  // 绿色：已停止（启用）
+                            if (status && status.outputChannel >= 0 && !status.enabled) return "#FF5722"  // 红色：禁用
+                        }
+                        return "#555555"  // 暗灰：未配置
+                    }
                     anchors.verticalCenter: parent.verticalCenter
+
+                    SequentialAnimation on opacity {
+                        running: sprinklerStatusLed.isRunning
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1.0; to: 0.3; duration: 600 }
+                        NumberAnimation { from: 0.3; to: 1.0; duration: 600 }
+                    }
+                    onIsRunningChanged: if (!isRunning) opacity = 1.0
                 }
 
                 Text {
-                    text: model.status
-                    font.pixelSize: 12
-                    color: "#9E9E9E"
+                    text: {
+                        if (index < root.sprinklerRunningStates.length && root.sprinklerRunningStates[index]) return "运行中"
+                        if (index < root.sprinklerStatusList.length) {
+                            var status = root.sprinklerStatusList[index]
+                            if (status && status.outputChannel >= 0 && status.enabled) return "已停止"
+                            if (status && status.outputChannel >= 0 && !status.enabled) return "禁用"
+                        }
+                        return "未配置"
+                    }
+                    font.pixelSize: 11
+                    color: (index < root.sprinklerRunningStates.length && root.sprinklerRunningStates[index]) ? "#00E676" : "#9E9E9E"
                 }
             }
 
@@ -179,18 +214,6 @@ Rectangle {
         }
     }
 
-    // 加载洒水配置状态（从数据库读取启用状态更新列表显示）
-    function updateSprinklerStatus() {
-        if (typeof deviceConfigMgr === "undefined") return
-        var configs = deviceConfigMgr.loadAllSprinklerConfigs()
-        for (var i = 0; i < configs.length && i < listView.model.count; i++) {
-            var config = configs[i]
-            var statusText = config.enabled ? "已启用" : "已禁用"
-            listView.model.setProperty(i, "status", statusText)
-        }
-    }
-
-    Component.onCompleted: {
-        updateSprinklerStatus()
-    }
+    // 旧代码: updateSprinklerStatus() 和 Component.onCompleted 已移至 SprinklerControlPage
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 状态由父组件 SprinklerControlPage 通过 sprinklerStatusList 传入
 }

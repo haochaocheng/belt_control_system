@@ -25,6 +25,15 @@ Rectangle {
     // ✅ 2026-01-31 [FIX 100.300.112.8.2]: 导航子区域（从父页面传递）
     property int focusSubArea: 0  // 0:列表区域 1:使用状态 2:参数区域 3:按钮区域
 
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 张紧控制状态数组（从父组件传入）
+    // 每个元素: { enabled: bool, outputChannel: int }
+    // index 0=张力传感器, 1=张紧控制
+    property var tensionStatusList: []
+
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 张紧运行状态数组
+    // true=运行中（亮绿闪烁）, false=已停止
+    property var tensionRunningStates: [false, false]
+
     // ========== 信号 ==========
     signal controlSelected(int controlIndex)  // 控制被选中时发出信号
 
@@ -92,9 +101,9 @@ Rectangle {
         clip: true
 
         model: ListModel {
-            ListElement { name: "张力传感器"; status: "投入" }
-            // 2026-03-17 [Phase 7.48.51]: 旧名"独立张紧控制"→"张紧控制"，状态"待实现"→"投入"
-            ListElement { name: "张紧控制"; status: "投入" }
+            ListElement { name: "张力传感器" }
+            // 2026-03-17 [Phase 7.48.51]: 旧名"独立张紧控制"→"张紧控制"
+            ListElement { name: "张紧控制" }
         }
         currentIndex: root.currentControlIndex
 
@@ -157,7 +166,7 @@ Rectangle {
                 anchors.left: parent.left
             }
 
-            // ✅ 控制名称居中显示
+            // ✅ 控制名称（居中偏左，给右侧状态留空间）
             Text {
                 text: model.name
                 // ✅ 调整字体，使二级标题比一级标题小
@@ -165,28 +174,56 @@ Rectangle {
                 font.weight: root.currentControlIndex === index ? Font.Bold : Font.Normal
                 color: root.currentControlIndex === index ? "#E0E0E0" : "#9E9E9E"
                 anchors.centerIn: parent
+                anchors.horizontalCenterOffset: -12
             }
 
-            // ✅ 状态指示放在最右侧
+            // ✅ 2026-03-30 [Phase 7.48.88.75]: 动态状态指示（参照 BrakeListPanel）
+            // 旧代码: 硬编码 model.status "投入"
             Row {
-                spacing: 8
+                spacing: 4
                 anchors.right: parent.right
-                anchors.rightMargin: 20
+                anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
 
                 Rectangle {
+                    id: tensionStatusLed
                     width: 8
                     height: 8
                     radius: 4
-                    // 张力传感器和张紧控制：都是绿色（投入）
-                    color: model.status === "投入" ? "#4CAF50" : "#95a5a6"
+                    property bool isRunning: index < root.tensionRunningStates.length ? root.tensionRunningStates[index] : false
+                    color: {
+                        if (tensionStatusLed.isRunning) return "#00E676"  // 亮绿：运行中
+                        if (index < root.tensionStatusList.length) {
+                            var status = root.tensionStatusList[index]
+                            if (status && status.outputChannel >= 0 && status.enabled) return "#4CAF50"  // 绿色：已停止（启用）
+                            if (status && status.outputChannel >= 0 && !status.enabled) return "#FF5722"  // 红色：禁用
+                        }
+                        return "#555555"  // 暗灰：未配置
+                    }
                     anchors.verticalCenter: parent.verticalCenter
+
+                    // ✅ 运行中闪烁动画
+                    SequentialAnimation on opacity {
+                        running: tensionStatusLed.isRunning
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1.0; to: 0.3; duration: 600 }
+                        NumberAnimation { from: 0.3; to: 1.0; duration: 600 }
+                    }
+                    onIsRunningChanged: if (!isRunning) opacity = 1.0
                 }
 
                 Text {
-                    text: model.status
-                    font.pixelSize: 12
-                    color: "#9E9E9E"
+                    text: {
+                        if (index < root.tensionRunningStates.length && root.tensionRunningStates[index]) return "运行中"
+                        if (index < root.tensionStatusList.length) {
+                            var status = root.tensionStatusList[index]
+                            if (status && status.outputChannel >= 0 && status.enabled) return "已停止"
+                            if (status && status.outputChannel >= 0 && !status.enabled) return "禁用"
+                        }
+                        return "未配置"
+                    }
+                    font.pixelSize: 11
+                    color: (index < root.tensionRunningStates.length && root.tensionRunningStates[index]) ? "#00E676" : "#9E9E9E"
                 }
             }
 

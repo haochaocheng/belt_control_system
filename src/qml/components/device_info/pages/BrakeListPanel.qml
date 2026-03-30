@@ -171,7 +171,9 @@ Rectangle {
                 anchors.left: parent.left
             }
 
-            // ✅ 制动器名称居中显示
+            // ✅ 制动器名称（居中偏左，给右侧状态留空间）
+            // 旧：anchors.centerIn: parent  // 2026-03-30 居中布局导致与右侧状态文字重叠
+            // 旧：anchors.left + leftMargin: 16  // 2026-03-30 左对齐与背景图片尖角重叠
             Text {
                 text: (index + 1) + "号制动器"
                 // ✅ 调整字体，使二级标题比一级标题小
@@ -179,14 +181,18 @@ Rectangle {
                 font.weight: root.currentBrakeIndex === index ? Font.Bold : Font.Normal
                 color: root.currentBrakeIndex === index ? "#E0E0E0" : "#9E9E9E"
                 anchors.centerIn: parent
+                // 旧：anchors.horizontalCenterOffset: -20  // 2026-03-30 偏移太大，左侧仍靠近背景边缘
+                anchors.horizontalCenterOffset: -12
             }
 
             // ✅ 2026-03-30 [Phase 7.48.88.74]: 动态状态指示（参照 MyMotorListPanel）
             // 旧代码: 硬编码 color: "#4CAF50" text: "投入"
             Row {
-                spacing: 8
+                spacing: 4
                 anchors.right: parent.right
-                anchors.rightMargin: 20
+                // 旧：anchors.rightMargin: 20  // 2026-03-30 缩小右边距，避免与名称重叠
+                // 旧：anchors.rightMargin: 6  // 2026-03-30 太小，右侧状态文字靠近背景边缘
+                anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
 
                 Rectangle {
@@ -229,7 +235,8 @@ Rectangle {
                         }
                         return "未配置"
                     }
-                    font.pixelSize: 12
+                    // 旧：font.pixelSize: 12  // 2026-03-30 缩小字号避免重叠
+                    font.pixelSize: 11
                     // ✅ 运行中文字颜色也用亮绿
                     color: (index < root.brakeRunningStates.length && root.brakeRunningStates[index]) ? "#00E676" : "#9E9E9E"
                 }

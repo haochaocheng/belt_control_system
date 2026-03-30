@@ -17,6 +17,12 @@ Rectangle {
     property string deviceName: "1号皮带"
     property int currentSprinklerIndex: 0  // 当前选中的洒水索引 (0-7)
 
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 洒水状态数组（传递给 SprinklerListPanel）
+    property var sprinklerStatusList: []
+
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 洒水运行状态数组
+    property var sprinklerRunningStates: [false,false,false,false,false,false,false,false]
+
     // 导航焦点属性（3区域模式：0:列表 1:参数 2:按钮）
     property int focusItemIndex: -1
     property int focusSubArea: 0
@@ -277,6 +283,9 @@ Rectangle {
                 item.currentSprinklerIndex = Qt.binding(function() { return navigationManager.listIndex })
                 item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
                 item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+                // ✅ 2026-03-30 [Phase 7.48.88.75]: 传递洒水状态和运行状态数据
+                item.sprinklerStatusList = Qt.binding(function() { return root.sprinklerStatusList })
+                item.sprinklerRunningStates = Qt.binding(function() { return root.sprinklerRunningStates })
                 item.sprinklerSelected.connect(function(sprinklerIndex) {
                     root.currentSprinklerIndex = sprinklerIndex
                     root.focusItemIndex = sprinklerIndex
@@ -309,5 +318,40 @@ Rectangle {
                 item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
             }
         }
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 从数据库加载洒水状态
+    function loadAllSprinklerStatuses() {
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
+        var statusList = []
+        for (var i = 0; i < 8; i++) {
+            var config = deviceConfigMgr.loadSprinklerConfig(i + 1)  // 洒水索引从1开始
+            if (config && Object.keys(config).length > 0) {
+                var enabled = config.hasOwnProperty("enabled") ? (config["enabled"] === true || config["enabled"] === 1) : true
+                var ch = config.hasOwnProperty("channel") ? config["channel"] : -1
+                statusList.push({ enabled: enabled, outputChannel: ch })
+            } else {
+                statusList.push({ enabled: true, outputChannel: -1 })
+            }
+        }
+        root.sprinklerStatusList = statusList
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 监听设备运行状态信号
+    Connections {
+        target: typeof commonControl !== "undefined" ? commonControl : null
+        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+            var match = deviceName.match(/(\d+)号洒水/)
+            if (!match) return
+            var sprIdx = parseInt(match[1]) - 1
+            if (sprIdx < 0 || sprIdx >= 8) return
+            var newStates = root.sprinklerRunningStates.slice()
+            newStates[sprIdx] = isRunning
+            root.sprinklerRunningStates = newStates
+        }
+    }
+
+    Component.onCompleted: {
+        loadAllSprinklerStatuses()
     }
 }

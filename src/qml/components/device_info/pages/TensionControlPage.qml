@@ -18,6 +18,13 @@ Rectangle {
     property string deviceName: "1号皮带"
     property int currentControlIndex: 0  // 当前选中的控制索引 (0=张力传感器, 1=独立张紧控制)
 
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 张紧状态数组（传递给 TensionControlListPanel）
+    // 每个元素: { enabled: bool, outputChannel: int }
+    property var tensionStatusList: []
+
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 张紧运行状态数组
+    property var tensionRunningStates: [false, false]
+
     // ✅ 2026-01-31 [FIX 100.300.112.8]: 导航焦点属性
     // ✅ 2026-01-31 [FIX 100.300.112.8.3]: 改为3区域模式（0:列表 1:参数 2:按钮）
     property int focusItemIndex: -1  // -1 表示无焦点
@@ -389,6 +396,9 @@ Rectangle {
                 item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
                 // ✅ 2026-01-31 [FIX 100.300.112.8]: 传递焦点子区域
                 item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
+                // ✅ 2026-03-30 [Phase 7.48.88.75]: 传递张紧状态和运行状态数据
+                item.tensionStatusList = Qt.binding(function() { return root.tensionStatusList })
+                item.tensionRunningStates = Qt.binding(function() { return root.tensionRunningStates })
                 item.controlSelected.connect(function(controlIndex) {
                     // ✅ 2026-02-03 [FIX 100.300.112.8.25.16]: 鼠标点击时同步所有焦点状态
                     console.log("🔍 [TensionControlPage] 鼠标点击控制:", controlIndex)
@@ -427,5 +437,54 @@ Rectangle {
                 item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
             }
         }
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 从数据库加载张紧控制状态
+    function loadAllTensionStatuses() {
+        if (typeof deviceConfigMgr === "undefined" || !deviceConfigMgr) return
+        var statusList = []
+
+        // index 0: 张力传感器
+        var sensorCfg = deviceConfigMgr.loadTensionSensorConfig(root.deviceId)
+        if (sensorCfg && Object.keys(sensorCfg).length > 0) {
+            var sEnabled = sensorCfg.hasOwnProperty("sensor_enabled") ? (sensorCfg["sensor_enabled"] === true || sensorCfg["sensor_enabled"] === 1) : true
+            var sCh = sensorCfg.hasOwnProperty("channel") ? sensorCfg["channel"] : -1
+            statusList.push({ enabled: sEnabled, outputChannel: sCh })
+        } else {
+            statusList.push({ enabled: true, outputChannel: -1 })
+        }
+
+        // index 1: 张紧控制
+        var tensionCfg = deviceConfigMgr.loadTensionConfig(root.deviceId, 1)
+        if (tensionCfg && Object.keys(tensionCfg).length > 0) {
+            var tEnabled = tensionCfg.hasOwnProperty("enabled") ? (tensionCfg["enabled"] === true || tensionCfg["enabled"] === 1) : true
+            var tCh = tensionCfg.hasOwnProperty("output_channel") ? tensionCfg["output_channel"] : -1
+            statusList.push({ enabled: tEnabled, outputChannel: tCh })
+        } else {
+            statusList.push({ enabled: true, outputChannel: -1 })
+        }
+
+        root.tensionStatusList = statusList
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.75]: 监听设备运行状态信号
+    Connections {
+        target: typeof commonControl !== "undefined" ? commonControl : null
+        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+            // 匹配"张力传感器"或"张紧控制"
+            if (deviceName === "张力传感器") {
+                var newStates = root.tensionRunningStates.slice()
+                newStates[0] = isRunning
+                root.tensionRunningStates = newStates
+            } else if (deviceName === "张紧控制") {
+                var newStates2 = root.tensionRunningStates.slice()
+                newStates2[1] = isRunning
+                root.tensionRunningStates = newStates2
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        loadAllTensionStatuses()
     }
 }
