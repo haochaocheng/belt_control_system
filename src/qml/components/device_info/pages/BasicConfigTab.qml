@@ -1108,6 +1108,22 @@ Rectangle {
                     }
                 }
 
+                // ✅ 2026-03-30 [Phase 7.48.88.71]: 监听全局设备状态变化信号
+                // 逻辑控制、2号键启动、R键启动都会触发 commonControl.deviceStatusChanged
+                // 旧代码：仅监听 doDataManager.doStatesChanged（依赖硬件DO反馈）
+                Connections {
+                    target: typeof commonControl !== "undefined" ? commonControl : null
+                    function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+                        var match = deviceName.match(/(\d+)号电机/)
+                        if (!match) return
+                        var motorIdx = parseInt(match[1]) - 1  // 1-based → 0-based
+                        if (motorIdx === root.motorIndex) {
+                            motorRunItem.motorIsOn = isRunning
+                            console.log("✅ [BasicConfigTab] 全局状态更新 - 电机" + (motorIdx + 1) + (isRunning ? " 运行中" : " 已停止"))
+                        }
+                    }
+                }
+
                 // ✅ 2026-03-12: 组件加载时读取当前状态
                 Component.onCompleted: {
                     if (typeof doDataManager !== "undefined") {
