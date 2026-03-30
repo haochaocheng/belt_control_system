@@ -26,6 +26,10 @@ Rectangle {
     // ✅ 2026-03-29 [Phase 7.48.88.56]: 电机状态列表（传递给 MyMotorListPanel）
     property var motorStatusList: []
 
+    // ✅ 2026-03-30 [Phase 7.48.88.71]: 电机运行状态数组（全局关联，实时更新）
+    // true=运行中, false=已停止。通过监听 commonControl.deviceStatusChanged 信号更新
+    property var motorRunningStates: [false,false,false,false,false,false,false,false]
+
     // ✅ 2026-03-29 [Phase 7.48.88.57]: 当前正在编辑的电机修改标记（-1=无修改）
     // ✅ 2026-03-29 [Phase 7.48.88.60]: 改为数组，支持多电机同时标记修改（类似VSCode多文件修改标记）
     // 旧代码: property int modifiedMotorIndex: -1
@@ -405,6 +409,8 @@ Rectangle {
                     item.focusItemIndex = Qt.binding(function() { return root.focusItemIndex })
                     // ✅ 2026-03-29 [Phase 7.48.88.56]: 传递电机状态列表
                     item.motorStatusList = Qt.binding(function() { return root.motorStatusList })
+                    // ✅ 2026-03-30 [Phase 7.48.88.71]: 传递电机运行状态（全局关联）
+                    item.motorRunningStates = Qt.binding(function() { return root.motorRunningStates })
                     // ✅ 2026-03-29 [Phase 7.48.88.57]: 传递修改标记索引
                     // ✅ 2026-03-29 [Phase 7.48.88.60]: 改为数组绑定
                     // 旧代码: item.modifiedMotorIndex = Qt.binding(function() { return root.modifiedMotorIndex })
@@ -961,5 +967,22 @@ Rectangle {
             if (!channelMap[ch]) available.push(ch)
         }
         return available.length > 0 ? "可用通道: " + available.join(", ") : "所有通道已被占用"
+    }
+
+    // ✅ 2026-03-30 [Phase 7.48.88.71]: 监听全局设备状态变化，更新电机运行状态
+    Connections {
+        target: typeof commonControl !== "undefined" ? commonControl : null
+        function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+            // 解析 "X号电机" → 提取电机编号
+            var match = deviceName.match(/(\d+)号电机/)
+            if (!match) return
+            var motorIdx = parseInt(match[1]) - 1  // 1-based → 0-based
+            if (motorIdx < 0 || motorIdx >= 8) return
+            // 更新运行状态数组（赋新数组触发QML绑定更新）
+            var newStates = root.motorRunningStates.slice()
+            newStates[motorIdx] = isRunning
+            root.motorRunningStates = newStates
+            console.log("✅ [MotorControlPage] 电机" + (motorIdx + 1) + (isRunning ? " 运行中" : " 已停止"))
+        }
     }
 }

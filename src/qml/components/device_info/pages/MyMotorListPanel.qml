@@ -20,9 +20,13 @@ Rectangle {
 
     // ✅ 2026-03-29 [Phase 7.48.88.56]: 电机状态数组（从父组件 MotorControlPage 传入）
     // 每个元素: { enabled: bool, outputChannel: int }
-    // enabled=true: 投入（绿色）, enabled=false: 禁用（灰���）
+    // enabled=true: 投入（绿色）, enabled=false: 禁用（灰色）
     // outputChannel=-1: 未配置（暗灰色）
     property var motorStatusList: []
+
+    // ✅ 2026-03-30 [Phase 7.48.88.71]: 电机运行状态数组（全局关联，从MotorControlPage传入）
+    // true=运行中（亮绿闪烁）, false=已停止
+    property var motorRunningStates: [false,false,false,false,false,false,false,false]
 
     // ✅ 2026-03-29 [Phase 7.48.88.57]: 参数已修改的电机索引（-1=无修改）
     // 当某电机参数被修改但未保存时，在其名称左侧显示 ● 标记
@@ -184,6 +188,7 @@ Rectangle {
             }
 
             // ✅ 2026-03-29 [Phase 7.48.88.56]: 状态指示（从 motorStatusList 获取实际状态）
+            // ✅ 2026-03-30 [Phase 7.48.88.71]: 增加运行状态全局关联（亮绿闪烁=运行中）
             // ❌ 旧代码: 硬编码 color: "#4CAF50" text: "运行中"
             Row {
                 spacing: 8
@@ -192,32 +197,50 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
 
                 Rectangle {
+                    id: statusLed
                     width: 8
                     height: 8
                     radius: 4
-                    // 绿色=投入, 灰色=禁用/未配置
+                    // ✅ 2026-03-30 [Phase 7.48.88.71]: 运行中=亮绿, 投入(已停止)=绿色, 禁用=红色, 未配置=暗灰
+                    // 旧代码：只有投入/禁用/未配置三种状态
+                    property bool isRunning: index < root.motorRunningStates.length ? root.motorRunningStates[index] : false
                     color: {
+                        if (statusLed.isRunning) return "#00E676"  // 亮绿：运行中
                         if (index < root.motorStatusList.length) {
                             var status = root.motorStatusList[index]
-                            if (status && status.outputChannel >= 0 && status.enabled) return "#4CAF50"  // 绿色：投入
+                            if (status && status.outputChannel >= 0 && status.enabled) return "#4CAF50"  // 绿色：已停止（投入）
                             if (status && status.outputChannel >= 0 && !status.enabled) return "#FF5722"  // 红色：禁用
                         }
                         return "#555555"  // 暗灰：未配置
                     }
                     anchors.verticalCenter: parent.verticalCenter
+
+                    // ✅ 2026-03-30 [Phase 7.48.88.71]: 运行中闪烁动画
+                    SequentialAnimation on opacity {
+                        running: statusLed.isRunning
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1.0; to: 0.3; duration: 600 }
+                        NumberAnimation { from: 0.3; to: 1.0; duration: 600 }
+                    }
+                    // 非运行时恢复完全不透明
+                    onIsRunningChanged: if (!isRunning) opacity = 1.0
                 }
 
                 Text {
+                    // ✅ 2026-03-30 [Phase 7.48.88.71]: 增加运行中文本显示
+                    // 旧代码：只有投入/禁用/未配置
                     text: {
+                        if (index < root.motorRunningStates.length && root.motorRunningStates[index]) return "运行中"
                         if (index < root.motorStatusList.length) {
                             var status = root.motorStatusList[index]
-                            if (status && status.outputChannel >= 0 && status.enabled) return "投入"
+                            if (status && status.outputChannel >= 0 && status.enabled) return "已停止"
                             if (status && status.outputChannel >= 0 && !status.enabled) return "禁用"
                         }
                         return "未配置"
                     }
                     font.pixelSize: 12
-                    color: "#9E9E9E"
+                    // ✅ 2026-03-30 [Phase 7.48.88.71]: 运行中文字颜色也用亮绿
+                    color: (index < root.motorRunningStates.length && root.motorRunningStates[index]) ? "#00E676" : "#9E9E9E"
                 }
             }
 
