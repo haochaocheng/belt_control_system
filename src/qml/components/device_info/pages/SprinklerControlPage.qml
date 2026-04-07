@@ -275,7 +275,9 @@ Rectangle {
         // ========== 左侧：洒水列表 ==========
         Loader {
             id: sprinklerListPanel
-            width: 192
+            // ✅ 2026-04-07 [Phase 7.48.88.82]: 统一所有列表面板宽度为240px（与电机列表一致）
+            // 旧：width: 192
+            width: 240
             height: parent.height
             source: "SprinklerListPanel.qml"
 

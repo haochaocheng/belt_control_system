@@ -191,9 +191,11 @@ Rectangle {
             // ✅ 2026-03-30 [Phase 7.48.88.71]: 增加运行状态全局关联（亮绿闪烁=运行中）
             // ❌ 旧代码: 硬编码 color: "#4CAF50" text: "运行中"
             Row {
-                spacing: 8
+                // ✅ 2026-04-07 [Phase 7.48.88.82]: 统一spacing和rightMargin与其他3个列表一致
+                // 旧：spacing: 8, anchors.rightMargin: 20
+                spacing: 4
                 anchors.right: parent.right
-                anchors.rightMargin: 20
+                anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
 
                 // ✅ 2026-04-07 [Phase 7.48.88.81]: 修复状态颜色区分+圆形放大+文字对齐
@@ -235,8 +237,10 @@ Rectangle {
                         }
                         return "未配置"
                     }
-                    width: 38  // 固定宽度：3个字(运行中/已停止/未配置)约36px，确保圆形对齐
-                    font.pixelSize: 12
+                    width: 38  // 固定宽度确保圆形对齐
+                    // ✅ 2026-04-07 [Phase 7.48.88.82]: 统一字号为11（与其他3个列表一致）
+                    // 旧：font.pixelSize: 12
+                    font.pixelSize: 11
                     horizontalAlignment: Text.AlignLeft
                     color: {
                         if (index < root.motorRunningStates.length && root.motorRunningStates[index]) return "#00E676"  // 运行中=亮绿

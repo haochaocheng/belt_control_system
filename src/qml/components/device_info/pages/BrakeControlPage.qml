@@ -337,7 +337,8 @@ Rectangle {
         Loader {
             id: brakeListPanel
             // ✅ 2026-01-27 [FIX 100.300.35]: 宽度减少到80%（240px → 192px）
-            width: 192
+            // ✅ 2026-04-07 [Phase 7.48.88.82]: 统一所有列表面板宽度为240px（与电机列表一致）
+            width: 240
             height: parent.height
             source: "BrakeListPanel.qml"
 
