@@ -88,8 +88,11 @@ bool ModbusTCPSlaveController::startServer()
     m_modbusServer->setConnectionParameter(QModbusDevice::NetworkPortParameter, m_port);
     m_modbusServer->setServerAddress(m_slaveAddress);
 
-    // 初始化寄存器（如果还没有初始化）
-    initializeRegisters();
+    // ✅ 2026-04-07 [Phase 7.48.88.88]: 初始化寄存器（如果还没有初始化）
+    // 注释原因：initializeRegisters()在startServer()中无条件调用会覆盖TCPDataAdapter.initializePort()
+    //           中设置的更大寄存器空间，导致输入寄存器从35开始设置失败。
+    //           改为由外部调用者（如TCPDataAdapter::startPortServices）在connectDevice之后调用。
+    // initializeRegisters();
 
     qDebug() << "✅ [ModbusTCPSlaveController] 启动服务器 - 端口:" << m_port << "从站地址:" << m_slaveAddress;
 

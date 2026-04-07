@@ -215,8 +215,10 @@ bool TCPDataAdapter::startPortServices(int portIndex)
 
     bool success = true;
 
-    // 先初始化寄存器空间
-    initializePort(portIndex);
+    // ✅ 2026-04-07 [Phase 7.48.88.88]: 调整初始化顺序
+    // 先启动服务器（connectDevice），再初始化寄存器空间
+    // 原因：QModbusTcpServer的setMap在未连接状态下可能不完全生效，
+    //       导致输入寄存器从35开始设置失败
 
     // 启动Modbus从站
     if (m_modbusSlaves[portIndex]) {
@@ -237,6 +239,9 @@ bool TCPDataAdapter::startPortServices(int portIndex)
             qDebug() << "[TCPDataAdapter] 端口" << portIndex << "S7服务器已启动";
         }
     }
+
+    // 连接后初始化寄存器空间
+    initializePort(portIndex);
 
     // 确保同步已启用
     if (!m_syncEnabled) {

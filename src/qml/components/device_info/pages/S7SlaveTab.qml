@@ -24,6 +24,9 @@ Rectangle {
     property int mapCategory: 0   // 0=DB1(状态区), 1=DB2(控制区)
     property var currentMapData: []
 
+    // ✅ 2026-04-07 [Phase 7.48.88.88]: 配置/数据视图切换
+    property int viewMode: 0  // 0=配置视图, 1=数据视图
+
     // ✅ 2026-02-08 [Phase 7.42.13]: 信号 - 请求更新焦点索引
     signal requestFocusParamIndex(int paramIndex)
 
@@ -130,11 +133,69 @@ Rectangle {
     onPortIndexChanged: loadMapData()
     Component.onCompleted: Qt.callLater(loadMapData)
 
-    // ========== 滚动视图 ==========
-    ScrollView {
-        id: paramScrollView
+    // ========== 主布局 ==========
+    // ✅ 2026-04-07 [Phase 7.48.88.88]: 使用ColumnLayout，顶部视图切换按钮
+    ColumnLayout {
         anchors.fill: parent
-        clip: true
+        spacing: 0
+
+        // ========== 视图切换栏 ==========
+        Row {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 36
+            Layout.leftMargin: 10
+            spacing: 8
+
+            Rectangle {
+                width: 80
+                height: 30
+                radius: 4
+                color: root.viewMode === 0 ? "#2196F3" : "#353b4d"
+                border.color: root.viewMode === 0 ? "#64B5F6" : "#4a5068"
+                border.width: 1
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "参数配置"
+                    font.pixelSize: 13
+                    color: root.viewMode === 0 ? "#FFFFFF" : "#9E9E9E"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: root.viewMode = 0
+                }
+            }
+
+            Rectangle {
+                width: 80
+                height: 30
+                radius: 4
+                color: root.viewMode === 1 ? "#2196F3" : "#353b4d"
+                border.color: root.viewMode === 1 ? "#64B5F6" : "#4a5068"
+                border.width: 1
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "映射表"
+                    font.pixelSize: 13
+                    color: root.viewMode === 1 ? "#FFFFFF" : "#9E9E9E"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: root.viewMode = 1
+                }
+            }
+        }
+
+        // ========== 配置视图 ==========
+        ScrollView {
+            id: paramScrollView
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            visible: root.viewMode === 0
 
         // ✅ 2026-02-08 [Phase 7.42.13]: 改为 4 列 GridLayout，参考 CurrentProtectionTab
         GridLayout {
@@ -681,123 +742,62 @@ Rectangle {
                     enabled: false
                 }
             }
-            // ✅ 2026-04-07 [Phase 7.48.88.84]: S7数据映射可视化区域
-            // ✅ 2026-04-07 [Phase 7.48.88.87]: 修复 - 移入GridLayout内部，解决参数叠加问题
-            // ========== 分隔线 ==========
-            Rectangle {
-                Layout.columnSpan: 4
-                Layout.fillWidth: true
-                height: 1
-                color: "#3d4556"
-                Layout.topMargin: 10
-                Layout.bottomMargin: 5
-            }
+            // ✅ 2026-04-07 [Phase 7.48.88.88]: 配置视图中不再显示映射数据，移到数据视图
+        }  // GridLayout 结束
+    }  // ScrollView（配置视图）结束
 
-            // ========== 数据映射标题 ==========
-            Text {
-                Layout.columnSpan: 4
-                text: "S7 数据块映射表"
-                font.pixelSize: 18
-                font.weight: Font.Bold
-                color: "#E0E0E0"
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHCenter
-            }
+        // ========== 数据视图（映射表）==========
+        // ✅ 2026-04-07 [Phase 7.48.88.88]: 独立数据视图
+        ScrollView {
+            id: dataScrollView
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            visible: root.viewMode === 1
 
-            // ========== 映射类别切换 ==========
-            Row {
-                Layout.columnSpan: 4
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignHCenter
+            ColumnLayout {
+                width: dataScrollView.width * 0.95
                 spacing: 8
-                Layout.bottomMargin: 5
 
-                Repeater {
-                    model: ["DB1 状态区(256B)", "DB2 控制区(64B)"]
-
-                    Rectangle {
-                        width: 160
-                        height: 32
-                        radius: 4
-                        color: root.mapCategory === index ? "#2196F3" : "#353b4d"
-                        border.color: root.mapCategory === index ? "#64B5F6" : "#4a5068"
-                        border.width: 1
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: modelData
-                            font.pixelSize: 12
-                            color: root.mapCategory === index ? "#FFFFFF" : "#9E9E9E"
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: root.mapCategory = index
-                        }
-                    }
-                }
-            }
-
-            // ========== 映射表头 ==========
-            Rectangle {
-                Layout.columnSpan: 4
-                Layout.fillWidth: true
-                height: 30
-                color: "#2a3042"
-                radius: 2
-
+                // ========== 映射类别切换 ==========
                 Row {
-                    anchors.fill: parent
-                    anchors.leftMargin: 8
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 8
+                    Layout.topMargin: 5
 
-                    Text {
-                        width: 80
-                        text: "偏移"
-                        font.pixelSize: 12
-                        font.weight: Font.Bold
-                        color: "#64B5F6"
-                        verticalAlignment: Text.AlignVCenter
-                        height: parent.height
-                    }
-                    Text {
-                        width: 60
-                        text: "长度"
-                        font.pixelSize: 12
-                        font.weight: Font.Bold
-                        color: "#64B5F6"
-                        verticalAlignment: Text.AlignVCenter
-                        height: parent.height
-                    }
-                    Text {
-                        width: 200
-                        text: "名称"
-                        font.pixelSize: 12
-                        font.weight: Font.Bold
-                        color: "#64B5F6"
-                        verticalAlignment: Text.AlignVCenter
-                        height: parent.height
-                    }
-                    Text {
-                        width: parent.width - 348
-                        text: "类型/说明"
-                        font.pixelSize: 12
-                        font.weight: Font.Bold
-                        color: "#64B5F6"
-                        verticalAlignment: Text.AlignVCenter
-                        height: parent.height
+                    Repeater {
+                        model: ["DB1 状态区(256B)", "DB2 控制区(64B)"]
+
+                        Rectangle {
+                            width: 160
+                            height: 32
+                            radius: 4
+                            color: root.mapCategory === index ? "#2196F3" : "#353b4d"
+                            border.color: root.mapCategory === index ? "#64B5F6" : "#4a5068"
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData
+                                font.pixelSize: 12
+                                color: root.mapCategory === index ? "#FFFFFF" : "#9E9E9E"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: root.mapCategory = index
+                            }
+                        }
                     }
                 }
-            }
 
-            // ========== 映射数据列表 ==========
-            Repeater {
-                model: root.currentMapData
-
+                // ========== 映射表头 ==========
                 Rectangle {
-                    Layout.columnSpan: 4
                     Layout.fillWidth: true
-                    height: 26
-                    color: index % 2 === 0 ? "#1e2433" : "#252b3d"
+                    height: 30
+                    color: "#2a3042"
+                    radius: 2
 
                     Row {
                         anchors.fill: parent
@@ -805,55 +805,107 @@ Rectangle {
 
                         Text {
                             width: 80
-                            text: modelData.address || ""
-                            font.pixelSize: 11
-                            font.family: "Consolas"
-                            color: "#81D4FA"
+                            text: "偏移"
+                            font.pixelSize: 12
+                            font.weight: Font.Bold
+                            color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
                         }
                         Text {
                             width: 60
-                            text: modelData.type || ""
-                            font.pixelSize: 11
-                            font.family: "Consolas"
-                            color: "#FFB74D"
+                            text: "长度"
+                            font.pixelSize: 12
+                            font.weight: Font.Bold
+                            color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
                         }
                         Text {
                             width: 200
-                            text: modelData.name || ""
-                            font.pixelSize: 11
-                            color: "#E0E0E0"
+                            text: "名称"
+                            font.pixelSize: 12
+                            font.weight: Font.Bold
+                            color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
-                            elide: Text.ElideRight
                         }
                         Text {
                             width: parent.width - 348
-                            text: modelData.source || modelData.target || modelData.description || ""
-                            font.pixelSize: 11
-                            color: "#9E9E9E"
+                            text: "类型/说明"
+                            font.pixelSize: 12
+                            font.weight: Font.Bold
+                            color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
-                            elide: Text.ElideRight
                         }
                     }
                 }
-            }
 
-            // ========== 统计信息 ==========
-            Text {
-                Layout.columnSpan: 4
-                Layout.fillWidth: true
-                text: "共 " + root.currentMapData.length + " 条映射"
-                font.pixelSize: 11
-                color: "#757575"
-                horizontalAlignment: Text.AlignRight
-                Layout.topMargin: 4
-                Layout.rightMargin: 10
-            }
-        }  // GridLayout 结束
-    }  // ScrollView 结束
+                // ========== 映射数据列表 ==========
+                Repeater {
+                    model: root.currentMapData
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 26
+                        color: index % 2 === 0 ? "#1e2433" : "#252b3d"
+
+                        Row {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+
+                            Text {
+                                width: 80
+                                text: modelData.address || ""
+                                font.pixelSize: 11
+                                font.family: "Consolas"
+                                color: "#81D4FA"
+                                verticalAlignment: Text.AlignVCenter
+                                height: parent.height
+                            }
+                            Text {
+                                width: 60
+                                text: modelData.type || ""
+                                font.pixelSize: 11
+                                font.family: "Consolas"
+                                color: "#FFB74D"
+                                verticalAlignment: Text.AlignVCenter
+                                height: parent.height
+                            }
+                            Text {
+                                width: 200
+                                text: modelData.name || ""
+                                font.pixelSize: 11
+                                color: "#E0E0E0"
+                                verticalAlignment: Text.AlignVCenter
+                                height: parent.height
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                width: parent.width - 348
+                                text: modelData.source || modelData.target || modelData.description || ""
+                                font.pixelSize: 11
+                                color: "#9E9E9E"
+                                verticalAlignment: Text.AlignVCenter
+                                height: parent.height
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                }
+
+                // ========== 统计信息 ==========
+                Text {
+                    Layout.fillWidth: true
+                    text: "共 " + root.currentMapData.length + " 条映射"
+                    font.pixelSize: 11
+                    color: "#757575"
+                    horizontalAlignment: Text.AlignRight
+                    Layout.topMargin: 4
+                    Layout.rightMargin: 10
+                }
+            }  // ColumnLayout 结束
+        }  // ScrollView（数据视图）结束
+    }  // ColumnLayout（主布局）结束
 }
