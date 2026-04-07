@@ -207,6 +207,87 @@ void TCPDataAdapter::syncNow()
     onSyncTimer();
 }
 
+// ✅ 2026-04-07 [Phase 7.48.88.86]: 启动/停止端口服务
+
+bool TCPDataAdapter::startPortServices(int portIndex)
+{
+    if (portIndex < 0 || portIndex >= 8) return false;
+
+    bool success = true;
+
+    // 先初始化寄存器空间
+    initializePort(portIndex);
+
+    // 启动Modbus从站
+    if (m_modbusSlaves[portIndex]) {
+        if (!m_modbusSlaves[portIndex]->startServer()) {
+            qWarning() << "[TCPDataAdapter] 端口" << portIndex << "Modbus从站启动失败";
+            success = false;
+        } else {
+            qDebug() << "[TCPDataAdapter] 端口" << portIndex << "Modbus从站已启动";
+        }
+    }
+
+    // 启动S7服务器
+    if (m_s7Servers[portIndex]) {
+        if (!m_s7Servers[portIndex]->startServer()) {
+            qWarning() << "[TCPDataAdapter] 端口" << portIndex << "S7服务器启动失败";
+            success = false;
+        } else {
+            qDebug() << "[TCPDataAdapter] 端口" << portIndex << "S7服务器已启动";
+        }
+    }
+
+    // 确保同步已启用
+    if (!m_syncEnabled) {
+        setSyncEnabled(true);
+    }
+
+    return success;
+}
+
+void TCPDataAdapter::stopPortServices(int portIndex)
+{
+    if (portIndex < 0 || portIndex >= 8) return;
+
+    if (m_modbusSlaves[portIndex]) {
+        m_modbusSlaves[portIndex]->stopServer();
+        qDebug() << "[TCPDataAdapter] 端口" << portIndex << "Modbus从站已停止";
+    }
+
+    if (m_s7Servers[portIndex]) {
+        m_s7Servers[portIndex]->stopServer();
+        qDebug() << "[TCPDataAdapter] 端口" << portIndex << "S7服务器已停止";
+    }
+}
+
+bool TCPDataAdapter::isPortRunning(int portIndex) const
+{
+    if (portIndex < 0 || portIndex >= 8) return false;
+
+    // 检查Modbus从站是否连接
+    if (m_modbusSlaves[portIndex]) {
+        if (m_modbusSlaves[portIndex]->property("isConnected").toBool()) {
+            return true;
+        }
+    }
+
+    // 检查S7服务器是否连接
+    if (m_s7Servers[portIndex]) {
+        if (m_s7Servers[portIndex]->property("isConnected").toBool()) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void TCPDataAdapter::autoStart()
+{
+    qDebug() << "[TCPDataAdapter] 自动启动 - 初始化端口0并启用同步";
+    startPortServices(0);
+}
+
 // ===== 离散输入同步（10001+ / 只读） =====
 
 void TCPDataAdapter::syncDiscreteInputs(int portIndex)

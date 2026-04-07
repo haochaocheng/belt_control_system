@@ -76,6 +76,14 @@ public:
     // 初始化指定端口的从站寄存器空间
     Q_INVOKABLE void initializePort(int portIndex);
 
+    // ✅ 2026-04-07 [Phase 7.48.88.86]: 启动/停止端口服务
+    Q_INVOKABLE bool startPortServices(int portIndex);
+    Q_INVOKABLE void stopPortServices(int portIndex);
+    Q_INVOKABLE bool isPortRunning(int portIndex) const;
+
+    // ✅ 2026-04-07 [Phase 7.48.88.86]: 自动启动（初始化端口0 + 启动同步）
+    Q_INVOKABLE void autoStart();
+
 signals:
     void syncIntervalChanged();
     void syncEnabledChanged();

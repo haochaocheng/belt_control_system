@@ -137,12 +137,21 @@ Rectangle {
         console.log("✅ [TCPControlPage] triggerButton - 按钮索引:", buttonIndex)
         switch(buttonIndex) {
         case 0:  // 打开连接
-            console.log("✅ [TCPControlPage] 执行打开连接")
-            // TODO: 实现打开连接逻辑
+            // 旧：console.log("✅ [TCPControlPage] 执行打开连接")  // 2026-04-07 [Phase 7.48.88.86] 实现实际连接逻辑
+            // 旧：// TODO: 实现打开连接逻辑  // 2026-04-07 [Phase 7.48.88.86] 已实现
+            console.log("✅ [TCPControlPage] 执行打开连接 - 端口:", currentPortIndex)
+            if (typeof tcpDataAdapter !== "undefined") {
+                var result = tcpDataAdapter.startPortServices(currentPortIndex)
+                console.log("✅ [TCPControlPage] 启动结果:", result)
+            }
             return true
         case 1:  // 关闭连接
-            console.log("✅ [TCPControlPage] 执行关闭连接")
-            // TODO: 实现关闭连接逻辑
+            // 旧：console.log("✅ [TCPControlPage] 执行关闭连接")  // 2026-04-07 [Phase 7.48.88.86] 实现实际断开逻辑
+            // 旧：// TODO: 实现关闭连接逻辑  // 2026-04-07 [Phase 7.48.88.86] 已实现
+            console.log("✅ [TCPControlPage] 执行关闭连接 - 端口:", currentPortIndex)
+            if (typeof tcpDataAdapter !== "undefined") {
+                tcpDataAdapter.stopPortServices(currentPortIndex)
+            }
             return true
         // 旧：case 2(保存)/3(删除)/4(重置)  // 2026-03-18 [Phase 7.48.55] 删除按钮，不需要
         default:

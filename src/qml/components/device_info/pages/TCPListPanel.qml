@@ -107,25 +107,41 @@ Rectangle {
             }
 
             // ========== 端口名称和端口号显示 ==========
-            Column {
+            Row {
                 anchors.centerIn: parent
-                spacing: 2
+                spacing: 6
 
-                // 端口名称
-                Text {
-                    text: root.tcpPorts[index] ? root.tcpPorts[index].name : ""
-                    font.pixelSize: 14
-                    font.weight: root.currentPortIndex === index ? Font.Bold : Font.Normal
-                    color: root.currentPortIndex === index ? "#E0E0E0" : "#9E9E9E"
-                    anchors.horizontalCenter: parent.horizontalCenter
+                // ✅ 2026-04-07 [Phase 7.48.88.86]: 运行状态指示器
+                Rectangle {
+                    width: 8
+                    height: 8
+                    radius: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: {
+                        if (typeof tcpDataAdapter !== "undefined" && tcpDataAdapter.isPortRunning(index)) {
+                            return "#4CAF50"  // 绿色 = 运行中
+                        }
+                        return "#757575"  // 灰色 = 未启动
+                    }
                 }
 
-                // 端口号
-                Text {
-                    text: root.tcpPorts[index] ? "Port: " + root.tcpPorts[index].port : ""
-                    font.pixelSize: 11
-                    color: root.currentPortIndex === index ? "#B0B0B0" : "#707070"
-                    anchors.horizontalCenter: parent.horizontalCenter
+                Column {
+                    spacing: 2
+
+                    // 端口名称
+                    Text {
+                        text: root.tcpPorts[index] ? root.tcpPorts[index].name : ""
+                        font.pixelSize: 14
+                        font.weight: root.currentPortIndex === index ? Font.Bold : Font.Normal
+                        color: root.currentPortIndex === index ? "#E0E0E0" : "#9E9E9E"
+                    }
+
+                    // 端口号
+                    Text {
+                        text: root.tcpPorts[index] ? "Port: " + root.tcpPorts[index].port : ""
+                        font.pixelSize: 11
+                        color: root.currentPortIndex === index ? "#B0B0B0" : "#707070"
+                    }
                 }
             }
 

@@ -390,6 +390,10 @@ int main(int argc, char *argv[]) {
         tcpDataAdapter.setAIDataManager(&aiDataManager);
         tcpDataAdapter.setCSDataManager(&csDataManager);
         logMessage("TCPDataAdapter connected to all data managers");
+
+        // ✅ 2026-04-07 [Phase 7.48.88.86]: 自动启动端口0的从站服务 + 数据同步
+        tcpDataAdapter.autoStart();
+        logMessage("TCPDataAdapter autoStart completed");
 #endif
 
 #ifdef MQTT_ENABLED
