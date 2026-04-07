@@ -21,6 +21,8 @@ Rectangle {
 
     // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行状态（用于冻结参数编辑）
     property bool beltIsRunning: false
+    // ✅ 2026-04-07 [Phase 7.48.88.79]: 制动器运行状态数组（从父页面传递，状态监控LED实时同步）
+    property var brakeRunningStates: [false,false,false,false,false,false,false,false]
 
     // 统一尺寸常量（匹配SwitchInputPage样式）
     readonly property int lblFs: 21       // 标签字号（与开关量输入一致）
@@ -313,47 +315,13 @@ Rectangle {
             }
 
             // ========== 运行状态LED ==========
+            // ✅ 2026-04-07 [Phase 7.48.88.79]: 改用 brakeRunningStates 属性绑定驱动
+            // 旧代码：依赖 doDataManager + commonControl 三数据源（配置面板中信号可能收不到）
+            // 新代码：直接绑定父页面传递的 brakeRunningStates[brakeIndex]（与列表面板同源数据）
             Item {
                 id: brakeRunItem
                 implicitWidth: brakeRunRow.implicitWidth; implicitHeight: 40
-                property bool brakeIsOn: false
-
-                // ✅ 数据源1：DO通道状态变化
-                Connections {
-                    target: releaseOutputChannelSpin
-                    function onValueChanged() {
-                        if (typeof doDataManager !== "undefined") {
-                            brakeRunItem.brakeIsOn = doDataManager.getDoState(releaseOutputChannelSpin.value)
-                        }
-                    }
-                }
-
-                // ✅ 数据源2：doDataManager 全局DO状态
-                Connections {
-                    target: typeof doDataManager !== "undefined" ? doDataManager : null
-                    function onDoStatesChanged() {
-                        brakeRunItem.brakeIsOn = doDataManager.getDoState(releaseOutputChannelSpin.value)
-                    }
-                }
-
-                // ✅ 数据源3：commonControl 全局设备状态信号
-                Connections {
-                    target: typeof commonControl !== "undefined" ? commonControl : null
-                    function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
-                        var match = deviceName.match(/(\d+)号制动器/)
-                        if (!match) return
-                        var brakeIdx = parseInt(match[1]) - 1
-                        if (brakeIdx === root.brakeIndex) {
-                            brakeRunItem.brakeIsOn = isRunning
-                        }
-                    }
-                }
-
-                Component.onCompleted: {
-                    if (typeof doDataManager !== "undefined") {
-                        brakeRunItem.brakeIsOn = doDataManager.getDoState(releaseOutputChannelSpin.value)
-                    }
-                }
+                property bool brakeIsOn: root.brakeIndex >= 0 && root.brakeIndex < root.brakeRunningStates.length ? root.brakeRunningStates[root.brakeIndex] : false
 
                 Row {
                     id: brakeRunRow

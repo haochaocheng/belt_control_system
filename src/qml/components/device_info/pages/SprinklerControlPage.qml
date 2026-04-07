@@ -316,6 +316,8 @@ Rectangle {
                 item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                 item.focusButtonIndex = Qt.binding(function() { return root.focusButtonIndex })
                 item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                // ✅ 2026-04-07 [Phase 7.48.88.79]: 传递运行状态到配置面板（状态监控LED实时同步）
+                item.sprinklerRunningStates = Qt.binding(function() { return root.sprinklerRunningStates })
             }
         }
     }

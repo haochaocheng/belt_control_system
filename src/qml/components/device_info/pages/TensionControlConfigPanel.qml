@@ -22,6 +22,8 @@ Rectangle {
     property bool tensionOpened: false  // 张紧打开状态
     // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行中参数冻结
     property bool beltIsRunning: false
+    // ✅ 2026-04-07 [Phase 7.48.88.79]: 张紧运行状态数组（从父页面传递，状态监控LED实时同步）
+    property var tensionRunningStates: [false, false]
 
     // ========== 布局常量 ==========
     // ✅ 2026-03-17 [Phase 7.48.52]: 参照 BasicConfigTab 调整布局常量
@@ -362,48 +364,13 @@ Rectangle {
             }
 
             // ========== 运行状态LED ==========
+            // ✅ 2026-04-07 [Phase 7.48.88.79]: 改用 tensionRunningStates 属性绑定驱动
+            // 旧代码：依赖 doDataManager + commonControl 三数据源（配置面板中信号可能收不到）
+            // 新代码：直接绑定父页面传递的 tensionRunningStates[controlIndex]（与列表面板同源数据）
             Item {
                 id: tensionRunItem
                 implicitWidth: tensionRunRow.implicitWidth; implicitHeight: 40
-                property bool tensionIsOn: false
-
-                // ✅ 数据源1：DO通道状态变化
-                Connections {
-                    target: outputChannelSpin
-                    function onValueChanged() {
-                        if (typeof doDataManager !== "undefined") {
-                            tensionRunItem.tensionIsOn = doDataManager.getDoState(outputChannelSpin.value)
-                        }
-                    }
-                }
-
-                // ✅ 数据源2：doDataManager 全局DO状态
-                Connections {
-                    target: typeof doDataManager !== "undefined" ? doDataManager : null
-                    function onDoStatesChanged() {
-                        tensionRunItem.tensionIsOn = doDataManager.getDoState(outputChannelSpin.value)
-                    }
-                }
-
-                // ✅ 数据源3：commonControl 全局设备状态信号
-                Connections {
-                    target: typeof commonControl !== "undefined" ? commonControl : null
-                    function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
-                        var match = deviceName.match(/(\d+)号张紧/)
-                        if (!match) return
-                        var tensionIdx = parseInt(match[1]) - 1
-                        if (tensionIdx === root.controlIndex) {
-                            tensionRunItem.tensionIsOn = isRunning
-                            root.tensionOpened = isRunning
-                        }
-                    }
-                }
-
-                Component.onCompleted: {
-                    if (typeof doDataManager !== "undefined") {
-                        tensionRunItem.tensionIsOn = doDataManager.getDoState(outputChannelSpin.value)
-                    }
-                }
+                property bool tensionIsOn: root.controlIndex >= 0 && root.controlIndex < root.tensionRunningStates.length ? root.tensionRunningStates[root.controlIndex] : false
 
                 Row {
                     id: tensionRunRow
