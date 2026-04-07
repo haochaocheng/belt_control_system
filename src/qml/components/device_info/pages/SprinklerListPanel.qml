@@ -162,17 +162,20 @@ Rectangle {
                 anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
 
+                // ✅ 2026-04-07 [Phase 7.48.88.81]: 修复状态颜色区分+圆形放大+文字对齐
+                // 旧：8x8圆形，已停止=绿色#4CAF50（与运行中难以区分），文字宽度不固定导致圆形不对齐
+                // 新：10x10圆形，已停止=橙色#FFA726，文字固定宽度38确保圆形对齐
                 Rectangle {
                     id: sprinklerStatusLed
-                    width: 8
-                    height: 8
-                    radius: 4
+                    width: 10
+                    height: 10
+                    radius: 5
                     property bool isRunning: index < root.sprinklerRunningStates.length ? root.sprinklerRunningStates[index] : false
                     color: {
                         if (sprinklerStatusLed.isRunning) return "#00E676"  // 亮绿：运行中
                         if (index < root.sprinklerStatusList.length) {
                             var status = root.sprinklerStatusList[index]
-                            if (status && status.outputChannel >= 0 && status.enabled) return "#4CAF50"  // 绿色：已停止（启用）
+                            if (status && status.outputChannel >= 0 && status.enabled) return "#FFA726"  // 橙色：已停止（启用）
                             if (status && status.outputChannel >= 0 && !status.enabled) return "#FF5722"  // 红色：禁用
                         }
                         return "#555555"  // 暗灰：未配置
@@ -198,8 +201,18 @@ Rectangle {
                         }
                         return "未配置"
                     }
+                    width: 38  // 固定宽度确保圆形对齐
                     font.pixelSize: 11
-                    color: (index < root.sprinklerRunningStates.length && root.sprinklerRunningStates[index]) ? "#00E676" : "#9E9E9E"
+                    horizontalAlignment: Text.AlignLeft
+                    color: {
+                        if (index < root.sprinklerRunningStates.length && root.sprinklerRunningStates[index]) return "#00E676"  // 运行中=亮绿
+                        if (index < root.sprinklerStatusList.length) {
+                            var status = root.sprinklerStatusList[index]
+                            if (status && status.outputChannel >= 0 && status.enabled) return "#FFA726"  // 已停止=橙色
+                            if (status && status.outputChannel >= 0 && !status.enabled) return "#FF5722"  // 禁用=红色
+                        }
+                        return "#9E9E9E"  // 未配置=灰色
+                    }
                 }
             }
 
