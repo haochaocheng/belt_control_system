@@ -299,25 +299,147 @@ Rectangle {
             DeviceInfo.CustomTextField { id: brakeFailureVoiceField; Layout.fillWidth: true; text: "制动器" + (root.brakeIndex + 1) + "抱闸失败"; readOnly: true; keyboardManager: root.keyboardManager; enabled: enabledSwitch.checked && !root.beltIsRunning }
         }
 
-        // ========== 行7：LED指示 + 操作按钮 ==========
+        // ========== 行7：状态监控 + 操作按钮 ==========
+        // ✅ 2026-04-07 [Phase 7.48.88.78]: 统一状态监控样式（参照电机BasicConfigTab）
+        // 旧代码：简陋的16px LED无效果，仅DI反馈更新
+        // 新代码：24px LED + 高亮点 + 发光效果 + doDataManager + commonControl 三数据源
         RowLayout {
             Layout.fillWidth: true; spacing: 15; opacity: enabledSwitch.checked ? 1.0 : 0.4
-            // LED指示灯
-            Row {
-                spacing: 20
-                Row {
-                    spacing: 6
-                    Rectangle { id: releaseLed; width: 16; height: 16; radius: 8; color: "#555"; anchors.verticalCenter: parent.verticalCenter
-                        border.width: 1; border.color: "#333" }
-                    Text { text: "松闸到位"; font.pixelSize: root.lblFs; color: root.lblC; anchors.verticalCenter: parent.verticalCenter }
+
+            // ========== 状态监控标题 ==========
+            Text {
+                text: "状态监控"
+                font.pixelSize: 19; font.bold: true; color: "#7dd3fc"
+            }
+
+            // ========== 运行状态LED ==========
+            Item {
+                id: brakeRunItem
+                implicitWidth: brakeRunRow.implicitWidth; implicitHeight: 40
+                property bool brakeIsOn: false
+
+                // ✅ 数据源1：DO通道状态变化
+                Connections {
+                    target: releaseOutputChannelSpin
+                    function onValueChanged() {
+                        if (typeof doDataManager !== "undefined") {
+                            brakeRunItem.brakeIsOn = doDataManager.getDoState(releaseOutputChannelSpin.value)
+                        }
+                    }
                 }
+
+                // ✅ 数据源2：doDataManager 全局DO状态
+                Connections {
+                    target: typeof doDataManager !== "undefined" ? doDataManager : null
+                    function onDoStatesChanged() {
+                        brakeRunItem.brakeIsOn = doDataManager.getDoState(releaseOutputChannelSpin.value)
+                    }
+                }
+
+                // ✅ 数据源3：commonControl 全局设备状态信号
+                Connections {
+                    target: typeof commonControl !== "undefined" ? commonControl : null
+                    function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+                        var match = deviceName.match(/(\d+)号制动器/)
+                        if (!match) return
+                        var brakeIdx = parseInt(match[1]) - 1
+                        if (brakeIdx === root.brakeIndex) {
+                            brakeRunItem.brakeIsOn = isRunning
+                        }
+                    }
+                }
+
+                Component.onCompleted: {
+                    if (typeof doDataManager !== "undefined") {
+                        brakeRunItem.brakeIsOn = doDataManager.getDoState(releaseOutputChannelSpin.value)
+                    }
+                }
+
                 Row {
-                    spacing: 6
-                    Rectangle { id: brakeLed; width: 16; height: 16; radius: 8; color: "#555"; anchors.verticalCenter: parent.verticalCenter
-                        border.width: 1; border.color: "#333" }
-                    Text { text: "抱闸到位"; font.pixelSize: root.lblFs; color: root.lblC; anchors.verticalCenter: parent.verticalCenter }
+                    id: brakeRunRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 12
+
+                    Rectangle {
+                        id: brakeRunLed
+                        width: 24; height: 24; radius: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        property bool isOn: brakeRunItem.brakeIsOn
+                        color: isOn ? "#22C55E" : "#1a1a2e"
+                        border.color: isOn ? "#86EFAC" : "#475569"; border.width: 2
+                        Rectangle { width: 10; height: 10; radius: 5; anchors.centerIn: parent; color: brakeRunLed.isOn ? "#bbf7d0" : "#334155"; opacity: brakeRunLed.isOn ? 0.8 : 0.3 }
+                        Rectangle { visible: brakeRunLed.isOn; width: 32; height: 32; radius: 16; anchors.centerIn: parent; color: "#22C55E"; opacity: 0.2; z: -1 }
+                    }
+
+                    Text {
+                        text: brakeRunLed.isOn ? "运行中" : "已停止"
+                        font.pixelSize: 18
+                        color: brakeRunLed.isOn ? "#22C55E" : "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
             }
+
+            // ========== 松闸到位LED ==========
+            Item {
+                id: releaseLedItem
+                implicitWidth: releaseLedRow.implicitWidth; implicitHeight: 40
+
+                Row {
+                    id: releaseLedRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 12
+
+                    Rectangle {
+                        id: releaseLed
+                        width: 24; height: 24; radius: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        property bool isOn: false
+                        color: isOn ? "#00d4ff" : "#1a1a2e"
+                        border.color: isOn ? "#7dd3fc" : "#475569"; border.width: 2
+                        Rectangle { width: 10; height: 10; radius: 5; anchors.centerIn: parent; color: releaseLed.isOn ? "#bae6fd" : "#334155"; opacity: releaseLed.isOn ? 0.8 : 0.3 }
+                        Rectangle { visible: releaseLed.isOn; width: 32; height: 32; radius: 16; anchors.centerIn: parent; color: "#00d4ff"; opacity: 0.2; z: -1 }
+                    }
+
+                    Text {
+                        text: releaseLed.isOn ? "松闸到位" : "松闸未到位"
+                        font.pixelSize: 18
+                        color: releaseLed.isOn ? "#00d4ff" : "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+
+            // ========== 抱闸到位LED ==========
+            Item {
+                id: brakeLedItem
+                implicitWidth: brakeLedRow.implicitWidth; implicitHeight: 40
+
+                Row {
+                    id: brakeLedRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 12
+
+                    Rectangle {
+                        id: brakeLed
+                        width: 24; height: 24; radius: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        property bool isOn: false
+                        color: isOn ? "#00d4ff" : "#1a1a2e"
+                        border.color: isOn ? "#7dd3fc" : "#475569"; border.width: 2
+                        Rectangle { width: 10; height: 10; radius: 5; anchors.centerIn: parent; color: brakeLed.isOn ? "#bae6fd" : "#334155"; opacity: brakeLed.isOn ? 0.8 : 0.3 }
+                        Rectangle { visible: brakeLed.isOn; width: 32; height: 32; radius: 16; anchors.centerIn: parent; color: "#00d4ff"; opacity: 0.2; z: -1 }
+                    }
+
+                    Text {
+                        text: brakeLed.isOn ? "抱闸到位" : "抱闸未到位"
+                        font.pixelSize: 18
+                        color: brakeLed.isOn ? "#00d4ff" : "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+
             Item { Layout.fillWidth: true }
             // 操作按钮
             Button {
@@ -451,15 +573,18 @@ Rectangle {
     }
 
     // ========== DI反馈连接 ==========
+    // ✅ 2026-04-07 [Phase 7.48.88.78]: 改用 isOn 属性驱动LED（统一样式后不再直接设color）
+    // 旧代码：releaseLed.color = val ? "#4CAF50" : "#555"
+    // 新代码：releaseLed.isOn = val（LED颜色由 isOn 属性绑定自动控制）
     Connections {
         target: typeof mqttController !== "undefined" ? mqttController : null
         function onBitChanged(reg, bit, val) {
             if (useReleaseFeedbackSwitch.checked && reg === 2 && bit === releasePositionChannelSpin.value) {
-                releaseLed.color = val ? "#4CAF50" : "#555"
+                releaseLed.isOn = val
                 if (val && root.waitingForRelease) { root.waitingForRelease = false; releaseTimeoutTimer.stop() }
             }
             if (useBrakeFeedbackSwitch.checked && reg === 2 && bit === brakePositionChannelSpin.value) {
-                brakeLed.color = val ? "#4CAF50" : "#555"
+                brakeLed.isOn = val
                 if (val && root.waitingForBrake) { root.waitingForBrake = false; brakeTimeoutTimer.stop() }
             }
         }

@@ -346,34 +346,117 @@ Rectangle {
         // ========== 分隔线2 ==========
         Rectangle { Layout.fillWidth: true; height: 1; color: "#3d4556" }
 
-        // ========== LED状态指示 ==========
+        // ========== 状态监控（统一电机样式） ==========
+        // ✅ 2026-04-07 [Phase 7.48.88.78]: 统一状态监控样式（参照电机BasicConfigTab）
+        // 旧代码：简陋的20px LED无效果，仅内部timer驱动 tensionOpened
+        // 新代码：24px LED + 高亮点 + 发光效果 + doDataManager + commonControl 三数据源 + 保留张紧打开/关闭指示
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 40
             spacing: 16
 
-            // 张紧打开LED
-            Rectangle {
-                width: 20; height: 20; radius: 10
-                color: root.tensionOpened ? "#4CAF50" : "#616161"
-                border.color: "#334155"; border.width: 1
-            }
+            // ========== 状态监控标题 ==========
             Text {
-                text: "张紧打开"
-                font.pixelSize: root.lblFs; color: root.lblC
+                text: "状态监控"
+                font.pixelSize: 19; font.bold: true; color: "#7dd3fc"
             }
 
-            Item { width: 20 }
+            // ========== 运行状态LED ==========
+            Item {
+                id: tensionRunItem
+                implicitWidth: tensionRunRow.implicitWidth; implicitHeight: 40
+                property bool tensionIsOn: false
 
-            // 张紧关闭LED
-            Rectangle {
-                width: 20; height: 20; radius: 10
-                color: !root.tensionOpened ? "#4CAF50" : "#616161"
-                border.color: "#334155"; border.width: 1
+                // ✅ 数据源1：DO通道状态变化
+                Connections {
+                    target: outputChannelSpin
+                    function onValueChanged() {
+                        if (typeof doDataManager !== "undefined") {
+                            tensionRunItem.tensionIsOn = doDataManager.getDoState(outputChannelSpin.value)
+                        }
+                    }
+                }
+
+                // ✅ 数据源2：doDataManager 全局DO状态
+                Connections {
+                    target: typeof doDataManager !== "undefined" ? doDataManager : null
+                    function onDoStatesChanged() {
+                        tensionRunItem.tensionIsOn = doDataManager.getDoState(outputChannelSpin.value)
+                    }
+                }
+
+                // ✅ 数据源3：commonControl 全局设备状态信号
+                Connections {
+                    target: typeof commonControl !== "undefined" ? commonControl : null
+                    function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+                        var match = deviceName.match(/(\d+)号张紧/)
+                        if (!match) return
+                        var tensionIdx = parseInt(match[1]) - 1
+                        if (tensionIdx === root.controlIndex) {
+                            tensionRunItem.tensionIsOn = isRunning
+                            root.tensionOpened = isRunning
+                        }
+                    }
+                }
+
+                Component.onCompleted: {
+                    if (typeof doDataManager !== "undefined") {
+                        tensionRunItem.tensionIsOn = doDataManager.getDoState(outputChannelSpin.value)
+                    }
+                }
+
+                Row {
+                    id: tensionRunRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 12
+
+                    Rectangle {
+                        id: tensionRunLed
+                        width: 24; height: 24; radius: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        property bool isOn: tensionRunItem.tensionIsOn
+                        color: isOn ? "#22C55E" : "#1a1a2e"
+                        border.color: isOn ? "#86EFAC" : "#475569"; border.width: 2
+                        Rectangle { width: 10; height: 10; radius: 5; anchors.centerIn: parent; color: tensionRunLed.isOn ? "#bbf7d0" : "#334155"; opacity: tensionRunLed.isOn ? 0.8 : 0.3 }
+                        Rectangle { visible: tensionRunLed.isOn; width: 32; height: 32; radius: 16; anchors.centerIn: parent; color: "#22C55E"; opacity: 0.2; z: -1 }
+                    }
+
+                    Text {
+                        text: tensionRunLed.isOn ? "运行中" : "已停止"
+                        font.pixelSize: 18
+                        color: tensionRunLed.isOn ? "#22C55E" : "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
             }
-            Text {
-                text: "张紧关闭"
-                font.pixelSize: root.lblFs; color: root.lblC
+
+            // ========== 张紧打开LED（青色，参照反馈LED样式） ==========
+            Item {
+                implicitWidth: tensionOpenRow.implicitWidth; implicitHeight: 40
+
+                Row {
+                    id: tensionOpenRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 12
+
+                    Rectangle {
+                        id: tensionOpenLed
+                        width: 24; height: 24; radius: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        property bool isOn: root.tensionOpened
+                        color: isOn ? "#00d4ff" : "#1a1a2e"
+                        border.color: isOn ? "#7dd3fc" : "#475569"; border.width: 2
+                        Rectangle { width: 10; height: 10; radius: 5; anchors.centerIn: parent; color: tensionOpenLed.isOn ? "#bae6fd" : "#334155"; opacity: tensionOpenLed.isOn ? 0.8 : 0.3 }
+                        Rectangle { visible: tensionOpenLed.isOn; width: 32; height: 32; radius: 16; anchors.centerIn: parent; color: "#00d4ff"; opacity: 0.2; z: -1 }
+                    }
+
+                    Text {
+                        text: tensionOpenLed.isOn ? "张紧打开" : "张紧关闭"
+                        font.pixelSize: 18
+                        color: tensionOpenLed.isOn ? "#00d4ff" : "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
             }
         }
     } // ColumnLayout end

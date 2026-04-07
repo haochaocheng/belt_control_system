@@ -175,6 +175,85 @@ Rectangle {
             }
         }
 
+        // ========== 状态监控（统一电机样式） ==========
+        // ✅ 2026-04-07 [Phase 7.48.88.78]: 新增状态监控区域（参照电机BasicConfigTab）
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 40
+            spacing: 16
+
+            Text { text: "状态监控:"; font.pixelSize: root.lblFs; color: root.lblC; Layout.preferredWidth: root.lblW; horizontalAlignment: Text.AlignRight }
+
+            Item {
+                id: sprinklerRunItem
+                implicitWidth: sprinklerRunRow.implicitWidth; implicitHeight: 40
+                property bool sprinklerIsOn: false
+
+                // ✅ 数据源1：DO通道状态变化
+                Connections {
+                    target: channelSpin
+                    function onValueChanged() {
+                        if (typeof doDataManager !== "undefined" && channelSpin.value >= 0) {
+                            sprinklerRunItem.sprinklerIsOn = doDataManager.getDoState(channelSpin.value)
+                        }
+                    }
+                }
+
+                // ✅ 数据源2：doDataManager 全局DO状态
+                Connections {
+                    target: typeof doDataManager !== "undefined" ? doDataManager : null
+                    function onDoStatesChanged() {
+                        if (channelSpin.value >= 0) {
+                            sprinklerRunItem.sprinklerIsOn = doDataManager.getDoState(channelSpin.value)
+                        }
+                    }
+                }
+
+                // ✅ 数据源3：commonControl 全局设备状态信号
+                Connections {
+                    target: typeof commonControl !== "undefined" ? commonControl : null
+                    function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
+                        var match = deviceName.match(/(\d+)号洒水/)
+                        if (!match) return
+                        var sprinklerIdx = parseInt(match[1]) - 1
+                        if (sprinklerIdx === root.sprinklerIndex) {
+                            sprinklerRunItem.sprinklerIsOn = isRunning
+                        }
+                    }
+                }
+
+                Component.onCompleted: {
+                    if (typeof doDataManager !== "undefined" && channelSpin.value >= 0) {
+                        sprinklerRunItem.sprinklerIsOn = doDataManager.getDoState(channelSpin.value)
+                    }
+                }
+
+                Row {
+                    id: sprinklerRunRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 12
+
+                    Rectangle {
+                        id: sprinklerRunLed
+                        width: 24; height: 24; radius: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        property bool isOn: sprinklerRunItem.sprinklerIsOn
+                        color: isOn ? "#22C55E" : "#1a1a2e"
+                        border.color: isOn ? "#86EFAC" : "#475569"; border.width: 2
+                        Rectangle { width: 10; height: 10; radius: 5; anchors.centerIn: parent; color: sprinklerRunLed.isOn ? "#bbf7d0" : "#334155"; opacity: sprinklerRunLed.isOn ? 0.8 : 0.3 }
+                        Rectangle { visible: sprinklerRunLed.isOn; width: 32; height: 32; radius: 16; anchors.centerIn: parent; color: "#22C55E"; opacity: 0.2; z: -1 }
+                    }
+
+                    Text {
+                        text: sprinklerRunLed.isOn ? "运行中" : "已停止"
+                        font.pixelSize: 18
+                        color: sprinklerRunLed.isOn ? "#22C55E" : "#9E9E9E"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+        }
+
         // ========== 分隔线 ==========
         // ✅ 2026-03-18 [Phase 7.48.55]: 手动控制区域
         Rectangle {
