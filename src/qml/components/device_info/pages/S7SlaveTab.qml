@@ -681,9 +681,8 @@ Rectangle {
                     enabled: false
                 }
             }
-        }  // GridLayout 结束
-
             // ✅ 2026-04-07 [Phase 7.48.88.84]: S7数据映射可视化区域
+            // ✅ 2026-04-07 [Phase 7.48.88.87]: 修复 - 移入GridLayout内部，解决参数叠加问题
             // ========== 分隔线 ==========
             Rectangle {
                 Layout.columnSpan: 4
@@ -855,5 +854,6 @@ Rectangle {
                 Layout.topMargin: 4
                 Layout.rightMargin: 10
             }
+        }  // GridLayout 结束
     }  // ScrollView 结束
 }
