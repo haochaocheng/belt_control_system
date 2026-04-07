@@ -6,6 +6,7 @@
 
 #include "S7ServerController.h"
 #include <QDebug>
+#include <cstring>  // ✅ 2026-04-07 [Phase 7.48.88.83]: memcpy用于数据缓冲区操作
 
 S7ServerController::S7ServerController(QObject *parent)
     : QObject(parent)
@@ -162,51 +163,71 @@ void S7ServerController::stopServer()
 // ========== 数据区操作 ==========
 bool S7ServerController::registerDB(int dbNumber, int size)
 {
+    // ✅ 2026-04-07 [Phase 7.48.88.83]: 实现数据区注册（分配内存缓冲区）
+    // 旧代码：仅打印日志，无实际内存分配
+    // 原因：TCPDataAdapter需要实际的数据缓冲区来存储同步数据
+    if (size <= 0 || size > 65536) {
+        qWarning() << "❌ [S7ServerController] 无效的DB大小:" << size;
+        return false;
+    }
+
+    m_dbBuffers[dbNumber] = QByteArray(size, 0);
+
 #ifdef ENABLE_SNAP7
-    qDebug() << "✅ [S7ServerController] 注册DB" << dbNumber << "大小:" << size;
-    // 注意：Snap7服务器的RegisterArea需要持久化内存
-    // 实际应用中需要维护数据区缓冲区
-    return true;
-#else
-    Q_UNUSED(dbNumber);
-    Q_UNUSED(size);
-    qWarning() << "⚠️ [S7ServerController] Snap7未启用";
-    return false;
+    if (m_s7Server) {
+        // Snap7 RegisterArea: srvAreaDB=0x84, DB编号, 缓冲区指针, 大小
+        int result = m_s7Server->RegisterArea(srvAreaDB, dbNumber,
+            m_dbBuffers[dbNumber].data(), size);
+        if (result != 0) {
+            qWarning() << "⚠️ [S7ServerController] Snap7注册DB" << dbNumber << "失败, 错误码:" << result;
+        }
+    }
 #endif
+
+    qDebug() << "✅ [S7ServerController] 注册DB" << dbNumber << "大小:" << size << "bytes";
+    return true;
 }
 
 bool S7ServerController::setDBData(int dbNumber, int start, const QByteArray &data)
 {
-#ifdef ENABLE_SNAP7
-    qDebug() << "✅ [S7ServerController] 设置DB数据 - DB" << dbNumber
-             << "起始:" << start << "大小:" << data.size();
-    // TODO: 实际实现需要访问已注册的数据区内存
+    // ✅ 2026-04-07 [Phase 7.48.88.83]: 实现数据写入缓冲区
+    // 旧代码：仅打印日志，未写入实际数据
+    if (!m_dbBuffers.contains(dbNumber)) {
+        qWarning() << "❌ [S7ServerController] DB" << dbNumber << "未注册";
+        return false;
+    }
+
+    QByteArray &buffer = m_dbBuffers[dbNumber];
+    if (start < 0 || start + data.size() > buffer.size()) {
+        qWarning() << "❌ [S7ServerController] DB" << dbNumber << "写入越界:"
+                   << "start=" << start << "dataSize=" << data.size() << "bufSize=" << buffer.size();
+        return false;
+    }
+
+    memcpy(buffer.data() + start, data.constData(), data.size());
+
+    // Snap7服务器使用共享内存指针（RegisterArea时已注册），PLC客户端直接读取缓冲区
+    // 无需额外操作，数据已在缓冲区中
     return true;
-#else
-    Q_UNUSED(dbNumber);
-    Q_UNUSED(start);
-    Q_UNUSED(data);
-    qWarning() << "⚠️ [S7ServerController] Snap7未启用";
-    return false;
-#endif
 }
 
 QByteArray S7ServerController::getDBData(int dbNumber, int start, int size)
 {
-    QByteArray result;
-#ifdef ENABLE_SNAP7
-    result.resize(size);
-    result.fill(0);
-    qDebug() << "✅ [S7ServerController] 获取DB数据 - DB" << dbNumber
-             << "起始:" << start << "大小:" << size;
-    // TODO: 实际实现需要访问已注册的数据区内存
-#else
-    Q_UNUSED(dbNumber);
-    Q_UNUSED(start);
-    Q_UNUSED(size);
-    qWarning() << "⚠️ [S7ServerController] Snap7未启用";
-#endif
-    return result;
+    // ✅ 2026-04-07 [Phase 7.48.88.83]: 实现数据读取
+    // 旧代码：返回全零数组
+    if (!m_dbBuffers.contains(dbNumber)) {
+        qWarning() << "❌ [S7ServerController] DB" << dbNumber << "未注册";
+        return QByteArray();
+    }
+
+    const QByteArray &buffer = m_dbBuffers[dbNumber];
+    if (start < 0 || start + size > buffer.size()) {
+        qWarning() << "❌ [S7ServerController] DB" << dbNumber << "读取越界:"
+                   << "start=" << start << "size=" << size << "bufSize=" << buffer.size();
+        return QByteArray();
+    }
+
+    return buffer.mid(start, size);
 }
 
 // ========== 辅助函数 ==========

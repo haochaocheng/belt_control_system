@@ -8,6 +8,7 @@
 #define S7SERVERCONTROLLER_H
 
 #include <QObject>
+#include <QMap>  // ✅ 2026-04-07 [Phase 7.48.88.83]: 数据区缓冲用
 
 #ifdef ENABLE_SNAP7
 #include "snap7.h"
@@ -100,6 +101,10 @@ private:
 #ifdef ENABLE_SNAP7
     TS7Server *m_s7Server;  // ✅ 2026-02-08 [Phase 7.42.7]: Snap7服务器
 #endif
+
+    // ✅ 2026-04-07 [Phase 7.48.88.83]: 数据区内存缓冲（无论Snap7是否启用都需要）
+    // key=DB编号, value=数据缓冲区
+    QMap<int, QByteArray> m_dbBuffers;
 
     // ========== S7配置 ==========
     int m_port;

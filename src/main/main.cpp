@@ -37,6 +37,7 @@
 #include "control/ModbusTCPSlaveController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加Modbus TCP从站控制器头文件
 #include "control/S7ClientController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加S7客户端控制器头文件
 #include "control/S7ServerController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器头文件
+#include "control/TCPDataAdapter.h"  // ✅ 2026-04-07 [Phase 7.48.88.83]: 添加TCP数据适配层头文件
 #ifdef MQTT_ENABLED
 #include "mqtt/MQTTController.h"  // ✅ 2026-02-08 [Phase 7.43]: 添加MQTT控制器头文件
 #include "mqtt/MQTTAutoManager.h"  // ✅ 2026-02-09 [Phase 7.44.1]: 添加MQTT自动管理器头文件
@@ -218,6 +219,28 @@ int main(int argc, char *argv[]) {
         S7ServerController s7Server7;
         S7ServerController s7Server8;
 
+        // ✅ 2026-04-07 [Phase 7.48.88.83]: 初始化TCP数据适配层
+        TCPDataAdapter tcpDataAdapter;
+        // 绑定Modbus从站控制器（8端口）
+        tcpDataAdapter.bindModbusSlave(0, &modbusTcpSlave1);
+        tcpDataAdapter.bindModbusSlave(1, &modbusTcpSlave2);
+        tcpDataAdapter.bindModbusSlave(2, &modbusTcpSlave3);
+        tcpDataAdapter.bindModbusSlave(3, &modbusTcpSlave4);
+        tcpDataAdapter.bindModbusSlave(4, &modbusTcpSlave5);
+        tcpDataAdapter.bindModbusSlave(5, &modbusTcpSlave6);
+        tcpDataAdapter.bindModbusSlave(6, &modbusTcpSlave7);
+        tcpDataAdapter.bindModbusSlave(7, &modbusTcpSlave8);
+        // 绑定S7服务器控制器（8端口）
+        tcpDataAdapter.bindS7Server(0, &s7Server1);
+        tcpDataAdapter.bindS7Server(1, &s7Server2);
+        tcpDataAdapter.bindS7Server(2, &s7Server3);
+        tcpDataAdapter.bindS7Server(3, &s7Server4);
+        tcpDataAdapter.bindS7Server(4, &s7Server5);
+        tcpDataAdapter.bindS7Server(5, &s7Server6);
+        tcpDataAdapter.bindS7Server(6, &s7Server7);
+        tcpDataAdapter.bindS7Server(7, &s7Server8);
+        logMessage("TCPDataAdapter initialized with 8 Modbus slaves and 8 S7 servers");
+
 #ifdef MQTT_ENABLED
         // ✅ 2026-02-08 [Phase 7.43]: 初始化MQTT控制器
         MQTTController mqttController;
@@ -354,6 +377,20 @@ int main(int argc, char *argv[]) {
         // 原因：R/S键启动/停止时，需要使用DeviceRoleManager的localDeviceId而非SystemConfig的machineNumber
         maintenanceControl.setDeviceRoleManager(&deviceRoleManager);
         localControl.setDeviceRoleManager(&deviceRoleManager);
+
+        // ✅ 2026-04-07 [Phase 7.48.88.83]: 连接数据管理器到TCP数据适配层
+        tcpDataAdapter.setSystemConfig(&systemConfig);
+        tcpDataAdapter.setCommonControl(&commonControl);
+        tcpDataAdapter.setNetworkTask(&networkTask);
+
+#ifdef MQTT_ENABLED
+        // ✅ 2026-04-07 [Phase 7.48.88.83]: 连接MQTT数据管理器到TCP数据适配层
+        tcpDataAdapter.setDODataManager(&doDataManager);
+        tcpDataAdapter.setDIDataManager(&diDataManager);
+        tcpDataAdapter.setAIDataManager(&aiDataManager);
+        tcpDataAdapter.setCSDataManager(&csDataManager);
+        logMessage("TCPDataAdapter connected to all data managers");
+#endif
 
 #ifdef MQTT_ENABLED
         // ✅ 2026-02-10 [Phase 7.45.6]: 设置 MQTT 控制器并启动发布
@@ -532,6 +569,8 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("s7Server6", &s7Server6);
         engine.rootContext()->setContextProperty("s7Server7", &s7Server7);
         engine.rootContext()->setContextProperty("s7Server8", &s7Server8);
+        // ✅ 2026-04-07 [Phase 7.48.88.83]: 注册TCP数据适配层到QML
+        engine.rootContext()->setContextProperty("tcpDataAdapter", &tcpDataAdapter);
 #ifdef MQTT_ENABLED
         // ✅ 2026-02-08 [Phase 7.43]: 注册MQTT控制器到QML
         engine.rootContext()->setContextProperty("mqttController", &mqttController);

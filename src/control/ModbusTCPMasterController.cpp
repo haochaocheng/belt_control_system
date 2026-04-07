@@ -581,8 +581,19 @@ void ModbusTCPMasterController::handleReadReady()
 
 void ModbusTCPMasterController::handlePollTimeout()
 {
-    // TODO: 处理轮询超时
-    // qDebug() << "TODO: handlePollTimeout";
+    // ✅ 2026-04-07 [Phase 7.48.88.83]: 实现轮询超时处理
+    // 旧代码：// TODO: 处理轮询超时
+    // 原因：之前为空实现，主站无法自动轮询从站数据
+    if (!m_modbusClient || m_modbusClient->state() != QModbusDevice::ConnectedState) {
+        return;
+    }
+
+    if (m_registerCount <= 0) {
+        return;
+    }
+
+    // 默认读取保持寄存器（最常用的轮询模式）
+    readHoldingRegisters(m_startRegister, m_registerCount);
 }
 
 // ========== 辅助函数 ==========

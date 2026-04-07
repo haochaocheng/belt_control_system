@@ -415,9 +415,18 @@ bool S7ClientController::writeOutput(int start, const QByteArray &data)
 // ========== 私有槽函数 ==========
 void S7ClientController::handlePollTimeout()
 {
-    // TODO: 实现轮询逻辑
-    // 可以在这里定期读取PLC数据
-    // 例如：readDB(1, 0, 10, data);
+    // ✅ 2026-04-07 [Phase 7.48.88.83]: 实现轮询逻辑
+    // 旧代码：// TODO: 实现轮询逻辑
+    // 原因：之前为空实现，主站无法自动轮询PLC数据
+    if (!m_isConnected) {
+        return;
+    }
+
+    // 默认轮询DB1状态区（与S7ServerController的DB1映射对应）
+    QByteArray data;
+    if (readDB(1, 0, 140, data)) {
+        emit dataRead(1, 0, data);
+    }
 }
 
 // ========== 辅助函数 ==========
