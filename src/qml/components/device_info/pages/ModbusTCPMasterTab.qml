@@ -17,6 +17,11 @@ Rectangle {
     property var currentPort: null
     property int focusParamIndex: -1
     property var virtualKeyboard: null
+    property int portIndex: 0  // ✅ 2026-04-07 [Phase 7.48.88.85]: 端口索引
+
+    // ✅ 2026-04-07 [Phase 7.48.88.85]: 轮询数据展示
+    property int readMode: 0  // 0=保持寄存器, 1=输入寄存器, 2=线圈, 3=离散输入
+    property var pollDataList: []
 
     // ✅ 2026-02-08 [Phase 7.42.13]: 信号 - 请求更新焦点索引
     signal requestFocusParamIndex(int paramIndex)
@@ -101,6 +106,31 @@ Rectangle {
         // 其他输入框（SpinBox/TextField）返回 false，让 DeviceSettingsDialog 调用 triggerParamInput
         return false
     }
+
+    // ✅ 2026-04-07 [Phase 7.48.88.85]: 加载轮询配置概览
+    function loadPollConfig() {
+        var items = []
+        var start = root.startRegister
+        var count = root.registerCount
+        var modeNames = ["保持寄存器(4x)", "输入寄存器(3x)", "线圈(0x)", "离散输入(1x)"]
+        var modePrefix = ["4", "3", "0", "1"]
+        var prefix = modePrefix[root.readMode]
+        for (var i = 0; i < count; i++) {
+            var addr = start + i
+            items.push({
+                address: prefix + String(addr + 1).padStart(4, '0'),
+                name: "寄存器 " + addr,
+                type: root.readMode <= 1 ? "UINT16" : "BOOL",
+                value: "--"
+            })
+        }
+        root.pollDataList = items
+    }
+
+    onReadModeChanged: loadPollConfig()
+    onStartRegisterChanged: loadPollConfig()
+    onRegisterCountChanged: loadPollConfig()
+    Component.onCompleted: Qt.callLater(loadPollConfig)
 
     // ========== 滚动视图 ==========
     ScrollView {
@@ -609,5 +639,222 @@ Rectangle {
                 }
             }
         }  // GridLayout 结束
+
+            // ✅ 2026-04-07 [Phase 7.48.88.85]: 轮询数据展示区域
+            // ========== 分隔线 ==========
+            Rectangle {
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                height: 1
+                color: "#3d4556"
+                Layout.topMargin: 10
+                Layout.bottomMargin: 5
+            }
+
+            // ========== 轮询数据标题 ==========
+            Text {
+                Layout.columnSpan: 4
+                text: "轮询数据概览"
+                font.pixelSize: 18
+                font.weight: Font.Bold
+                color: "#E0E0E0"
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+            }
+
+            // ========== 读取模式切换 ==========
+            Row {
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 8
+                Layout.bottomMargin: 5
+
+                Repeater {
+                    model: ["保持寄存器(4x)", "输入寄存器(3x)", "线圈(0x)", "离散输入(1x)"]
+
+                    Rectangle {
+                        width: 140
+                        height: 32
+                        radius: 4
+                        color: root.readMode === index ? "#2196F3" : "#353b4d"
+                        border.color: root.readMode === index ? "#64B5F6" : "#4a5068"
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData
+                            font.pixelSize: 12
+                            color: root.readMode === index ? "#FFFFFF" : "#9E9E9E"
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: root.readMode = index
+                        }
+                    }
+                }
+            }
+
+            // ========== 轮询配置信息 ==========
+            Rectangle {
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                height: 30
+                color: "#1e2433"
+                radius: 2
+
+                Row {
+                    anchors.fill: parent
+                    anchors.leftMargin: 8
+                    spacing: 20
+
+                    Text {
+                        text: "目标: " + root.targetIP + ":" + root.portNumber
+                        font.pixelSize: 11
+                        color: "#81D4FA"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                    Text {
+                        text: "从站: " + root.slaveAddress
+                        font.pixelSize: 11
+                        color: "#81D4FA"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                    Text {
+                        text: "范围: " + root.startRegister + " ~ " + (root.startRegister + root.registerCount - 1)
+                        font.pixelSize: 11
+                        color: "#81D4FA"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                    Text {
+                        text: "间隔: " + (root.pollInterval * 100) + "ms"
+                        font.pixelSize: 11
+                        color: "#81D4FA"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                }
+            }
+
+            // ========== 数据表头 ==========
+            Rectangle {
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                height: 30
+                color: "#2a3042"
+                radius: 2
+
+                Row {
+                    anchors.fill: parent
+                    anchors.leftMargin: 8
+
+                    Text {
+                        width: 90
+                        text: "地址"
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        color: "#64B5F6"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                    Text {
+                        width: 200
+                        text: "名称"
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        color: "#64B5F6"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                    Text {
+                        width: 80
+                        text: "类型"
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        color: "#64B5F6"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                    Text {
+                        width: parent.width - 378
+                        text: "当前值"
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        color: "#64B5F6"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                }
+            }
+
+            // ========== 轮询数据列表 ==========
+            Repeater {
+                model: root.pollDataList
+
+                Rectangle {
+                    Layout.columnSpan: 4
+                    Layout.fillWidth: true
+                    height: 26
+                    color: index % 2 === 0 ? "#1e2433" : "#252b3d"
+
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+
+                        Text {
+                            width: 90
+                            text: modelData.address || ""
+                            font.pixelSize: 11
+                            font.family: "Consolas"
+                            color: "#81D4FA"
+                            verticalAlignment: Text.AlignVCenter
+                            height: parent.height
+                        }
+                        Text {
+                            width: 200
+                            text: modelData.name || ""
+                            font.pixelSize: 11
+                            color: "#E0E0E0"
+                            verticalAlignment: Text.AlignVCenter
+                            height: parent.height
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            width: 80
+                            text: modelData.type || ""
+                            font.pixelSize: 11
+                            font.family: "Consolas"
+                            color: "#FFB74D"
+                            verticalAlignment: Text.AlignVCenter
+                            height: parent.height
+                        }
+                        Text {
+                            width: parent.width - 378
+                            text: modelData.value || "--"
+                            font.pixelSize: 11
+                            font.family: "Consolas"
+                            color: "#4CAF50"
+                            verticalAlignment: Text.AlignVCenter
+                            height: parent.height
+                        }
+                    }
+                }
+            }
+
+            // ========== 统计信息 ==========
+            Text {
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                text: "共 " + root.pollDataList.length + " 个寄存器（连接后自动刷新）"
+                font.pixelSize: 11
+                color: "#757575"
+                horizontalAlignment: Text.AlignRight
+                Layout.topMargin: 4
+                Layout.rightMargin: 10
+            }
     }  // ScrollView 结束
 }

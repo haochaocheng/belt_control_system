@@ -170,6 +170,7 @@ Rectangle {
                     item.currentPort = Qt.binding(function() { return root.currentPort })
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                     item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                    item.portIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.85]
                 }
             }
 
@@ -197,6 +198,7 @@ Rectangle {
                     item.currentPort = Qt.binding(function() { return root.currentPort })
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                     item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                    item.portIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.85]
                 }
             }
 
