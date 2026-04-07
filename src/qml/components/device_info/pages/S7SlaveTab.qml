@@ -18,6 +18,11 @@ Rectangle {
     property var currentPort: null
     property int focusParamIndex: -1
     property var virtualKeyboard: null
+    property int portIndex: 0  // ✅ 2026-04-07 [Phase 7.48.88.84]: 端口索引
+
+    // ✅ 2026-04-07 [Phase 7.48.88.84]: 数据映射可视化
+    property int mapCategory: 0   // 0=DB1(状态区), 1=DB2(控制区)
+    property var currentMapData: []
 
     // ✅ 2026-02-08 [Phase 7.42.13]: 信号 - 请求更新焦点索引
     signal requestFocusParamIndex(int paramIndex)
@@ -100,6 +105,30 @@ Rectangle {
         // 其他输入框返回 false，让 DeviceSettingsDialog 调用 triggerParamInput
         return false
     }
+
+    // ✅ 2026-04-07 [Phase 7.48.88.84]: 加载S7数据映射
+    function loadMapData() {
+        if (typeof tcpDataAdapter === "undefined") {
+            console.log("⚠️ [S7SlaveTab] tcpDataAdapter 未注册")
+            root.currentMapData = []
+            return
+        }
+        switch(root.mapCategory) {
+        case 0:
+            root.currentMapData = tcpDataAdapter.getS7DB1Map(root.portIndex)
+            break
+        case 1:
+            root.currentMapData = tcpDataAdapter.getS7DB2Map(root.portIndex)
+            break
+        default:
+            root.currentMapData = []
+        }
+        console.log("✅ [S7SlaveTab] 加载映射数据 - 类别:", root.mapCategory, "数量:", root.currentMapData.length)
+    }
+
+    onMapCategoryChanged: loadMapData()
+    onPortIndexChanged: loadMapData()
+    Component.onCompleted: Qt.callLater(loadMapData)
 
     // ========== 滚动视图 ==========
     ScrollView {
@@ -653,5 +682,178 @@ Rectangle {
                 }
             }
         }  // GridLayout 结束
+
+            // ✅ 2026-04-07 [Phase 7.48.88.84]: S7数据映射可视化区域
+            // ========== 分隔线 ==========
+            Rectangle {
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                height: 1
+                color: "#3d4556"
+                Layout.topMargin: 10
+                Layout.bottomMargin: 5
+            }
+
+            // ========== 数据映射标题 ==========
+            Text {
+                Layout.columnSpan: 4
+                text: "S7 数据块映射表"
+                font.pixelSize: 18
+                font.weight: Font.Bold
+                color: "#E0E0E0"
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+            }
+
+            // ========== 映射类别切换 ==========
+            Row {
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 8
+                Layout.bottomMargin: 5
+
+                Repeater {
+                    model: ["DB1 状态区(256B)", "DB2 控制区(64B)"]
+
+                    Rectangle {
+                        width: 160
+                        height: 32
+                        radius: 4
+                        color: root.mapCategory === index ? "#2196F3" : "#353b4d"
+                        border.color: root.mapCategory === index ? "#64B5F6" : "#4a5068"
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData
+                            font.pixelSize: 12
+                            color: root.mapCategory === index ? "#FFFFFF" : "#9E9E9E"
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: root.mapCategory = index
+                        }
+                    }
+                }
+            }
+
+            // ========== 映射表头 ==========
+            Rectangle {
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                height: 30
+                color: "#2a3042"
+                radius: 2
+
+                Row {
+                    anchors.fill: parent
+                    anchors.leftMargin: 8
+
+                    Text {
+                        width: 80
+                        text: "偏移"
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        color: "#64B5F6"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                    Text {
+                        width: 60
+                        text: "长度"
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        color: "#64B5F6"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                    Text {
+                        width: 200
+                        text: "名称"
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        color: "#64B5F6"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                    Text {
+                        width: parent.width - 348
+                        text: "类型/说明"
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        color: "#64B5F6"
+                        verticalAlignment: Text.AlignVCenter
+                        height: parent.height
+                    }
+                }
+            }
+
+            // ========== 映射数据列表 ==========
+            Repeater {
+                model: root.currentMapData
+
+                Rectangle {
+                    Layout.columnSpan: 4
+                    Layout.fillWidth: true
+                    height: 26
+                    color: index % 2 === 0 ? "#1e2433" : "#252b3d"
+
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+
+                        Text {
+                            width: 80
+                            text: modelData.address || ""
+                            font.pixelSize: 11
+                            font.family: "Consolas"
+                            color: "#81D4FA"
+                            verticalAlignment: Text.AlignVCenter
+                            height: parent.height
+                        }
+                        Text {
+                            width: 60
+                            text: modelData.type || ""
+                            font.pixelSize: 11
+                            font.family: "Consolas"
+                            color: "#FFB74D"
+                            verticalAlignment: Text.AlignVCenter
+                            height: parent.height
+                        }
+                        Text {
+                            width: 200
+                            text: modelData.name || ""
+                            font.pixelSize: 11
+                            color: "#E0E0E0"
+                            verticalAlignment: Text.AlignVCenter
+                            height: parent.height
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            width: parent.width - 348
+                            text: modelData.source || modelData.target || modelData.description || ""
+                            font.pixelSize: 11
+                            color: "#9E9E9E"
+                            verticalAlignment: Text.AlignVCenter
+                            height: parent.height
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+            }
+
+            // ========== 统计信息 ==========
+            Text {
+                Layout.columnSpan: 4
+                Layout.fillWidth: true
+                text: "共 " + root.currentMapData.length + " 条映射"
+                font.pixelSize: 11
+                color: "#757575"
+                horizontalAlignment: Text.AlignRight
+                Layout.topMargin: 4
+                Layout.rightMargin: 10
+            }
     }  // ScrollView 结束
 }

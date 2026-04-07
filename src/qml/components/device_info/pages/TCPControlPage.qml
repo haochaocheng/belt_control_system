@@ -391,6 +391,7 @@ Rectangle {
                 onLoaded: {
                     console.log("✅ [TCPControlPage] TCPConfigPanel 加载成功")
                     item.currentPort = Qt.binding(function() { return root.currentPort })
+                    item.currentPortIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.84]
                     item.focusSubArea = Qt.binding(function() { return root.focusSubArea })
                     item.focusTabIndex = Qt.binding(function() { return root.focusTabIndex })
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })

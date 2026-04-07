@@ -13,6 +13,7 @@ Rectangle {
 
     // ========== 公开属性 ==========
     property var currentPort: null
+    property int currentPortIndex: 0  // ✅ 2026-04-07 [Phase 7.48.88.84]: 端口索引传递
     property int focusSubArea: 0
     property int focusTabIndex: -1
     property int focusParamIndex: 0
@@ -182,6 +183,7 @@ Rectangle {
                     item.currentPort = Qt.binding(function() { return root.currentPort })
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                     item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                    item.portIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.84]
                 }
             }
 
@@ -208,6 +210,7 @@ Rectangle {
                     item.currentPort = Qt.binding(function() { return root.currentPort })
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                     item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
+                    item.portIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.84]
                 }
             }
         }
