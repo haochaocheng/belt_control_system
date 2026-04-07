@@ -28,6 +28,11 @@ Rectangle {
     // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行状态（从MotorConfigPanel传入，用于冻结参数编辑）
     property bool beltIsRunning: false
 
+    // ✅ 2026-04-07 [Phase 7.48.88.80]: 电机运行状态数组（从MotorConfigPanel传入，通过Qt.binding实现实时同步）
+    // 旧方案：3个Connections监听doDataManager/commonControl信号（在Loader内不可靠）
+    // 新方案：与制动器/张紧/洒水统一，使用属性绑定模式
+    property var motorRunningStates: [false,false,false,false,false,false,false,false]
+
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.7]: 监听 focusParamIndex 变化，确认属性传递
     onFocusParamIndexChanged: {
         console.log("🟢 [BasicConfigTab] focusParamIndex 变化:", focusParamIndex)
@@ -1057,55 +1062,14 @@ Rectangle {
                 Layout.fillWidth: true; Layout.maximumWidth: 300
                 implicitHeight: 40
 
-                // ✅ 2026-03-10 [Phase 7.48.33]: 使用属性+Connections实现实时刷新
-                // ✅ 2026-03-10 [Phase 7.48.35]: 修复 parent 引用错误，改用 id 引用
-                // ✅ 2026-03-10 [Phase 7.48.36]: 改用 doDataManager（前后端分离）
-                // 旧：监听 diDataManager.module1DataChanged/module2DataChanged
-                // 新：监听 doDataManager.doStatesChanged，读取 do_states[outputChannel]
-                // ✅ 2026-03-12 [Phase 7.48.40]: 修复所有电机运行状态显示一致的bug
-                // 原因：仅在doStatesChanged信号时更新，切换电机/通道变化时不会刷新
-                // 修复：增加outputChannelSpin.value变化时也刷新LED状态
-                property bool motorIsOn: false
-
-                // ✅ 2026-03-12: 通道值变化时刷新LED状态
-                Connections {
-                    target: outputChannelSpin
-                    function onValueChanged() {
-                        if (typeof doDataManager !== "undefined") {
-                            motorRunItem.motorIsOn = doDataManager.getDoState(outputChannelSpin.value)
-                        }
-                    }
-                }
-
-                Connections {
-                    target: typeof doDataManager !== "undefined" ? doDataManager : null
-                    function onDoStatesChanged() {
-                        motorRunItem.motorIsOn = doDataManager.getDoState(outputChannelSpin.value)
-                    }
-                }
-
-                // ✅ 2026-03-30 [Phase 7.48.88.71]: 监听全局设备状态变化信号
-                // 逻辑控制、2号键启动、R键启动都会触发 commonControl.deviceStatusChanged
-                // 旧代码：仅监听 doDataManager.doStatesChanged（依赖硬件DO反馈）
-                Connections {
-                    target: typeof commonControl !== "undefined" ? commonControl : null
-                    function onDeviceStatusChanged(beltNumber, deviceName, isRunning) {
-                        var match = deviceName.match(/(\d+)号电机/)
-                        if (!match) return
-                        var motorIdx = parseInt(match[1]) - 1  // 1-based → 0-based
-                        if (motorIdx === root.motorIndex) {
-                            motorRunItem.motorIsOn = isRunning
-                            console.log("✅ [BasicConfigTab] 全局状态更新 - 电机" + (motorIdx + 1) + (isRunning ? " 运行中" : " 已停止"))
-                        }
-                    }
-                }
-
-                // ✅ 2026-03-12: 组件加载时读取当前状态
-                Component.onCompleted: {
-                    if (typeof doDataManager !== "undefined") {
-                        motorRunItem.motorIsOn = doDataManager.getDoState(outputChannelSpin.value)
-                    }
-                }
+                // ✅ 2026-04-07 [Phase 7.48.88.80]: 改用属性绑定模式（与制动器/张紧/洒水统一）
+                // 旧方案：3个Connections监听 outputChannelSpin/doDataManager/commonControl 信号
+                //   - 2026-03-10 [Phase 7.48.33~36]: Connections + doDataManager
+                //   - 2026-03-12 [Phase 7.48.40]: outputChannelSpin.onValueChanged
+                //   - 2026-03-30 [Phase 7.48.88.71]: commonControl.onDeviceStatusChanged
+                //   问题：Loader内Connections不能可靠接收信号，导致状态不同步
+                // 新方案：通过 motorRunningStates[motorIndex] 属性绑定，由 DeviceSettingsDialog 统一维护
+                property bool motorIsOn: root.motorIndex >= 0 && root.motorIndex < root.motorRunningStates.length ? root.motorRunningStates[root.motorIndex] : false
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter

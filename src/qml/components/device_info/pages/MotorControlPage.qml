@@ -469,6 +469,8 @@ Rectangle {
                     item.motorIndex = Qt.binding(function() { return root.currentMotorIndex })
                     // ✅ 2026-03-30 [Phase 7.48.88.72]: 传递皮带运行状态（冻结参数编辑）
                     item.beltIsRunning = Qt.binding(function() { return root.beltIsRunning })
+                    // ✅ 2026-04-07 [Phase 7.48.88.80]: 传递电机运行状态数组（状态监控实时同步）
+                    item.motorRunningStates = Qt.binding(function() { return root.motorRunningStates })
                     // ✅ 2026-01-30 [FIX 100.300.106]: 传递焦点索引和虚拟键盘
                     // ✅ 2026-01-30 [FIX 100.300.106.2]: 直接传递 focusSubArea
                     item.focusSubArea = Qt.binding(function() { return root.focusSubArea })

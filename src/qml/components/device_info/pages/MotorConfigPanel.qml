@@ -31,6 +31,9 @@ Rectangle {
     // ✅ 2026-03-30 [Phase 7.48.88.72]: 皮带运行状态（从MotorControlPage传入，用于冻结参数编辑）
     property bool beltIsRunning: false
 
+    // ✅ 2026-04-07 [Phase 7.48.88.80]: 电机运行状态数组（从MotorControlPage传入，传递到BasicConfigTab）
+    property var motorRunningStates: [false,false,false,false,false,false,false,false]
+
     // ✅ 2026-02-02 [FIX 100.300.112.8.24.8]: 信号 - 请求更新焦点索引
     // 从子组件（BasicConfigTab 等）转发到父组件（MotorControlPage）
     signal requestFocusParamIndex(int paramIndex)
@@ -292,6 +295,8 @@ Rectangle {
                         item.deviceId = 1  // ✅ 2026-03-10 [Phase 7.48.33]: 传递设备ID
                         // ✅ 2026-03-30 [Phase 7.48.88.72]: 传递皮带运行状态
                         item.beltIsRunning = Qt.binding(function() { return root.beltIsRunning })
+                        // ✅ 2026-04-07 [Phase 7.48.88.80]: 传递电机运行状态数组（状态监控实时同步）
+                        item.motorRunningStates = Qt.binding(function() { return root.motorRunningStates })
                         item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
                         item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                         item.requestFocusParamIndex.connect(function(paramIndex) {
