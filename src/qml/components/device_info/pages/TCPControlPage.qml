@@ -287,6 +287,16 @@ Rectangle {
             root.requestReturnToCategory()
             resetFlagTimer.start()
         }
+
+        // ✅ 2026-04-08 [Phase 7.48.88.90]: Tab区域按上键 → 切换当前Tab的参数配置/映射表视图
+        onToggleViewRequested: {
+            if (tcpConfigPanel.item) {
+                var currentTab = tcpConfigPanel.item.getCurrentTabItem()
+                if (currentTab && typeof currentTab.toggleViewMode === "function") {
+                    currentTab.toggleViewMode()
+                }
+            }
+        }
     }
 
     // ========== 键盘事件 ==========

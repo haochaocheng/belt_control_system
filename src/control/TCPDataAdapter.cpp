@@ -814,9 +814,9 @@ bool TCPDataAdapter::isRemoteControlAllowed() const
 
 QVariantList TCPDataAdapter::getDiscreteInputMap(int portIndex) const
 {
-    Q_UNUSED(portIndex);
     QVariantList map;
 
+    // ✅ 2026-04-08 [Phase 7.48.88.90]: 添加当前值读取
     auto addEntry = [&](int addr, const QString &name, const QString &source) {
         QVariantMap entry;
         entry["address"] = QString("1%1").arg(addr + 1, 4, 10, QChar('0'));
@@ -824,6 +824,12 @@ QVariantList TCPDataAdapter::getDiscreteInputMap(int portIndex) const
         entry["name"] = name;
         entry["source"] = source;
         entry["type"] = "BOOL";
+        // 读取当前寄存器值
+        if (portIndex >= 0 && portIndex < 8 && m_modbusSlaves[portIndex]) {
+            entry["value"] = m_modbusSlaves[portIndex]->getDiscreteInput(addr);
+        } else {
+            entry["value"] = "--";
+        }
         map.append(entry);
     };
 
@@ -905,9 +911,9 @@ QVariantList TCPDataAdapter::getDiscreteInputMap(int portIndex) const
 
 QVariantList TCPDataAdapter::getInputRegisterMap(int portIndex) const
 {
-    Q_UNUSED(portIndex);
     QVariantList map;
 
+    // ✅ 2026-04-08 [Phase 7.48.88.90]: 添加当前值读取
     auto addEntry = [&](int addr, const QString &name, const QString &source, const QString &type) {
         QVariantMap entry;
         entry["address"] = QString("3%1").arg(addr + 1, 4, 10, QChar('0'));
@@ -915,6 +921,12 @@ QVariantList TCPDataAdapter::getInputRegisterMap(int portIndex) const
         entry["name"] = name;
         entry["source"] = source;
         entry["type"] = type;
+        // 读取当前寄存器值
+        if (portIndex >= 0 && portIndex < 8 && m_modbusSlaves[portIndex]) {
+            entry["value"] = m_modbusSlaves[portIndex]->getInputRegister(addr);
+        } else {
+            entry["value"] = "--";
+        }
         map.append(entry);
     };
 
@@ -978,7 +990,7 @@ QVariantList TCPDataAdapter::getInputRegisterMap(int portIndex) const
 
 QVariantList TCPDataAdapter::getCoilMap(int portIndex) const
 {
-    Q_UNUSED(portIndex);
+    // 旧：Q_UNUSED(portIndex);  // 2026-04-08 [Phase 7.48.88.90] 需要portIndex读取当前值
     QVariantList map;
 
     auto addEntry = [&](int addr, const QString &name, const QString &target) {
@@ -988,6 +1000,12 @@ QVariantList TCPDataAdapter::getCoilMap(int portIndex) const
         entry["name"] = name;
         entry["target"] = target;
         entry["type"] = "BOOL";
+        // ✅ 2026-04-08 [Phase 7.48.88.90]: 添加当前寄存器值
+        if (portIndex >= 0 && portIndex < 8 && m_modbusSlaves[portIndex]) {
+            entry["value"] = m_modbusSlaves[portIndex]->getCoil(addr);
+        } else {
+            entry["value"] = "--";
+        }
         map.append(entry);
     };
 
@@ -1005,7 +1023,7 @@ QVariantList TCPDataAdapter::getCoilMap(int portIndex) const
 
 QVariantList TCPDataAdapter::getHoldingRegisterMap(int portIndex) const
 {
-    Q_UNUSED(portIndex);
+    // 旧：Q_UNUSED(portIndex);  // 2026-04-08 [Phase 7.48.88.90] 需要portIndex读取当前值
     QVariantList map;
 
     auto addEntry = [&](int addr, const QString &name, const QString &desc, const QString &type) {
@@ -1015,6 +1033,12 @@ QVariantList TCPDataAdapter::getHoldingRegisterMap(int portIndex) const
         entry["name"] = name;
         entry["description"] = desc;
         entry["type"] = type;
+        // ✅ 2026-04-08 [Phase 7.48.88.90]: 添加当前寄存器值
+        if (portIndex >= 0 && portIndex < 8 && m_modbusSlaves[portIndex]) {
+            entry["value"] = m_modbusSlaves[portIndex]->getHoldingRegister(addr);
+        } else {
+            entry["value"] = "--";
+        }
         map.append(entry);
     };
 
@@ -1032,8 +1056,16 @@ QVariantList TCPDataAdapter::getHoldingRegisterMap(int portIndex) const
 
 QVariantList TCPDataAdapter::getS7DB1Map(int portIndex) const
 {
-    Q_UNUSED(portIndex);
+    // 旧：Q_UNUSED(portIndex);  // 2026-04-08 [Phase 7.48.88.90] 需要portIndex读取当前值
     QVariantList map;
+
+    // ✅ 2026-04-08 [Phase 7.48.88.90]: 读取DB1完整数据块用于获取当前值
+    QByteArray dbData;
+    bool hasData = false;
+    if (portIndex >= 0 && portIndex < 8 && m_s7Servers[portIndex]) {
+        dbData = m_s7Servers[portIndex]->getDBData(1, 0, 140);
+        hasData = !dbData.isEmpty();
+    }
 
     auto addEntry = [&](int offset, int length, const QString &name, const QString &type) {
         QVariantMap entry;
@@ -1041,6 +1073,29 @@ QVariantList TCPDataAdapter::getS7DB1Map(int portIndex) const
         entry["length"] = length;
         entry["name"] = name;
         entry["type"] = type;
+        // ✅ 2026-04-08 [Phase 7.48.88.90]: 添加当前值
+        if (hasData && offset < dbData.size()) {
+            if (type == "BYTE" && length == 1) {
+                entry["value"] = static_cast<quint8>(dbData.at(offset));
+            } else if (type == "WORD" && length == 2 && offset + 1 < dbData.size()) {
+                quint16 val = (static_cast<quint8>(dbData.at(offset)) << 8) | static_cast<quint8>(dbData.at(offset + 1));
+                entry["value"] = val;
+            } else if (type == "REAL" && length == 4 && offset + 3 < dbData.size()) {
+                float val;
+                quint8 bytes[4] = {
+                    static_cast<quint8>(dbData.at(offset)),
+                    static_cast<quint8>(dbData.at(offset + 1)),
+                    static_cast<quint8>(dbData.at(offset + 2)),
+                    static_cast<quint8>(dbData.at(offset + 3))
+                };
+                memcpy(&val, bytes, 4);
+                entry["value"] = QString::number(val, 'f', 2);
+            } else {
+                entry["value"] = "--";
+            }
+        } else {
+            entry["value"] = "--";
+        }
         map.append(entry);
     };
 
@@ -1078,8 +1133,16 @@ QVariantList TCPDataAdapter::getS7DB1Map(int portIndex) const
 
 QVariantList TCPDataAdapter::getS7DB2Map(int portIndex) const
 {
-    Q_UNUSED(portIndex);
+    // 旧：Q_UNUSED(portIndex);  // 2026-04-08 [Phase 7.48.88.90] 需要portIndex读取当前值
     QVariantList map;
+
+    // ✅ 2026-04-08 [Phase 7.48.88.90]: 读取DB2完整数据块用于获取当前值
+    QByteArray dbData;
+    bool hasData = false;
+    if (portIndex >= 0 && portIndex < 8 && m_s7Servers[portIndex]) {
+        dbData = m_s7Servers[portIndex]->getDBData(2, 0, 6);
+        hasData = !dbData.isEmpty();
+    }
 
     auto addEntry = [&](int offset, int length, const QString &name, const QString &type) {
         QVariantMap entry;
@@ -1087,6 +1150,19 @@ QVariantList TCPDataAdapter::getS7DB2Map(int portIndex) const
         entry["length"] = length;
         entry["name"] = name;
         entry["type"] = type;
+        // ✅ 2026-04-08 [Phase 7.48.88.90]: 添加当前值
+        if (hasData && offset < dbData.size()) {
+            if (length == 1) {
+                entry["value"] = static_cast<quint8>(dbData.at(offset));
+            } else if (length == 2 && offset + 1 < dbData.size()) {
+                quint16 val = (static_cast<quint8>(dbData.at(offset)) << 8) | static_cast<quint8>(dbData.at(offset + 1));
+                entry["value"] = val;
+            } else {
+                entry["value"] = "--";
+            }
+        } else {
+            entry["value"] = "--";
+        }
         map.append(entry);
     };
 

@@ -50,6 +50,13 @@ Rectangle {
         return 11
     }
 
+    // ✅ 2026-04-08 [Phase 7.48.88.90]: 键盘切换视图模式
+    function toggleViewMode() {
+        root.viewMode = (root.viewMode === 0) ? 1 : 0
+        console.log("✅ [S7MasterTab] 切换视图:", root.viewMode === 0 ? "参数配置" : "数据概览")
+        if (root.viewMode === 1) loadPollConfig()
+    }
+
     // ✅ 2026-02-08 [Phase 7.42.13]: 重构虚拟键盘支持
     function triggerParamInput(index) {
         console.log("✅ [S7MasterTab] triggerParamInput:", index)
@@ -859,7 +866,8 @@ Rectangle {
                             Text {
                                 anchors.centerIn: parent
                                 text: modelData.label
-                                font.pixelSize: 12
+                                // ✅ 2026-04-08 [Phase 7.48.88.90]: 统一类别按钮字体大小
+                                font.pixelSize: 13
                                 color: root.pollDbNumber === modelData.dbNum ? "#FFFFFF" : "#9E9E9E"
                             }
 
@@ -885,28 +893,29 @@ Rectangle {
 
                         Text {
                             text: "目标: " + root.targetIP + ":" + root.portNumber
-                            font.pixelSize: 11
+                            // ✅ 2026-04-08 [Phase 7.48.88.90]: 统一数据视图字体大小
+                            font.pixelSize: 13
                             color: "#81D4FA"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
                         }
                         Text {
                             text: "Rack: " + root.rack + " Slot: " + root.slot
-                            font.pixelSize: 11
+                            font.pixelSize: 13
                             color: "#81D4FA"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
                         }
                         Text {
                             text: "DB" + root.pollDbNumber + " [" + root.pollDbStart + "..." + (root.pollDbStart + root.pollDbSize - 1) + "]"
-                            font.pixelSize: 11
+                            font.pixelSize: 13
                             color: "#81D4FA"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
                         }
                         Text {
                             text: "间隔: " + (root.pollInterval * 100) + "ms"
-                            font.pixelSize: 11
+                            font.pixelSize: 13
                             color: "#81D4FA"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
@@ -928,7 +937,7 @@ Rectangle {
                         Text {
                             width: 80
                             text: "偏移"
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.weight: Font.Bold
                             color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
@@ -937,7 +946,7 @@ Rectangle {
                         Text {
                             width: 60
                             text: "长度"
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.weight: Font.Bold
                             color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
@@ -946,7 +955,7 @@ Rectangle {
                         Text {
                             width: 200
                             text: "名称"
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.weight: Font.Bold
                             color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
@@ -955,7 +964,7 @@ Rectangle {
                         Text {
                             width: parent.width - 348
                             text: "当前值"
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.weight: Font.Bold
                             color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
@@ -970,7 +979,7 @@ Rectangle {
 
                     Rectangle {
                         Layout.fillWidth: true
-                        height: 26
+                        height: 28
                         color: index % 2 === 0 ? "#1e2433" : "#252b3d"
 
                         Row {
@@ -980,7 +989,7 @@ Rectangle {
                             Text {
                                 width: 80
                                 text: modelData.address || ""
-                                font.pixelSize: 11
+                                font.pixelSize: 13
                                 font.family: "Consolas"
                                 color: "#81D4FA"
                                 verticalAlignment: Text.AlignVCenter
@@ -989,7 +998,7 @@ Rectangle {
                             Text {
                                 width: 60
                                 text: modelData.type || ""
-                                font.pixelSize: 11
+                                font.pixelSize: 13
                                 font.family: "Consolas"
                                 color: "#FFB74D"
                                 verticalAlignment: Text.AlignVCenter
@@ -998,7 +1007,7 @@ Rectangle {
                             Text {
                                 width: 200
                                 text: modelData.name || ""
-                                font.pixelSize: 11
+                                font.pixelSize: 13
                                 color: "#E0E0E0"
                                 verticalAlignment: Text.AlignVCenter
                                 height: parent.height
@@ -1007,7 +1016,7 @@ Rectangle {
                             Text {
                                 width: parent.width - 348
                                 text: "--"
-                                font.pixelSize: 11
+                                font.pixelSize: 13
                                 font.family: "Consolas"
                                 color: "#4CAF50"
                                 verticalAlignment: Text.AlignVCenter
@@ -1021,7 +1030,7 @@ Rectangle {
                 Text {
                     Layout.fillWidth: true
                     text: "共 " + root.pollDataList.length + " 项数据（连接后自动刷新）"
-                    font.pixelSize: 11
+                    font.pixelSize: 13
                     color: "#757575"
                     horizontalAlignment: Text.AlignRight
                     Layout.topMargin: 4

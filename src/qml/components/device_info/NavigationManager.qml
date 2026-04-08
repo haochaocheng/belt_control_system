@@ -77,6 +77,7 @@ QtObject {
     // ========== 自定义信号 ==========
     signal areaChanged(string newArea)  // 区域切换信号（自定义，因为需要传递参数）
     signal returnToCategory()  // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.8]: 返回到左侧类别信号
+    signal toggleViewRequested()  // ✅ 2026-04-08 [Phase 7.48.88.90]: Tab区域按上键切换参数配置/映射表视图
 
     // ========== 区域切换函数 ==========
 
@@ -188,7 +189,9 @@ QtObject {
             break
 
         case "Up":
-            // 在Tab区域，向上保持不变
+            // ✅ 2026-04-08 [Phase 7.48.88.90]: Tab区域按上键 → 切换参数配置/映射表视图
+            // 通过信号通知外部调用当前Tab的toggleViewMode()
+            toggleViewRequested()
             break
 
         case "Down":

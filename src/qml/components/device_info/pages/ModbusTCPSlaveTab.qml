@@ -47,6 +47,13 @@ Rectangle {
         return 8
     }
 
+    // ✅ 2026-04-08 [Phase 7.48.88.90]: 键盘切换视图模式
+    function toggleViewMode() {
+        root.viewMode = (root.viewMode === 0) ? 1 : 0
+        console.log("✅ [ModbusTCPSlaveTab] 切换视图:", root.viewMode === 0 ? "参数配置" : "映射表")
+        if (root.viewMode === 1) loadMapData()
+    }
+
     // ✅ 2026-04-07 [Phase 7.48.88.84]: 加载数据映射
     function loadMapData() {
         if (typeof tcpDataAdapter === "undefined") return
@@ -703,7 +710,8 @@ Rectangle {
                             Text {
                                 anchors.centerIn: parent
                                 text: modelData
-                                font.pixelSize: 12
+                                // ✅ 2026-04-08 [Phase 7.48.88.90]: 统一类别按钮字体大小
+                                font.pixelSize: 13
                                 color: root.mapCategory === index ? "#FFFFFF" : "#9E9E9E"
                             }
 
@@ -729,34 +737,45 @@ Rectangle {
                         Text {
                             width: 90
                             text: "地址"
-                            font.pixelSize: 12
+                            // ✅ 2026-04-08 [Phase 7.48.88.90]: 统一映射表字体大小为14px
+                            font.pixelSize: 14
                             font.weight: Font.Bold
                             color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
                         }
                         Text {
-                            width: 200
+                            width: 180
                             text: "名称"
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.weight: Font.Bold
                             color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
                         }
+                        Text {
+                            width: 70
+                            text: "类型"
+                            font.pixelSize: 14
+                            font.weight: Font.Bold
+                            color: "#64B5F6"
+                            verticalAlignment: Text.AlignVCenter
+                            height: parent.height
+                        }
+                        // ✅ 2026-04-08 [Phase 7.48.88.90]: 新增当前值列
                         Text {
                             width: 80
-                            text: "类型"
-                            font.pixelSize: 12
+                            text: "当前值"
+                            font.pixelSize: 14
                             font.weight: Font.Bold
                             color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
                         }
                         Text {
-                            width: parent.width - 378
+                            width: parent.width - 428
                             text: "数据来源"
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.weight: Font.Bold
                             color: "#64B5F6"
                             verticalAlignment: Text.AlignVCenter
@@ -771,7 +790,7 @@ Rectangle {
 
                     Rectangle {
                         Layout.fillWidth: true
-                        height: 26
+                        height: 28
                         color: index % 2 === 0 ? "#1e2433" : "#252b3d"
 
                         Row {
@@ -781,34 +800,50 @@ Rectangle {
                             Text {
                                 width: 90
                                 text: modelData.address || ""
-                                font.pixelSize: 11
+                                // ✅ 2026-04-08 [Phase 7.48.88.90]: 统一映射表字体大小为13px
+                                font.pixelSize: 13
                                 font.family: "Consolas"
                                 color: "#81D4FA"
                                 verticalAlignment: Text.AlignVCenter
                                 height: parent.height
                             }
                             Text {
-                                width: 200
+                                width: 180
                                 text: modelData.name || ""
-                                font.pixelSize: 11
+                                font.pixelSize: 13
                                 color: "#E0E0E0"
                                 verticalAlignment: Text.AlignVCenter
                                 height: parent.height
                                 elide: Text.ElideRight
                             }
                             Text {
-                                width: 80
+                                width: 70
                                 text: modelData.type || ""
-                                font.pixelSize: 11
+                                font.pixelSize: 13
                                 font.family: "Consolas"
                                 color: "#FFB74D"
                                 verticalAlignment: Text.AlignVCenter
                                 height: parent.height
                             }
+                            // ✅ 2026-04-08 [Phase 7.48.88.90]: 新增当前值列
                             Text {
-                                width: parent.width - 378
+                                width: 80
+                                text: modelData.value !== undefined ? String(modelData.value) : "--"
+                                font.pixelSize: 13
+                                font.family: "Consolas"
+                                color: {
+                                    if (modelData.type === "BOOL") {
+                                        return modelData.value === 1 || modelData.value === true ? "#4CAF50" : "#757575"
+                                    }
+                                    return "#81D4FA"
+                                }
+                                verticalAlignment: Text.AlignVCenter
+                                height: parent.height
+                            }
+                            Text {
+                                width: parent.width - 428
                                 text: modelData.source || modelData.target || modelData.description || ""
-                                font.pixelSize: 11
+                                font.pixelSize: 13
                                 color: "#9E9E9E"
                                 verticalAlignment: Text.AlignVCenter
                                 height: parent.height
@@ -822,7 +857,8 @@ Rectangle {
                 Text {
                     Layout.fillWidth: true
                     text: "共 " + root.currentMapData.length + " 条映射"
-                    font.pixelSize: 11
+                    // ✅ 2026-04-08 [Phase 7.48.88.90]: 统一字体大小
+                    font.pixelSize: 13
                     color: "#757575"
                     horizontalAlignment: Text.AlignRight
                     Layout.topMargin: 4
