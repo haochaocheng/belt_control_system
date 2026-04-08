@@ -752,6 +752,12 @@ Rectangle {
                             // ✅ 2026-04-08 [Phase 7.48.88.94]: 当前类别焦点橙色高亮
                             border.color: root.focusSubArea === 2 && root.focusParamIndex >= 0 && root.mapCategory === index ? "#FF9800" : (root.mapCategory === index ? "#64B5F6" : "#4a5068")
                             border.width: root.focusSubArea === 2 && root.focusParamIndex >= 0 && root.mapCategory === index ? 3 : 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData
+                                font.pixelSize: 13
+                                color: root.mapCategory === index ? "#FFFFFF" : "#9E9E9E"
                             }
 
                             MouseArea {
