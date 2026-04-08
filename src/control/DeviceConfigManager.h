@@ -277,6 +277,11 @@ public:
      */
     Q_INVOKABLE QVariantList loadAllMotorConfigs(int deviceId, int motorIndex);
 
+    // ✅ 2026-04-08 [Phase 7.48.88.96]: 按AI模块和通道查找电机配置
+    // 原因：用户可在电机配置中将module_type设为"模拟量模块1/2"，register_address设为通道号
+    //       当AI通道数据到来时，需要查找是否有电机配置匹配该通道
+    Q_INVOKABLE QVariantList findMotorConfigsByAIChannel(int deviceId, const QString &moduleType, int channelIndex);
+
     // ✅ 2026-03-10 [Phase 7.48.31]: 删除电机配置（恢复默认值用）
     Q_INVOKABLE bool deleteMotorConfig(int deviceId, int motorIndex, int tabIndex);
 

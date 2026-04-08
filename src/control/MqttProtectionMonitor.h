@@ -28,6 +28,7 @@ class DeviceConfigManager;  // ✅ 2026-02-28 [Phase 7.47.49]
 class AlarmPlaybackService; // ✅ 2026-03-04 [Phase 7.47.95]
 class MQTTController;       // ✅ 2026-03-09 [Phase 7.48.26]: 洒水控制用MQTT发布
 class CSDataManager;        // ✅ 2026-03-18 [Phase 7.48.56]: CS模块（沿线点位保护）
+class SystemConfig;         // ✅ 2026-04-08 [Phase 7.48.88.96]: 模拟量保护值写入
 
 /**
  * @brief MQTT开关量保护监控器
@@ -93,6 +94,11 @@ public:
 
     // ✅ 2026-03-18 [Phase 7.48.56]: 设置CS数据管理器（沿线点位保护）
     void setCSDataManager(CSDataManager *csManager) { m_csDataManager = csManager; }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.96]: 设置SystemConfig（模拟量保护值写入）
+    // 原因：AI通道数据和电机寄存器数据计算出工程量后，需要写入SystemConfig，
+    //       TCPDataAdapter从SystemConfig读取这些值同步到Modbus从站/S7从站映射表
+    void setSystemConfig(SystemConfig *config) { m_systemConfig = config; }
 
     /**
      * @brief 设置AI模块的皮带编号映射
@@ -251,6 +257,7 @@ private:
     AudioPathMapper *m_audioPathMapper; ///< 音频路径映射器
     DeviceConfigManager *m_deviceConfigMgr; ///< 设备配置管理器（查询use_text_to_speech）✅ Phase 7.47.49
     AlarmPlaybackService *m_alarmPlaybackService; ///< 报警播放服务（按次数/按时长播放）✅ Phase 7.47.95
+    SystemConfig *m_systemConfig = nullptr;        ///< 系统配置（模拟量保护值写入）✅ Phase 7.48.88.96
     bool m_isRunning;                  ///< 是否正在运行
 
     /**
@@ -327,6 +334,11 @@ private:
     // ✅ 2026-03-13: 电机保护报警状态追踪（边沿触发）
     // Key = "motor:电机索引:Tab索引" (如 "motor:0:2" = 电机1的前轴承温度)
     QMap<QString, bool> m_motorProtectionAlarmActive;
+
+    // ✅ 2026-04-08 [Phase 7.48.88.96]: 将AI通道工程量更新到SystemConfig
+    void updateSystemConfigFromAI(const QString &protectionName, double engineeringValue);
+    // ✅ 2026-04-08 [Phase 7.48.88.96]: 将电机寄存器工程量更新到SystemConfig
+    void updateSystemConfigFromMotor(int motorIndex, int tabIndex, double engineeringValue);
 
     // ✅ 2026-03-10 [Phase 7.48.31]: publishMotorCommand 已移至 public 区域（Q_INVOKABLE）
 

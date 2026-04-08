@@ -47,24 +47,29 @@ class SystemConfig : public QObject
     Q_PROPERTY(bool mainEmergencyStopActive READ mainEmergencyStopActive NOTIFY mainEmergencyStopActiveChanged)
 
     // 模拟量保护值
-    Q_PROPERTY(double speedValue READ speedValue NOTIFY speedValueChanged)
-    Q_PROPERTY(double tensionValue READ tensionValue NOTIFY tensionValueChanged)
-    Q_PROPERTY(double motor1CurrentValue READ motor1CurrentValue NOTIFY motor1CurrentValueChanged)
-    Q_PROPERTY(double motor2CurrentValue READ motor2CurrentValue NOTIFY motor2CurrentValueChanged)
-    Q_PROPERTY(double motor1VoltageValue READ motor1VoltageValue NOTIFY motor1VoltageValueChanged)
-    Q_PROPERTY(double motor2VoltageValue READ motor2VoltageValue NOTIFY motor2VoltageValueChanged)
-    Q_PROPERTY(double motor1XVibrationValue READ motor1XVibrationValue NOTIFY motor1XVibrationValueChanged)
-    Q_PROPERTY(double motor1YVibrationValue READ motor1YVibrationValue NOTIFY motor1YVibrationValueChanged)
-    Q_PROPERTY(double motor2XVibrationValue READ motor2XVibrationValue NOTIFY motor2XVibrationValueChanged)
-    Q_PROPERTY(double motor2YVibrationValue READ motor2YVibrationValue NOTIFY motor2YVibrationValueChanged)
-    Q_PROPERTY(double motor1TemperatureValue READ motor1TemperatureValue NOTIFY motor1TemperatureValueChanged)
-    Q_PROPERTY(double motor2TemperatureValue READ motor2TemperatureValue NOTIFY motor2TemperatureValueChanged)
-    Q_PROPERTY(double motor1PhaseAWindingValue READ motor1PhaseAWindingValue NOTIFY motor1PhaseAWindingValueChanged)
-    Q_PROPERTY(double motor1PhaseBWindingValue READ motor1PhaseBWindingValue NOTIFY motor1PhaseBWindingValueChanged)
-    Q_PROPERTY(double motor1PhaseCWindingValue READ motor1PhaseCWindingValue NOTIFY motor1PhaseCWindingValueChanged)
-    Q_PROPERTY(double motor2PhaseAWindingValue READ motor2PhaseAWindingValue NOTIFY motor2PhaseAWindingValueChanged)
-    Q_PROPERTY(double motor2PhaseBWindingValue READ motor2PhaseBWindingValue NOTIFY motor2PhaseBWindingValueChanged)
-    Q_PROPERTY(double motor2PhaseCWindingValue READ motor2PhaseCWindingValue NOTIFY motor2PhaseCWindingValueChanged)
+    // 旧：Q_PROPERTY(double speedValue READ speedValue NOTIFY speedValueChanged)  // 2026-04-08 [Phase 7.48.88.96] 添加WRITE setter
+    // 旧：... 所有模拟量属性均只有READ无WRITE，导致TCPDataAdapter读取的值始终为0.0
+    // ✅ 2026-04-08 [Phase 7.48.88.96]: 为所有模拟量保护值添加WRITE setter
+    // 原因：MqttProtectionMonitor计算出工程量后需要写入SystemConfig，
+    //       TCPDataAdapter从SystemConfig读取这些值同步到Modbus从站映射表
+    Q_PROPERTY(double speedValue READ speedValue WRITE setSpeedValue NOTIFY speedValueChanged)
+    Q_PROPERTY(double tensionValue READ tensionValue WRITE setTensionValue NOTIFY tensionValueChanged)
+    Q_PROPERTY(double motor1CurrentValue READ motor1CurrentValue WRITE setMotor1CurrentValue NOTIFY motor1CurrentValueChanged)
+    Q_PROPERTY(double motor2CurrentValue READ motor2CurrentValue WRITE setMotor2CurrentValue NOTIFY motor2CurrentValueChanged)
+    Q_PROPERTY(double motor1VoltageValue READ motor1VoltageValue WRITE setMotor1VoltageValue NOTIFY motor1VoltageValueChanged)
+    Q_PROPERTY(double motor2VoltageValue READ motor2VoltageValue WRITE setMotor2VoltageValue NOTIFY motor2VoltageValueChanged)
+    Q_PROPERTY(double motor1XVibrationValue READ motor1XVibrationValue WRITE setMotor1XVibrationValue NOTIFY motor1XVibrationValueChanged)
+    Q_PROPERTY(double motor1YVibrationValue READ motor1YVibrationValue WRITE setMotor1YVibrationValue NOTIFY motor1YVibrationValueChanged)
+    Q_PROPERTY(double motor2XVibrationValue READ motor2XVibrationValue WRITE setMotor2XVibrationValue NOTIFY motor2XVibrationValueChanged)
+    Q_PROPERTY(double motor2YVibrationValue READ motor2YVibrationValue WRITE setMotor2YVibrationValue NOTIFY motor2YVibrationValueChanged)
+    Q_PROPERTY(double motor1TemperatureValue READ motor1TemperatureValue WRITE setMotor1TemperatureValue NOTIFY motor1TemperatureValueChanged)
+    Q_PROPERTY(double motor2TemperatureValue READ motor2TemperatureValue WRITE setMotor2TemperatureValue NOTIFY motor2TemperatureValueChanged)
+    Q_PROPERTY(double motor1PhaseAWindingValue READ motor1PhaseAWindingValue WRITE setMotor1PhaseAWindingValue NOTIFY motor1PhaseAWindingValueChanged)
+    Q_PROPERTY(double motor1PhaseBWindingValue READ motor1PhaseBWindingValue WRITE setMotor1PhaseBWindingValue NOTIFY motor1PhaseBWindingValueChanged)
+    Q_PROPERTY(double motor1PhaseCWindingValue READ motor1PhaseCWindingValue WRITE setMotor1PhaseCWindingValue NOTIFY motor1PhaseCWindingValueChanged)
+    Q_PROPERTY(double motor2PhaseAWindingValue READ motor2PhaseAWindingValue WRITE setMotor2PhaseAWindingValue NOTIFY motor2PhaseAWindingValueChanged)
+    Q_PROPERTY(double motor2PhaseBWindingValue READ motor2PhaseBWindingValue WRITE setMotor2PhaseBWindingValue NOTIFY motor2PhaseBWindingValueChanged)
+    Q_PROPERTY(double motor2PhaseCWindingValue READ motor2PhaseCWindingValue WRITE setMotor2PhaseCWindingValue NOTIFY motor2PhaseCWindingValueChanged)
 
 public:
     enum WarningMode {
@@ -153,6 +158,28 @@ public:
     void setLocalDeviceName(const QString &name);
     // ✅ 2026-03-20 [Phase 7.48.60]: 皮带音频来源 Setter
     void setBeltAudioSource(int source);
+
+    // ✅ 2026-04-08 [Phase 7.48.88.96]: 模拟量保护值 Setters
+    // 原因：MqttProtectionMonitor需要将计算出的工程量写入SystemConfig，
+    //       TCPDataAdapter读取这些值同步到Modbus从站/S7从站映射表
+    void setSpeedValue(double value);
+    void setTensionValue(double value);
+    void setMotor1CurrentValue(double value);
+    void setMotor2CurrentValue(double value);
+    void setMotor1VoltageValue(double value);
+    void setMotor2VoltageValue(double value);
+    void setMotor1XVibrationValue(double value);
+    void setMotor1YVibrationValue(double value);
+    void setMotor2XVibrationValue(double value);
+    void setMotor2YVibrationValue(double value);
+    void setMotor1TemperatureValue(double value);
+    void setMotor2TemperatureValue(double value);
+    void setMotor1PhaseAWindingValue(double value);
+    void setMotor1PhaseBWindingValue(double value);
+    void setMotor1PhaseCWindingValue(double value);
+    void setMotor2PhaseAWindingValue(double value);
+    void setMotor2PhaseBWindingValue(double value);
+    void setMotor2PhaseCWindingValue(double value);
 
 public slots:
     // 保存所有配置

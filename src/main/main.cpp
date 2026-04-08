@@ -414,6 +414,10 @@ int main(int argc, char *argv[]) {
         mqttProtectionMonitor.setMQTTController(&mqttController);
         // ✅ 2026-03-18 [Phase 7.48.56]: 注入CSDataManager，用于沿线点位保护监控
         mqttProtectionMonitor.setCSDataManager(&csDataManager);
+        // ✅ 2026-04-08 [Phase 7.48.88.96]: 注入SystemConfig，用于模拟量保护值写入
+        // 原因：AI通道和电机寄存器计算出工程量后写入SystemConfig，
+        //       TCPDataAdapter从SystemConfig读取同步到Modbus从站/S7从站映射表
+        mqttProtectionMonitor.setSystemConfig(&systemConfig);
         // 连接CSDataManager的bitChanged信号到MqttProtectionMonitor
         QObject::connect(&csDataManager, &CSDataManager::bitChanged,
                          &mqttProtectionMonitor, &MqttProtectionMonitor::onCSBitChanged);

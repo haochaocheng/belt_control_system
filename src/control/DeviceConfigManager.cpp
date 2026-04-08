@@ -2963,6 +2963,24 @@ QVariantList DeviceConfigManager::loadAllMotorConfigs(int deviceId, int motorInd
     return queryToList(query);
 }
 
+// ✅ 2026-04-08 [Phase 7.48.88.96]: 按AI模块和通道查找电机配置
+// 原因：用户可在电机配置中将module_type设为"模拟量模块1/2"，register_address设为通道号
+//       当AI通道数据到来时，需要查找是否有电机配置匹配该通道，并emit motorValueUpdated
+QVariantList DeviceConfigManager::findMotorConfigsByAIChannel(int deviceId, const QString &moduleType, int channelIndex)
+{
+    QSqlQuery query(m_database);
+    query.prepare("SELECT * FROM device_motor_config WHERE device_id = ? AND module_type = ? AND register_address = ?");
+    query.addBindValue(deviceId);
+    query.addBindValue(moduleType);
+    query.addBindValue(channelIndex);
+
+    if (!query.exec()) {
+        return QVariantList();
+    }
+
+    return queryToList(query);
+}
+
 // ✅ 2026-03-10 [Phase 7.48.31]: 删除电机配置（恢复默认值用）
 bool DeviceConfigManager::deleteMotorConfig(int deviceId, int motorIndex, int tabIndex)
 {

@@ -415,3 +415,115 @@ QVariantList SystemConfig::getDefaultStopDelays()
 {
     return {1.0, 1.0, 1.0, 1.0};
 }
+
+// ✅ 2026-04-08 [Phase 7.48.88.96]: 模拟量保护值 Setters
+// 原因：MqttProtectionMonitor计算出工程量后需要写入SystemConfig，
+//       TCPDataAdapter读取这些值同步到Modbus从站/S7从站映射表
+// 注意：qFuzzyCompare(0.0, 0.0)返回false，加1.0修正零值比较
+void SystemConfig::setSpeedValue(double value) {
+    if (qFuzzyCompare(1.0 + m_speedValue, 1.0 + value)) return;
+    m_speedValue = value;
+    emit speedValueChanged();
+}
+
+void SystemConfig::setTensionValue(double value) {
+    if (qFuzzyCompare(1.0 + m_tensionValue, 1.0 + value)) return;
+    m_tensionValue = value;
+    emit tensionValueChanged();
+}
+
+void SystemConfig::setMotor1CurrentValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor1CurrentValue, 1.0 + value)) return;
+    m_motor1CurrentValue = value;
+    emit motor1CurrentValueChanged();
+}
+
+void SystemConfig::setMotor2CurrentValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor2CurrentValue, 1.0 + value)) return;
+    m_motor2CurrentValue = value;
+    emit motor2CurrentValueChanged();
+}
+
+void SystemConfig::setMotor1VoltageValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor1VoltageValue, 1.0 + value)) return;
+    m_motor1VoltageValue = value;
+    emit motor1VoltageValueChanged();
+}
+
+void SystemConfig::setMotor2VoltageValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor2VoltageValue, 1.0 + value)) return;
+    m_motor2VoltageValue = value;
+    emit motor2VoltageValueChanged();
+}
+
+void SystemConfig::setMotor1XVibrationValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor1XVibrationValue, 1.0 + value)) return;
+    m_motor1XVibrationValue = value;
+    emit motor1XVibrationValueChanged();
+}
+
+void SystemConfig::setMotor1YVibrationValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor1YVibrationValue, 1.0 + value)) return;
+    m_motor1YVibrationValue = value;
+    emit motor1YVibrationValueChanged();
+}
+
+void SystemConfig::setMotor2XVibrationValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor2XVibrationValue, 1.0 + value)) return;
+    m_motor2XVibrationValue = value;
+    emit motor2XVibrationValueChanged();
+}
+
+void SystemConfig::setMotor2YVibrationValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor2YVibrationValue, 1.0 + value)) return;
+    m_motor2YVibrationValue = value;
+    emit motor2YVibrationValueChanged();
+}
+
+void SystemConfig::setMotor1TemperatureValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor1TemperatureValue, 1.0 + value)) return;
+    m_motor1TemperatureValue = value;
+    emit motor1TemperatureValueChanged();
+}
+
+void SystemConfig::setMotor2TemperatureValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor2TemperatureValue, 1.0 + value)) return;
+    m_motor2TemperatureValue = value;
+    emit motor2TemperatureValueChanged();
+}
+
+void SystemConfig::setMotor1PhaseAWindingValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor1PhaseAWindingValue, 1.0 + value)) return;
+    m_motor1PhaseAWindingValue = value;
+    emit motor1PhaseAWindingValueChanged();
+}
+
+void SystemConfig::setMotor1PhaseBWindingValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor1PhaseBWindingValue, 1.0 + value)) return;
+    m_motor1PhaseBWindingValue = value;
+    emit motor1PhaseBWindingValueChanged();
+}
+
+void SystemConfig::setMotor1PhaseCWindingValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor1PhaseCWindingValue, 1.0 + value)) return;
+    m_motor1PhaseCWindingValue = value;
+    emit motor1PhaseCWindingValueChanged();
+}
+
+void SystemConfig::setMotor2PhaseAWindingValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor2PhaseAWindingValue, 1.0 + value)) return;
+    m_motor2PhaseAWindingValue = value;
+    emit motor2PhaseAWindingValueChanged();
+}
+
+void SystemConfig::setMotor2PhaseBWindingValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor2PhaseBWindingValue, 1.0 + value)) return;
+    m_motor2PhaseBWindingValue = value;
+    emit motor2PhaseBWindingValueChanged();
+}
+
+void SystemConfig::setMotor2PhaseCWindingValue(double value) {
+    if (qFuzzyCompare(1.0 + m_motor2PhaseCWindingValue, 1.0 + value)) return;
+    m_motor2PhaseCWindingValue = value;
+    emit motor2PhaseCWindingValueChanged();
+}

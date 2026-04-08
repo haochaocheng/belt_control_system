@@ -7,6 +7,7 @@
 #include "DataPathConfig.h"      // ✅ 2026-02-28 [Phase 7.47.43]: 统一音频路径
 #include "DeviceConfigManager.h" // ✅ 2026-02-28 [Phase 7.47.49]: 查询use_text_to_speech
 #include "AlarmPlaybackService.h" // ✅ 2026-03-04 [Phase 7.47.95]: 按次数/按时长播放
+#include "SystemConfig.h"         // ✅ 2026-04-08 [Phase 7.48.88.96]: 模拟量保护值写入
 #include <QDebug>
 #include <QFile>
 #include <QJsonDocument>  // ✅ 2026-03-09 [Phase 7.48.26]: JSON命令格式
@@ -394,6 +395,53 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
         return;
     }
 
+    // ✅ 2026-04-08 [Phase 7.48.88.96]: 检查是否有电机配置使用此AI通道
+    // 原因：用户可在电机配置中将module_type设为"模拟量模块1/2"、register_address设为通道号
+    //       当AI通道数据到来时，查找匹配的电机配置，转换工程量并emit motorValueUpdated
+    {
+        QString expectedModule = (aiLocalIndex == 0) ? "模拟量模块1" : "模拟量模块2";
+        QVariantList motorConfigs = m_deviceConfigMgr->findMotorConfigsByAIChannel(beltNumber, expectedModule, channelIndex);
+        for (const QVariant &mc : motorConfigs) {
+            QVariantMap config = mc.toMap();
+            int motorIdx = config.value("motor_index", -1).toInt();
+            int tabIdx = config.value("tab_index", -1).toInt();
+            if (motorIdx < 0 || tabIdx < 1) continue;
+
+            QString inputType = config.value("input_type", "4-20mA电流型").toString();
+            double rangeValue = config.value("range_value", 100.0).toDouble();
+            double upperLimit = config.value("upper_limit", 100.0).toDouble();
+            double lowerLimit = config.value("lower_limit", 0.0).toDouble();
+            QString protectionName = config.value("protection_name", "").toString();
+            QString unit = config.value("unit", "").toString();
+
+            // AD值转工程量（AI模块使用16位ADC，与模拟量保护相同公式）
+            double adValue = static_cast<double>(data.adValue);
+            double engValue = 0.0;
+            if (inputType.contains("4-20mA") || inputType.contains("1-5V")) {
+                const double adZero = 65535.0 * 0.2;
+                if (adValue <= adZero) {
+                    engValue = 0.0;
+                } else {
+                    engValue = ((adValue - adZero) / (65535.0 - adZero)) * rangeValue;
+                }
+            } else if (inputType.contains("PT100")) {
+                // PT100用电机转换公式（但AI模块是16位ADC，需要缩放到12位）
+                quint16 rawValue12 = static_cast<quint16>(adValue * 4096.0 / 65536.0);
+                engValue = convertPT100(rawValue12);
+            } else {
+                engValue = (adValue / 65535.0) * rangeValue;
+            }
+
+            // 更新SystemConfig
+            updateSystemConfigFromMotor(motorIdx, tabIdx, engValue);
+
+            // emit motorValueUpdated 供BasicConfigTab QML显示
+            bool isExceeded = (engValue > upperLimit) ||
+                              (engValue < lowerLimit && data.adValue > 0);
+            emit motorValueUpdated(motorIdx, tabIdx, engValue, unit, protectionName, isExceeded);
+        }
+    }
+
     QVariantList protections = m_deviceConfigMgr->loadAllAnalogProtections(beltNumber);
     if (protections.isEmpty()) {
         // 首次运行时可能没有保护项，不输出警告
@@ -459,6 +507,10 @@ void MqttProtectionMonitor::onAIChannelChanged(int moduleIndex, int channelIndex
             // 0-20mA / 0-5V / 0-10V：零点在0%
             engineeringValue = (adValue / 65535.0) * rangeValue;
         }
+
+        // ✅ 2026-04-08 [Phase 7.48.88.96]: 将AI通道工程量写入SystemConfig
+        // 原因：TCPDataAdapter从SystemConfig读取这些值同步到Modbus从站/S7从站映射表
+        updateSystemConfigFromAI(protName, engineeringValue);
 
         // ✅ 2026-03-06 [Phase 7.48.14]: 临时屏蔽保护检测日志（日志量过大）
         // qDebug() << "   保护:" << protName << "工程量:" << engineeringValue
@@ -930,6 +982,10 @@ void MqttProtectionMonitor::onMotorRegisterReceived(int motorIndex, int tabIndex
         engineeringValue = convert420mA(rawValue, rangeValue);
     }
 
+    // ✅ 2026-04-08 [Phase 7.48.88.96]: 将电机寄存器工程量写入SystemConfig
+    // 原因：TCPDataAdapter从SystemConfig读取这些值同步到Modbus从站/S7从站映射表
+    updateSystemConfigFromMotor(motorIndex, tabIndex, engineeringValue);
+
     // ✅ 2026-03-13 [Phase 7.48.43]: 发射实时值更新信号（供QML显示，无论保护是否启用）
     bool isExceeded = (engineeringValue > upperLimit) ||
                       (engineeringValue < lowerLimit && rawValue > 0);
@@ -1164,5 +1220,63 @@ void MqttProtectionMonitor::onCSBitChanged(int protType, int pointIndex, bool va
         // ✅ 2026-03-23 [Phase 7.48.85]: 发射保护恢复信号给 ProtectionLogicController
         int beltNumber = m_beltMapping.value(0, 1);
         emit protectionActionCleared(beltNumber, protectionName, 4);  // source=4: CS
+    }
+}
+
+// ✅ 2026-04-08 [Phase 7.48.88.96]: 将AI通道工程量更新到SystemConfig
+// 原因：TCPDataAdapter从SystemConfig读取模拟量保护值同步到Modbus从站/S7从站映射表
+// 如果SystemConfig没有对应的属性，则跳过（不是所有保护项都需要同步到TCPDataAdapter）
+void MqttProtectionMonitor::updateSystemConfigFromAI(const QString &protectionName, double engineeringValue)
+{
+    if (!m_systemConfig) return;
+
+    // 按保护名称映射到SystemConfig属性
+    if (protectionName == "速度") {
+        m_systemConfig->setSpeedValue(engineeringValue);
+    } else if (protectionName == "张力") {
+        m_systemConfig->setTensionValue(engineeringValue);
+    } else if (protectionName == "电压") {
+        // 电压保护默认对应1号电机电压（模拟量保护中只有一个电压项）
+        m_systemConfig->setMotor1VoltageValue(engineeringValue);
+    } else if (protectionName.contains("1号电机电流") || protectionName == "电流" ) {
+        m_systemConfig->setMotor1CurrentValue(engineeringValue);
+    } else if (protectionName.contains("2号电机电流")) {
+        m_systemConfig->setMotor2CurrentValue(engineeringValue);
+    }
+    // 其他保护项（温度一、温度二、湿度、甲烷等）暂无对应SystemConfig属性，跳过
+}
+
+// ✅ 2026-04-08 [Phase 7.48.88.96]: 将电机寄存器工程量更新到SystemConfig
+// motorIndex: 0=1号电机, 1=2号电机, 2-7=暂无对应SystemConfig属性
+// tabIndex: 1=电流, 2=前轴承温度, 3=后轴承温度, 4=甲相绕组, 5=乙相绕组, 6=丙相绕组, 7=电机温度, 8=水平振动, 9=垂直振动
+void MqttProtectionMonitor::updateSystemConfigFromMotor(int motorIndex, int tabIndex, double engineeringValue)
+{
+    if (!m_systemConfig) return;
+    if (motorIndex > 1) return;  // 只有1号/2号电机有对应SystemConfig属性
+
+    if (motorIndex == 0) {
+        // 1号电机
+        switch (tabIndex) {
+        case 1: m_systemConfig->setMotor1CurrentValue(engineeringValue); break;
+        case 4: m_systemConfig->setMotor1PhaseAWindingValue(engineeringValue); break;
+        case 5: m_systemConfig->setMotor1PhaseBWindingValue(engineeringValue); break;
+        case 6: m_systemConfig->setMotor1PhaseCWindingValue(engineeringValue); break;
+        case 7: m_systemConfig->setMotor1TemperatureValue(engineeringValue); break;
+        case 8: m_systemConfig->setMotor1XVibrationValue(engineeringValue); break;
+        case 9: m_systemConfig->setMotor1YVibrationValue(engineeringValue); break;
+        default: break;
+        }
+    } else {
+        // 2号电机
+        switch (tabIndex) {
+        case 1: m_systemConfig->setMotor2CurrentValue(engineeringValue); break;
+        case 4: m_systemConfig->setMotor2PhaseAWindingValue(engineeringValue); break;
+        case 5: m_systemConfig->setMotor2PhaseBWindingValue(engineeringValue); break;
+        case 6: m_systemConfig->setMotor2PhaseCWindingValue(engineeringValue); break;
+        case 7: m_systemConfig->setMotor2TemperatureValue(engineeringValue); break;
+        case 8: m_systemConfig->setMotor2XVibrationValue(engineeringValue); break;
+        case 9: m_systemConfig->setMotor2YVibrationValue(engineeringValue); break;
+        default: break;
+        }
     }
 }
