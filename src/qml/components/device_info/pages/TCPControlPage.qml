@@ -101,6 +101,16 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-04-08 [Phase 7.48.88.94]: 数据视图模式下，方向键委托给Tab处理（类别切换+滚动）
+    function tryDataViewNavigation(direction) {
+        if (focusSubArea !== 2 || focusParamIndex < 0) return false
+        if (!tcpConfigPanel.item) return false
+        var currentTab = tcpConfigPanel.item.getCurrentTabItem()
+        if (!currentTab || typeof currentTab.handleDataViewKey !== "function") return false
+        if (!currentTab.viewMode || currentTab.viewMode !== 1) return false
+        return currentTab.handleDataViewKey(direction)
+    }
+
     function handleEnterKey() {
         console.log("✅ [TCPControlPage] 处理回车键 - 当前焦点区域:", focusSubArea)
 
@@ -325,7 +335,9 @@ Rectangle {
             event.accepted = true
             return
         }
-        navigationManager.handleDirectionKey("Up")
+        // ✅ 2026-04-08 [Phase 7.48.88.94]: 数据视图模式下优先让Tab处理
+        if (!tryDataViewNavigation("Up"))
+            navigationManager.handleDirectionKey("Up")
         event.accepted = true
     }
 
@@ -334,7 +346,9 @@ Rectangle {
             event.accepted = true
             return
         }
-        navigationManager.handleDirectionKey("Down")
+        // ✅ 2026-04-08 [Phase 7.48.88.94]: 数据视图模式下优先让Tab处理
+        if (!tryDataViewNavigation("Down"))
+            navigationManager.handleDirectionKey("Down")
         event.accepted = true
     }
 
@@ -349,7 +363,9 @@ Rectangle {
             resetFlagTimer.start()
             event.accepted = true
         } else {
-            navigationManager.handleDirectionKey("Left")
+            // ✅ 2026-04-08 [Phase 7.48.88.94]: 数据视图模式下优先让Tab处理
+            if (!tryDataViewNavigation("Left"))
+                navigationManager.handleDirectionKey("Left")
             event.accepted = true
         }
     }
@@ -359,7 +375,9 @@ Rectangle {
             event.accepted = true
             return
         }
-        navigationManager.handleDirectionKey("Right")
+        // ✅ 2026-04-08 [Phase 7.48.88.94]: 数据视图模式下优先让Tab处理
+        if (!tryDataViewNavigation("Right"))
+            navigationManager.handleDirectionKey("Right")
         event.accepted = true
     }
 

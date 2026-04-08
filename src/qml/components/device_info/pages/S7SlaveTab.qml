@@ -54,6 +54,31 @@ Rectangle {
         if (root.viewMode === 1) loadMapData()
     }
 
+    // ✅ 2026-04-08 [Phase 7.48.88.94]: 数据视图键盘导航（类别切换+滚动）
+    function handleDataViewKey(direction) {
+        if (root.viewMode !== 1) return false
+        var scrollStep = 84  // 3行 × 28px
+        switch(direction) {
+        case "Left":
+        case "Right":
+            root.mapCategory = root.mapCategory === 0 ? 1 : 0
+            return true
+        case "Down":
+            if (dataScrollView.contentHeight > dataScrollView.height) {
+                dataScrollView.contentY = Math.min(dataScrollView.contentY + scrollStep,
+                    dataScrollView.contentHeight - dataScrollView.height)
+            }
+            return true
+        case "Up":
+            if (dataScrollView.contentY > 0) {
+                dataScrollView.contentY = Math.max(dataScrollView.contentY - scrollStep, 0)
+                return true
+            }
+            return false  // 已在顶部，让NavigationManager处理（回到视图切换行-1）
+        }
+        return false
+    }
+
     // ✅ 2026-02-08 [Phase 7.42.13]: 重构虚拟键盘支持
     function triggerParamInput(index) {
         console.log("✅ [S7SlaveTab] triggerParamInput:", index)
@@ -799,8 +824,9 @@ Rectangle {
                             height: 32
                             radius: 4
                             color: root.mapCategory === index ? "#2196F3" : "#353b4d"
-                            border.color: root.mapCategory === index ? "#64B5F6" : "#4a5068"
-                            border.width: 1
+                            // ✅ 2026-04-08 [Phase 7.48.88.94]: 当前类别焦点橙色高亮
+                            border.color: root.focusSubArea === 2 && root.focusParamIndex >= 0 && root.mapCategory === index ? "#FF9800" : (root.mapCategory === index ? "#64B5F6" : "#4a5068")
+                            border.width: root.focusSubArea === 2 && root.focusParamIndex >= 0 && root.mapCategory === index ? 3 : 1
 
                             Text {
                                 anchors.centerIn: parent
