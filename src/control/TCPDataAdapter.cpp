@@ -437,6 +437,60 @@ void TCPDataAdapter::syncInputRegisters(int portIndex)
         syncFloat(IR_MOTOR2_WINDING_START, "motor2PhaseAWindingValue");
         syncFloat(IR_MOTOR2_WINDING_START + 2, "motor2PhaseBWindingValue");
         syncFloat(IR_MOTOR2_WINDING_START + 4, "motor2PhaseCWindingValue");
+
+        // ✅ 2026-04-08 [Phase 7.48.88.97]: 环境模拟量扩展（16个）
+        syncFloat(IR_TEMPERATURE1_START, "temperature1Value");
+        syncFloat(IR_TEMPERATURE2_START, "temperature2Value");
+        syncFloat(IR_TEMPERATURE_ENV_START, "temperatureValue");
+        syncFloat(IR_HUMIDITY_START, "humidityValue");
+        syncFloat(IR_METHANE_START, "methaneValue");
+        syncFloat(IR_DUST_START, "dustValue");
+        syncFloat(IR_COALFLOW_START, "coalFlowValue");
+        syncFloat(IR_SILOHEIGHT_START, "siloHeightValue");
+        syncFloat(IR_VOLTAGE_ENV_START, "voltageValue");
+        syncFloat(IR_SMOKE_START, "smokeValue");
+        syncFloat(IR_PRESSURE_START, "pressureValue");
+        syncFloat(IR_OXYGEN_START, "oxygenValue");
+        syncFloat(IR_CO_START, "coValue");
+        syncFloat(IR_H2S_START, "h2sValue");
+        syncFloat(IR_CO2_START, "co2Value");
+        syncFloat(IR_WINDSPEED_START, "windSpeedValue");
+
+        // ✅ 2026-04-08 [Phase 7.48.88.97]: 电机1-2 扩展Tab（前/后轴承、堵转、起动超时、功率、不平衡）
+        // 使用Q_INVOKABLE motorProtectionValue(motorIndex, tabIndex)读取
+        auto syncMotorTab = [&](int startAddr, int motorIdx, int tabIdx) {
+            float val = static_cast<float>(
+                static_cast<SystemConfig*>(m_systemConfig)->motorProtectionValue(motorIdx, tabIdx));
+            int hi, lo;
+            floatToRegisters(val, hi, lo);
+            slave->setInputRegister(startAddr, hi);
+            slave->setInputRegister(startAddr + 1, lo);
+        };
+        syncMotorTab(IR_MOTOR1_FRONT_BEARING_START, 0, SystemConfig::TAB_FRONT_BEARING);
+        syncMotorTab(IR_MOTOR1_REAR_BEARING_START,  0, SystemConfig::TAB_REAR_BEARING);
+        syncMotorTab(IR_MOTOR1_STALL_START,         0, SystemConfig::TAB_STALL);
+        syncMotorTab(IR_MOTOR1_START_TIMEOUT_START,  0, SystemConfig::TAB_START_TIMEOUT);
+        syncMotorTab(IR_MOTOR1_POWER_START,          0, SystemConfig::TAB_POWER);
+        syncMotorTab(IR_MOTOR1_IMBALANCE_START,      0, SystemConfig::TAB_IMBALANCE);
+        syncMotorTab(IR_MOTOR2_FRONT_BEARING_START, 1, SystemConfig::TAB_FRONT_BEARING);
+        syncMotorTab(IR_MOTOR2_REAR_BEARING_START,  1, SystemConfig::TAB_REAR_BEARING);
+        syncMotorTab(IR_MOTOR2_STALL_START,         1, SystemConfig::TAB_STALL);
+        syncMotorTab(IR_MOTOR2_START_TIMEOUT_START,  1, SystemConfig::TAB_START_TIMEOUT);
+        syncMotorTab(IR_MOTOR2_POWER_START,          1, SystemConfig::TAB_POWER);
+        syncMotorTab(IR_MOTOR2_IMBALANCE_START,      1, SystemConfig::TAB_IMBALANCE);
+
+        // ✅ 2026-04-08 [Phase 7.48.88.97]: 电机3-8 完整数据块（每电机28寄存器）
+        for (int m = 2; m < SystemConfig::MOTOR_COUNT; m++) {
+            int base = IR_MOTOR_BLOCK_START + (m - 2) * IR_MOTOR_BLOCK_SIZE;
+            // Tab 1-13（每Tab占2寄存器，tab0无值）
+            for (int t = 1; t < SystemConfig::MOTOR_TAB_COUNT; t++) {
+                int addr = base + (t - 1) * 2;
+                syncMotorTab(addr, m, t);
+            }
+            // 电压（独立，偏移26-27）— 电机3-8暂无独立电压属性，保留0
+            slave->setInputRegister(base + 26, 0);
+            slave->setInputRegister(base + 27, 0);
+        }
     }
 
     // ----- 打包状态寄存器 (30055-30062) -----
@@ -984,6 +1038,64 @@ QVariantList TCPDataAdapter::getInputRegisterMap(int portIndex) const
     addEntry(IR_BRAKE_PACKED, "制动器打包", "CommonControl(packed)", "UINT16");
     addEntry(IR_SPRINKLER_TENSION_PACKED, "洒水+张紧打包", "CommonControl(packed)", "UINT16");
     addEntry(IR_PROTECTION_PACKED, "保护状态打包", "SystemConfig(packed)", "UINT16");
+
+    // ✅ 2026-04-08 [Phase 7.48.88.97]: 环境模拟量
+    QList<FloatParam> envFloats = {
+        {IR_TEMPERATURE1_START, "温度一", "temperature1Value"},
+        {IR_TEMPERATURE2_START, "温度二", "temperature2Value"},
+        {IR_TEMPERATURE_ENV_START, "温度（环境）", "temperatureValue"},
+        {IR_HUMIDITY_START, "湿度", "humidityValue"},
+        {IR_METHANE_START, "甲烷", "methaneValue"},
+        {IR_DUST_START, "粉尘浓度", "dustValue"},
+        {IR_COALFLOW_START, "煤流", "coalFlowValue"},
+        {IR_SILOHEIGHT_START, "煤仓高度", "siloHeightValue"},
+        {IR_VOLTAGE_ENV_START, "电压（环境）", "voltageValue"},
+        {IR_SMOKE_START, "烟雾", "smokeValue"},
+        {IR_PRESSURE_START, "气压", "pressureValue"},
+        {IR_OXYGEN_START, "氧气", "oxygenValue"},
+        {IR_CO_START, "一氧化碳", "coValue"},
+        {IR_H2S_START, "硫化氢", "h2sValue"},
+        {IR_CO2_START, "二氧化碳", "co2Value"},
+        {IR_WINDSPEED_START, "风速", "windSpeedValue"},
+    };
+    for (const auto &fp : envFloats) {
+        addEntry(fp.addr, fp.name, "SystemConfig." + fp.source, "FLOAT32");
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.97]: 电机1-2 扩展Tab
+    QList<FloatParam> motor12Ext = {
+        {IR_MOTOR1_FRONT_BEARING_START, "电机1前轴承温度", "motorProtectionValue(0,2)"},
+        {IR_MOTOR1_REAR_BEARING_START,  "电机1后轴承温度", "motorProtectionValue(0,3)"},
+        {IR_MOTOR1_STALL_START,         "电机1堵转", "motorProtectionValue(0,10)"},
+        {IR_MOTOR1_START_TIMEOUT_START,  "电机1起动超时", "motorProtectionValue(0,11)"},
+        {IR_MOTOR1_POWER_START,          "电机1功率", "motorProtectionValue(0,12)"},
+        {IR_MOTOR1_IMBALANCE_START,      "电机1三相不平衡", "motorProtectionValue(0,13)"},
+        {IR_MOTOR2_FRONT_BEARING_START, "电机2前轴承温度", "motorProtectionValue(1,2)"},
+        {IR_MOTOR2_REAR_BEARING_START,  "电机2后轴承温度", "motorProtectionValue(1,3)"},
+        {IR_MOTOR2_STALL_START,         "电机2堵转", "motorProtectionValue(1,10)"},
+        {IR_MOTOR2_START_TIMEOUT_START,  "电机2起动超时", "motorProtectionValue(1,11)"},
+        {IR_MOTOR2_POWER_START,          "电机2功率", "motorProtectionValue(1,12)"},
+        {IR_MOTOR2_IMBALANCE_START,      "电机2三相不平衡", "motorProtectionValue(1,13)"},
+    };
+    for (const auto &fp : motor12Ext) {
+        addEntry(fp.addr, fp.name, "SystemConfig." + fp.source, "FLOAT32");
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.97]: 电机3-8 完整数据块
+    QStringList tabNames = {"", "电流", "前轴承温度", "后轴承温度",
+                            "甲相绕组", "乙相绕组", "丙相绕组",
+                            "电机温度", "水平振动", "垂直振动",
+                            "堵转", "起动超时", "功率", "三相不平衡"};
+    for (int m = 2; m < 8; m++) {
+        int base = IR_MOTOR_BLOCK_START + (m - 2) * IR_MOTOR_BLOCK_SIZE;
+        for (int t = 1; t < 14; t++) {
+            int addr = base + (t - 1) * 2;
+            addEntry(addr,
+                     QString("电机%1%2").arg(m + 1).arg(tabNames[t]),
+                     QString("SystemConfig.motorProtectionValue(%1,%2)").arg(m).arg(t),
+                     "FLOAT32");
+        }
+    }
 
     return map;
 }

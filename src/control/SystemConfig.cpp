@@ -416,10 +416,14 @@ QVariantList SystemConfig::getDefaultStopDelays()
     return {1.0, 1.0, 1.0, 1.0};
 }
 
-// ✅ 2026-04-08 [Phase 7.48.88.96]: 模拟量保护值 Setters
+// ✅ 2026-04-08 [Phase 7.48.88.97]: 模拟量保护值 Setters（完整版）
+// 旧：Phase 7.48.88.96 仅有速度/张力 + 18个电机独立setter
+// 新：18个环境setter + 8电机×14Tab数组 + 16个兼容setter
 // 原因：MqttProtectionMonitor计算出工程量后需要写入SystemConfig，
 //       TCPDataAdapter读取这些值同步到Modbus从站/S7从站映射表
 // 注意：qFuzzyCompare(0.0, 0.0)返回false，加1.0修正零值比较
+
+// ========== 环境模拟量 Setters ==========
 void SystemConfig::setSpeedValue(double value) {
     if (qFuzzyCompare(1.0 + m_speedValue, 1.0 + value)) return;
     m_speedValue = value;
@@ -432,18 +436,172 @@ void SystemConfig::setTensionValue(double value) {
     emit tensionValueChanged();
 }
 
-void SystemConfig::setMotor1CurrentValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor1CurrentValue, 1.0 + value)) return;
-    m_motor1CurrentValue = value;
-    emit motor1CurrentValueChanged();
+void SystemConfig::setTemperature1Value(double value) {
+    if (qFuzzyCompare(1.0 + m_temperature1Value, 1.0 + value)) return;
+    m_temperature1Value = value;
+    emit temperature1ValueChanged();
 }
 
-void SystemConfig::setMotor2CurrentValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor2CurrentValue, 1.0 + value)) return;
-    m_motor2CurrentValue = value;
-    emit motor2CurrentValueChanged();
+void SystemConfig::setTemperature2Value(double value) {
+    if (qFuzzyCompare(1.0 + m_temperature2Value, 1.0 + value)) return;
+    m_temperature2Value = value;
+    emit temperature2ValueChanged();
 }
 
+void SystemConfig::setTemperatureValue(double value) {
+    if (qFuzzyCompare(1.0 + m_temperatureValue_env, 1.0 + value)) return;
+    m_temperatureValue_env = value;
+    emit temperatureValueChanged();
+}
+
+void SystemConfig::setHumidityValue(double value) {
+    if (qFuzzyCompare(1.0 + m_humidityValue, 1.0 + value)) return;
+    m_humidityValue = value;
+    emit humidityValueChanged();
+}
+
+void SystemConfig::setMethaneValue(double value) {
+    if (qFuzzyCompare(1.0 + m_methaneValue, 1.0 + value)) return;
+    m_methaneValue = value;
+    emit methaneValueChanged();
+}
+
+void SystemConfig::setDustValue(double value) {
+    if (qFuzzyCompare(1.0 + m_dustValue, 1.0 + value)) return;
+    m_dustValue = value;
+    emit dustValueChanged();
+}
+
+void SystemConfig::setCoalFlowValue(double value) {
+    if (qFuzzyCompare(1.0 + m_coalFlowValue, 1.0 + value)) return;
+    m_coalFlowValue = value;
+    emit coalFlowValueChanged();
+}
+
+void SystemConfig::setSiloHeightValue(double value) {
+    if (qFuzzyCompare(1.0 + m_siloHeightValue, 1.0 + value)) return;
+    m_siloHeightValue = value;
+    emit siloHeightValueChanged();
+}
+
+void SystemConfig::setVoltageValue(double value) {
+    if (qFuzzyCompare(1.0 + m_voltageValue, 1.0 + value)) return;
+    m_voltageValue = value;
+    emit voltageValueChanged();
+}
+
+void SystemConfig::setSmokeValue(double value) {
+    if (qFuzzyCompare(1.0 + m_smokeValue_env, 1.0 + value)) return;
+    m_smokeValue_env = value;
+    emit smokeValueChanged();
+}
+
+void SystemConfig::setPressureValue(double value) {
+    if (qFuzzyCompare(1.0 + m_pressureValue, 1.0 + value)) return;
+    m_pressureValue = value;
+    emit pressureValueChanged();
+}
+
+void SystemConfig::setOxygenValue(double value) {
+    if (qFuzzyCompare(1.0 + m_oxygenValue, 1.0 + value)) return;
+    m_oxygenValue = value;
+    emit oxygenValueChanged();
+}
+
+void SystemConfig::setCoValue(double value) {
+    if (qFuzzyCompare(1.0 + m_coValue, 1.0 + value)) return;
+    m_coValue = value;
+    emit coValueChanged();
+}
+
+void SystemConfig::setH2sValue(double value) {
+    if (qFuzzyCompare(1.0 + m_h2sValue, 1.0 + value)) return;
+    m_h2sValue = value;
+    emit h2sValueChanged();
+}
+
+void SystemConfig::setCo2Value(double value) {
+    if (qFuzzyCompare(1.0 + m_co2Value, 1.0 + value)) return;
+    m_co2Value = value;
+    emit co2ValueChanged();
+}
+
+void SystemConfig::setWindSpeedValue(double value) {
+    if (qFuzzyCompare(1.0 + m_windSpeedValue, 1.0 + value)) return;
+    m_windSpeedValue = value;
+    emit windSpeedValueChanged();
+}
+
+// ========== 通用电机保护值访问（8电机×14Tab）==========
+double SystemConfig::motorProtectionValue(int motorIndex, int tabIndex) const
+{
+    if (motorIndex < 0 || motorIndex >= MOTOR_COUNT || tabIndex < 0 || tabIndex >= MOTOR_TAB_COUNT)
+        return 0.0;
+    return m_motorValues[motorIndex][tabIndex];
+}
+
+void SystemConfig::setMotorProtectionValue(int motorIndex, int tabIndex, double value)
+{
+    if (motorIndex < 0 || motorIndex >= MOTOR_COUNT || tabIndex < 0 || tabIndex >= MOTOR_TAB_COUNT)
+        return;
+    if (qFuzzyCompare(1.0 + m_motorValues[motorIndex][tabIndex], 1.0 + value))
+        return;
+    m_motorValues[motorIndex][tabIndex] = value;
+    emit motorProtectionValueChanged(motorIndex, tabIndex, value);
+    // 为motor1/2的旧Q_PROPERTY属性emit兼容信号
+    emitMotorCompatSignal(motorIndex, tabIndex);
+}
+
+// ========== 电机保护值兼容信号发射 ==========
+// 当m_motorValues[0或1][tabIndex]变化时，同时emit旧的motor1/2专用信号
+// 这样绑定motor1CurrentValueChanged等旧信号的QML/C++代码无需修改
+void SystemConfig::emitMotorCompatSignal(int motorIndex, int tabIndex)
+{
+    if (motorIndex == 0) {
+        switch (tabIndex) {
+        case TAB_CURRENT:     emit motor1CurrentValueChanged(); break;
+        case TAB_WINDING_A:   emit motor1PhaseAWindingValueChanged(); break;
+        case TAB_WINDING_B:   emit motor1PhaseBWindingValueChanged(); break;
+        case TAB_WINDING_C:   emit motor1PhaseCWindingValueChanged(); break;
+        case TAB_MOTOR_TEMP:  emit motor1TemperatureValueChanged(); break;
+        case TAB_X_VIBRATION: emit motor1XVibrationValueChanged(); break;
+        case TAB_Y_VIBRATION: emit motor1YVibrationValueChanged(); break;
+        default: break;
+        }
+    } else if (motorIndex == 1) {
+        switch (tabIndex) {
+        case TAB_CURRENT:     emit motor2CurrentValueChanged(); break;
+        case TAB_WINDING_A:   emit motor2PhaseAWindingValueChanged(); break;
+        case TAB_WINDING_B:   emit motor2PhaseBWindingValueChanged(); break;
+        case TAB_WINDING_C:   emit motor2PhaseCWindingValueChanged(); break;
+        case TAB_MOTOR_TEMP:  emit motor2TemperatureValueChanged(); break;
+        case TAB_X_VIBRATION: emit motor2XVibrationValueChanged(); break;
+        case TAB_Y_VIBRATION: emit motor2YVibrationValueChanged(); break;
+        default: break;
+        }
+    }
+    // motorIndex >= 2 的电机没有旧Q_PROPERTY，不需要兼容信号
+}
+
+// ========== 电机保护值兼容 Setters（motor1/2 旧属性，委托到数组）==========
+// 旧：void SystemConfig::setMotor1CurrentValue(double value) { m_motor1CurrentValue = value; }
+// 新：委托到 setMotorProtectionValue(motorIndex, tabIndex, value)
+void SystemConfig::setMotor1CurrentValue(double value)     { setMotorProtectionValue(0, TAB_CURRENT, value); }
+void SystemConfig::setMotor2CurrentValue(double value)     { setMotorProtectionValue(1, TAB_CURRENT, value); }
+void SystemConfig::setMotor1XVibrationValue(double value)  { setMotorProtectionValue(0, TAB_X_VIBRATION, value); }
+void SystemConfig::setMotor1YVibrationValue(double value)  { setMotorProtectionValue(0, TAB_Y_VIBRATION, value); }
+void SystemConfig::setMotor2XVibrationValue(double value)  { setMotorProtectionValue(1, TAB_X_VIBRATION, value); }
+void SystemConfig::setMotor2YVibrationValue(double value)  { setMotorProtectionValue(1, TAB_Y_VIBRATION, value); }
+void SystemConfig::setMotor1TemperatureValue(double value) { setMotorProtectionValue(0, TAB_MOTOR_TEMP, value); }
+void SystemConfig::setMotor2TemperatureValue(double value) { setMotorProtectionValue(1, TAB_MOTOR_TEMP, value); }
+void SystemConfig::setMotor1PhaseAWindingValue(double value) { setMotorProtectionValue(0, TAB_WINDING_A, value); }
+void SystemConfig::setMotor1PhaseBWindingValue(double value) { setMotorProtectionValue(0, TAB_WINDING_B, value); }
+void SystemConfig::setMotor1PhaseCWindingValue(double value) { setMotorProtectionValue(0, TAB_WINDING_C, value); }
+void SystemConfig::setMotor2PhaseAWindingValue(double value) { setMotorProtectionValue(1, TAB_WINDING_A, value); }
+void SystemConfig::setMotor2PhaseBWindingValue(double value) { setMotorProtectionValue(1, TAB_WINDING_B, value); }
+void SystemConfig::setMotor2PhaseCWindingValue(double value) { setMotorProtectionValue(1, TAB_WINDING_C, value); }
+
+// 电压保留独立变量（来自模拟量保护表，不属于电机Tab）
 void SystemConfig::setMotor1VoltageValue(double value) {
     if (qFuzzyCompare(1.0 + m_motor1VoltageValue, 1.0 + value)) return;
     m_motor1VoltageValue = value;
@@ -454,76 +612,4 @@ void SystemConfig::setMotor2VoltageValue(double value) {
     if (qFuzzyCompare(1.0 + m_motor2VoltageValue, 1.0 + value)) return;
     m_motor2VoltageValue = value;
     emit motor2VoltageValueChanged();
-}
-
-void SystemConfig::setMotor1XVibrationValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor1XVibrationValue, 1.0 + value)) return;
-    m_motor1XVibrationValue = value;
-    emit motor1XVibrationValueChanged();
-}
-
-void SystemConfig::setMotor1YVibrationValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor1YVibrationValue, 1.0 + value)) return;
-    m_motor1YVibrationValue = value;
-    emit motor1YVibrationValueChanged();
-}
-
-void SystemConfig::setMotor2XVibrationValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor2XVibrationValue, 1.0 + value)) return;
-    m_motor2XVibrationValue = value;
-    emit motor2XVibrationValueChanged();
-}
-
-void SystemConfig::setMotor2YVibrationValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor2YVibrationValue, 1.0 + value)) return;
-    m_motor2YVibrationValue = value;
-    emit motor2YVibrationValueChanged();
-}
-
-void SystemConfig::setMotor1TemperatureValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor1TemperatureValue, 1.0 + value)) return;
-    m_motor1TemperatureValue = value;
-    emit motor1TemperatureValueChanged();
-}
-
-void SystemConfig::setMotor2TemperatureValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor2TemperatureValue, 1.0 + value)) return;
-    m_motor2TemperatureValue = value;
-    emit motor2TemperatureValueChanged();
-}
-
-void SystemConfig::setMotor1PhaseAWindingValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor1PhaseAWindingValue, 1.0 + value)) return;
-    m_motor1PhaseAWindingValue = value;
-    emit motor1PhaseAWindingValueChanged();
-}
-
-void SystemConfig::setMotor1PhaseBWindingValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor1PhaseBWindingValue, 1.0 + value)) return;
-    m_motor1PhaseBWindingValue = value;
-    emit motor1PhaseBWindingValueChanged();
-}
-
-void SystemConfig::setMotor1PhaseCWindingValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor1PhaseCWindingValue, 1.0 + value)) return;
-    m_motor1PhaseCWindingValue = value;
-    emit motor1PhaseCWindingValueChanged();
-}
-
-void SystemConfig::setMotor2PhaseAWindingValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor2PhaseAWindingValue, 1.0 + value)) return;
-    m_motor2PhaseAWindingValue = value;
-    emit motor2PhaseAWindingValueChanged();
-}
-
-void SystemConfig::setMotor2PhaseBWindingValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor2PhaseBWindingValue, 1.0 + value)) return;
-    m_motor2PhaseBWindingValue = value;
-    emit motor2PhaseBWindingValueChanged();
-}
-
-void SystemConfig::setMotor2PhaseCWindingValue(double value) {
-    if (qFuzzyCompare(1.0 + m_motor2PhaseCWindingValue, 1.0 + value)) return;
-    m_motor2PhaseCWindingValue = value;
-    emit motor2PhaseCWindingValueChanged();
 }

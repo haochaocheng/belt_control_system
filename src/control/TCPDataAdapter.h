@@ -187,7 +187,52 @@ private:
     static constexpr int IR_BRAKE_PACKED = 59;           // 制动器打包 59
     static constexpr int IR_SPRINKLER_TENSION_PACKED = 60; // 洒水+张紧打包 60
     static constexpr int IR_PROTECTION_PACKED = 61;      // 保护状态打包 61
-    static constexpr int IR_TOTAL_COUNT = 100;           // 输入寄存器总数
+
+    // ✅ 2026-04-08 [Phase 7.48.88.97]: 环境模拟量扩展 62-93（16个FLOAT32 × 2寄存器）
+    static constexpr int IR_TEMPERATURE1_START = 62;     // 温度一 62-63
+    static constexpr int IR_TEMPERATURE2_START = 64;     // 温度二 64-65
+    static constexpr int IR_TEMPERATURE_ENV_START = 66;  // 温度（环境）66-67
+    static constexpr int IR_HUMIDITY_START = 68;         // 湿度 68-69
+    static constexpr int IR_METHANE_START = 70;          // 甲烷 70-71
+    static constexpr int IR_DUST_START = 72;             // 粉尘浓度 72-73
+    static constexpr int IR_COALFLOW_START = 74;         // 煤流 74-75
+    static constexpr int IR_SILOHEIGHT_START = 76;       // 煤仓高度 76-77
+    static constexpr int IR_VOLTAGE_ENV_START = 78;      // 电压（环境）78-79
+    static constexpr int IR_SMOKE_START = 80;            // 烟雾 80-81
+    static constexpr int IR_PRESSURE_START = 82;         // 气压 82-83
+    static constexpr int IR_OXYGEN_START = 84;           // 氧气 84-85
+    static constexpr int IR_CO_START = 86;               // 一氧化碳 86-87
+    static constexpr int IR_H2S_START = 88;              // 硫化氢 88-89
+    static constexpr int IR_CO2_START = 90;              // 二氧化碳 90-91
+    static constexpr int IR_WINDSPEED_START = 92;        // 风速 92-93
+
+    // ✅ 2026-04-08 [Phase 7.48.88.97]: 电机1-2 扩展Tab值 94-117
+    static constexpr int IR_MOTOR1_FRONT_BEARING_START = 94;  // 电机1前轴承温度 94-95
+    static constexpr int IR_MOTOR1_REAR_BEARING_START = 96;   // 电机1后轴承温度 96-97
+    static constexpr int IR_MOTOR1_STALL_START = 98;          // 电机1堵转 98-99
+    static constexpr int IR_MOTOR1_START_TIMEOUT_START = 100; // 电机1起动超时 100-101
+    static constexpr int IR_MOTOR1_POWER_START = 102;         // 电机1功率 102-103
+    static constexpr int IR_MOTOR1_IMBALANCE_START = 104;     // 电机1三相不平衡 104-105
+    static constexpr int IR_MOTOR2_FRONT_BEARING_START = 106; // 电机2前轴承温度 106-107
+    static constexpr int IR_MOTOR2_REAR_BEARING_START = 108;  // 电机2后轴承温度 108-109
+    static constexpr int IR_MOTOR2_STALL_START = 110;         // 电机2堵转 110-111
+    static constexpr int IR_MOTOR2_START_TIMEOUT_START = 112; // 电机2起动超时 112-113
+    static constexpr int IR_MOTOR2_POWER_START = 114;         // 电机2功率 114-115
+    static constexpr int IR_MOTOR2_IMBALANCE_START = 116;     // 电机2三相不平衡 116-117
+
+    // ✅ 2026-04-08 [Phase 7.48.88.97]: 电机3-8 完整数据块 120-287
+    // 每个电机28个寄存器（13个Tab值 + 1个电压 = 14个FLOAT32 × 2寄存器）
+    // 电机N(motorIndex 2-7)基地址: IR_MOTOR_BLOCK_START + (motorIndex - 2) * IR_MOTOR_BLOCK_SIZE
+    // 块内偏移: (tabIndex - 1) * 2（tab 1起，tab 0无值）
+    //   0-1=电流(tab1), 2-3=前轴承(tab2), 4-5=后轴承(tab3),
+    //   6-7=甲相(tab4), 8-9=乙相(tab5), 10-11=丙相(tab6),
+    //   12-13=电机温度(tab7), 14-15=水平振动(tab8), 16-17=垂直振动(tab9),
+    //   18-19=堵转(tab10), 20-21=起动超时(tab11), 22-23=功率(tab12), 24-25=不平衡(tab13)
+    //   26-27=电压（独立）
+    static constexpr int IR_MOTOR_BLOCK_START = 120;
+    static constexpr int IR_MOTOR_BLOCK_SIZE = 28;       // 每电机28寄存器
+    // 旧值: static constexpr int IR_TOTAL_COUNT = 100;
+    static constexpr int IR_TOTAL_COUNT = 300;           // 输入寄存器总数（扩展后）
 
     // 线圈区 (00001+)
     static constexpr int COIL_DO_START = 0;              // DO控制 0-7

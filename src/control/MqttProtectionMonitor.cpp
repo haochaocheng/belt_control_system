@@ -1226,57 +1226,66 @@ void MqttProtectionMonitor::onCSBitChanged(int protType, int pointIndex, bool va
 // ✅ 2026-04-08 [Phase 7.48.88.96]: 将AI通道工程量更新到SystemConfig
 // 原因：TCPDataAdapter从SystemConfig读取模拟量保护值同步到Modbus从站/S7从站映射表
 // 如果SystemConfig没有对应的属性，则跳过（不是所有保护项都需要同步到TCPDataAdapter）
+// ✅ 2026-04-08 [Phase 7.48.88.97]: 将AI通道工程量更新到SystemConfig（完整版，覆盖全部18个环境保护项）
+// 旧：Phase 7.48.88.96 仅映射5项（速度/张力/电压/1号电流/2号电流）
+// 新：全部18项环境模拟量保护 + 电流/电压保留兼容
 void MqttProtectionMonitor::updateSystemConfigFromAI(const QString &protectionName, double engineeringValue)
 {
     if (!m_systemConfig) return;
 
     // 按保护名称映射到SystemConfig属性
+    // 名称与 DeviceConfigManager::initDefaultAnalogProtections() 中的 protection_name 一致
     if (protectionName == "速度") {
         m_systemConfig->setSpeedValue(engineeringValue);
     } else if (protectionName == "张力") {
         m_systemConfig->setTensionValue(engineeringValue);
+    } else if (protectionName == "温度一") {
+        m_systemConfig->setTemperature1Value(engineeringValue);
+    } else if (protectionName == "温度二") {
+        m_systemConfig->setTemperature2Value(engineeringValue);
+    } else if (protectionName == "温度") {
+        m_systemConfig->setTemperatureValue(engineeringValue);
+    } else if (protectionName == "湿度") {
+        m_systemConfig->setHumidityValue(engineeringValue);
+    } else if (protectionName == "甲烷") {
+        m_systemConfig->setMethaneValue(engineeringValue);
+    } else if (protectionName == "粉尘浓度") {
+        m_systemConfig->setDustValue(engineeringValue);
+    } else if (protectionName == "煤流") {
+        m_systemConfig->setCoalFlowValue(engineeringValue);
+    } else if (protectionName == "煤仓高度") {
+        m_systemConfig->setSiloHeightValue(engineeringValue);
     } else if (protectionName == "电压") {
-        // 电压保护默认对应1号电机电压（模拟量保护中只有一个电压项）
+        m_systemConfig->setVoltageValue(engineeringValue);
+        // 兼容：电压也写入旧的motor1VoltageValue属性
         m_systemConfig->setMotor1VoltageValue(engineeringValue);
-    } else if (protectionName.contains("1号电机电流") || protectionName == "电流" ) {
+    } else if (protectionName == "烟雾") {
+        m_systemConfig->setSmokeValue(engineeringValue);
+    } else if (protectionName == "气压") {
+        m_systemConfig->setPressureValue(engineeringValue);
+    } else if (protectionName == "氧气") {
+        m_systemConfig->setOxygenValue(engineeringValue);
+    } else if (protectionName == "一氧化碳") {
+        m_systemConfig->setCoValue(engineeringValue);
+    } else if (protectionName == "硫化氢") {
+        m_systemConfig->setH2sValue(engineeringValue);
+    } else if (protectionName == "二氧化碳") {
+        m_systemConfig->setCo2Value(engineeringValue);
+    } else if (protectionName == "风速") {
+        m_systemConfig->setWindSpeedValue(engineeringValue);
+    } else if (protectionName.contains("1号电机电流") || protectionName == "电流") {
         m_systemConfig->setMotor1CurrentValue(engineeringValue);
     } else if (protectionName.contains("2号电机电流")) {
         m_systemConfig->setMotor2CurrentValue(engineeringValue);
     }
-    // 其他保护项（温度一、温度二、湿度、甲烷等）暂无对应SystemConfig属性，跳过
 }
 
-// ✅ 2026-04-08 [Phase 7.48.88.96]: 将电机寄存器工程量更新到SystemConfig
-// motorIndex: 0=1号电机, 1=2号电机, 2-7=暂无对应SystemConfig属性
-// tabIndex: 1=电流, 2=前轴承温度, 3=后轴承温度, 4=甲相绕组, 5=乙相绕组, 6=丙相绕组, 7=电机温度, 8=水平振动, 9=垂直振动
+// ✅ 2026-04-08 [Phase 7.48.88.97]: 将电机寄存器工程量更新到SystemConfig（完整版，8电机×14Tab）
+// 旧：Phase 7.48.88.96 仅支持motorIndex 0-1，tabIndex 1,4-9，使用独立setter
+// 新：所有8个电机，所有Tab（含 2=前轴承, 3=后轴承, 10=堵转, 11=起动超时, 12=功率, 13=不平衡），使用统一数组setter
 void MqttProtectionMonitor::updateSystemConfigFromMotor(int motorIndex, int tabIndex, double engineeringValue)
 {
     if (!m_systemConfig) return;
-    if (motorIndex > 1) return;  // 只有1号/2号电机有对应SystemConfig属性
-
-    if (motorIndex == 0) {
-        // 1号电机
-        switch (tabIndex) {
-        case 1: m_systemConfig->setMotor1CurrentValue(engineeringValue); break;
-        case 4: m_systemConfig->setMotor1PhaseAWindingValue(engineeringValue); break;
-        case 5: m_systemConfig->setMotor1PhaseBWindingValue(engineeringValue); break;
-        case 6: m_systemConfig->setMotor1PhaseCWindingValue(engineeringValue); break;
-        case 7: m_systemConfig->setMotor1TemperatureValue(engineeringValue); break;
-        case 8: m_systemConfig->setMotor1XVibrationValue(engineeringValue); break;
-        case 9: m_systemConfig->setMotor1YVibrationValue(engineeringValue); break;
-        default: break;
-        }
-    } else {
-        // 2号电机
-        switch (tabIndex) {
-        case 1: m_systemConfig->setMotor2CurrentValue(engineeringValue); break;
-        case 4: m_systemConfig->setMotor2PhaseAWindingValue(engineeringValue); break;
-        case 5: m_systemConfig->setMotor2PhaseBWindingValue(engineeringValue); break;
-        case 6: m_systemConfig->setMotor2PhaseCWindingValue(engineeringValue); break;
-        case 7: m_systemConfig->setMotor2TemperatureValue(engineeringValue); break;
-        case 8: m_systemConfig->setMotor2XVibrationValue(engineeringValue); break;
-        case 9: m_systemConfig->setMotor2YVibrationValue(engineeringValue); break;
-        default: break;
-        }
-    }
+    // 直接调用通用接口，内部会校验范围
+    m_systemConfig->setMotorProtectionValue(motorIndex, tabIndex, engineeringValue);
 }
