@@ -111,9 +111,17 @@ Rectangle {
         }
 
         if (focusSubArea === 1) {
-            console.log("✅ [TCPControlPage] Tab 栏区域 - 切换 Tab:", focusTabIndex)
+            // 旧：console.log("✅ [TCPControlPage] Tab 栏区域 - 切换 Tab:", focusTabIndex)  // 2026-04-08 [Phase 7.48.88.91] Tab已通过左右键切换，Enter改为切换视图
+            // 旧：if (tcpConfigPanel.item) {  // 2026-04-08 [Phase 7.48.88.91]
+            // 旧：    tcpConfigPanel.item.currentTabIndex = focusTabIndex  // 2026-04-08 [Phase 7.48.88.91]
+            // 旧：}  // 2026-04-08 [Phase 7.48.88.91]
+            // ✅ 2026-04-08 [Phase 7.48.88.91]: Tab栏按Enter键 → 切换参数配置/映射表视图
+            console.log("✅ [TCPControlPage] Tab 栏区域 - 切换视图模式")
             if (tcpConfigPanel.item) {
-                tcpConfigPanel.item.currentTabIndex = focusTabIndex
+                var currentTab = tcpConfigPanel.item.getCurrentTabItem()
+                if (currentTab && typeof currentTab.toggleViewMode === "function") {
+                    currentTab.toggleViewMode()
+                }
             }
             return true
         }

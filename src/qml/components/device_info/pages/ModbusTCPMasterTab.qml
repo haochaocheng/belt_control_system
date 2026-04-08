@@ -713,14 +713,20 @@ Rectangle {
 
         // ========== 数据视图 ==========
         // ✅ 2026-04-07 [Phase 7.48.88.88]: 独立数据视图，无需滚动即可查看
-        ScrollView {
+        // ✅ 2026-04-08 [Phase 7.48.88.91]: 改为Flickable支持触摸拖拽和键盘滚动
+        Flickable {
             id: dataScrollView
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
             visible: root.viewMode === 1
+            contentWidth: width
+            contentHeight: dataColumnLayout.height
+            flickableDirection: Flickable.VerticalFlick
+            boundsBehavior: Flickable.StopAtBounds
 
             ColumnLayout {
+                id: dataColumnLayout
                 width: dataScrollView.width * 0.95
                 spacing: 8
 
@@ -916,6 +922,6 @@ Rectangle {
                     Layout.rightMargin: 10
                 }
             }  // ColumnLayout 结束
-        }  // ScrollView（数据视图）结束
+        }  // Flickable（数据视图）结束
     }  // ColumnLayout（主布局）结束
 }

@@ -85,6 +85,9 @@ bool ModbusTCPSlaveController::startServer()
     }
 
     // 配置服务器参数
+    // ✅ 2026-04-08 [Phase 7.48.88.91]: 必须设置监听地址为0.0.0.0，否则Qt默认127.0.0.1仅本机访问
+    // 原因：Modbus Poll等外部工具无法连接，因为服务器只监听了回环地址
+    m_modbusServer->setConnectionParameter(QModbusDevice::NetworkAddressParameter, QStringLiteral("0.0.0.0"));
     m_modbusServer->setConnectionParameter(QModbusDevice::NetworkPortParameter, m_port);
     m_modbusServer->setServerAddress(m_slaveAddress);
 
