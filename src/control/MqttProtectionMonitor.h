@@ -135,6 +135,9 @@ public:
     // 原因：速度保护禁止自动清除，必须按F键复位
     Q_INVOKABLE void resetSpeedProtectionAlarm(int beltNumber);
 
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: publishSprinklerCommand 公开供TCPDataAdapter调用
+    void publishSprinklerCommand(int sprinklerIndex, bool activate);
+
 public slots:
     // ✅ 2026-03-05 [Phase 7.48.5]: AI通道变化槽函数（移至 public slots）
     /**
@@ -310,12 +313,7 @@ private:
      */
     void checkSprinklerActivation(int beltNumber, const QString &protectionName, bool exceeded);
 
-    /**
-     * @brief 发布洒水控制命令（多洒水版本）
-     * @param sprinklerIndex 洒水索引（1-8）
-     * @param activate true=启动洒水, false=停止洒水
-     */
-    void publishSprinklerCommand(int sprinklerIndex, bool activate);
+    // 旧位置: publishSprinklerCommand 已移至 public（Phase 7.48.88.98）
 
     // ✅ 2026-03-13: PT100/4-20mA 转换函数
     /**

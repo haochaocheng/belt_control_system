@@ -22,6 +22,11 @@ class CommonControl;
 class NetworkTask;
 class ModbusTCPSlaveController;
 class S7ServerController;
+// ✅ 2026-04-08 [Phase 7.48.88.98]: 控制区新增依赖
+class MqttProtectionMonitor;
+class ProtectionLogicController;
+class DeviceRuntimeTracker;
+class DeviceConfigManager;
 
 class TCPDataAdapter : public QObject
 {
@@ -44,6 +49,12 @@ public:
     void setSystemConfig(SystemConfig *config);
     void setCommonControl(CommonControl *ctrl);
     void setNetworkTask(NetworkTask *task);
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: 控制区新增依赖
+    void setMqttProtectionMonitor(MqttProtectionMonitor *monitor);
+    void setProtectionLogicController(ProtectionLogicController *ctrl);
+    void setDeviceRuntimeTracker(DeviceRuntimeTracker *tracker);
+    void setDeviceConfigManager(DeviceConfigManager *mgr);
 
     // ===== TCP控制器绑定（8端口，每端口4个控制器） =====
     // portIndex: 0-7
@@ -99,6 +110,9 @@ private slots:
     void onCoilWritten(int portIndex, int address, bool value);
     void onHoldingRegisterWritten(int portIndex, int address, int value);
 
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: S7 DB2写入事件处理
+    void onS7DB2Written(int portIndex, int dbNumber, int offset, const QByteArray &data);
+
 private:
     // ===== 同步方法（从数据管理器 → 从站寄存器） =====
     void syncDiscreteInputs(int portIndex);     // 离散输入区
@@ -121,6 +135,14 @@ private:
     // ===== 安全检查 =====
     bool isRemoteControlAllowed() const;
 
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: 目标皮带编号（HR20覆盖本机编号）
+    int getTargetBeltNumber() const;
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: 参数写入确认流程处理
+    void handleParamConfirm(int portIndex, int value);
+    void handleParamExecute(int portIndex, int value);
+    void executeParameterWrite(int portIndex);
+
     // ===== 成员变量 =====
     // 数据管理器指针
     DODataManager *m_doDataManager = nullptr;
@@ -130,6 +152,12 @@ private:
     SystemConfig *m_systemConfig = nullptr;
     CommonControl *m_commonControl = nullptr;
     NetworkTask *m_networkTask = nullptr;
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: 控制区新增依赖指针
+    MqttProtectionMonitor *m_mqttProtectionMonitor = nullptr;
+    ProtectionLogicController *m_protectionLogicController = nullptr;
+    DeviceRuntimeTracker *m_runtimeTracker = nullptr;
+    DeviceConfigManager *m_deviceConfigMgr = nullptr;
 
     // TCP控制器数组（8端口）
     ModbusTCPSlaveController *m_modbusSlaves[8] = {};
@@ -141,7 +169,12 @@ private:
     bool m_syncEnabled = false;
 
     // 线圈上升沿检测（防止重复触发）
-    bool m_lastCoilStates[8][32] = {};  // [portIndex][coilAddress]
+    // 旧值: bool m_lastCoilStates[8][32] = {};
+    bool m_lastCoilStates[8][64] = {};  // [portIndex][coilAddress] ✅ Phase 7.48.88.98 扩展到64
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: 参数写入确认状态（每端口独立）
+    bool m_paramConfirmActive[8] = {};          // 确认码已写入
+    int m_paramTargetBeltNumber[8] = {};        // 目标皮带编号覆盖（HR20，0=使用本机编号）
 
     // ===== Modbus地址常量 =====
     // 离散输入区 (10001+)
@@ -239,14 +272,63 @@ private:
     static constexpr int COIL_START_BELT = 8;            // 启动皮带 8
     static constexpr int COIL_STOP_BELT = 9;             // 停止皮带 9
     static constexpr int COIL_EMERGENCY_STOP = 10;       // 紧急停车 10
-    static constexpr int COIL_TOTAL_COUNT = 32;          // 线圈总数
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: B组 — 电机独立控制 (11-26)
+    static constexpr int COIL_MOTOR_START_START = 11;    // 电机1-8启动 11-18
+    static constexpr int COIL_MOTOR_STOP_START = 19;     // 电机1-8停止 19-26
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: C组 — 洒水控制 (27-42)
+    static constexpr int COIL_SPRINKLER_START_START = 27; // 洒水1-8启动 27-34
+    static constexpr int COIL_SPRINKLER_STOP_START = 35;  // 洒水1-8停止 35-42
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 保护/系统复位+序列控制 (43-47)
+    static constexpr int COIL_RESET_ALL_PROTECTION = 43; // 复位全部保护 43
+    static constexpr int COIL_RESET_SPEED_ALARM = 44;    // 复位速度保护报警 44
+    static constexpr int COIL_RESET_FAULT = 45;          // 复位故障状态 45
+    static constexpr int COIL_START_SEQUENCE = 46;       // 启动设备序列 46
+    static constexpr int COIL_STOP_SEQUENCE = 47;        // 停止设备序列 47
+
+    // 旧值: static constexpr int COIL_TOTAL_COUNT = 32;
+    static constexpr int COIL_TOTAL_COUNT = 64;          // 线圈总数（扩展后，预留48-63）
 
     // 保持寄存器区 (40001+)
     static constexpr int HR_WORK_MODE = 0;               // 工作模式 0
     static constexpr int HR_MACHINE_NUMBER = 1;          // 本机编号 1
     static constexpr int HR_DO_CONTROL_START = 2;        // DO控制字 2-9
     static constexpr int HR_HEARTBEAT = 10;              // 心跳计数器 10
-    static constexpr int HR_TOTAL_COUNT = 32;            // 保持寄存器总数
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: B组 — 系统配置参数 (11-19)
+    static constexpr int HR_WARNING_TIME = 11;           // 预警时间(秒) 11
+    static constexpr int HR_WARNING_PLAY_COUNT = 12;     // 预警播放次数 12
+    static constexpr int HR_WARNING_MODE = 13;           // 预警模式 13
+    static constexpr int HR_MODBUS_POLL_INTERVAL = 14;   // Modbus轮询间隔(ms) 14
+    static constexpr int HR_BELT_AUDIO_SOURCE = 15;      // 皮带音频来源 15
+    static constexpr int HR_DEFAULT_DELAY = 16;          // 默认延时(×10ms→s) 16
+    static constexpr int HR_AUDIO_OUTPUT_MODE = 17;      // 音频输出模式 17
+    static constexpr int HR_TTS_ENGINE = 18;             // TTS引擎选择 18
+    static constexpr int HR_TTS_MODEL = 19;              // TTS模型选择 19
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: C组 — 目标皮带选择 (20)
+    static constexpr int HR_TARGET_BELT = 20;            // 目标皮带编号(0=本机) 20
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 保护参数修改块 (21-34)
+    static constexpr int HR_PARAM_CONFIRM = 21;          // 参数写入确认(写0x5A5A) 21
+    static constexpr int HR_PARAM_STATUS = 22;           // 参数写入状态(只读:0空闲/1就绪/2成功/3错误) 22
+    static constexpr int HR_PARAM_DEVICE_ID = 23;        // 目标设备ID 23
+    static constexpr int HR_PARAM_TYPE = 24;             // 参数类型(1=模拟量保护,2=电机配置) 24
+    static constexpr int HR_PARAM_INDEX1 = 25;           // 参数索引1 25
+    static constexpr int HR_PARAM_INDEX2 = 26;           // 参数索引2 26
+    static constexpr int HR_PARAM_UPPER_HI = 27;         // 上限值高16位 27
+    static constexpr int HR_PARAM_UPPER_LO = 28;         // 上限值低16位 28
+    static constexpr int HR_PARAM_LOWER_HI = 29;         // 下限值高16位 29
+    static constexpr int HR_PARAM_LOWER_LO = 30;         // 下限值低16位 30
+    static constexpr int HR_PARAM_RANGE_HI = 31;         // 量程高16位 31
+    static constexpr int HR_PARAM_RANGE_LO = 32;         // 量程低16位 32
+    static constexpr int HR_PARAM_LEVEL = 33;            // 保护等级 33
+    static constexpr int HR_PARAM_EXECUTE = 34;          // 执行写入(写0x1234) 34
+
+    // 旧值: static constexpr int HR_TOTAL_COUNT = 32;
+    static constexpr int HR_TOTAL_COUNT = 64;            // 保持寄存器总数（扩展后，预留35-63）
 
     // S7数据块常量
     static constexpr int S7_DB1_NUMBER = 1;              // DB1 状态区

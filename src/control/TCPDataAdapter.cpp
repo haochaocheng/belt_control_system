@@ -13,6 +13,11 @@
 #include "../network/NetworkTask.h"
 #include "ModbusTCPSlaveController.h"
 #include "S7ServerController.h"
+// ✅ 2026-04-08 [Phase 7.48.88.98]: 控制区新增依赖
+#include "MqttProtectionMonitor.h"
+#include "ProtectionLogicController.h"
+#include "DeviceRuntimeTracker.h"
+#include "DeviceConfigManager.h"
 
 #include <QDebug>
 #include <QtEndian>
@@ -75,6 +80,28 @@ void TCPDataAdapter::setNetworkTask(NetworkTask *task)
     m_networkTask = task;
 }
 
+// ✅ 2026-04-08 [Phase 7.48.88.98]: 控制区新增依赖setter
+
+void TCPDataAdapter::setMqttProtectionMonitor(MqttProtectionMonitor *monitor)
+{
+    m_mqttProtectionMonitor = monitor;
+}
+
+void TCPDataAdapter::setProtectionLogicController(ProtectionLogicController *ctrl)
+{
+    m_protectionLogicController = ctrl;
+}
+
+void TCPDataAdapter::setDeviceRuntimeTracker(DeviceRuntimeTracker *tracker)
+{
+    m_runtimeTracker = tracker;
+}
+
+void TCPDataAdapter::setDeviceConfigManager(DeviceConfigManager *mgr)
+{
+    m_deviceConfigMgr = mgr;
+}
+
 // ===== TCP控制器绑定 =====
 
 void TCPDataAdapter::bindModbusSlave(int portIndex, ModbusTCPSlaveController *slave)
@@ -111,6 +138,15 @@ void TCPDataAdapter::bindS7Server(int portIndex, S7ServerController *server)
     m_s7Servers[portIndex] = server;
 
     if (server) {
+        // ✅ 2026-04-08 [Phase 7.48.88.98]: 监听S7 DB2写入事件
+        connect(server, &S7ServerController::dataWritten,
+                this, [this, portIndex](int area, int dbNumber, int start, int size) {
+            Q_UNUSED(area);
+            if (dbNumber == S7_DB2_NUMBER) {
+                QByteArray data = m_s7Servers[portIndex]->getDBData(S7_DB2_NUMBER, start, size);
+                onS7DB2Written(portIndex, dbNumber, start, data);
+            }
+        });
         qDebug() << "[TCPDataAdapter] 绑定S7服务器, 端口:" << portIndex;
     }
 
@@ -679,7 +715,8 @@ void TCPDataAdapter::syncS7DB1(int portIndex)
 void TCPDataAdapter::onCoilWritten(int portIndex, int address, bool value)
 {
     // 上升沿检测：只在从0→1时触发命令
-    if (address >= 0 && address < 32) {
+    // 旧值: if (address >= 0 && address < 32)
+    if (address >= 0 && address < COIL_TOTAL_COUNT) {  // ✅ Phase 7.48.88.98: 扩展到64
         bool lastState = m_lastCoilStates[portIndex][address];
         m_lastCoilStates[portIndex][address] = value;
 
@@ -735,10 +772,10 @@ void TCPDataAdapter::handleCoilCommand(int portIndex, int address, bool value)
             return;
         }
         if (m_commonControl) {
-            int machineNumber = m_systemConfig ? m_systemConfig->property("machineNumber").toInt() : 1;
-            m_commonControl->startBelt(machineNumber);
-            emit commandReceived(portIndex, "START_BELT", machineNumber);
-            qDebug() << "[TCPDataAdapter] 远程启动皮带:" << machineNumber;
+            int beltNumber = getTargetBeltNumber();
+            m_commonControl->startBelt(beltNumber);
+            emit commandReceived(portIndex, "START_BELT", beltNumber);
+            qDebug() << "[TCPDataAdapter] 远程启动皮带:" << beltNumber;
         }
         return;
     }
@@ -751,10 +788,10 @@ void TCPDataAdapter::handleCoilCommand(int portIndex, int address, bool value)
             return;
         }
         if (m_commonControl) {
-            int machineNumber = m_systemConfig ? m_systemConfig->property("machineNumber").toInt() : 1;
-            m_commonControl->stopBelt(machineNumber);
-            emit commandReceived(portIndex, "STOP_BELT", machineNumber);
-            qDebug() << "[TCPDataAdapter] 远程停止皮带:" << machineNumber;
+            int beltNumber = getTargetBeltNumber();
+            m_commonControl->stopBelt(beltNumber);
+            emit commandReceived(portIndex, "STOP_BELT", beltNumber);
+            qDebug() << "[TCPDataAdapter] 远程停止皮带:" << beltNumber;
         }
         return;
     }
@@ -763,10 +800,154 @@ void TCPDataAdapter::handleCoilCommand(int portIndex, int address, bool value)
     if (address == COIL_EMERGENCY_STOP) {
         // 紧急停车不受工作模式限制
         if (m_commonControl) {
-            int machineNumber = m_systemConfig ? m_systemConfig->property("machineNumber").toInt() : 1;
-            m_commonControl->emergencyStopBelt(machineNumber);
-            emit commandReceived(portIndex, "EMERGENCY_STOP", machineNumber);
-            qWarning() << "[TCPDataAdapter] ⚠ 远程紧急停车:" << machineNumber;
+            int beltNumber = getTargetBeltNumber();
+            m_commonControl->emergencyStopBelt(beltNumber);
+            emit commandReceived(portIndex, "EMERGENCY_STOP", beltNumber);
+            qWarning() << "[TCPDataAdapter] ⚠ 远程紧急停车:" << beltNumber;
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: B组 — 电机独立启动 (线圈11-18)
+    if (address >= COIL_MOTOR_START_START && address < COIL_MOTOR_START_START + 8) {
+        if (!isRemoteControlAllowed()) {
+            qWarning() << "[TCPDataAdapter] 远程电机启动被拒绝: 当前非集控模式";
+            emit errorOccurred("远程电机启动被拒绝：当前非集控模式");
+            return;
+        }
+        int motorIdx = address - COIL_MOTOR_START_START;  // 0-7
+        int beltNumber = getTargetBeltNumber();
+        if (m_mqttProtectionMonitor) {
+            m_mqttProtectionMonitor->publishMotorCommand(beltNumber, motorIdx, true);
+            emit commandReceived(portIndex, "MOTOR_START", motorIdx + 1);
+            qDebug() << "[TCPDataAdapter] 远程电机启动: 皮带" << beltNumber << "电机" << (motorIdx + 1);
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: B组 — 电机独立停止 (线圈19-26)
+    if (address >= COIL_MOTOR_STOP_START && address < COIL_MOTOR_STOP_START + 8) {
+        if (!isRemoteControlAllowed()) {
+            qWarning() << "[TCPDataAdapter] 远程电机停止被拒绝: 当前非集控模式";
+            emit errorOccurred("远程电机停止被拒绝：当前非集控模式");
+            return;
+        }
+        int motorIdx = address - COIL_MOTOR_STOP_START;  // 0-7
+        int beltNumber = getTargetBeltNumber();
+        if (m_mqttProtectionMonitor) {
+            m_mqttProtectionMonitor->publishMotorCommand(beltNumber, motorIdx, false);
+            emit commandReceived(portIndex, "MOTOR_STOP", motorIdx + 1);
+            qDebug() << "[TCPDataAdapter] 远程电机停止: 皮带" << beltNumber << "电机" << (motorIdx + 1);
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: C组 — 洒水启动 (线圈27-34)
+    if (address >= COIL_SPRINKLER_START_START && address < COIL_SPRINKLER_START_START + 8) {
+        if (!isRemoteControlAllowed()) {
+            qWarning() << "[TCPDataAdapter] 远程洒水启动被拒绝: 当前非集控模式";
+            emit errorOccurred("远程洒水启动被拒绝：当前非集控模式");
+            return;
+        }
+        int sprinklerIdx = address - COIL_SPRINKLER_START_START + 1;  // 1-8
+        if (m_mqttProtectionMonitor) {
+            m_mqttProtectionMonitor->publishSprinklerCommand(sprinklerIdx, true);
+            emit commandReceived(portIndex, "SPRINKLER_START", sprinklerIdx);
+            qDebug() << "[TCPDataAdapter] 远程洒水启动:" << sprinklerIdx;
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: C组 — 洒水停止 (线圈35-42)
+    if (address >= COIL_SPRINKLER_STOP_START && address < COIL_SPRINKLER_STOP_START + 8) {
+        if (!isRemoteControlAllowed()) {
+            qWarning() << "[TCPDataAdapter] 远程洒水停止被拒绝: 当前非集控模式";
+            emit errorOccurred("远程洒水停止被拒绝：当前非集控模式");
+            return;
+        }
+        int sprinklerIdx = address - COIL_SPRINKLER_STOP_START + 1;  // 1-8
+        if (m_mqttProtectionMonitor) {
+            m_mqttProtectionMonitor->publishSprinklerCommand(sprinklerIdx, false);
+            emit commandReceived(portIndex, "SPRINKLER_STOP", sprinklerIdx);
+            qDebug() << "[TCPDataAdapter] 远程洒水停止:" << sprinklerIdx;
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 复位全部保护 (线圈43)
+    if (address == COIL_RESET_ALL_PROTECTION) {
+        if (!isRemoteControlAllowed()) {
+            qWarning() << "[TCPDataAdapter] 远程保护复位被拒绝: 当前非集控模式";
+            emit errorOccurred("远程保护复位被拒绝：当前非集控模式");
+            return;
+        }
+        if (m_protectionLogicController) {
+            m_protectionLogicController->resetAllProtections();
+            emit commandReceived(portIndex, "RESET_ALL_PROTECTION", 0);
+            qDebug() << "[TCPDataAdapter] 远程复位全部保护";
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 复位速度保护报警 (线圈44)
+    if (address == COIL_RESET_SPEED_ALARM) {
+        if (!isRemoteControlAllowed()) {
+            qWarning() << "[TCPDataAdapter] 远程速度报警复位被拒绝: 当前非集控模式";
+            emit errorOccurred("远程速度报警复位被拒绝：当前非集控模式");
+            return;
+        }
+        int beltNumber = getTargetBeltNumber();
+        if (m_mqttProtectionMonitor) {
+            m_mqttProtectionMonitor->resetSpeedProtectionAlarm(beltNumber);
+            emit commandReceived(portIndex, "RESET_SPEED_ALARM", beltNumber);
+            qDebug() << "[TCPDataAdapter] 远程复位速度保护报警: 皮带" << beltNumber;
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 复位故障状态 (线圈45)
+    if (address == COIL_RESET_FAULT) {
+        if (!isRemoteControlAllowed()) {
+            qWarning() << "[TCPDataAdapter] 远程故障复位被拒绝: 当前非集控模式";
+            emit errorOccurred("远程故障复位被拒绝：当前非集控模式");
+            return;
+        }
+        if (m_runtimeTracker) {
+            m_runtimeTracker->resetFault();
+            emit commandReceived(portIndex, "RESET_FAULT", 0);
+            qDebug() << "[TCPDataAdapter] 远程复位故障状态";
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 启动设备序列 (线圈46)
+    if (address == COIL_START_SEQUENCE) {
+        if (!isRemoteControlAllowed()) {
+            qWarning() << "[TCPDataAdapter] 远程启动序列被拒绝: 当前非集控模式";
+            emit errorOccurred("远程启动序列被拒绝：当前非集控模式");
+            return;
+        }
+        int beltNumber = getTargetBeltNumber();
+        if (m_commonControl) {
+            m_commonControl->startDeviceSequence(beltNumber);
+            emit commandReceived(portIndex, "START_SEQUENCE", beltNumber);
+            qDebug() << "[TCPDataAdapter] 远程启动设备序列: 皮带" << beltNumber;
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 停止设备序列 (线圈47)
+    if (address == COIL_STOP_SEQUENCE) {
+        if (!isRemoteControlAllowed()) {
+            qWarning() << "[TCPDataAdapter] 远程停止序列被拒绝: 当前非集控模式";
+            emit errorOccurred("远程停止序列被拒绝：当前非集控模式");
+            return;
+        }
+        int beltNumber = getTargetBeltNumber();
+        if (m_commonControl) {
+            m_commonControl->stopDeviceSequence(beltNumber);
+            emit commandReceived(portIndex, "STOP_SEQUENCE", beltNumber);
+            qDebug() << "[TCPDataAdapter] 远程停止设备序列: 皮带" << beltNumber;
         }
         return;
     }
@@ -824,6 +1005,287 @@ void TCPDataAdapter::handleHoldingRegisterCommand(int portIndex, int address, in
         }
         return;
     }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: B组 — 系统配置参数 (11-19)
+
+    // 预警时间(秒) (保持寄存器11)
+    if (address == HR_WARNING_TIME) {
+        int clampedVal = qBound(5, value, 300);
+        if (m_systemConfig) {
+            m_systemConfig->setProperty("warningTimeSeconds", clampedVal);
+            emit commandReceived(portIndex, "SET_WARNING_TIME", clampedVal);
+            qDebug() << "[TCPDataAdapter] 预警时间设置:" << clampedVal << "秒";
+        }
+        return;
+    }
+
+    // 预警播放次数 (保持寄存器12)
+    if (address == HR_WARNING_PLAY_COUNT) {
+        int clampedVal = qBound(1, value, 50);
+        if (m_systemConfig) {
+            m_systemConfig->setProperty("warningPlayCount", clampedVal);
+            emit commandReceived(portIndex, "SET_WARNING_PLAY_COUNT", clampedVal);
+            qDebug() << "[TCPDataAdapter] 预警播放次数设置:" << clampedVal;
+        }
+        return;
+    }
+
+    // 预警模式 (保持寄存器13)
+    if (address == HR_WARNING_MODE) {
+        if (value == 0 || value == 1) {
+            if (m_systemConfig) {
+                m_systemConfig->setProperty("warningMode", value);
+                emit commandReceived(portIndex, "SET_WARNING_MODE", value);
+                qDebug() << "[TCPDataAdapter] 预警模式设置:" << value;
+            }
+        }
+        return;
+    }
+
+    // Modbus轮询间隔(ms) (保持寄存器14)
+    if (address == HR_MODBUS_POLL_INTERVAL) {
+        int clampedVal = qBound(100, value, 10000);
+        if (m_systemConfig) {
+            m_systemConfig->setProperty("modbusPollInterval", clampedVal);
+            emit commandReceived(portIndex, "SET_MODBUS_POLL_INTERVAL", clampedVal);
+            qDebug() << "[TCPDataAdapter] Modbus轮询间隔设置:" << clampedVal << "ms";
+        }
+        return;
+    }
+
+    // 皮带音频来源 (保持寄存器15)
+    if (address == HR_BELT_AUDIO_SOURCE) {
+        if (value == 0 || value == 1) {
+            if (m_systemConfig) {
+                m_systemConfig->setProperty("beltAudioSource", value);
+                emit commandReceived(portIndex, "SET_BELT_AUDIO_SOURCE", value);
+                qDebug() << "[TCPDataAdapter] 皮带音频来源设置:" << value;
+            }
+        }
+        return;
+    }
+
+    // 默认延时(×10ms→s) (保持寄存器16)
+    if (address == HR_DEFAULT_DELAY) {
+        int clampedVal = qBound(5, value, 300);
+        if (m_systemConfig) {
+            double delaySec = clampedVal / 10.0;
+            m_systemConfig->setProperty("defaultDelay", delaySec);
+            emit commandReceived(portIndex, "SET_DEFAULT_DELAY", clampedVal);
+            qDebug() << "[TCPDataAdapter] 默认延时设置:" << delaySec << "秒 (raw=" << clampedVal << ")";
+        }
+        return;
+    }
+
+    // 音频输出模式 (保持寄存器17)
+    if (address == HR_AUDIO_OUTPUT_MODE) {
+        if (value >= 0 && value <= 3) {
+            if (m_commonControl) {
+                m_commonControl->setAudioOutputMode(static_cast<CommonControl::AudioOutputMode>(value));
+                emit commandReceived(portIndex, "SET_AUDIO_OUTPUT_MODE", value);
+                qDebug() << "[TCPDataAdapter] 音频输出模式设置:" << value;
+            }
+        }
+        return;
+    }
+
+    // TTS引擎选择 (保持寄存器18)
+    if (address == HR_TTS_ENGINE) {
+        if (value == 0 || value == 1) {
+            if (m_commonControl) {
+                m_commonControl->switchTTSEngine(value);
+                emit commandReceived(portIndex, "SET_TTS_ENGINE", value);
+                qDebug() << "[TCPDataAdapter] TTS引擎选择:" << value;
+            }
+        }
+        return;
+    }
+
+    // TTS模型选择 (保持寄存器19)
+    if (address == HR_TTS_MODEL) {
+        if (value >= 0) {
+            if (m_commonControl) {
+                m_commonControl->switchTTSModel(value);
+                emit commandReceived(portIndex, "SET_TTS_MODEL", value);
+                qDebug() << "[TCPDataAdapter] TTS模型选择:" << value;
+            }
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: C组 — 目标皮带选择 (保持寄存器20)
+    if (address == HR_TARGET_BELT) {
+        if (value >= 0 && value <= 8) {
+            m_paramTargetBeltNumber[portIndex] = value;
+            emit commandReceived(portIndex, "SET_TARGET_BELT", value);
+            qDebug() << "[TCPDataAdapter] 目标皮带编号设置:" << value << "(0=使用本机编号)";
+        }
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 参数写入确认 (保持寄存器21)
+    if (address == HR_PARAM_CONFIRM) {
+        handleParamConfirm(portIndex, value);
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 参数数据区 (保持寄存器23-33)
+    // 这些地址的写入不需要立即处理，数据存储在从站寄存器中
+    // 等待 HR_PARAM_EXECUTE 触发时统一读取
+    if (address >= HR_PARAM_DEVICE_ID && address <= HR_PARAM_LEVEL) {
+        // 数据暂存在保持寄存器中，不需要额外处理
+        return;
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 执行写入 (保持寄存器34)
+    if (address == HR_PARAM_EXECUTE) {
+        handleParamExecute(portIndex, value);
+        return;
+    }
+}
+
+// ✅ 2026-04-08 [Phase 7.48.88.98]: 目标皮带编号获取（HR20覆盖本机编号）
+int TCPDataAdapter::getTargetBeltNumber() const
+{
+    // 遍历所有端口，找到第一个非零的目标皮带编号
+    // 实际上使用当前操作端口的值，但简化为使用第一个端口
+    for (int i = 0; i < 8; i++) {
+        if (m_paramTargetBeltNumber[i] > 0) {
+            return m_paramTargetBeltNumber[i];
+        }
+    }
+    // 默认使用本机编号
+    return m_systemConfig ? m_systemConfig->property("machineNumber").toInt() : 1;
+}
+
+// ✅ 2026-04-08 [Phase 7.48.88.98]: 参数确认码处理
+void TCPDataAdapter::handleParamConfirm(int portIndex, int value)
+{
+    if (value == 0x5A5A) {
+        if (!isRemoteControlAllowed()) {
+            qWarning() << "[TCPDataAdapter] 参数修改被拒绝: 当前非集控模式";
+            // 设置状态为错误
+            if (m_modbusSlaves[portIndex]) {
+                m_modbusSlaves[portIndex]->setHoldingRegister(HR_PARAM_STATUS, 3);  // 3=错误
+            }
+            return;
+        }
+        m_paramConfirmActive[portIndex] = true;
+        // 设置状态为就绪
+        if (m_modbusSlaves[portIndex]) {
+            m_modbusSlaves[portIndex]->setHoldingRegister(HR_PARAM_STATUS, 1);  // 1=就绪
+        }
+        emit commandReceived(portIndex, "PARAM_CONFIRM", 1);
+        qDebug() << "[TCPDataAdapter] 参数写入确认码已接受, 端口:" << portIndex;
+    } else {
+        m_paramConfirmActive[portIndex] = false;
+        if (m_modbusSlaves[portIndex]) {
+            m_modbusSlaves[portIndex]->setHoldingRegister(HR_PARAM_STATUS, 0);  // 0=空闲
+        }
+    }
+}
+
+// ✅ 2026-04-08 [Phase 7.48.88.98]: 参数执行处理
+void TCPDataAdapter::handleParamExecute(int portIndex, int value)
+{
+    if (value != 0x1234) {
+        qWarning() << "[TCPDataAdapter] 无效的执行码:" << Qt::hex << value;
+        return;
+    }
+
+    if (!m_paramConfirmActive[portIndex]) {
+        qWarning() << "[TCPDataAdapter] 参数执行被拒绝: 未发送确认码";
+        if (m_modbusSlaves[portIndex]) {
+            m_modbusSlaves[portIndex]->setHoldingRegister(HR_PARAM_STATUS, 3);  // 3=错误
+        }
+        return;
+    }
+
+    executeParameterWrite(portIndex);
+
+    // 清除确认状态和执行码，防止重复执行
+    m_paramConfirmActive[portIndex] = false;
+    if (m_modbusSlaves[portIndex]) {
+        m_modbusSlaves[portIndex]->setHoldingRegister(HR_PARAM_CONFIRM, 0);
+        m_modbusSlaves[portIndex]->setHoldingRegister(HR_PARAM_EXECUTE, 0);
+    }
+}
+
+// ✅ 2026-04-08 [Phase 7.48.88.98]: 执行参数写入
+void TCPDataAdapter::executeParameterWrite(int portIndex)
+{
+    if (!m_modbusSlaves[portIndex] || !m_deviceConfigMgr) {
+        if (m_modbusSlaves[portIndex]) {
+            m_modbusSlaves[portIndex]->setHoldingRegister(HR_PARAM_STATUS, 3);  // 3=错误
+        }
+        return;
+    }
+
+    auto *slave = m_modbusSlaves[portIndex];
+
+    int deviceId = slave->getHoldingRegister(HR_PARAM_DEVICE_ID);
+    int paramType = slave->getHoldingRegister(HR_PARAM_TYPE);
+    int index1 = slave->getHoldingRegister(HR_PARAM_INDEX1);
+    int index2 = slave->getHoldingRegister(HR_PARAM_INDEX2);
+    float upperLimit = registersToFloat(slave->getHoldingRegister(HR_PARAM_UPPER_HI),
+                                         slave->getHoldingRegister(HR_PARAM_UPPER_LO));
+    float lowerLimit = registersToFloat(slave->getHoldingRegister(HR_PARAM_LOWER_HI),
+                                         slave->getHoldingRegister(HR_PARAM_LOWER_LO));
+    float range = registersToFloat(slave->getHoldingRegister(HR_PARAM_RANGE_HI),
+                                    slave->getHoldingRegister(HR_PARAM_RANGE_LO));
+    int level = slave->getHoldingRegister(HR_PARAM_LEVEL);
+
+    qDebug() << "[TCPDataAdapter] 执行参数写入: deviceId=" << deviceId
+             << "type=" << paramType << "index1=" << index1 << "index2=" << index2
+             << "upper=" << upperLimit << "lower=" << lowerLimit
+             << "range=" << range << "level=" << level;
+
+    // 校验设备ID
+    if (deviceId < 1 || deviceId > 12) {
+        qWarning() << "[TCPDataAdapter] 无效设备ID:" << deviceId;
+        slave->setHoldingRegister(HR_PARAM_STATUS, 3);
+        return;
+    }
+
+    bool success = false;
+
+    if (paramType == 1) {
+        // 类型1: 模拟量保护参数修改
+        // index1 = 保护序号（用于定位保护名称）
+        QVariantMap protection;
+        protection["upper_limit"] = static_cast<double>(upperLimit);
+        protection["lower_limit"] = static_cast<double>(lowerLimit);
+        protection["range"] = static_cast<double>(range);
+        protection["level"] = level;
+        // 加载已有配置，更新部分字段
+        QVariantList allProtections = m_deviceConfigMgr->loadAllAnalogProtections(deviceId);
+        if (index1 >= 0 && index1 < allProtections.size()) {
+            QVariantMap existing = allProtections[index1].toMap();
+            existing["upper_limit"] = protection["upper_limit"];
+            existing["lower_limit"] = protection["lower_limit"];
+            existing["range"] = protection["range"];
+            existing["level"] = protection["level"];
+            success = m_deviceConfigMgr->saveAnalogProtection(deviceId, existing);
+        } else {
+            qWarning() << "[TCPDataAdapter] 模拟量保护索引越界:" << index1;
+        }
+    } else if (paramType == 2) {
+        // 类型2: 电机配置参数修改
+        // index1 = motorIndex, index2 = tabIndex
+        QVariantMap existing = m_deviceConfigMgr->loadMotorConfig(deviceId, index1, index2);
+        existing["upper_limit"] = static_cast<double>(upperLimit);
+        existing["lower_limit"] = static_cast<double>(lowerLimit);
+        existing["range"] = static_cast<double>(range);
+        existing["level"] = level;
+        success = m_deviceConfigMgr->saveMotorConfig(deviceId, index1, index2, existing);
+    } else {
+        qWarning() << "[TCPDataAdapter] 未知参数类型:" << paramType;
+    }
+
+    // 设置执行结果状态
+    slave->setHoldingRegister(HR_PARAM_STATUS, success ? 2 : 3);  // 2=成功, 3=错误
+    emit commandReceived(portIndex, "PARAM_WRITE", success ? 1 : 0);
+    qDebug() << "[TCPDataAdapter] 参数写入" << (success ? "成功" : "失败");
 }
 
 // ===== IEEE754浮点转换 =====
@@ -862,6 +1324,134 @@ bool TCPDataAdapter::isRemoteControlAllowed() const
     // 只有集控模式(workMode=3)允许远程启停
     int mode = m_systemConfig->property("workMode").toInt();
     return (mode == 3);  // Centralized
+}
+
+// ✅ 2026-04-08 [Phase 7.48.88.98]: S7 DB2写入事件处理
+void TCPDataAdapter::onS7DB2Written(int portIndex, int dbNumber, int offset, const QByteArray &data)
+{
+    Q_UNUSED(dbNumber);
+    if (data.isEmpty()) return;
+
+    qDebug() << "[TCPDataAdapter] S7 DB2写入: 端口=" << portIndex
+             << "偏移=" << offset << "大小=" << data.size();
+
+    // 根据偏移量映射到对应的Modbus命令处理
+    for (int i = 0; i < data.size(); i++) {
+        int byteOffset = offset + i;
+        quint8 byteVal = static_cast<quint8>(data.at(i));
+
+        switch (byteOffset) {
+        case 0:  // DO输出控制(bit0-7)
+            for (int bit = 0; bit < 8; bit++) {
+                if (byteVal & (1 << bit)) {
+                    handleCoilCommand(portIndex, COIL_DO_START + bit, true);
+                }
+            }
+            break;
+
+        case 1:  // 皮带控制(bit0=启动, bit1=停止, bit2=急停)
+            if (byteVal & 0x01) handleCoilCommand(portIndex, COIL_START_BELT, true);
+            if (byteVal & 0x02) handleCoilCommand(portIndex, COIL_STOP_BELT, true);
+            if (byteVal & 0x04) handleCoilCommand(portIndex, COIL_EMERGENCY_STOP, true);
+            break;
+
+        case 2:  // 工作模式切换
+            handleHoldingRegisterCommand(portIndex, HR_WORK_MODE, byteVal);
+            break;
+
+        case 3:  // 命令序列号（忽略）
+            break;
+
+        case 4:  // 心跳高字节
+        case 5:  // 心跳低字节（需要两个字节一起处理）
+            if (byteOffset == 4 && data.size() > i + 1) {
+                int heartbeat = (byteVal << 8) | static_cast<quint8>(data.at(i + 1));
+                handleHoldingRegisterCommand(portIndex, HR_HEARTBEAT, heartbeat);
+            }
+            break;
+
+        case 6:  // 电机启动(bit0-7=电机1-8)
+            for (int bit = 0; bit < 8; bit++) {
+                if (byteVal & (1 << bit)) {
+                    handleCoilCommand(portIndex, COIL_MOTOR_START_START + bit, true);
+                }
+            }
+            break;
+
+        case 7:  // 电机停止(bit0-7=电机1-8)
+            for (int bit = 0; bit < 8; bit++) {
+                if (byteVal & (1 << bit)) {
+                    handleCoilCommand(portIndex, COIL_MOTOR_STOP_START + bit, true);
+                }
+            }
+            break;
+
+        case 8:  // 洒水启动(bit0-7=洒水1-8)
+            for (int bit = 0; bit < 8; bit++) {
+                if (byteVal & (1 << bit)) {
+                    handleCoilCommand(portIndex, COIL_SPRINKLER_START_START + bit, true);
+                }
+            }
+            break;
+
+        case 9:  // 洒水停止(bit0-7=洒水1-8)
+            for (int bit = 0; bit < 8; bit++) {
+                if (byteVal & (1 << bit)) {
+                    handleCoilCommand(portIndex, COIL_SPRINKLER_STOP_START + bit, true);
+                }
+            }
+            break;
+
+        case 10:  // 复位命令(bit0=全部保护, bit1=速度报警, bit2=故障, bit3=启动序列, bit4=停止序列)
+            if (byteVal & 0x01) handleCoilCommand(portIndex, COIL_RESET_ALL_PROTECTION, true);
+            if (byteVal & 0x02) handleCoilCommand(portIndex, COIL_RESET_SPEED_ALARM, true);
+            if (byteVal & 0x04) handleCoilCommand(portIndex, COIL_RESET_FAULT, true);
+            if (byteVal & 0x08) handleCoilCommand(portIndex, COIL_START_SEQUENCE, true);
+            if (byteVal & 0x10) handleCoilCommand(portIndex, COIL_STOP_SEQUENCE, true);
+            break;
+
+        case 11:  // 目标皮带编号
+            handleHoldingRegisterCommand(portIndex, HR_TARGET_BELT, byteVal);
+            break;
+
+        case 12:  // 预警时间高字节
+            if (data.size() > i + 1) {
+                int val = (byteVal << 8) | static_cast<quint8>(data.at(i + 1));
+                handleHoldingRegisterCommand(portIndex, HR_WARNING_TIME, val);
+            }
+            break;
+
+        case 14:  // 预警次数
+            handleHoldingRegisterCommand(portIndex, HR_WARNING_PLAY_COUNT, byteVal);
+            break;
+
+        case 15:  // 预警模式
+            handleHoldingRegisterCommand(portIndex, HR_WARNING_MODE, byteVal);
+            break;
+
+        case 16:  // 轮询间隔高字节
+            if (data.size() > i + 1) {
+                int val = (byteVal << 8) | static_cast<quint8>(data.at(i + 1));
+                handleHoldingRegisterCommand(portIndex, HR_MODBUS_POLL_INTERVAL, val);
+            }
+            break;
+
+        case 18:  // 音频来源
+            handleHoldingRegisterCommand(portIndex, HR_BELT_AUDIO_SOURCE, byteVal);
+            break;
+
+        case 19:  // TTS引擎
+            handleHoldingRegisterCommand(portIndex, HR_TTS_ENGINE, byteVal);
+            break;
+
+        case 20:  // TTS模型
+            handleHoldingRegisterCommand(portIndex, HR_TTS_MODEL, byteVal);
+            break;
+
+        default:
+            break;
+        }
+    }
 }
 
 // ===== QML映射表查询 =====
@@ -1130,6 +1720,37 @@ QVariantList TCPDataAdapter::getCoilMap(int portIndex) const
     addEntry(COIL_STOP_BELT, "停止皮带", "CommonControl.stopBelt");
     addEntry(COIL_EMERGENCY_STOP, "紧急停车", "CommonControl.emergencyStop");
 
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: B组 — 电机独立控制
+    for (int i = 0; i < 8; i++) {
+        addEntry(COIL_MOTOR_START_START + i,
+                 QString("电机%1启动").arg(i + 1),
+                 "MqttProtectionMonitor.publishMotorCommand");
+    }
+    for (int i = 0; i < 8; i++) {
+        addEntry(COIL_MOTOR_STOP_START + i,
+                 QString("电机%1停止").arg(i + 1),
+                 "MqttProtectionMonitor.publishMotorCommand");
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: C组 — 洒水控制
+    for (int i = 0; i < 8; i++) {
+        addEntry(COIL_SPRINKLER_START_START + i,
+                 QString("洒水%1启动").arg(i + 1),
+                 "MqttProtectionMonitor.publishSprinklerCommand");
+    }
+    for (int i = 0; i < 8; i++) {
+        addEntry(COIL_SPRINKLER_STOP_START + i,
+                 QString("洒水%1停止").arg(i + 1),
+                 "MqttProtectionMonitor.publishSprinklerCommand");
+    }
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 保护/系统复位+序列
+    addEntry(COIL_RESET_ALL_PROTECTION, "复位全部保护", "ProtectionLogicController.resetAllProtections");
+    addEntry(COIL_RESET_SPEED_ALARM, "复位速度保护报警", "MqttProtectionMonitor.resetSpeedProtectionAlarm");
+    addEntry(COIL_RESET_FAULT, "复位故障状态", "DeviceRuntimeTracker.resetFault");
+    addEntry(COIL_START_SEQUENCE, "启动设备序列", "CommonControl.startDeviceSequence");
+    addEntry(COIL_STOP_SEQUENCE, "停止设备序列", "CommonControl.stopDeviceSequence");
+
     return map;
 }
 
@@ -1162,6 +1783,36 @@ QVariantList TCPDataAdapter::getHoldingRegisterMap(int portIndex) const
                  "与线圈联动", "UINT16");
     }
     addEntry(HR_HEARTBEAT, "心跳计数器", "上位机写入，本机+1回写", "UINT16");
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: B组 — 系统配置参数
+    addEntry(HR_WARNING_TIME, "预警时间(秒)", "5-300", "UINT16");
+    addEntry(HR_WARNING_PLAY_COUNT, "预警播放次数", "1-50", "UINT16");
+    addEntry(HR_WARNING_MODE, "预警模式", "0按次/1按时长", "UINT16");
+    addEntry(HR_MODBUS_POLL_INTERVAL, "Modbus轮询间隔(ms)", "100-10000", "UINT16");
+    addEntry(HR_BELT_AUDIO_SOURCE, "皮带音频来源", "0本地/1远程", "UINT16");
+    addEntry(HR_DEFAULT_DELAY, "默认延时(×0.1s)", "5-300", "UINT16");
+    addEntry(HR_AUDIO_OUTPUT_MODE, "音频输出模式", "0-3", "UINT16");
+    addEntry(HR_TTS_ENGINE, "TTS引擎选择", "0/1", "UINT16");
+    addEntry(HR_TTS_MODEL, "TTS模型选择", "0-N", "UINT16");
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: C组 — 目标皮带选择
+    addEntry(HR_TARGET_BELT, "目标皮带编号", "0=本机,1-8=指定", "UINT16");
+
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: D组 — 保护参数修改块
+    addEntry(HR_PARAM_CONFIRM, "参数写入确认", "写0x5A5A解锁", "UINT16");
+    addEntry(HR_PARAM_STATUS, "参数写入状态", "只读:0空闲/1就绪/2成功/3错误", "UINT16");
+    addEntry(HR_PARAM_DEVICE_ID, "目标设备ID", "1-12", "UINT16");
+    addEntry(HR_PARAM_TYPE, "参数类型", "1=模拟量/2=电机", "UINT16");
+    addEntry(HR_PARAM_INDEX1, "参数索引1", "类型1:保护序号/类型2:motorIndex", "UINT16");
+    addEntry(HR_PARAM_INDEX2, "参数索引2", "类型2:tabIndex", "UINT16");
+    addEntry(HR_PARAM_UPPER_HI, "上限值(高16位)", "FLOAT32 HiWord", "UINT16");
+    addEntry(HR_PARAM_UPPER_LO, "上限值(低16位)", "FLOAT32 LoWord", "UINT16");
+    addEntry(HR_PARAM_LOWER_HI, "下限值(高16位)", "FLOAT32 HiWord", "UINT16");
+    addEntry(HR_PARAM_LOWER_LO, "下限值(低16位)", "FLOAT32 LoWord", "UINT16");
+    addEntry(HR_PARAM_RANGE_HI, "量程(高16位)", "FLOAT32 HiWord", "UINT16");
+    addEntry(HR_PARAM_RANGE_LO, "量程(低16位)", "FLOAT32 LoWord", "UINT16");
+    addEntry(HR_PARAM_LEVEL, "保护等级", "0-3", "UINT16");
+    addEntry(HR_PARAM_EXECUTE, "执行写入", "写0x1234执行", "UINT16");
 
     return map;
 }
@@ -1252,7 +1903,7 @@ QVariantList TCPDataAdapter::getS7DB2Map(int portIndex) const
     QByteArray dbData;
     bool hasData = false;
     if (portIndex >= 0 && portIndex < 8 && m_s7Servers[portIndex]) {
-        dbData = m_s7Servers[portIndex]->getDBData(2, 0, 6);
+        dbData = m_s7Servers[portIndex]->getDBData(2, 0, S7_DB2_SIZE);
         hasData = !dbData.isEmpty();
     }
 
@@ -1283,6 +1934,21 @@ QVariantList TCPDataAdapter::getS7DB2Map(int portIndex) const
     addEntry(2, 1, "工作模式切换", "BYTE");
     addEntry(3, 1, "命令序列号", "BYTE");
     addEntry(4, 2, "心跳计数器", "WORD");
+    // ✅ 2026-04-08 [Phase 7.48.88.98]: S7 DB2控制区扩展
+    addEntry(6, 1, "电机启动(bit0-7)", "BYTE");
+    addEntry(7, 1, "电机停止(bit0-7)", "BYTE");
+    addEntry(8, 1, "洒水启动(bit0-7)", "BYTE");
+    addEntry(9, 1, "洒水停止(bit0-7)", "BYTE");
+    addEntry(10, 1, "复位命令(bit0-4)", "BYTE");
+    addEntry(11, 1, "目标皮带编号", "BYTE");
+    addEntry(12, 2, "预警时间", "WORD");
+    addEntry(14, 1, "预警次数", "BYTE");
+    addEntry(15, 1, "预警模式", "BYTE");
+    addEntry(16, 2, "轮询间隔", "WORD");
+    addEntry(18, 1, "音频来源", "BYTE");
+    addEntry(19, 1, "TTS引擎", "BYTE");
+    addEntry(20, 1, "TTS模型", "BYTE");
+    addEntry(21, 43, "预留/参数块", "BYTES");
 
     return map;
 }

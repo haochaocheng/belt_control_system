@@ -522,6 +522,14 @@ int main(int argc, char *argv[]) {
         QObject::connect(&commonControl, &CommonControl::motorDeactivated,
                          &mqttProtectionMonitor, &MqttProtectionMonitor::notifyMotorStopped);
         logMessage("Motor state signals connected to MqttProtectionMonitor speed protection");
+
+        // ✅ 2026-04-08 [Phase 7.48.88.98]: 注入控制区依赖到TCPDataAdapter
+        // 原因：Modbus从站控制区（线圈+保持寄存器）需要调用这4个组件执行控制命令
+        tcpDataAdapter.setMqttProtectionMonitor(&mqttProtectionMonitor);
+        tcpDataAdapter.setProtectionLogicController(&protectionLogicController);
+        tcpDataAdapter.setDeviceRuntimeTracker(&runtimeTracker);
+        tcpDataAdapter.setDeviceConfigManager(&deviceConfigMgr);
+        logMessage("TCPDataAdapter control dependencies injected (Phase 7.48.88.98)");
 #endif
 
         // 将C++对象注册到QML（QML中可直接访问其属性和信号）
