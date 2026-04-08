@@ -156,8 +156,9 @@ Rectangle {
                 height: 30
                 radius: 4
                 color: root.viewMode === 0 ? "#2196F3" : "#353b4d"
-                border.color: root.viewMode === 0 ? "#64B5F6" : (root.focusSubArea === 2 && root.focusParamIndex === -1 ? "#FF9800" : "#4a5068")
-                border.width: root.focusSubArea === 2 && root.focusParamIndex === -1 && root.viewMode !== 0 ? 3 : 1  // ✅ 2026-04-08 [Phase 7.48.88.92]: 焦点高亮
+                // ✅ 2026-04-08 [Phase 7.48.88.93]: 修复焦点高亮方向——橙色跟随当前活跃按钮
+                border.color: root.focusSubArea === 2 && root.focusParamIndex === -1 && root.viewMode === 0 ? "#FF9800" : (root.viewMode === 0 ? "#64B5F6" : "#4a5068")
+                border.width: root.focusSubArea === 2 && root.focusParamIndex === -1 && root.viewMode === 0 ? 3 : 1
 
                 Text {
                     anchors.centerIn: parent
@@ -177,8 +178,9 @@ Rectangle {
                 height: 30
                 radius: 4
                 color: root.viewMode === 1 ? "#2196F3" : "#353b4d"
-                border.color: root.viewMode === 1 ? "#64B5F6" : (root.focusSubArea === 2 && root.focusParamIndex === -1 ? "#FF9800" : "#4a5068")
-                border.width: root.focusSubArea === 2 && root.focusParamIndex === -1 && root.viewMode !== 1 ? 3 : 1  // ✅ 2026-04-08 [Phase 7.48.88.92]: 焦点高亮
+                // ✅ 2026-04-08 [Phase 7.48.88.93]: 修复焦点高亮方向——橙色跟随当前活跃按钮
+                border.color: root.focusSubArea === 2 && root.focusParamIndex === -1 && root.viewMode === 1 ? "#FF9800" : (root.viewMode === 1 ? "#64B5F6" : "#4a5068")
+                border.width: root.focusSubArea === 2 && root.focusParamIndex === -1 && root.viewMode === 1 ? 3 : 1
 
                 Text {
                     anchors.centerIn: parent
