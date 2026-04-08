@@ -41,6 +41,10 @@ QtObject {
     // ✅ 2026-03-22 [Phase 7.48.74]: 参数区域列数（默认2列，某些单列面板设为1）
     property int paramColumns: 2
 
+    // ✅ 2026-04-08 [Phase 7.48.88.92]: 参数区是否有视图切换行（paramIndex=-1表示视图切换按钮行）
+    // TCP控制页面设为true，其他页面默认false
+    property bool hasViewSwitchRow: false
+
     // ✅ 2026-03-22 [Phase 7.48.74]: 参数区域行映射（可选，用于非均匀网格布局）
     // 格式：[[startIndex, count], ...] — 每行起始索引和该行字段数
     // 为空数组时使用paramColumns均匀网格导航
@@ -195,9 +199,11 @@ QtObject {
             break
 
         case "Down":
-            // 向下进入当前Tab对应的参数区第一个参数
+            // 向下进入当前Tab对应的参数区
             switchToArea(areaParams)
-            paramIndex = 0  // 从第一个参数开始
+            // ✅ 2026-04-08 [Phase 7.48.88.92]: 如果有视图切换行，先进入视图切换按钮（paramIndex=-1）
+            // 旧：paramIndex = 0  // 从第一个参数开始  // 2026-04-08 [Phase 7.48.88.92] 改为条件判断
+            paramIndex = hasViewSwitchRow ? -1 : 0
             // ✅ 2026-01-30 [FIX 100.300.109 Phase 2.2]: 移除手动信号调用
             return
         }
@@ -226,6 +232,24 @@ QtObject {
             return
         }
 
+        // ✅ 2026-04-08 [Phase 7.48.88.92]: 视图切换行特殊处理（paramIndex === -1）
+        if (hasViewSwitchRow && paramIndex === -1) {
+            switch(direction) {
+            case "Up":
+                switchToArea(areaTabBar)
+                return
+            case "Down":
+                paramIndex = 0
+                console.log("✅ [NavigationManager] 从视图切换行进入参数区:", paramIndex)
+                return
+            case "Left":
+            case "Right":
+                // 在视图切换行左右键 → 切换视图
+                toggleViewRequested()
+                return
+            }
+        }
+
         var newIndex = paramIndex
         // ✅ 2026-03-22 [Phase 7.48.74]: 使用 paramColumns 代替硬编码2
         var cols = paramColumns
@@ -235,7 +259,14 @@ QtObject {
             if (paramIndex >= cols) {
                 newIndex = paramIndex - cols
             } else if (paramIndex < cols) {
-                switchToArea(areaTabBar)
+                // ✅ 2026-04-08 [Phase 7.48.88.92]: 如果有视图切换行，先回到视图切换按钮
+                // 旧：switchToArea(areaTabBar)  // 2026-04-08 [Phase 7.48.88.92] 改为条件判断
+                if (hasViewSwitchRow) {
+                    paramIndex = -1
+                    console.log("✅ [NavigationManager] 回到视图切换行")
+                } else {
+                    switchToArea(areaTabBar)
+                }
                 return
             }
             break

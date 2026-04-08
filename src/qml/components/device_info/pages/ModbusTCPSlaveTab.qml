@@ -17,6 +17,7 @@ Rectangle {
     // ========== 公开属性 ==========
     property var currentPort: null
     property int focusParamIndex: -1
+    property int focusSubArea: 0  // ✅ 2026-04-08 [Phase 7.48.88.92]: 焦点子区域
     property var virtualKeyboard: null
 
     // ✅ 2026-02-08 [Phase 7.42.13]: 信号 - 请求更新焦点索引
@@ -67,6 +68,15 @@ Rectangle {
 
     onMapCategoryChanged: loadMapData()
     Component.onCompleted: loadMapData()
+
+    // ✅ 2026-04-08 [Phase 7.48.88.92]: 映射表数据定时刷新（仅在数据视图可见时运行）
+    Timer {
+        id: mapRefreshTimer
+        interval: 1000  // 1秒刷新一次
+        running: root.viewMode === 1  // 仅映射表视图可见时运行
+        repeat: true
+        onTriggered: root.loadMapData()
+    }
 
     // ✅ 2026-02-08 [Phase 7.42.13]: 重构虚拟键盘支持
     function triggerParamInput(index) {
@@ -146,8 +156,8 @@ Rectangle {
                 height: 30
                 radius: 4
                 color: root.viewMode === 0 ? "#2196F3" : "#353b4d"
-                border.color: root.viewMode === 0 ? "#64B5F6" : "#4a5068"
-                border.width: 1
+                border.color: root.viewMode === 0 ? "#64B5F6" : (root.focusSubArea === 2 && root.focusParamIndex === -1 ? "#FF9800" : "#4a5068")
+                border.width: root.focusSubArea === 2 && root.focusParamIndex === -1 && root.viewMode !== 0 ? 3 : 1  // ✅ 2026-04-08 [Phase 7.48.88.92]: 焦点高亮
 
                 Text {
                     anchors.centerIn: parent
@@ -167,8 +177,8 @@ Rectangle {
                 height: 30
                 radius: 4
                 color: root.viewMode === 1 ? "#2196F3" : "#353b4d"
-                border.color: root.viewMode === 1 ? "#64B5F6" : "#4a5068"
-                border.width: 1
+                border.color: root.viewMode === 1 ? "#64B5F6" : (root.focusSubArea === 2 && root.focusParamIndex === -1 ? "#FF9800" : "#4a5068")
+                border.width: root.focusSubArea === 2 && root.focusParamIndex === -1 && root.viewMode !== 1 ? 3 : 1  // ✅ 2026-04-08 [Phase 7.48.88.92]: 焦点高亮
 
                 Text {
                     anchors.centerIn: parent

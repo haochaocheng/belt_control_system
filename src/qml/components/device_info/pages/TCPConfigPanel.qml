@@ -169,6 +169,7 @@ Rectangle {
                     console.log("✅ [TCPConfigPanel] ModbusTCPMasterTab 加载成功")
                     item.currentPort = Qt.binding(function() { return root.currentPort })
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                    item.focusSubArea = Qt.binding(function() { return root.focusSubArea })  // ✅ 2026-04-08 [Phase 7.48.88.92]
                     item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     item.portIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.85]
                 }
@@ -183,6 +184,7 @@ Rectangle {
                     console.log("✅ [TCPConfigPanel] ModbusTCPSlaveTab 加载成功")
                     item.currentPort = Qt.binding(function() { return root.currentPort })
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                    item.focusSubArea = Qt.binding(function() { return root.focusSubArea })  // ✅ 2026-04-08 [Phase 7.48.88.92]
                     item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     item.portIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.84]
                 }
@@ -197,6 +199,7 @@ Rectangle {
                     console.log("✅ [TCPConfigPanel] S7MasterTab 加载成功")
                     item.currentPort = Qt.binding(function() { return root.currentPort })
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                    item.focusSubArea = Qt.binding(function() { return root.focusSubArea })  // ✅ 2026-04-08 [Phase 7.48.88.92]
                     item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     item.portIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.85]
                 }
@@ -211,6 +214,7 @@ Rectangle {
                     console.log("✅ [TCPConfigPanel] S7SlaveTab 加载成功")
                     item.currentPort = Qt.binding(function() { return root.currentPort })
                     item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
+                    item.focusSubArea = Qt.binding(function() { return root.focusSubArea })  // ✅ 2026-04-08 [Phase 7.48.88.92]
                     item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
                     item.portIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.84]
                 }

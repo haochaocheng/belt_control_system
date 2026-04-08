@@ -127,6 +127,17 @@ Rectangle {
         }
 
         if (focusSubArea === 2) {
+            // ✅ 2026-04-08 [Phase 7.48.88.92]: 视图切换行按Enter键切换视图
+            if (focusParamIndex === -1) {
+                console.log("✅ [TCPControlPage] 视图切换行 - 切换视图模式")
+                if (tcpConfigPanel.item) {
+                    var currentTabView = tcpConfigPanel.item.getCurrentTabItem()
+                    if (currentTabView && typeof currentTabView.toggleViewMode === "function") {
+                        currentTabView.toggleViewMode()
+                    }
+                }
+                return true
+            }
             // ✅ 2026-02-08 [Phase 7.42.15]: 参数区域按回车键时触发虚拟键盘
             console.log("✅ [TCPControlPage] 参数区域 - 触发参数输入:", focusParamIndex)
             triggerParamInput(focusParamIndex)
@@ -212,6 +223,7 @@ Rectangle {
             skipTabArea = false
             lastMotorIndex = 7  // 8个端口 (0-7)
             lastTabIndex = 3    // 4个Tab (0-3)
+            hasViewSwitchRow = true  // ✅ 2026-04-08 [Phase 7.48.88.92]: TCP页面有视图切换行
 
             Qt.callLater(function() {
                 var paramCount = root.getParamFieldCount()

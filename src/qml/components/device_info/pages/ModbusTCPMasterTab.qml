@@ -16,6 +16,7 @@ Rectangle {
     // ========== 公开属性 ==========
     property var currentPort: null
     property int focusParamIndex: -1
+    property int focusSubArea: 0  // ✅ 2026-04-08 [Phase 7.48.88.92]: 焦点子区域
     property var virtualKeyboard: null
     property int portIndex: 0  // ✅ 2026-04-07 [Phase 7.48.88.85]: 端口索引
 
@@ -142,6 +143,15 @@ Rectangle {
     onRegisterCountChanged: loadPollConfig()
     Component.onCompleted: Qt.callLater(loadPollConfig)
 
+    // ✅ 2026-04-08 [Phase 7.48.88.92]: 数据概览定时刷新（仅在数据视图可见时运行）
+    Timer {
+        id: pollRefreshTimer
+        interval: 1000  // 1秒刷新一次
+        running: root.viewMode === 1  // 仅数据概览视图可见时运行
+        repeat: true
+        onTriggered: root.loadPollConfig()
+    }
+
     // ========== 主布局 ==========
     // ✅ 2026-04-07 [Phase 7.48.88.88]: 使用ColumnLayout替代ScrollView，顶部视图切换按钮
     ColumnLayout {
@@ -160,8 +170,8 @@ Rectangle {
                 height: 30
                 radius: 4
                 color: root.viewMode === 0 ? "#2196F3" : "#353b4d"
-                border.color: root.viewMode === 0 ? "#64B5F6" : "#4a5068"
-                border.width: 1
+                border.color: root.viewMode === 0 ? "#64B5F6" : (root.focusSubArea === 2 && root.focusParamIndex === -1 ? "#FF9800" : "#4a5068")
+                border.width: root.focusSubArea === 2 && root.focusParamIndex === -1 && root.viewMode !== 0 ? 3 : 1  // ✅ 2026-04-08 [Phase 7.48.88.92]: 焦点高亮
 
                 Text {
                     anchors.centerIn: parent
@@ -181,8 +191,8 @@ Rectangle {
                 height: 30
                 radius: 4
                 color: root.viewMode === 1 ? "#2196F3" : "#353b4d"
-                border.color: root.viewMode === 1 ? "#64B5F6" : "#4a5068"
-                border.width: 1
+                border.color: root.viewMode === 1 ? "#64B5F6" : (root.focusSubArea === 2 && root.focusParamIndex === -1 ? "#FF9800" : "#4a5068")
+                border.width: root.focusSubArea === 2 && root.focusParamIndex === -1 && root.viewMode !== 1 ? 3 : 1  // ✅ 2026-04-08 [Phase 7.48.88.92]: 焦点高亮
 
                 Text {
                     anchors.centerIn: parent
