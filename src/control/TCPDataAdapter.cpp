@@ -190,13 +190,15 @@ void TCPDataAdapter::initializePort(int portIndex)
 
 void TCPDataAdapter::onSyncTimer()
 {
+    // ✅ 2026-04-08 [Phase 7.48.88.89]: 只同步已启动且已连接的端口
+    // 原因：遍历所有8端口会向未初始化的端口写寄存器，产生大量WARNING日志
     for (int i = 0; i < 8; i++) {
-        if (m_modbusSlaves[i]) {
+        if (m_modbusSlaves[i] && m_modbusSlaves[i]->isConnected()) {
             syncDiscreteInputs(i);
             syncInputRegisters(i);
             emit syncCompleted(i);
         }
-        if (m_s7Servers[i]) {
+        if (m_s7Servers[i] && m_s7Servers[i]->property("isConnected").toBool()) {
             syncS7DB1(i);
         }
     }
@@ -215,12 +217,16 @@ bool TCPDataAdapter::startPortServices(int portIndex)
 
     bool success = true;
 
-    // ✅ 2026-04-07 [Phase 7.48.88.88]: 调整初始化顺序
-    // 先启动服务器（connectDevice），再初始化寄存器空间
-    // 原因：QModbusTcpServer的setMap在未连接状态下可能不完全生效，
-    //       导致输入寄存器从35开始设置失败
+    // ✅ 2026-04-08 [Phase 7.48.88.89]: 调整初始化顺序
+    // 必须先初始化寄存器空间（setMap），再启动服务器（connectDevice）
+    // 原因：Qt QModbusTcpServer要求setMap在connectDevice之前调用，
+    //       否则寄存器空间不完整导致所有setData失败
+    // 同时S7的registerDB也必须在startServer之前调用
 
-    // 启动Modbus从站
+    // 1) 先初始化寄存器/数据块空间
+    initializePort(portIndex);
+
+    // 2) 再启动服务器
     if (m_modbusSlaves[portIndex]) {
         if (!m_modbusSlaves[portIndex]->startServer()) {
             qWarning() << "[TCPDataAdapter] 端口" << portIndex << "Modbus从站启动失败";
@@ -230,7 +236,6 @@ bool TCPDataAdapter::startPortServices(int portIndex)
         }
     }
 
-    // 启动S7服务器
     if (m_s7Servers[portIndex]) {
         if (!m_s7Servers[portIndex]->startServer()) {
             qWarning() << "[TCPDataAdapter] 端口" << portIndex << "S7服务器启动失败";
@@ -240,10 +245,7 @@ bool TCPDataAdapter::startPortServices(int portIndex)
         }
     }
 
-    // 连接后初始化寄存器空间
-    initializePort(portIndex);
-
-    // 确保同步已启用
+    // 3) 确保同步已启用
     if (!m_syncEnabled) {
         setSyncEnabled(true);
     }

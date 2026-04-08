@@ -120,11 +120,12 @@ bool ModbusTCPSlaveController::setHoldingRegister(int address, int value)
     unit.setValue(0, static_cast<quint16>(value));
 
     if (!m_modbusServer->setData(unit)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 设置保持寄存器失败:" << address;
+        // ✅ 2026-04-08 [Phase 7.48.88.89]: 降级为静默失败，避免同步周期内大量WARNING刷屏
+        // qWarning() << "❌ [ModbusTCPSlaveController] 设置保持寄存器失败:" << address;
         return false;
     }
 
-    qDebug() << "✅ [ModbusTCPSlaveController] 设置保持寄存器:" << address << "值:" << value;
+    // ✅ 2026-04-08 [Phase 7.48.88.89]: 移除逐条DEBUG日志，300+寄存器×10Hz=3000条/秒
     return true;
 }
 
@@ -137,7 +138,6 @@ int ModbusTCPSlaveController::getHoldingRegister(int address)
 
     quint16 value = 0;
     if (!m_modbusServer->data(QModbusDataUnit::HoldingRegisters, address, &value)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 获取保持寄存器失败:" << address;
         return 0;
     }
 
@@ -161,11 +161,9 @@ bool ModbusTCPSlaveController::setHoldingRegisters(int startAddress, const QList
     }
 
     if (!m_modbusServer->setData(unit)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 设置多个保持寄存器失败:" << startAddress;
         return false;
     }
 
-    qDebug() << "✅ [ModbusTCPSlaveController] 设置多个保持寄存器:" << startAddress << "数量:" << values.size();
     return true;
 }
 
@@ -201,11 +199,10 @@ bool ModbusTCPSlaveController::setInputRegister(int address, int value)
     unit.setValue(0, static_cast<quint16>(value));
 
     if (!m_modbusServer->setData(unit)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 设置输入寄存器失败:" << address;
+        // ✅ 2026-04-08 [Phase 7.48.88.89]: 静默失败
         return false;
     }
 
-    qDebug() << "✅ [ModbusTCPSlaveController] 设置输入寄存器:" << address << "值:" << value;
     return true;
 }
 
@@ -218,7 +215,6 @@ int ModbusTCPSlaveController::getInputRegister(int address)
 
     quint16 value = 0;
     if (!m_modbusServer->data(QModbusDataUnit::InputRegisters, address, &value)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 获取输入寄存器失败:" << address;
         return 0;
     }
 
@@ -242,11 +238,9 @@ bool ModbusTCPSlaveController::setInputRegisters(int startAddress, const QList<i
     }
 
     if (!m_modbusServer->setData(unit)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 设置多个输入寄存器失败:" << startAddress;
         return false;
     }
 
-    qDebug() << "✅ [ModbusTCPSlaveController] 设置多个输入寄存器:" << startAddress << "数量:" << values.size();
     return true;
 }
 
@@ -282,11 +276,10 @@ bool ModbusTCPSlaveController::setCoil(int address, bool value)
     unit.setValue(0, value ? 1 : 0);
 
     if (!m_modbusServer->setData(unit)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 设置线圈失败:" << address;
+        // ✅ 2026-04-08 [Phase 7.48.88.89]: 静默失败
         return false;
     }
 
-    qDebug() << "✅ [ModbusTCPSlaveController] 设置线圈:" << address << "值:" << value;
     return true;
 }
 
@@ -299,7 +292,6 @@ bool ModbusTCPSlaveController::getCoil(int address)
 
     quint16 value = 0;
     if (!m_modbusServer->data(QModbusDataUnit::Coils, address, &value)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 获取线圈失败:" << address;
         return false;
     }
 
@@ -323,11 +315,9 @@ bool ModbusTCPSlaveController::setCoils(int startAddress, const QList<bool> &val
     }
 
     if (!m_modbusServer->setData(unit)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 设置多个线圈失败:" << startAddress;
         return false;
     }
 
-    qDebug() << "✅ [ModbusTCPSlaveController] 设置多个线圈:" << startAddress << "数量:" << values.size();
     return true;
 }
 
@@ -363,11 +353,10 @@ bool ModbusTCPSlaveController::setDiscreteInput(int address, bool value)
     unit.setValue(0, value ? 1 : 0);
 
     if (!m_modbusServer->setData(unit)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 设置离散输入失败:" << address;
+        // ✅ 2026-04-08 [Phase 7.48.88.89]: 静默失败
         return false;
     }
 
-    qDebug() << "✅ [ModbusTCPSlaveController] 设置离散输入:" << address << "值:" << value;
     return true;
 }
 
@@ -380,7 +369,6 @@ bool ModbusTCPSlaveController::getDiscreteInput(int address)
 
     quint16 value = 0;
     if (!m_modbusServer->data(QModbusDataUnit::DiscreteInputs, address, &value)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 获取离散输入失败:" << address;
         return false;
     }
 
@@ -404,11 +392,9 @@ bool ModbusTCPSlaveController::setDiscreteInputs(int startAddress, const QList<b
     }
 
     if (!m_modbusServer->setData(unit)) {
-        qWarning() << "❌ [ModbusTCPSlaveController] 设置多个离散输入失败:" << startAddress;
         return false;
     }
 
-    qDebug() << "✅ [ModbusTCPSlaveController] 设置多个离散输入:" << startAddress << "数量:" << values.size();
     return true;
 }
 
@@ -474,7 +460,11 @@ void ModbusTCPSlaveController::clearAllRegisters()
 // ========== 私有槽函数 ==========
 void ModbusTCPSlaveController::handleStateChanged(QModbusDevice::State state)
 {
-    qDebug() << "✅ [ModbusTCPSlaveController] 状态变化:" << state;
+    // ✅ 2026-04-08 [Phase 7.48.88.89]: 仅在连接/断开时打印，减少日志
+    if (state == QModbusDevice::ConnectedState || state == QModbusDevice::UnconnectedState) {
+        qDebug() << "[ModbusTCPSlaveController] 状态:" << (state == QModbusDevice::ConnectedState ? "已连接" : "已断开")
+                 << "端口:" << m_port;
+    }
     updateStatusText();
     emit isConnectedChanged();
 }
@@ -489,9 +479,7 @@ void ModbusTCPSlaveController::handleErrorOccurred(QModbusDevice::Error error)
 // ✅ 2026-02-08 [Phase 7.42]: 完善数据写入处理
 void ModbusTCPSlaveController::handleDataWritten(QModbusDataUnit::RegisterType table, int address, int size)
 {
-    qDebug() << "✅ [ModbusTCPSlaveController] 数据写入 - 表:" << table << "地址:" << address << "大小:" << size;
-
-    // 发送数据写入信号，获取实际值
+    // ✅ 2026-04-08 [Phase 7.48.88.89]: 移除逐次日志，仅处理信号转发
     if (table == QModbusDataUnit::HoldingRegisters) {
         for (int i = 0; i < size; ++i) {
             int value = getHoldingRegister(address + i);
