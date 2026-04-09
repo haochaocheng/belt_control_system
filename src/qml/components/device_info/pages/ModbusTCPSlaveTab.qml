@@ -24,10 +24,31 @@ Rectangle {
     signal requestFocusParamIndex(int paramIndex)
 
     // ========== 参数数据 ==========
-    property int portNumber: currentPort ? currentPort.port : 502
-    property bool isEnabled: false
-    property int slaveAddress: 1
-    property int maxConnections: 5
+    // ✅ 2026-04-09: 问题2修复——参数从后端读取实际配置值
+    property int portNumber: {
+        if (typeof tcpDataAdapter !== "undefined") {
+            return tcpDataAdapter.getModbusSlavePort(root.portIndex)
+        }
+        return currentPort ? currentPort.port : 502
+    }
+    property bool isEnabled: {
+        if (typeof tcpDataAdapter !== "undefined") {
+            return tcpDataAdapter.isPortRunning(root.portIndex)
+        }
+        return false
+    }
+    property int slaveAddress: {
+        if (typeof tcpDataAdapter !== "undefined") {
+            return tcpDataAdapter.getModbusSlaveAddress(root.portIndex)
+        }
+        return 1
+    }
+    property int maxConnections: {
+        if (typeof tcpDataAdapter !== "undefined") {
+            return tcpDataAdapter.getModbusMaxConnections(root.portIndex)
+        }
+        return 5
+    }
     property int holdingRegisterCount: 100
     property int inputRegisterCount: 100
     property int coilCount: 100
@@ -57,14 +78,17 @@ Rectangle {
 
     // ✅ 2026-04-08 [Phase 7.48.88.94]: 数据视图键盘导航（类别切换+滚动）
     function handleDataViewKey(direction) {
+        console.log("🔍 [ModbusTCPSlaveTab.handleDataViewKey]", direction, "viewMode:", root.viewMode, "mapCategory:", root.mapCategory)
         if (root.viewMode !== 1) return false
         var scrollStep = 84  // 3行 × 28px
         switch(direction) {
         case "Left":
             root.mapCategory = (root.mapCategory - 1 + 4) % 4
+            console.log("🔍 [ModbusTCPSlaveTab] Left → mapCategory:", root.mapCategory)
             return true
         case "Right":
             root.mapCategory = (root.mapCategory + 1) % 4
+            console.log("🔍 [ModbusTCPSlaveTab] Right → mapCategory:", root.mapCategory)
             return true
         case "Down":
             if (dataScrollView.contentHeight > dataScrollView.height) {
@@ -105,6 +129,19 @@ Rectangle {
         onTriggered: root.loadMapData()
     }
 
+    // ✅ 2026-04-09: 问题2修复——定时刷新端口运行状态，使状态字段和参数保持同步
+    Timer {
+        id: statusRefreshTimer
+        interval: 2000  // 2秒刷新一次
+        running: true
+        repeat: true
+        onTriggered: {
+            if (typeof tcpDataAdapter !== "undefined") {
+                root.isEnabled = tcpDataAdapter.isPortRunning(root.portIndex)
+            }
+        }
+    }
+
     // ✅ 2026-02-08 [Phase 7.42.13]: 重构虚拟键盘支持
     function triggerParamInput(index) {
         console.log("✅ [ModbusTCPSlaveTab] triggerParamInput:", index)
@@ -116,8 +153,16 @@ Rectangle {
             inputField = portNumberField
             break
         case 1:  // 状态（CustomComboBox）
-            console.log("✅ [ModbusTCPSlaveTab] 切换状态")
-            statusField.currentIndex = (statusField.currentIndex + 1) % statusField.model.length
+            // ✅ 2026-04-09: 问题2修复——按Enter键实际启停端口服务
+            console.log("✅ [ModbusTCPSlaveTab] 切换状态 → 实际启停端口")
+            if (typeof tcpDataAdapter !== "undefined") {
+                if (root.isEnabled) {
+                    tcpDataAdapter.stopPortServices(root.portIndex)
+                } else {
+                    tcpDataAdapter.startPortServices(root.portIndex)
+                }
+            }
+            // 旧：statusField.currentIndex = (statusField.currentIndex + 1) % statusField.model.length  // 2026-04-09 改为实际启停
             return
         case 2:  // 从站地址（CustomSpinBox）
             inputField = slaveAddressField
@@ -155,9 +200,17 @@ Rectangle {
     function handleEnterKey() {
         console.log("✅ [ModbusTCPSlaveTab] handleEnterKey - focusParamIndex:", focusParamIndex)
 
-        // 如果是 ComboBox，切换选项
+        // 如果是 ComboBox，启停端口
         if (focusParamIndex === 1) {  // 状态（ComboBox）
-            statusField.currentIndex = (statusField.currentIndex + 1) % statusField.model.length
+            // ✅ 2026-04-09: 问题2修复——按Enter键实际启停端口服务
+            if (typeof tcpDataAdapter !== "undefined") {
+                if (root.isEnabled) {
+                    tcpDataAdapter.stopPortServices(root.portIndex)
+                } else {
+                    tcpDataAdapter.startPortServices(root.portIndex)
+                }
+            }
+            // 旧：statusField.currentIndex = (statusField.currentIndex + 1) % statusField.model.length  // 2026-04-09
             return true  // 已处理，不需要弹出虚拟键盘
         }
 
@@ -265,7 +318,13 @@ Rectangle {
                     from: 1
                     to: 65535
                     value: root.portNumber
-                    onValueChanged: root.portNumber = value
+                    // ✅ 2026-04-09: 问题2修复——写回后端
+                    onValueChanged: {
+                        root.portNumber = value
+                        if (typeof tcpDataAdapter !== "undefined") {
+                            tcpDataAdapter.setModbusSlavePort(root.portIndex, value)
+                        }
+                    }
                 }
 
                 MouseArea {
@@ -312,8 +371,9 @@ Rectangle {
                     id: statusField
                     anchors.fill: parent
                     model: ["关闭", "打开"]
+                    // ✅ 2026-04-09: 问题2修复——状态显示后端实际运行状态（只读）
                     currentIndex: root.isEnabled ? 1 : 0
-                    onCurrentIndexChanged: root.isEnabled = (currentIndex === 1)
+                    // 旧：onCurrentIndexChanged: root.isEnabled = (currentIndex === 1)  // 2026-04-09 状态由后端控制，不允许直接切换
                 }
 
                 MouseArea {
@@ -364,7 +424,13 @@ Rectangle {
                     from: 1
                     to: 247
                     value: root.slaveAddress
-                    onValueChanged: root.slaveAddress = value
+                    // ✅ 2026-04-09: 问题2修复——写回后端
+                    onValueChanged: {
+                        root.slaveAddress = value
+                        if (typeof tcpDataAdapter !== "undefined") {
+                            tcpDataAdapter.setModbusSlaveAddress(root.portIndex, value)
+                        }
+                    }
                 }
 
                 MouseArea {
@@ -420,7 +486,13 @@ Rectangle {
                         from: 1
                         to: 100
                         value: root.maxConnections
-                        onValueChanged: root.maxConnections = value
+                        // ✅ 2026-04-09: 问题2修复——写回后端
+                        onValueChanged: {
+                            root.maxConnections = value
+                            if (typeof tcpDataAdapter !== "undefined") {
+                                tcpDataAdapter.setModbusMaxConnections(root.portIndex, value)
+                            }
+                        }
                     }
 
                     Text {

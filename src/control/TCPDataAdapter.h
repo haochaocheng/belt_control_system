@@ -95,6 +95,15 @@ public:
     // ✅ 2026-04-07 [Phase 7.48.88.86]: 自动启动（初始化端口0 + 启动同步）
     Q_INVOKABLE void autoStart();
 
+    // ✅ 2026-04-09: 问题2修复——暴露端口配置读写方法供QML参数配置区使用
+    Q_INVOKABLE int getModbusSlavePort(int portIndex) const;
+    Q_INVOKABLE void setModbusSlavePort(int portIndex, int port);
+    Q_INVOKABLE int getModbusSlaveAddress(int portIndex) const;
+    Q_INVOKABLE void setModbusSlaveAddress(int portIndex, int address);
+    Q_INVOKABLE int getModbusMaxConnections(int portIndex) const;
+    Q_INVOKABLE void setModbusMaxConnections(int portIndex, int max);
+    Q_INVOKABLE QString getPortStatusText(int portIndex) const;
+
 signals:
     void syncIntervalChanged();
     void syncEnabledChanged();

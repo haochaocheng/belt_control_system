@@ -331,6 +331,62 @@ void TCPDataAdapter::autoStart()
     startPortServices(0);
 }
 
+// ✅ 2026-04-09: 问题2修复——端口配置读写方法，供QML参数配置区实际应用到后端
+
+int TCPDataAdapter::getModbusSlavePort(int portIndex) const
+{
+    if (portIndex < 0 || portIndex >= 8 || !m_modbusSlaves[portIndex]) return 502 + portIndex;
+    return m_modbusSlaves[portIndex]->port();
+}
+
+void TCPDataAdapter::setModbusSlavePort(int portIndex, int port)
+{
+    if (portIndex < 0 || portIndex >= 8 || !m_modbusSlaves[portIndex]) return;
+    m_modbusSlaves[portIndex]->setPort(port);
+    qDebug() << "[TCPDataAdapter] 端口" << portIndex << "Modbus从站端口号设为:" << port;
+}
+
+int TCPDataAdapter::getModbusSlaveAddress(int portIndex) const
+{
+    if (portIndex < 0 || portIndex >= 8 || !m_modbusSlaves[portIndex]) return 1;
+    return m_modbusSlaves[portIndex]->slaveAddress();
+}
+
+void TCPDataAdapter::setModbusSlaveAddress(int portIndex, int address)
+{
+    if (portIndex < 0 || portIndex >= 8 || !m_modbusSlaves[portIndex]) return;
+    m_modbusSlaves[portIndex]->setSlaveAddress(address);
+    qDebug() << "[TCPDataAdapter] 端口" << portIndex << "Modbus从站地址设为:" << address;
+}
+
+int TCPDataAdapter::getModbusMaxConnections(int portIndex) const
+{
+    if (portIndex < 0 || portIndex >= 8 || !m_modbusSlaves[portIndex]) return 5;
+    return m_modbusSlaves[portIndex]->maxConnections();
+}
+
+void TCPDataAdapter::setModbusMaxConnections(int portIndex, int max)
+{
+    if (portIndex < 0 || portIndex >= 8 || !m_modbusSlaves[portIndex]) return;
+    m_modbusSlaves[portIndex]->setMaxConnections(max);
+    qDebug() << "[TCPDataAdapter] 端口" << portIndex << "Modbus从站最大连接数设为:" << max;
+}
+
+QString TCPDataAdapter::getPortStatusText(int portIndex) const
+{
+    if (portIndex < 0 || portIndex >= 8) return "无效端口";
+
+    bool modbusRunning = m_modbusSlaves[portIndex] &&
+                         m_modbusSlaves[portIndex]->isConnected();
+    bool s7Running = m_s7Servers[portIndex] &&
+                     m_s7Servers[portIndex]->property("isConnected").toBool();
+
+    if (modbusRunning && s7Running) return "Modbus+S7 运行中";
+    if (modbusRunning) return "Modbus 运行中";
+    if (s7Running) return "S7 运行中";
+    return "未启动";
+}
+
 // ===== 离散输入同步（10001+ / 只读） =====
 
 void TCPDataAdapter::syncDiscreteInputs(int portIndex)

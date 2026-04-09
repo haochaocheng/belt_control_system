@@ -102,13 +102,34 @@ Rectangle {
     }
 
     // ✅ 2026-04-08 [Phase 7.48.88.94]: 数据视图模式下，方向键委托给Tab处理（类别切换+滚动）
+    // ✅ 2026-04-08 [Phase 7.48.88.95]: 添加调试日志，修复viewMode检查
     function tryDataViewNavigation(direction) {
-        if (focusSubArea !== 2 || focusParamIndex < 0) return false
-        if (!tcpConfigPanel.item) return false
+        console.log("🔍 [tryDataViewNavigation]", direction, "focusSubArea:", focusSubArea, "focusParamIndex:", focusParamIndex)
+        if (focusSubArea !== 2 || focusParamIndex < 0) {
+            console.log("🔍 [tryDataViewNavigation] SKIP: focusSubArea !== 2 || focusParamIndex < 0")
+            return false
+        }
+        if (!tcpConfigPanel.item) {
+            console.log("🔍 [tryDataViewNavigation] SKIP: no tcpConfigPanel.item")
+            return false
+        }
         var currentTab = tcpConfigPanel.item.getCurrentTabItem()
-        if (!currentTab || typeof currentTab.handleDataViewKey !== "function") return false
-        if (!currentTab.viewMode || currentTab.viewMode !== 1) return false
-        return currentTab.handleDataViewKey(direction)
+        if (!currentTab) {
+            console.log("🔍 [tryDataViewNavigation] SKIP: no currentTab")
+            return false
+        }
+        if (typeof currentTab.handleDataViewKey !== "function") {
+            console.log("🔍 [tryDataViewNavigation] SKIP: handleDataViewKey not a function")
+            return false
+        }
+        console.log("🔍 [tryDataViewNavigation] currentTab.viewMode:", currentTab.viewMode)
+        if (currentTab.viewMode !== 1) {
+            console.log("🔍 [tryDataViewNavigation] SKIP: viewMode !== 1")
+            return false
+        }
+        var result = currentTab.handleDataViewKey(direction)
+        console.log("🔍 [tryDataViewNavigation] handleDataViewKey result:", result)
+        return result
     }
 
     function handleEnterKey() {
@@ -467,9 +488,10 @@ Rectangle {
         }
 
         // 底部：按钮区域
+        // ✅ 2026-04-09: 问题5修复——合并为单个切换按钮，减少占用空间
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 90
+            Layout.preferredHeight: 60
             color: "#1a1f2e"
 
             Rectangle {
@@ -480,66 +502,72 @@ Rectangle {
                 opacity: 0.3
             }
 
-            ColumnLayout {
+            RowLayout {
                 anchors.fill: parent
                 anchors.margins: 10
                 spacing: 10
 
-                // 第一行：打开连接、关闭连接
-                RowLayout {
+                // 单个切换按钮：根据端口运行状态显示不同文字和颜色
+                Button {
+                    id: toggleConnectionBtn
                     Layout.fillWidth: true
-                    spacing: 10
+                    Layout.preferredHeight: 40
 
-                    Button {
-                        text: "打开连接"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
-
-                        background: Rectangle {
-                            color: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? "#2ecc71" : "#27ae60"
-                            radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? 5 : 0
-                            border.color: "#2196F3"
+                    property bool portRunning: {
+                        if (typeof tcpDataAdapter !== "undefined") {
+                            return tcpDataAdapter.isPortRunning(root.currentPortIndex)
                         }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: triggerButton(0)
+                        return false
                     }
 
-                    Button {
-                        text: "关闭连接"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 35
+                    text: portRunning ? "关闭连接" : "打开连接"
 
-                        background: Rectangle {
-                            color: root.focusSubArea === 3 && root.focusButtonIndex === 1 ? "#e74c3c" : "#c0392b"
-                            radius: 4
-                            border.width: root.focusSubArea === 3 && root.focusButtonIndex === 1 ? 5 : 0
-                            border.color: "#2196F3"
+                    background: Rectangle {
+                        color: {
+                            var hasFocus = root.focusSubArea === 3 && root.focusButtonIndex === 0
+                            if (toggleConnectionBtn.portRunning) {
+                                return hasFocus ? "#e74c3c" : "#c0392b"  // 运行中 → 红色（关闭）
+                            } else {
+                                return hasFocus ? "#2ecc71" : "#27ae60"  // 未运行 → 绿色（打开）
+                            }
                         }
+                        radius: 4
+                        border.width: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? 5 : 0
+                        border.color: "#2196F3"
+                    }
 
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
+                    contentItem: Text {
+                        text: parent.text
+                        font.pixelSize: 16
+                        font.bold: true
+                        color: "white"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onClicked: {
+                        if (toggleConnectionBtn.portRunning) {
+                            triggerButton(1)  // 关闭
+                        } else {
+                            triggerButton(0)  // 打开
                         }
+                    }
 
-                        onClicked: triggerButton(1)
+                    // 定时刷新端口状态
+                    Timer {
+                        interval: 1000
+                        running: true
+                        repeat: true
+                        onTriggered: {
+                            toggleConnectionBtn.portRunning = Qt.binding(function() {
+                                if (typeof tcpDataAdapter !== "undefined") {
+                                    return tcpDataAdapter.isPortRunning(root.currentPortIndex)
+                                }
+                                return false
+                            })
+                        }
                     }
                 }
-
-                // 旧：第二行：保存、删除、重置  // 2026-03-18 [Phase 7.48.55] 删除，不需要
             }
         }
     }

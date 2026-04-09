@@ -385,7 +385,8 @@ QtObject {
 
         case "Right":
             // 右键：向右移动
-            if (buttonIndex < 2) {
+            // 旧：if (buttonIndex < 2) {  // 2026-04-09 底部按钮合并为1个，不需要左右切换
+            if (buttonIndex < 0) {  // ✅ 2026-04-09: 只有1个切换按钮，不需要右移
                 newIndex = buttonIndex + 1
             }
             break

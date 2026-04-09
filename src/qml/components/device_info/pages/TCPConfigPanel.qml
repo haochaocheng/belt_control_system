@@ -91,7 +91,8 @@ Rectangle {
                 model: ["Modbus主站", "Modbus从站", "S7主站", "S7从站"]
 
                 Rectangle {
-                    width: 110
+                    // 旧：width: 110  // 2026-04-09 问题4：Tab按钮宽度增加1.3倍
+                    width: 143
                     height: 50
                     color: "transparent"
 
@@ -125,12 +126,11 @@ Rectangle {
                         anchors.bottom: parent.bottom
                     }
 
+                    // ✅ 2026-04-09: 问题3+4修复——文字居中显示，避免S7文字被背景图片遮挡
                     Text {
                         text: modelData
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.left: parent.left
-                        anchors.leftMargin: 15
-                        font.pixelSize: 13
+                        anchors.centerIn: parent
+                        font.pixelSize: 14
                         font.weight: root.currentTabIndex === index ? Font.Bold : Font.Normal
                         color: root.currentTabIndex === index ? "#E0E0E0" : "#9E9E9E"
                     }
@@ -147,10 +147,105 @@ Rectangle {
         }
     }
 
+    // ========== 连接状态栏 ==========
+    // ✅ 2026-04-09: 问题1修复——添加端口连接状态显示，区分主站/从站
+    Rectangle {
+        id: connectionStatusBar
+        anchors.top: tabBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 36
+        color: "#1a2033"
+        border.color: "#3d4556"
+        border.width: 1
+
+        Row {
+            anchors.fill: parent
+            anchors.leftMargin: 15
+            anchors.rightMargin: 15
+            spacing: 12
+
+            // 运行状态指示灯
+            Rectangle {
+                id: statusDot
+                width: 10
+                height: 10
+                radius: 5
+                anchors.verticalCenter: parent.verticalCenter
+                color: {
+                    if (typeof tcpDataAdapter !== "undefined" && tcpDataAdapter.isPortRunning(root.currentPortIndex)) {
+                        return "#4CAF50"  // 绿色 = 运行中
+                    }
+                    return "#757575"  // 灰色 = 未启动
+                }
+            }
+
+            // 连接状态文字
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                font.pixelSize: 13
+                color: {
+                    if (typeof tcpDataAdapter !== "undefined" && tcpDataAdapter.isPortRunning(root.currentPortIndex)) {
+                        return "#4CAF50"
+                    }
+                    return "#9E9E9E"
+                }
+                text: {
+                    var isRunning = (typeof tcpDataAdapter !== "undefined" && tcpDataAdapter.isPortRunning(root.currentPortIndex))
+                    if (!isRunning) return "未启动"
+
+                    switch(root.currentTabIndex) {
+                    case 0:  // Modbus主站
+                        return "Modbus主站 · 运行中 · 轮询目标设备"
+                    case 1:  // Modbus从站
+                        return "Modbus从站 · 监听中 · 等待外部设备连接"
+                    case 2:  // S7主站
+                        return "S7主站 · 运行中 · 连接目标PLC"
+                    case 3:  // S7从站
+                        return "S7从站 · 监听中 · 等待PLC连接"
+                    default:
+                        return "运行中"
+                    }
+                }
+            }
+
+            // 右侧：端口信息
+            Item {
+                Layout.fillWidth: true
+                width: parent.width - statusDot.width - 300
+                height: parent.height
+
+                Text {
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.pixelSize: 12
+                    color: "#757575"
+                    text: "端口 " + (root.currentPortIndex + 1) + " · Port " + (502 + root.currentPortIndex)
+                }
+            }
+        }
+
+        // 定时刷新状态（每2秒）
+        Timer {
+            interval: 2000
+            running: true
+            repeat: true
+            onTriggered: {
+                // 触发重新评估绑定
+                statusDot.color = Qt.binding(function() {
+                    if (typeof tcpDataAdapter !== "undefined" && tcpDataAdapter.isPortRunning(root.currentPortIndex)) {
+                        return "#4CAF50"
+                    }
+                    return "#757575"
+                })
+            }
+        }
+    }
+
     // ========== 内容区域 ==========
     Rectangle {
         id: contentArea
-        anchors.top: tabBar.bottom
+        anchors.top: connectionStatusBar.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
