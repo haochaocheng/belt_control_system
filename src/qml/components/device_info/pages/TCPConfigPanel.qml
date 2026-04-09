@@ -149,6 +149,7 @@ Rectangle {
 
     // ========== 连接状态栏 ==========
     // ✅ 2026-04-09: 问题1修复——添加端口连接状态显示，区分主站/从站
+    // ✅ 2026-04-09: 修复状态文字硬编码问题——改为读取后端实际状态
     Rectangle {
         id: connectionStatusBar
         anchors.top: tabBar.bottom
@@ -158,6 +159,10 @@ Rectangle {
         color: "#1a2033"
         border.color: "#3d4556"
         border.width: 1
+
+        // 定时刷新的状态缓存属性
+        property bool portRunning: false
+        property string portStatus: "未启动"
 
         Row {
             anchors.fill: parent
@@ -172,47 +177,21 @@ Rectangle {
                 height: 10
                 radius: 5
                 anchors.verticalCenter: parent.verticalCenter
-                color: {
-                    if (typeof tcpDataAdapter !== "undefined" && tcpDataAdapter.isPortRunning(root.currentPortIndex)) {
-                        return "#4CAF50"  // 绿色 = 运行中
-                    }
-                    return "#757575"  // 灰色 = 未启动
-                }
+                color: connectionStatusBar.portRunning ? "#4CAF50" : "#757575"
             }
 
             // 连接状态文字
             Text {
+                id: statusText
                 anchors.verticalCenter: parent.verticalCenter
                 font.pixelSize: 13
-                color: {
-                    if (typeof tcpDataAdapter !== "undefined" && tcpDataAdapter.isPortRunning(root.currentPortIndex)) {
-                        return "#4CAF50"
-                    }
-                    return "#9E9E9E"
-                }
-                text: {
-                    var isRunning = (typeof tcpDataAdapter !== "undefined" && tcpDataAdapter.isPortRunning(root.currentPortIndex))
-                    if (!isRunning) return "未启动"
-
-                    switch(root.currentTabIndex) {
-                    case 0:  // Modbus主站
-                        return "Modbus主站 · 运行中 · 轮询目标设备"
-                    case 1:  // Modbus从站
-                        return "Modbus从站 · 监听中 · 等待外部设备连接"
-                    case 2:  // S7主站
-                        return "S7主站 · 运行中 · 连接目标PLC"
-                    case 3:  // S7从站
-                        return "S7从站 · 监听中 · 等待PLC连接"
-                    default:
-                        return "运行中"
-                    }
-                }
+                color: connectionStatusBar.portRunning ? "#4CAF50" : "#9E9E9E"
+                text: connectionStatusBar.portStatus
             }
 
             // 右侧：端口信息
             Item {
-                Layout.fillWidth: true
-                width: parent.width - statusDot.width - 300
+                width: parent.width - statusDot.width - statusText.width - 36
                 height: parent.height
 
                 Text {
@@ -230,15 +209,34 @@ Rectangle {
             interval: 2000
             running: true
             repeat: true
-            onTriggered: {
-                // 触发重新评估绑定
-                statusDot.color = Qt.binding(function() {
-                    if (typeof tcpDataAdapter !== "undefined" && tcpDataAdapter.isPortRunning(root.currentPortIndex)) {
-                        return "#4CAF50"
-                    }
-                    return "#757575"
-                })
+            onTriggered: refreshStatus()
+        }
+
+        // 端口切换或Tab切换时也刷新
+        Connections {
+            target: root
+            function onCurrentPortIndexChanged() { connectionStatusBar.refreshStatus() }
+            function onCurrentTabIndexChanged() { connectionStatusBar.refreshStatus() }
+        }
+
+        Component.onCompleted: refreshStatus()
+
+        function refreshStatus() {
+            if (typeof tcpDataAdapter === "undefined") {
+                portRunning = false
+                portStatus = "未启动"
+                return
             }
+
+            portRunning = tcpDataAdapter.isPortRunning(root.currentPortIndex)
+            portStatus = tcpDataAdapter.getPortStatusText(root.currentPortIndex)
+
+            if (!portRunning) return
+
+            // 追加Tab类型说明
+            var tabNames = ["Modbus主站", "Modbus从站", "S7主站", "S7从站"]
+            var tabName = tabNames[root.currentTabIndex] || ""
+            portStatus = tabName + " · " + portStatus
         }
     }
 

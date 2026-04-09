@@ -317,7 +317,8 @@ bool TCPDataAdapter::isPortRunning(int portIndex) const
 
     // 检查S7服务器是否连接
     if (m_s7Servers[portIndex]) {
-        if (m_s7Servers[portIndex]->property("isConnected").toBool()) {
+        // 旧：if (m_s7Servers[portIndex]->property("isConnected").toBool()) {  // 2026-04-09 BUG: S7ServerController没有isConnected属性，只有isRunning
+        if (m_s7Servers[portIndex]->property("isRunning").toBool()) {
             return true;
         }
     }
@@ -378,8 +379,9 @@ QString TCPDataAdapter::getPortStatusText(int portIndex) const
 
     bool modbusRunning = m_modbusSlaves[portIndex] &&
                          m_modbusSlaves[portIndex]->isConnected();
+    // 旧：bool s7Running = ... ->property("isConnected")...  // 2026-04-09 修正属性名
     bool s7Running = m_s7Servers[portIndex] &&
-                     m_s7Servers[portIndex]->property("isConnected").toBool();
+                     m_s7Servers[portIndex]->property("isRunning").toBool();
 
     if (modbusRunning && s7Running) return "Modbus+S7 运行中";
     if (modbusRunning) return "Modbus 运行中";

@@ -807,17 +807,24 @@ Rectangle {
                 spacing: 8
 
                 // ========== 映射类别切换 ==========
+                // ✅ 2026-04-09: 问题2修复——区分只读状态区和可写控制区
                 Row {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
-                    spacing: 8
+                    spacing: 6
                     Layout.topMargin: 5
 
                     Repeater {
-                        model: ["离散输入(1x)", "输入寄存器(3x)", "线圈(0x)", "保持寄存器(4x)"]
+                        // 格式: [显示名, 读写标记]
+                        model: [
+                            { label: "离散输入(1x)", rw: "只读" },
+                            { label: "输入寄存器(3x)", rw: "只读" },
+                            { label: "线圈(0x)", rw: "读写" },
+                            { label: "保持寄存器(4x)", rw: "读写" }
+                        ]
 
                         Rectangle {
-                            width: 140
+                            width: 145
                             height: 32
                             radius: 4
                             color: root.mapCategory === index ? "#2196F3" : "#353b4d"
@@ -825,11 +832,32 @@ Rectangle {
                             border.color: root.focusSubArea === 2 && root.focusParamIndex >= 0 && root.mapCategory === index ? "#FF9800" : (root.mapCategory === index ? "#64B5F6" : "#4a5068")
                             border.width: root.focusSubArea === 2 && root.focusParamIndex >= 0 && root.mapCategory === index ? 3 : 1
 
-                            Text {
+                            Row {
                                 anchors.centerIn: parent
-                                text: modelData
-                                font.pixelSize: 13
-                                color: root.mapCategory === index ? "#FFFFFF" : "#9E9E9E"
+                                spacing: 4
+
+                                Text {
+                                    text: modelData.label
+                                    font.pixelSize: 12
+                                    color: root.mapCategory === index ? "#FFFFFF" : "#9E9E9E"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                // 读写标记
+                                Rectangle {
+                                    width: 28
+                                    height: 14
+                                    radius: 2
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: modelData.rw === "读写" ? "#FF980033" : "#4CAF5033"
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: modelData.rw
+                                        font.pixelSize: 9
+                                        color: modelData.rw === "读写" ? "#FF9800" : "#4CAF50"
+                                    }
+                                }
                             }
 
                             MouseArea {
@@ -841,6 +869,7 @@ Rectangle {
                 }
 
                 // ========== 映射表头 ==========
+                // ✅ 2026-04-09: 问题2修复——新增"访问"列区分读写
                 Rectangle {
                     Layout.fillWidth: true
                     height: 30
@@ -852,9 +881,8 @@ Rectangle {
                         anchors.leftMargin: 8
 
                         Text {
-                            width: 90
+                            width: 80
                             text: "地址"
-                            // ✅ 2026-04-08 [Phase 7.48.88.90]: 统一映射表字体大小为14px
                             font.pixelSize: 14
                             font.weight: Font.Bold
                             color: "#64B5F6"
@@ -862,7 +890,7 @@ Rectangle {
                             height: parent.height
                         }
                         Text {
-                            width: 180
+                            width: 160
                             text: "名称"
                             font.pixelSize: 14
                             font.weight: Font.Bold
@@ -871,7 +899,7 @@ Rectangle {
                             height: parent.height
                         }
                         Text {
-                            width: 70
+                            width: 60
                             text: "类型"
                             font.pixelSize: 14
                             font.weight: Font.Bold
@@ -879,7 +907,16 @@ Rectangle {
                             verticalAlignment: Text.AlignVCenter
                             height: parent.height
                         }
-                        // ✅ 2026-04-08 [Phase 7.48.88.90]: 新增当前值列
+                        Text {
+                            width: 50
+                            text: "访问"
+                            font.pixelSize: 14
+                            font.weight: Font.Bold
+                            color: "#64B5F6"
+                            verticalAlignment: Text.AlignVCenter
+                            height: parent.height
+                        }
+                        // ✅ 2026-04-08 [Phase 7.48.88.90]: 当前值列
                         Text {
                             width: 80
                             text: "当前值"
@@ -890,7 +927,7 @@ Rectangle {
                             height: parent.height
                         }
                         Text {
-                            width: parent.width - 428
+                            width: parent.width - 438
                             text: "数据来源"
                             font.pixelSize: 14
                             font.weight: Font.Bold
@@ -902,6 +939,7 @@ Rectangle {
                 }
 
                 // ========== 映射数据列表 ==========
+                // ✅ 2026-04-09: 问题2修复——新增"访问"列，区分R/W
                 Repeater {
                     model: root.currentMapData
 
@@ -915,9 +953,8 @@ Rectangle {
                             anchors.leftMargin: 8
 
                             Text {
-                                width: 90
+                                width: 80
                                 text: modelData.address || ""
-                                // ✅ 2026-04-08 [Phase 7.48.88.90]: 统一映射表字体大小为13px
                                 font.pixelSize: 13
                                 font.family: "Consolas"
                                 color: "#81D4FA"
@@ -925,7 +962,7 @@ Rectangle {
                                 height: parent.height
                             }
                             Text {
-                                width: 180
+                                width: 160
                                 text: modelData.name || ""
                                 font.pixelSize: 13
                                 color: "#E0E0E0"
@@ -934,7 +971,7 @@ Rectangle {
                                 elide: Text.ElideRight
                             }
                             Text {
-                                width: 70
+                                width: 60
                                 text: modelData.type || ""
                                 font.pixelSize: 13
                                 font.family: "Consolas"
@@ -942,7 +979,20 @@ Rectangle {
                                 verticalAlignment: Text.AlignVCenter
                                 height: parent.height
                             }
-                            // ✅ 2026-04-08 [Phase 7.48.88.90]: 新增当前值列
+                            // 访问权限列：根据mapCategory判断
+                            Text {
+                                width: 50
+                                text: {
+                                    // 离散输入(0)和输入寄存器(1)是只读，线圈(2)和保持寄存器(3)是读写
+                                    if (root.mapCategory <= 1) return "R"
+                                    return "R/W"
+                                }
+                                font.pixelSize: 12
+                                font.family: "Consolas"
+                                color: root.mapCategory <= 1 ? "#4CAF50" : "#FF9800"
+                                verticalAlignment: Text.AlignVCenter
+                                height: parent.height
+                            }
                             Text {
                                 width: 80
                                 text: modelData.value !== undefined ? String(modelData.value) : "--"
@@ -958,7 +1008,7 @@ Rectangle {
                                 height: parent.height
                             }
                             Text {
-                                width: parent.width - 428
+                                width: parent.width - 438
                                 text: modelData.source || modelData.target || modelData.description || ""
                                 font.pixelSize: 13
                                 color: "#9E9E9E"
