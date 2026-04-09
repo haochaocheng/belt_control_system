@@ -234,7 +234,8 @@ void TCPDataAdapter::onSyncTimer()
             syncInputRegisters(i);
             emit syncCompleted(i);
         }
-        if (m_s7Servers[i] && m_s7Servers[i]->property("isConnected").toBool()) {
+        // 旧：if (m_s7Servers[i] && m_s7Servers[i]->property("isConnected").toBool()) {  // 2026-04-09 BUG: S7ServerController没有isConnected属性，应该是isRunning
+        if (m_s7Servers[i] && m_s7Servers[i]->isRunning()) {
             syncS7DB1(i);
         }
     }
@@ -646,8 +647,11 @@ void TCPDataAdapter::syncS7DB1(int portIndex)
     S7ServerController *server = m_s7Servers[portIndex];
     if (!server) return;
 
-    // 构建DB1数据缓冲区 (140 bytes实际使用, 256 bytes分配)
+    // 构建DB1数据缓冲区
+    // 旧值: QByteArray db1(S7_DB1_SIZE, 0);  // 2026-04-09: S7_DB1_SIZE从256扩展到640
     QByteArray db1(S7_DB1_SIZE, 0);
+
+    // ========== 基本数据区 (Byte 0-139) ==========
 
     // Byte 0: DO输出状态 (bit0-7)
     if (m_doDataManager) {
@@ -721,7 +725,7 @@ void TCPDataAdapter::syncS7DB1(int portIndex)
         }
     }
 
-    // Byte 44-115: 浮点参数 (REAL, Big-Endian)
+    // Byte 44-115: 基本浮点参数 (REAL, Big-Endian)
     if (m_systemConfig) {
         auto writeFloat = [&](int offset, const char *propName) {
             float val = m_systemConfig->property(propName).toFloat();
@@ -761,6 +765,72 @@ void TCPDataAdapter::syncS7DB1(int portIndex)
                 }
             }
             memcpy(db1.data() + baseOffset, bytes, 8);
+        }
+    }
+
+    // ========== ✅ 2026-04-09: 扩展数据区 (Byte 140-587) ==========
+    // 与Modbus输入寄存器完全对应，确保S7从站数据与Modbus从站一致
+
+    if (m_systemConfig) {
+        auto writeFloat = [&](int offset, const char *propName) {
+            float val = m_systemConfig->property(propName).toFloat();
+            QByteArray bytes = floatToBytes(val);
+            memcpy(db1.data() + offset, bytes.constData(), 4);
+        };
+
+        // ----- Byte 140-203: 16个环境模拟量FLOAT32 (对应Modbus IR 62-93) -----
+        writeFloat(S7_DB1_ENV_START + 0,  "temperature1Value");    // 温度一
+        writeFloat(S7_DB1_ENV_START + 4,  "temperature2Value");    // 温度二
+        writeFloat(S7_DB1_ENV_START + 8,  "temperatureValue");     // 温度（环境）
+        writeFloat(S7_DB1_ENV_START + 12, "humidityValue");        // 湿度
+        writeFloat(S7_DB1_ENV_START + 16, "methaneValue");         // 甲烷
+        writeFloat(S7_DB1_ENV_START + 20, "dustValue");            // 粉尘浓度
+        writeFloat(S7_DB1_ENV_START + 24, "coalFlowValue");        // 煤流
+        writeFloat(S7_DB1_ENV_START + 28, "siloHeightValue");      // 煤仓高度
+        writeFloat(S7_DB1_ENV_START + 32, "voltageValue");         // 电压（环境）
+        writeFloat(S7_DB1_ENV_START + 36, "smokeValue");           // 烟雾
+        writeFloat(S7_DB1_ENV_START + 40, "pressureValue");        // 气压
+        writeFloat(S7_DB1_ENV_START + 44, "oxygenValue");          // 氧气
+        writeFloat(S7_DB1_ENV_START + 48, "coValue");              // 一氧化碳
+        writeFloat(S7_DB1_ENV_START + 52, "h2sValue");             // 硫化氢
+        writeFloat(S7_DB1_ENV_START + 56, "co2Value");             // 二氧化碳
+        writeFloat(S7_DB1_ENV_START + 60, "windSpeedValue");       // 风速
+
+        // ----- Byte 204-251: 电机1-2扩展Tab (对应Modbus IR 94-117) -----
+        auto writeMotorTab = [&](int offset, int motorIdx, int tabIdx) {
+            float val = static_cast<float>(
+                static_cast<SystemConfig*>(m_systemConfig)->motorProtectionValue(motorIdx, tabIdx));
+            QByteArray bytes = floatToBytes(val);
+            memcpy(db1.data() + offset, bytes.constData(), 4);
+        };
+
+        // 电机1扩展 (Byte 204-227)
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 0,  0, SystemConfig::TAB_FRONT_BEARING);  // 前轴承
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 4,  0, SystemConfig::TAB_REAR_BEARING);   // 后轴承
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 8,  0, SystemConfig::TAB_STALL);          // 堵转
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 12, 0, SystemConfig::TAB_START_TIMEOUT);  // 起动超时
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 16, 0, SystemConfig::TAB_POWER);          // 功率
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 20, 0, SystemConfig::TAB_IMBALANCE);      // 不平衡
+
+        // 电机2扩展 (Byte 228-251)
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 24, 1, SystemConfig::TAB_FRONT_BEARING);
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 28, 1, SystemConfig::TAB_REAR_BEARING);
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 32, 1, SystemConfig::TAB_STALL);
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 36, 1, SystemConfig::TAB_START_TIMEOUT);
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 40, 1, SystemConfig::TAB_POWER);
+        writeMotorTab(S7_DB1_MOTOR12_EXT_START + 44, 1, SystemConfig::TAB_IMBALANCE);
+
+        // ----- Byte 252-587: 电机3-8完整数据块 (对应Modbus IR 120-287) -----
+        // 每电机14个Tab值 × 4字节 = 56字节
+        for (int m = 2; m < SystemConfig::MOTOR_COUNT; m++) {
+            int base = S7_DB1_MOTOR_BLOCK_START + (m - 2) * S7_DB1_MOTOR_BLOCK_SIZE;
+            // Tab 1-13 (tab0无值)
+            for (int t = 1; t < SystemConfig::MOTOR_TAB_COUNT; t++) {
+                int offset = base + (t - 1) * 4;  // 每Tab占4字节(FLOAT32)
+                writeMotorTab(offset, m, t);
+            }
+            // 电压（独立，偏移52-55）— 电机3-8暂无独立电压属性，保留0
+            // db1[base+52..base+55] 已被初始化为0
         }
     }
 
@@ -1880,11 +1950,12 @@ QVariantList TCPDataAdapter::getS7DB1Map(int portIndex) const
     // 旧：Q_UNUSED(portIndex);  // 2026-04-08 [Phase 7.48.88.90] 需要portIndex读取当前值
     QVariantList map;
 
-    // ✅ 2026-04-08 [Phase 7.48.88.90]: 读取DB1完整数据块用于获取当前值
+    // ✅ 2026-04-09: 读取DB1完整数据块（扩展到640字节）
     QByteArray dbData;
     bool hasData = false;
     if (portIndex >= 0 && portIndex < 8 && m_s7Servers[portIndex]) {
-        dbData = m_s7Servers[portIndex]->getDBData(1, 0, 140);
+        // 旧值: dbData = m_s7Servers[portIndex]->getDBData(1, 0, 140);  // 2026-04-09 扩展到S7_DB1_SIZE
+        dbData = m_s7Servers[portIndex]->getDBData(1, 0, S7_DB1_SIZE);
         hasData = !dbData.isEmpty();
     }
 
@@ -1920,6 +1991,7 @@ QVariantList TCPDataAdapter::getS7DB1Map(int portIndex) const
         map.append(entry);
     };
 
+    // ===== 基本数据区 (Byte 0-139) =====
     addEntry(0, 1, "DO输出状态", "BYTE");
     addEntry(1, 1, "DI反馈状态", "BYTE");
     addEntry(2, 1, "DI模块1", "BYTE");
@@ -1948,6 +2020,53 @@ QVariantList TCPDataAdapter::getS7DB1Map(int portIndex) const
     addEntry(116, 8, "沿线急停64点", "64×BOOL");
     addEntry(124, 8, "沿线跑偏64点", "64×BOOL");
     addEntry(132, 8, "沿线撕裂64点", "64×BOOL");
+
+    // ===== ✅ 2026-04-09: 扩展数据区 =====
+
+    // 环境模拟量 (Byte 140-203)
+    addEntry(140, 4, "温度一", "REAL");
+    addEntry(144, 4, "温度二", "REAL");
+    addEntry(148, 4, "温度（环境）", "REAL");
+    addEntry(152, 4, "湿度", "REAL");
+    addEntry(156, 4, "甲烷", "REAL");
+    addEntry(160, 4, "粉尘浓度", "REAL");
+    addEntry(164, 4, "煤流", "REAL");
+    addEntry(168, 4, "煤仓高度", "REAL");
+    addEntry(172, 4, "电压（环境）", "REAL");
+    addEntry(176, 4, "烟雾", "REAL");
+    addEntry(180, 4, "气压", "REAL");
+    addEntry(184, 4, "氧气", "REAL");
+    addEntry(188, 4, "一氧化碳", "REAL");
+    addEntry(192, 4, "硫化氢", "REAL");
+    addEntry(196, 4, "二氧化碳", "REAL");
+    addEntry(200, 4, "风速", "REAL");
+
+    // 电机1扩展 (Byte 204-227)
+    addEntry(204, 4, "电机1前轴承温度", "REAL");
+    addEntry(208, 4, "电机1后轴承温度", "REAL");
+    addEntry(212, 4, "电机1堵转", "REAL");
+    addEntry(216, 4, "电机1起动超时", "REAL");
+    addEntry(220, 4, "电机1功率", "REAL");
+    addEntry(224, 4, "电机1三相不平衡", "REAL");
+
+    // 电机2扩展 (Byte 228-251)
+    addEntry(228, 4, "电机2前轴承温度", "REAL");
+    addEntry(232, 4, "电机2后轴承温度", "REAL");
+    addEntry(236, 4, "电机2堵转", "REAL");
+    addEntry(240, 4, "电机2起动超时", "REAL");
+    addEntry(244, 4, "电机2功率", "REAL");
+    addEntry(248, 4, "电机2三相不平衡", "REAL");
+
+    // 电机3-8完整数据块 (Byte 252-587)
+    QStringList tabNames = {"电流", "前轴承", "后轴承", "甲相", "乙相", "丙相",
+                            "温度", "水平振动", "垂直振动", "堵转", "起动超时", "功率", "不平衡"};
+    for (int m = 3; m <= 8; m++) {
+        int base = S7_DB1_MOTOR_BLOCK_START + (m - 3) * S7_DB1_MOTOR_BLOCK_SIZE;
+        for (int t = 0; t < 13; t++) {
+            addEntry(base + t * 4, 4, QString("电机%1%2").arg(m).arg(tabNames[t]), "REAL");
+        }
+        addEntry(base + 52, 4, QString("电机%1电压").arg(m), "REAL");
+    }
 
     return map;
 }

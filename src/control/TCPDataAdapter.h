@@ -342,8 +342,16 @@ private:
     // S7数据块常量
     static constexpr int S7_DB1_NUMBER = 1;              // DB1 状态区
     static constexpr int S7_DB2_NUMBER = 2;              // DB2 控制区
-    static constexpr int S7_DB1_SIZE = 256;              // DB1 分配256字节
+    // 旧值: static constexpr int S7_DB1_SIZE = 256;    // 2026-04-09: 扩展以容纳环境值+电机3-8数据
+    static constexpr int S7_DB1_SIZE = 640;              // DB1 分配640字节（588字节实际使用）
     static constexpr int S7_DB2_SIZE = 64;               // DB2 分配64字节
+
+    // ✅ 2026-04-09: S7 DB1字节偏移常量（扩展数据区）
+    // 基本数据区 0-139 保持不变
+    static constexpr int S7_DB1_ENV_START = 140;          // 16个环境FLOAT32 (140-203, 64字节)
+    static constexpr int S7_DB1_MOTOR12_EXT_START = 204;  // 电机1-2扩展Tab (204-251, 48字节)
+    static constexpr int S7_DB1_MOTOR_BLOCK_START = 252;  // 电机3-8完整数据块 (252-587, 336字节)
+    static constexpr int S7_DB1_MOTOR_BLOCK_SIZE = 56;    // 每电机56字节 (14×FLOAT32)
 };
 
 #endif // TCPDATAADAPTER_H
