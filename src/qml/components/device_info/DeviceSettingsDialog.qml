@@ -1538,9 +1538,12 @@ Item {
                 var isSerialPortControlPage = (currentCategory === 7)  // 串口控制类别
                 var isCANControlPage = (currentCategory === 8)  // CAN控制类别
                 var isTCPControlPage = (currentCategory === 9)  // TCP控制类别
+                // ✅ 2026-04-10 [Phase 7.48.88.108]: S7控制页面也使用4区域模式（0=列表 1=Tab 2=参数 3=按钮），需要排除
+                // 旧: 只排除串口/CAN/TCP/MQTT，漏掉S7导致focusSubArea被错误重置为0
+                var isS7ControlPage = (currentCategory === 10)  // S7控制类别
                 var isMQTTControlPage = (currentCategory === 11)  // MQTT控制类别
 
-                if (currentPage.focusSubArea === 1 && !isSerialPortControlPage && !isCANControlPage && !isTCPControlPage && !isMQTTControlPage) {
+                if (currentPage.focusSubArea === 1 && !isSerialPortControlPage && !isCANControlPage && !isTCPControlPage && !isS7ControlPage && !isMQTTControlPage) {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
                     var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
                     var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
