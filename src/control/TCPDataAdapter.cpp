@@ -325,8 +325,12 @@ bool TCPDataAdapter::isPortRunning(int portIndex) const
 
 void TCPDataAdapter::autoStart()
 {
-    qDebug() << "[TCPDataAdapter] 自动启动 - 初始化端口0并启用同步";
-    startPortServices(0);
+    // 旧: 仅启动端口0  startPortServices(0);
+    // ✅ 2026-04-10 [Phase 7.48.88.106]: 问题3——8个端口全部默认启动
+    qDebug() << "[TCPDataAdapter] 自动启动 - 初始化全部8个端口并启用同步";
+    for (int i = 0; i < 8; i++) {
+        startPortServices(i);
+    }
     // ✅ 2026-04-10 [Phase 7.48.88.105]: 同时启动S7服务器
     startS7Server();
 }

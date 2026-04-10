@@ -582,6 +582,15 @@ Item {
                             event.accepted = true
                             return
                         }
+                    // ✅ 2026-04-10 [Phase 7.48.88.106]: S7控制页面使用NavigationManager
+                    } else if (currentCategory === 10) {
+                        var s7Page = s7ControlPageLoader.item
+                        if (s7Page && s7Page.navigationManager) {
+                            console.log("✅ [S7控制导航] 列表区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            s7Page.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
                     } else if (currentCategory === 8) {
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
@@ -646,6 +655,15 @@ Item {
                         if (tcpPage && tcpPage.navigationManager) {
                             console.log("✅ [TCP控制导航] 上键 - 调用 NavigationManager.handleDirectionKey")
                             tcpPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    // ✅ 2026-04-10 [Phase 7.48.88.106]: S7控制页面使用NavigationManager
+                    } else if (currentCategory === 10) {
+                        var s7Page = s7ControlPageLoader.item
+                        if (s7Page && s7Page.navigationManager) {
+                            console.log("✅ [S7控制导航] 上键 - 调用 NavigationManager.handleDirectionKey")
+                            s7Page.navigationManager.handleDirectionKey("Up")
                             event.accepted = true
                             return
                         }
@@ -1014,6 +1032,15 @@ Item {
                             event.accepted = true
                             return
                         }
+                    // ✅ 2026-04-10 [Phase 7.48.88.106]: S7控制页面使用NavigationManager
+                    } else if (currentCategory === 10) {
+                        var s7Page = s7ControlPageLoader.item
+                        if (s7Page && s7Page.navigationManager) {
+                            console.log("✅ [S7控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
+                            s7Page.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
                     } else if (currentCategory === 8) {
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
@@ -1071,6 +1098,15 @@ Item {
                         if (tcpPage && tcpPage.navigationManager) {
                             console.log("✅ [TCP控制导航] 下键 - 调用 NavigationManager.handleDirectionKey")
                             tcpPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    // ✅ 2026-04-10 [Phase 7.48.88.106]: S7控制页面使用NavigationManager
+                    } else if (currentCategory === 10) {
+                        var s7Page = s7ControlPageLoader.item
+                        if (s7Page && s7Page.navigationManager) {
+                            console.log("✅ [S7控制导航] 下键 - 调用 NavigationManager.handleDirectionKey")
+                            s7Page.navigationManager.handleDirectionKey("Down")
                             event.accepted = true
                             return
                         }
@@ -1572,6 +1608,17 @@ Item {
                 }
             }
 
+            // ✅ 2026-04-10 [Phase 7.48.88.106]: S7控制页面使用NavigationManager处理左键
+            if (currentCategory === 10 && currentFocusArea === 2) {
+                var s7Page = s7ControlPageLoader.item
+                if (s7Page && s7Page.navigationManager) {
+                    console.log("✅ [导航] S7控制页面左键 - 调用NavigationManager")
+                    s7Page.navigationManager.handleDirectionKey("Left")
+                    event.accepted = true
+                    return
+                }
+            }
+
             // ✅ 2026-02-08 [Phase 7.43.9]: MQTT控制页面使用NavigationManager处理左键
             if (currentCategory === 11 && currentFocusArea === 2) {
                 var mqttPage = mqttControlPageLoader.item
@@ -1771,6 +1818,34 @@ Item {
                         // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
                         console.log("🔍 [TCP控制导航] 右键 - 调用 NavigationManager.handleDirectionKey")
                         tcpPage.navigationManager.handleDirectionKey("Right")
+                        event.accepted = true
+                        return
+                    }
+                }
+
+                // ✅ 2026-04-10 [Phase 7.48.88.106]: S7控制页面使用 NavigationManager
+                var isS7ControlPage = (currentCategory === 10)
+                if (isS7ControlPage) {
+                    var s7Page = s7ControlPageLoader.item
+                    if (s7Page && s7Page.navigationManager) {
+                        // 数据视图模式下优先委托给Tab处理
+                        if (typeof s7Page.tryDataViewNavigation === "function" && s7Page.tryDataViewNavigation("Right")) {
+                            console.log("✅ [S7控制导航] 右键 - 数据视图导航已处理")
+                            event.accepted = true
+                            return
+                        }
+                        // 检查当前Tab是否有自定义导航
+                        if (typeof s7Page.getCurrentTab === "function") {
+                            var currentTab = s7Page.getCurrentTab()
+                            if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                var handled = currentTab.handleDirectionKey("Right")
+                                if (handled) {
+                                    event.accepted = true
+                                    return
+                                }
+                            }
+                        }
+                        s7Page.navigationManager.handleDirectionKey("Right")
                         event.accepted = true
                         return
                     }
@@ -2034,6 +2109,17 @@ Item {
                             }
                         } else {
                             console.log("⚠️ [导航] tcpConfigPanel 不存在")
+                        }
+                    // ✅ 2026-04-10 [Phase 7.48.88.106]: S7 控制页面回车键处理
+                    } else if (currentCategory === 10) {
+                        var s7Page = s7ControlPageLoader.item
+                        if (s7Page && typeof s7Page.handleEnterKey === "function") {
+                            handled = s7Page.handleEnterKey()
+                            if (handled) {
+                                console.log("✅ [导航] 回车键已被S7控制页面处理")
+                                event.accepted = true
+                                return
+                            }
                         }
                     // ✅ 2026-02-08 [Phase 7.43]: MQTT 控制页面回车键处理
                     } else if (currentCategory === 11) {

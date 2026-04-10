@@ -275,74 +275,88 @@ Rectangle {
                 spacing: 0
 
                 // 标题栏
+                // 旧: color: "#1a1f2e", 文字 "#00d4ff"
+                // ✅ 2026-04-10 [Phase 7.48.88.106]: 问题1——标题栏样式改为与TCP控制一致
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 50
-                    color: "#1a1f2e"
+                    color: "transparent"
+
+                    Image {
+                        anchors.fill: parent
+                        source: "../../images/059.png"
+                        fillMode: Image.Stretch
+                        z: -1
+                    }
 
                     Text {
                         anchors.centerIn: parent
                         text: "S7 控制"
-                        font.pixelSize: 18
-                        font.bold: true
-                        color: "#00d4ff"
-                    }
-
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        width: parent.width
-                        height: 2
-                        color: "#00d4ff"
-                        opacity: 0.3
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        color: "#E0E0E0"
                     }
                 }
 
                 // Tab栏
+                // 旧: color: "#141824", RowLayout + dvList.png/dvList2.png, 文字 "#00d4ff"/"#8899aa"
+                // ✅ 2026-04-10 [Phase 7.48.88.106]: 问题1——Tab样式改为与Modbus Tab一致（DJHeadbutton图片+蓝色调）
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 50
-                    color: "#141824"
+                    color: "#252b3d"
+                    border.color: "#3d4556"
+                    border.width: 1
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 5
-                        spacing: 4
+                    Row {
+                        spacing: 0
+                        height: parent.height
+                        width: childrenRect.width
 
                         Repeater {
                             model: root.tabModel
 
                             Rectangle {
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
+                                width: 143
+                                height: 50
                                 color: "transparent"
 
                                 // 焦点指示器
-                                border.color: (root.focusSubArea === 0 && root.focusTabIndex === index) ? "#2196F3" : "transparent"
-                                border.width: (root.focusSubArea === 0 && root.focusTabIndex === index) ? 3 : 0
-                                radius: 4
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: (root.focusSubArea === 0 && root.focusTabIndex === index)
+                                                  ? "#2196F3" : "transparent"
+                                    border.width: (root.focusSubArea === 0 && root.focusTabIndex === index) ? 3 : 0
+                                    radius: 4
+                                    z: 11
+                                }
 
+                                // 背景图片
                                 Image {
                                     anchors.fill: parent
-                                    anchors.margins: 2
                                     fillMode: Image.Stretch
-                                    source: root.currentTabIndex === index ? "../../images/dvList2.png" : "../../images/dvList.png"
+                                    z: -1
+                                    source: root.currentTabIndex === index
+                                            ? "../../images/DJHeadbutton2.png"
+                                            : "../../images/DJHeadbutton1.png"
+                                }
+
+                                // 底部激活指示条
+                                Rectangle {
+                                    visible: root.currentTabIndex === index
+                                    width: parent.width
+                                    height: 3
+                                    color: "#2196F3"
+                                    anchors.bottom: parent.bottom
                                 }
 
                                 Text {
-                                    anchors.centerIn: parent
                                     text: modelData
+                                    anchors.centerIn: parent
                                     font.pixelSize: 14
-                                    font.bold: root.currentTabIndex === index
-                                    color: root.currentTabIndex === index ? "#00d4ff" : "#8899aa"
-                                }
-
-                                // 底部激活条
-                                Rectangle {
-                                    anchors.bottom: parent.bottom
-                                    width: parent.width
-                                    height: 3
-                                    color: "#00d4ff"
-                                    visible: root.currentTabIndex === index
+                                    font.weight: root.currentTabIndex === index ? Font.Bold : Font.Normal
+                                    color: root.currentTabIndex === index ? "#E0E0E0" : "#9E9E9E"
                                 }
 
                                 MouseArea {
@@ -359,11 +373,15 @@ Rectangle {
                 }
 
                 // 连接状态栏
+                // 旧: color: "#0d1117", RowLayout, 闪烁动画, 文字颜色"#666"/"#556"
+                // ✅ 2026-04-10 [Phase 7.48.88.106]: 问题1——连接状态栏样式改为与TCP控制一致
                 Rectangle {
                     id: connectionStatusBar
                     Layout.fillWidth: true
                     Layout.preferredHeight: 36
-                    color: "#0d1117"
+                    color: "#1a2033"
+                    border.color: "#3d4556"
+                    border.width: 1
 
                     property bool s7Running: false
                     property bool hasConnected: false
@@ -384,43 +402,47 @@ Rectangle {
                         onTriggered: connectionStatusBar.refreshStatus()
                     }
 
-                    Component.onCompleted: refreshStatus()
+                    Component.onCompleted: connectionStatusBar.refreshStatus()
 
-                    RowLayout {
+                    Row {
                         anchors.fill: parent
                         anchors.leftMargin: 15
                         anchors.rightMargin: 15
-                        spacing: 10
+                        spacing: 12
 
                         // 状态指示灯
                         Rectangle {
-                            width: 12; height: 12; radius: 6
+                            id: s7StatusDot
+                            width: 10
+                            height: 10
+                            radius: 5
+                            anchors.verticalCenter: parent.verticalCenter
                             color: connectionStatusBar.hasConnected ? "#4CAF50" :
                                    connectionStatusBar.s7Running ? "#FF9800" : "#757575"
-
-                            SequentialAnimation on opacity {
-                                running: connectionStatusBar.s7Running && !connectionStatusBar.hasConnected
-                                loops: Animation.Infinite
-                                NumberAnimation { from: 1.0; to: 0.3; duration: 800 }
-                                NumberAnimation { from: 0.3; to: 1.0; duration: 800 }
-                            }
                         }
 
                         // 状态文字
                         Text {
-                            text: connectionStatusBar.statusText
+                            id: s7StatusText
+                            anchors.verticalCenter: parent.verticalCenter
                             font.pixelSize: 13
                             color: connectionStatusBar.hasConnected ? "#4CAF50" :
-                                   connectionStatusBar.s7Running ? "#FF9800" : "#666"
+                                   connectionStatusBar.s7Running ? "#FF9800" : "#9E9E9E"
+                            text: connectionStatusBar.statusText
                         }
 
-                        Item { Layout.fillWidth: true }
+                        // 右侧：端口信息
+                        Item {
+                            width: parent.width - s7StatusDot.width - s7StatusText.width - 36
+                            height: parent.height
 
-                        // 端口信息
-                        Text {
-                            text: "Port 102"
-                            font.pixelSize: 12
-                            color: "#556"
+                            Text {
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                font.pixelSize: 12
+                                color: "#757575"
+                                text: "Port 102"
+                            }
                         }
                     }
                 }
@@ -465,17 +487,18 @@ Rectangle {
         }
 
         // 底部：按钮区域
+        // 旧: color: "#1a1f2e", 分隔线 "#00d4ff"
+        // ✅ 2026-04-10 [Phase 7.48.88.106]: 问题1——底部区域样式改为与TCP控制一致
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 60
-            color: "#1a1f2e"
+            color: "#252b3d"
 
             Rectangle {
                 anchors.top: parent.top
                 width: parent.width
-                height: 2
-                color: "#00d4ff"
-                opacity: 0.3
+                height: 1
+                color: "#3d4556"
             }
 
             RowLayout {
