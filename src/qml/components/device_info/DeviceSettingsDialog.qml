@@ -840,6 +840,30 @@ Item {
                             }
                         }
                     } else if (currentCategory === 11) {
+                        // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域使用NavigationManager
+                        var mqttPage = mqttControlPageLoader.item
+                        if (mqttPage) {
+                            // 先检查当前 Tab 是否有自定义导航
+                            var mqttConfigPanel = mqttPage.mqttConfigPanel ? mqttPage.mqttConfigPanel.item : null
+                            if (mqttConfigPanel && typeof mqttConfigPanel.getCurrentTabItem === "function") {
+                                var currentTab = mqttConfigPanel.getCurrentTabItem()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [MQTT控制导航] 参数区域上键 - 调用当前Tab自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Up")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
+                            if (mqttPage.navigationManager) {
+                                console.log("✅ [MQTT控制导航] 参数区域上键 - 调用 NavigationManager.handleDirectionKey")
+                                mqttPage.navigationManager.handleDirectionKey("Up")
+                                event.accepted = true
+                                return
+                            }
+                        }
                     } else {
                         // ❌ 2026-03-03 [Phase 7.47.76]: 此块原用于"其他页面"（开关量/模拟量）按钮区上键导航
                         // 修改：开关量/模拟量的按钮区已改为 focusSubArea=3，此代码成为死代码
@@ -1269,6 +1293,9 @@ Item {
                             }
                         }
                     } else if (currentCategory === 11) {
+                        // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域使用NavigationManager
+                        var mqttPage = mqttControlPageLoader.item
+                        if (mqttPage) {
                             // 先检查当前 Tab 是否有自定义导航
                             var mqttConfigPanel = mqttPage.mqttConfigPanel ? mqttPage.mqttConfigPanel.item : null
                             if (mqttConfigPanel && typeof mqttConfigPanel.getCurrentTabItem === "function") {
