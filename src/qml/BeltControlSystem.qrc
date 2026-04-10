@@ -17,8 +17,6 @@
         <file>components/control_panel/ImageInputField.qml</file>
         <file>components/control_panel/ModuleConnectionPanel.qml</file>
         <file>components/control_panel/OperationLogPanel.qml</file>
-        <file>components/control_panel/OutputDevicePanel.qml</file>
-        <file>components/control_panel/OutputDeviceSettingsPopup.qml</file>
         <file>components/control_panel/ProtectionPanel.qml</file>
         <file>components/control_panel/ProtectionSettingsPopup.qml</file>
         <file>components/control_panel/StateInputField.qml</file>
@@ -163,6 +161,7 @@
         <file>components/device_info/pages/RearBearingTempTab.qml</file>
         <file>components/device_info/pages/ReservedModulePanel.qml</file>
         <file>components/device_info/pages/S7MasterTab.qml</file>
+        <file>components/device_info/pages/S7ControlPage.qml</file>
         <file>components/device_info/pages/S7SlaveTab.qml</file>
         <file>components/device_info/pages/SerialPortConfigPanel.qml</file>
         <file>components/device_info/pages/SerialPortControlPage.qml</file>

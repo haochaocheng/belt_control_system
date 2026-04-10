@@ -263,22 +263,25 @@ bool TCPDataAdapter::startPortServices(int portIndex)
     // 1) 先初始化寄存器/数据块空间
     initializePort(portIndex);
 
-    // 2) 再启动服务器
+    // ✅ 2026-04-10 [Phase 7.48.88.105]: 启动前为每个端口分配独立的TCP端口号
+    // Modbus: 用502+portIndex（Modbus Poll等工具可以设端口号）
+    if (m_modbusSlaves[portIndex]) {
+        int modbusPort = 502 + portIndex;
+        if (m_modbusSlaves[portIndex]->port() == 502 && portIndex > 0) {
+            m_modbusSlaves[portIndex]->setPort(modbusPort);
+            qDebug() << "[TCPDataAdapter] 端口" << portIndex << "Modbus端口号自动设为:" << modbusPort;
+        }
+    }
+    // 旧: S7互斥逻辑（共用102端口）已移到startS7Server()  // 2026-04-10 [Phase 7.48.88.105]
+
+    // 2) 再启动服务器（仅Modbus）
+    // 旧: 同时启动Modbus和S7  // 2026-04-10 [Phase 7.48.88.105]: S7已分离到独立的startS7Server()
     if (m_modbusSlaves[portIndex]) {
         if (!m_modbusSlaves[portIndex]->startServer()) {
             qWarning() << "[TCPDataAdapter] 端口" << portIndex << "Modbus从站启动失败";
             success = false;
         } else {
             qDebug() << "[TCPDataAdapter] 端口" << portIndex << "Modbus从站已启动";
-        }
-    }
-
-    if (m_s7Servers[portIndex]) {
-        if (!m_s7Servers[portIndex]->startServer()) {
-            qWarning() << "[TCPDataAdapter] 端口" << portIndex << "S7服务器启动失败";
-            success = false;
-        } else {
-            qDebug() << "[TCPDataAdapter] 端口" << portIndex << "S7服务器已启动";
         }
     }
 
@@ -298,30 +301,23 @@ void TCPDataAdapter::stopPortServices(int portIndex)
         m_modbusSlaves[portIndex]->stopServer();
         qDebug() << "[TCPDataAdapter] 端口" << portIndex << "Modbus从站已停止";
     }
-
-    if (m_s7Servers[portIndex]) {
-        m_s7Servers[portIndex]->stopServer();
-        qDebug() << "[TCPDataAdapter] 端口" << portIndex << "S7服务器已停止";
-    }
+    // 旧: 同时停止S7  // 2026-04-10 [Phase 7.48.88.105]: S7已分离到独立的stopS7Server()
 }
 
 bool TCPDataAdapter::isPortRunning(int portIndex) const
 {
     if (portIndex < 0 || portIndex >= 8) return false;
 
-    // 检查Modbus从站是否连接
+    // ✅ 2026-04-10 [Phase 7.48.88.105]: 只检查Modbus状态
+    // 旧: 同时检查Modbus和S7  // S7已分离到独立的isS7Running()
     if (m_modbusSlaves[portIndex]) {
         if (m_modbusSlaves[portIndex]->property("isConnected").toBool()) {
             return true;
         }
     }
 
-    // 检查S7服务器是否连接
-    if (m_s7Servers[portIndex]) {
-        // 旧：if (m_s7Servers[portIndex]->property("isConnected").toBool()) {  // 2026-04-09 BUG: S7ServerController没有isConnected属性，只有isRunning
-        if (m_s7Servers[portIndex]->property("isRunning").toBool()) {
-            return true;
-        }
+    return false;
+}
     }
 
     return false;
@@ -331,6 +327,8 @@ void TCPDataAdapter::autoStart()
 {
     qDebug() << "[TCPDataAdapter] 自动启动 - 初始化端口0并启用同步";
     startPortServices(0);
+    // ✅ 2026-04-10 [Phase 7.48.88.105]: 同时启动S7服务器
+    startS7Server();
 }
 
 // ✅ 2026-04-09: 问题2修复——端口配置读写方法，供QML参数配置区实际应用到后端
@@ -378,25 +376,89 @@ QString TCPDataAdapter::getPortStatusText(int portIndex) const
 {
     if (portIndex < 0 || portIndex >= 8) return "无效端口";
 
-    // ✅ 2026-04-10 [Phase 7.48.88.103]: 区分"已启动/监听中"和"未启动"
-    // 旧: 用✓/✗表示，但isConnected()只检查监听状态，不是客户端连接
-    // 新: 用"监听中"/"已停止"明确表达含义，避免误导
+    // ✅ 2026-04-10 [Phase 7.48.88.105]: 只显示Modbus状态
+    // 旧: 同时显示Modbus和S7状态  // S7已分离到独立的getS7StatusText()
     bool modbusExists = m_modbusSlaves[portIndex] != nullptr;
     bool modbusRunning = modbusExists && m_modbusSlaves[portIndex]->isConnected();
-    bool s7Exists = m_s7Servers[portIndex] != nullptr;
-    bool s7Running = s7Exists &&
-                     m_s7Servers[portIndex]->property("isRunning").toBool();
+    int modbusClients = modbusExists ? m_modbusSlaves[portIndex]->getConnectedClientCount() : 0;
 
-    QStringList parts;
-    if (modbusExists) {
-        parts << QString("Modbus:%1").arg(modbusRunning ? "监听中" : "已停止");
+    if (!modbusExists) return "未配置";
+
+    if (!modbusRunning) {
+        return "Modbus:已停止";
+    } else if (modbusClients > 0) {
+        return QString("Modbus:已连接(%1)").arg(modbusClients);
+    } else {
+        return "Modbus:监听中";
     }
-    if (s7Exists) {
-        parts << QString("S7:%1").arg(s7Running ? "监听中" : "已停止");
+}
+
+// ===== 离散输入同步（10001+ / 只读） =====
+
+// ✅ 2026-04-10 [Phase 7.48.88.105]: S7独立控制方法（从TCP端口服务中分离）
+// S7只能使用端口102，同一时间只能运行一个实例，固定使用portIndex=0
+
+bool TCPDataAdapter::startS7Server()
+{
+    // S7固定使用portIndex=0的S7服务器实例
+    const int portIndex = 0;
+
+    if (!m_s7Servers[portIndex]) {
+        qWarning() << "[TCPDataAdapter] S7服务器未绑定";
+        return false;
     }
 
-    if (parts.isEmpty()) return "未配置";
-    return parts.join(" | ");
+    // 先初始化DB数据块空间
+    initializePort(portIndex);
+
+    // 启动S7服务器
+    if (!m_s7Servers[portIndex]->startServer()) {
+        qWarning() << "[TCPDataAdapter] S7服务器启动失败";
+        return false;
+    }
+
+    qDebug() << "[TCPDataAdapter] S7服务器已启动（端口102）";
+
+    // 确保同步已启用
+    if (!m_syncEnabled) {
+        setSyncEnabled(true);
+    }
+
+    return true;
+}
+
+void TCPDataAdapter::stopS7Server()
+{
+    const int portIndex = 0;
+    if (m_s7Servers[portIndex]) {
+        m_s7Servers[portIndex]->stopServer();
+        qDebug() << "[TCPDataAdapter] S7服务器已停止";
+    }
+}
+
+bool TCPDataAdapter::isS7Running() const
+{
+    const int portIndex = 0;
+    if (m_s7Servers[portIndex]) {
+        return m_s7Servers[portIndex]->isRunning();
+    }
+    return false;
+}
+
+QString TCPDataAdapter::getS7StatusText() const
+{
+    const int portIndex = 0;
+    if (!m_s7Servers[portIndex]) return "未配置";
+
+    if (!m_s7Servers[portIndex]->isRunning()) {
+        return "S7:已停止";
+    }
+
+    int clients = m_s7Servers[portIndex]->getClientCount();
+    if (clients > 0) {
+        return QString("S7:已连接(%1)").arg(clients);
+    }
+    return "S7:监听中(端口102)";
 }
 
 // ===== 离散输入同步（10001+ / 只读） =====

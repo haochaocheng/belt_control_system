@@ -36,10 +36,8 @@ Rectangle {
             return modbusMasterTabLoader.item
         case 1:
             return modbusSlaveTabLoader.item
-        case 2:
-            return s7MasterTabLoader.item
-        case 3:
-            return s7SlaveTabLoader.item
+        // 旧: case 2: s7MasterTabLoader.item; case 3: s7SlaveTabLoader.item
+        // 2026-04-10 [Phase 7.48.88.105]: S7已分离到独立的S7ControlPage
         default:
             return null
         }
@@ -88,7 +86,9 @@ Rectangle {
             width: childrenRect.width
 
             Repeater {
-                model: ["Modbus主站", "Modbus从站", "S7主站", "S7从站"]
+                // 旧: model: ["Modbus主站", "Modbus从站", "S7主站", "S7从站"]
+                // ✅ 2026-04-10 [Phase 7.48.88.105]: S7已分离到独立的S7ControlPage
+                model: ["Modbus主站", "Modbus从站"]
 
                 Rectangle {
                     // 旧：width: 110  // 2026-04-09 问题4：Tab按钮宽度增加1.3倍
@@ -163,8 +163,11 @@ Rectangle {
         // 定时刷新的状态缓存属性
         property bool portRunning: false
         property string portStatus: "未配置"
-        // ✅ 2026-04-10: 用于区分全部监听/部分监听/全部停止
-        property bool allListening: false
+        // ✅ 2026-04-10 [Phase 7.48.88.104]: 三态指示
+        // 旧: allListening判断"监听中/已停止"二态
+        // 新: hasConnected判断"已连接"，allListening判断"全部监听"
+        property bool hasConnected: false  // 有客户端已连接
+        property bool allListening: false  // 全部服务在监听（无已停止的）
 
         Row {
             anchors.fill: parent
@@ -179,8 +182,9 @@ Rectangle {
                 height: 10
                 radius: 5
                 anchors.verticalCenter: parent.verticalCenter
-                // ✅ 2026-04-10: 绿=全部监听, 橙=部分监听, 灰=全部停止
-                color: connectionStatusBar.allListening ? "#4CAF50" :
+                // ✅ 2026-04-10 [Phase 7.48.88.104]: 绿=有客户端已连接, 橙=监听中无客户端, 灰=已停止
+                // 旧: 绿=全部监听, 橙=部分监听, 灰=全部停止
+                color: connectionStatusBar.hasConnected ? "#4CAF50" :
                        connectionStatusBar.portRunning ? "#FF9800" : "#757575"
             }
 
@@ -189,8 +193,9 @@ Rectangle {
                 id: statusText
                 anchors.verticalCenter: parent.verticalCenter
                 font.pixelSize: 13
-                // ✅ 2026-04-10: 同步指示灯颜色
-                color: connectionStatusBar.allListening ? "#4CAF50" :
+                // ✅ 2026-04-10 [Phase 7.48.88.104]: 同步指示灯颜色
+                // 旧: 绿=全部监听, 橙=部分监听, 灰=全部停止
+                color: connectionStatusBar.hasConnected ? "#4CAF50" :
                        connectionStatusBar.portRunning ? "#FF9800" : "#9E9E9E"
                 text: connectionStatusBar.portStatus
             }
@@ -232,6 +237,7 @@ Rectangle {
         function refreshStatus() {
             if (typeof tcpDataAdapter === "undefined") {
                 portRunning = false
+                hasConnected = false
                 allListening = false
                 portStatus = "未配置"
                 return
@@ -239,13 +245,18 @@ Rectangle {
 
             portRunning = tcpDataAdapter.isPortRunning(root.currentPortIndex)
             portStatus = tcpDataAdapter.getPortStatusText(root.currentPortIndex)
-            // ✅ 2026-04-10: 检查状态文字中是否含有"已停止"来判断是否全部监听
+            // ✅ 2026-04-10 [Phase 7.48.88.104]: 三态判定
+            // 旧: allListening = portRunning && portStatus.indexOf("已停止") < 0
+            // 新: 检测"已连接"关键字判断是否有客户端实际连接
+            hasConnected = portRunning && portStatus.indexOf("已连接") >= 0
             allListening = portRunning && portStatus.indexOf("已停止") < 0
 
             if (!portRunning) return
 
             // 追加Tab类型说明
-            var tabNames = ["Modbus主站", "Modbus从站", "S7主站", "S7从站"]
+            // 旧: var tabNames = ["Modbus主站", "Modbus从站", "S7主站", "S7从站"]
+            // ✅ 2026-04-10 [Phase 7.48.88.105]: S7已分离
+            var tabNames = ["Modbus主站", "Modbus从站"]
             var tabName = tabNames[root.currentTabIndex] || ""
             portStatus = tabName + " · " + portStatus
         }
@@ -294,35 +305,8 @@ Rectangle {
                 }
             }
 
-            // Tab 2: S7主站
-            Loader {
-                id: s7MasterTabLoader
-                source: "S7MasterTab.qml"
-
-                onLoaded: {
-                    console.log("✅ [TCPConfigPanel] S7MasterTab 加载成功")
-                    item.currentPort = Qt.binding(function() { return root.currentPort })
-                    item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
-                    item.focusSubArea = Qt.binding(function() { return root.focusSubArea })  // ✅ 2026-04-08 [Phase 7.48.88.92]
-                    item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-                    item.portIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.85]
-                }
-            }
-
-            // Tab 3: S7从站
-            Loader {
-                id: s7SlaveTabLoader
-                source: "S7SlaveTab.qml"
-
-                onLoaded: {
-                    console.log("✅ [TCPConfigPanel] S7SlaveTab 加载成功")
-                    item.currentPort = Qt.binding(function() { return root.currentPort })
-                    item.focusParamIndex = Qt.binding(function() { return root.focusParamIndex })
-                    item.focusSubArea = Qt.binding(function() { return root.focusSubArea })  // ✅ 2026-04-08 [Phase 7.48.88.92]
-                    item.virtualKeyboard = Qt.binding(function() { return root.virtualKeyboard })
-                    item.portIndex = Qt.binding(function() { return root.currentPortIndex })  // ✅ 2026-04-07 [Phase 7.48.88.84]
-                }
-            }
+            // 旧: Tab 2: S7主站 + Tab 3: S7从站 Loader
+            // ✅ 2026-04-10 [Phase 7.48.88.105]: S7已分离到独立的S7ControlPage，不再在此加载
         }
     }
 }

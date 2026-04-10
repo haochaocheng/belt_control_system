@@ -78,10 +78,7 @@ Rectangle {
             return 9
         case 1:  // Modbus从站
             return 8
-        case 2:  // S7主站
-            return 11
-        case 3:  // S7从站
-            return 9
+        // 旧: case 2 S7主站(11), case 3 S7从站(9)  // 2026-04-10 [Phase 7.48.88.105]: S7已分离
         default:
             return 0
         }
@@ -253,7 +250,9 @@ Rectangle {
             buttonIndex = 0
             skipTabArea = false
             lastMotorIndex = 7  // 8个端口 (0-7)
-            lastTabIndex = 3    // 4个Tab (0-3)
+            // 旧: lastTabIndex = 3    // 4个Tab (0-3)
+            // ✅ 2026-04-10 [Phase 7.48.88.105]: S7已分离到独立的S7ControlPage
+            lastTabIndex = 1    // 2个Tab (0-1): Modbus主站, Modbus从站
             hasViewSwitchRow = true  // ✅ 2026-04-08 [Phase 7.48.88.92]: TCP页面有视图切换行
 
             Qt.callLater(function() {

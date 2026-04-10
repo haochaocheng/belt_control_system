@@ -104,6 +104,13 @@ public:
     Q_INVOKABLE void setModbusMaxConnections(int portIndex, int max);
     Q_INVOKABLE QString getPortStatusText(int portIndex) const;
 
+    // ✅ 2026-04-10 [Phase 7.48.88.105]: S7独立控制方法（从TCP端口服务中分离）
+    // S7只能使用端口102，同一时间只能运行一个实例
+    Q_INVOKABLE bool startS7Server();
+    Q_INVOKABLE void stopS7Server();
+    Q_INVOKABLE bool isS7Running() const;
+    Q_INVOKABLE QString getS7StatusText() const;
+
 signals:
     void syncIntervalChanged();
     void syncEnabledChanged();

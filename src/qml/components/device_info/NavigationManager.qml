@@ -45,6 +45,10 @@ QtObject {
     // TCP控制页面设为true，其他页面默认false
     property bool hasViewSwitchRow: false
 
+    // ✅ 2026-04-10 [Phase 7.48.88.105]: 是否跳过左侧列表区域（S7控制页面无端口列表）
+    // S7只有一个实例（端口102），不需要端口选择列表
+    property bool skipMotorList: false
+
     // ✅ 2026-03-22 [Phase 7.48.74]: 参数区域行映射（可选，用于非均匀网格布局）
     // 格式：[[startIndex, count], ...] — 每行起始索引和该行字段数
     // 为空数组时使用paramColumns均匀网格导航
@@ -179,8 +183,13 @@ QtObject {
             if (tabIndex > 0) {
                 newIndex = tabIndex - 1
             } else {
-                // 在第一个Tab，向左跳转到电机列表区
-                switchToArea(areaMotorList)
+                // ✅ 2026-04-10 [Phase 7.48.88.105]: skipMotorList时直接返回类别
+                // 旧：switchToArea(areaMotorList)  // 2026-04-10: S7控制无端口列表，直接返回类别
+                if (skipMotorList) {
+                    returnToCategory()
+                } else {
+                    switchToArea(areaMotorList)
+                }
                 return
             }
             break
@@ -291,9 +300,15 @@ QtObject {
             if (cols > 1 && paramIndex % cols > 0) {
                 newIndex = paramIndex - 1
             } else {
+                // ✅ 2026-04-10 [Phase 7.48.88.105]: skipMotorList时从参数区返回Tab栏
                 if (skipTabArea) {
-                    console.log("✅ [NavigationManager] 从参数区返回到模块列表（跳过Tab）")
-                    switchToArea(areaMotorList)
+                    if (skipMotorList) {
+                        console.log("✅ [NavigationManager] 从参数区返回到类别（无列表无Tab）")
+                        returnToCategory()
+                    } else {
+                        console.log("✅ [NavigationManager] 从参数区返回到模块列表（跳过Tab）")
+                        switchToArea(areaMotorList)
+                    }
                     return
                 } else {
                     console.log("✅ [NavigationManager] 从参数区返回到Tab栏")
@@ -333,7 +348,11 @@ QtObject {
         case "Left":
             if (colInRow > 0) { paramIndex = idx - 1 }
             else {
-                if (skipTabArea) { switchToArea(areaMotorList) }
+                // ✅ 2026-04-10 [Phase 7.48.88.105]: skipMotorList时返回Tab栏
+                if (skipTabArea) {
+                    if (skipMotorList) { returnToCategory() }
+                    else { switchToArea(areaMotorList) }
+                }
                 else { switchToArea(areaTabBar) }
                 return
             }
@@ -473,13 +492,15 @@ QtObject {
 
     // 重置导航状态
     function reset() {
-        currentArea = areaMotorList
+        // ✅ 2026-04-10 [Phase 7.48.88.105]: skipMotorList时初始区域为Tab栏
+        // 旧：currentArea = areaMotorList  // 2026-04-10: 根据skipMotorList决定初始区域
+        currentArea = skipMotorList ? areaTabBar : areaMotorList
         motorListIndex = 0
         tabIndex = 0
         paramIndex = 0
         buttonIndex = 0
 
-        console.log("✅ [NavigationManager] 导航状态已重置")
+        console.log("✅ [NavigationManager] 导航状态已重置, 初始区域:", currentArea)
     }
 
     // ========== Tab切换时的参数区联动 ==========
