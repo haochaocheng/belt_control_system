@@ -378,16 +378,25 @@ QString TCPDataAdapter::getPortStatusText(int portIndex) const
 {
     if (portIndex < 0 || portIndex >= 8) return "无效端口";
 
-    bool modbusRunning = m_modbusSlaves[portIndex] &&
-                         m_modbusSlaves[portIndex]->isConnected();
-    // 旧：bool s7Running = ... ->property("isConnected")...  // 2026-04-09 修正属性名
-    bool s7Running = m_s7Servers[portIndex] &&
+    // ✅ 2026-04-10 [Phase 7.48.88.103]: 区分"已启动/监听中"和"未启动"
+    // 旧: 用✓/✗表示，但isConnected()只检查监听状态，不是客户端连接
+    // 新: 用"监听中"/"已停止"明确表达含义，避免误导
+    bool modbusExists = m_modbusSlaves[portIndex] != nullptr;
+    bool modbusRunning = modbusExists && m_modbusSlaves[portIndex]->isConnected();
+    bool s7Exists = m_s7Servers[portIndex] != nullptr;
+    bool s7Running = s7Exists &&
                      m_s7Servers[portIndex]->property("isRunning").toBool();
 
-    if (modbusRunning && s7Running) return "Modbus+S7 运行中";
-    if (modbusRunning) return "Modbus 运行中";
-    if (s7Running) return "S7 运行中";
-    return "未启动";
+    QStringList parts;
+    if (modbusExists) {
+        parts << QString("Modbus:%1").arg(modbusRunning ? "监听中" : "已停止");
+    }
+    if (s7Exists) {
+        parts << QString("S7:%1").arg(s7Running ? "监听中" : "已停止");
+    }
+
+    if (parts.isEmpty()) return "未配置";
+    return parts.join(" | ");
 }
 
 // ===== 离散输入同步（10001+ / 只读） =====
@@ -1686,6 +1695,7 @@ QVariantList TCPDataAdapter::getInputRegisterMap(int portIndex) const
     QVariantList map;
 
     // ✅ 2026-04-08 [Phase 7.48.88.90]: 添加当前值读取
+    // ✅ 2026-04-09 [Phase 7.48.88.102]: 修复FLOAT32显示——合并两个寄存器还原浮点数
     auto addEntry = [&](int addr, const QString &name, const QString &source, const QString &type) {
         QVariantMap entry;
         entry["address"] = QString("3%1").arg(addr + 1, 4, 10, QChar('0'));
@@ -1695,7 +1705,16 @@ QVariantList TCPDataAdapter::getInputRegisterMap(int portIndex) const
         entry["type"] = type;
         // 读取当前寄存器值
         if (portIndex >= 0 && portIndex < 8 && m_modbusSlaves[portIndex]) {
-            entry["value"] = m_modbusSlaves[portIndex]->getInputRegister(addr);
+            if (type == "FLOAT32") {
+                // 旧: entry["value"] = m_modbusSlaves[portIndex]->getInputRegister(addr);
+                // 2026-04-09: FLOAT32占两个连续寄存器，需合并为IEEE754浮点数
+                int hi = m_modbusSlaves[portIndex]->getInputRegister(addr);
+                int lo = m_modbusSlaves[portIndex]->getInputRegister(addr + 1);
+                float val = registersToFloat(hi, lo);
+                entry["value"] = QString::number(val, 'f', 2);
+            } else {
+                entry["value"] = m_modbusSlaves[portIndex]->getInputRegister(addr);
+            }
         } else {
             entry["value"] = "--";
         }
@@ -1973,14 +1992,15 @@ QVariantList TCPDataAdapter::getS7DB1Map(int portIndex) const
                 quint16 val = (static_cast<quint8>(dbData.at(offset)) << 8) | static_cast<quint8>(dbData.at(offset + 1));
                 entry["value"] = val;
             } else if (type == "REAL" && length == 4 && offset + 3 < dbData.size()) {
+                // ✅ 2026-04-10 [Phase 7.48.88.102]: 修复Big-Endian字节序转换
+                // 旧: 直接memcpy 4字节（在x86 Little-Endian上值错误）
+                // 新: S7 DB1数据以Big-Endian存储，需用qFromBigEndian还原
+                quint32 raw = (static_cast<quint8>(dbData.at(offset))     << 24) |
+                              (static_cast<quint8>(dbData.at(offset + 1)) << 16) |
+                              (static_cast<quint8>(dbData.at(offset + 2)) << 8)  |
+                              (static_cast<quint8>(dbData.at(offset + 3)));
                 float val;
-                quint8 bytes[4] = {
-                    static_cast<quint8>(dbData.at(offset)),
-                    static_cast<quint8>(dbData.at(offset + 1)),
-                    static_cast<quint8>(dbData.at(offset + 2)),
-                    static_cast<quint8>(dbData.at(offset + 3))
-                };
-                memcpy(&val, bytes, 4);
+                memcpy(&val, &raw, 4);
                 entry["value"] = QString::number(val, 'f', 2);
             } else {
                 entry["value"] = "--";

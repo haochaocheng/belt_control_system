@@ -162,7 +162,9 @@ Rectangle {
 
         // 定时刷新的状态缓存属性
         property bool portRunning: false
-        property string portStatus: "未启动"
+        property string portStatus: "未配置"
+        // ✅ 2026-04-10: 用于区分全部监听/部分监听/全部停止
+        property bool allListening: false
 
         Row {
             anchors.fill: parent
@@ -177,7 +179,9 @@ Rectangle {
                 height: 10
                 radius: 5
                 anchors.verticalCenter: parent.verticalCenter
-                color: connectionStatusBar.portRunning ? "#4CAF50" : "#757575"
+                // ✅ 2026-04-10: 绿=全部监听, 橙=部分监听, 灰=全部停止
+                color: connectionStatusBar.allListening ? "#4CAF50" :
+                       connectionStatusBar.portRunning ? "#FF9800" : "#757575"
             }
 
             // 连接状态文字
@@ -185,7 +189,9 @@ Rectangle {
                 id: statusText
                 anchors.verticalCenter: parent.verticalCenter
                 font.pixelSize: 13
-                color: connectionStatusBar.portRunning ? "#4CAF50" : "#9E9E9E"
+                // ✅ 2026-04-10: 同步指示灯颜色
+                color: connectionStatusBar.allListening ? "#4CAF50" :
+                       connectionStatusBar.portRunning ? "#FF9800" : "#9E9E9E"
                 text: connectionStatusBar.portStatus
             }
 
@@ -209,7 +215,8 @@ Rectangle {
             interval: 2000
             running: true
             repeat: true
-            onTriggered: refreshStatus()
+            // 旧: onTriggered: refreshStatus()  // 2026-04-10: Timer作用域无法直接访问父级函数
+            onTriggered: connectionStatusBar.refreshStatus()
         }
 
         // 端口切换或Tab切换时也刷新
@@ -219,17 +226,21 @@ Rectangle {
             function onCurrentTabIndexChanged() { connectionStatusBar.refreshStatus() }
         }
 
-        Component.onCompleted: refreshStatus()
+        // 旧: Component.onCompleted: refreshStatus()  // 2026-04-10: 需要通过id访问
+        Component.onCompleted: connectionStatusBar.refreshStatus()
 
         function refreshStatus() {
             if (typeof tcpDataAdapter === "undefined") {
                 portRunning = false
-                portStatus = "未启动"
+                allListening = false
+                portStatus = "未配置"
                 return
             }
 
             portRunning = tcpDataAdapter.isPortRunning(root.currentPortIndex)
             portStatus = tcpDataAdapter.getPortStatusText(root.currentPortIndex)
+            // ✅ 2026-04-10: 检查状态文字中是否含有"已停止"来判断是否全部监听
+            allListening = portRunning && portStatus.indexOf("已停止") < 0
 
             if (!portRunning) return
 
