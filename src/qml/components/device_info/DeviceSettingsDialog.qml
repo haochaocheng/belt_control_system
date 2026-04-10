@@ -582,15 +582,15 @@ Item {
                             event.accepted = true
                             return
                         }
-                    // ✅ 2026-04-10 [Phase 7.48.88.106]: S7控制页面使用NavigationManager
-                    } else if (currentCategory === 10) {
-                        var s7Page = s7ControlPageLoader.item
-                        if (s7Page && s7Page.navigationManager) {
-                            console.log("✅ [S7控制导航] 列表区域上键 - 调用 NavigationManager.handleDirectionKey")
-                            s7Page.navigationManager.handleDirectionKey("Up")
-                            event.accepted = true
-                            return
-                        }
+                    // 旧: S7在focusSubArea===0（列表区域）处理
+                    // ✅ 2026-04-10 [Phase 7.48.88.107]: S7无端口列表，focusSubArea不会为0，移至focusSubArea===2/3
+                    // } else if (currentCategory === 10) {
+                    //     var s7Page = s7ControlPageLoader.item
+                    //     if (s7Page && s7Page.navigationManager) {
+                    //         s7Page.navigationManager.handleDirectionKey("Up")
+                    //         event.accepted = true
+                    //         return
+                    //     }
                     } else if (currentCategory === 8) {
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
@@ -809,16 +809,21 @@ Item {
                                 return
                             }
                         }
-                    } else if (currentCategory === 11) {
-                        // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域使用NavigationManager
-                        var mqttPage = mqttControlPageLoader.item
-                        if (mqttPage) {
-                            // 先检查当前 Tab 是否有自定义导航
-                            var mqttConfigPanel = mqttPage.mqttConfigPanel ? mqttPage.mqttConfigPanel.item : null
-                            if (mqttConfigPanel && typeof mqttConfigPanel.getCurrentTabItem === "function") {
-                                var currentTab = mqttConfigPanel.getCurrentTabItem()
+                    // ✅ 2026-04-10 [Phase 7.48.88.107]: S7控制参数区域——数据视图+自定义导航+NavigationManager
+                    } else if (currentCategory === 10) {
+                        var s7Page = s7ControlPageLoader.item
+                        if (s7Page) {
+                            // 数据视图模式下优先委托给Tab处理（滚动）
+                            if (typeof s7Page.tryDataViewNavigation === "function" && s7Page.tryDataViewNavigation("Up")) {
+                                console.log("✅ [S7控制导航] 参数区域上键 - 数据视图导航已处理")
+                                event.accepted = true
+                                return
+                            }
+                            // 检查当前 Tab 是否有自定义导航
+                            if (typeof s7Page.getCurrentTab === "function") {
+                                var currentTab = s7Page.getCurrentTab()
                                 if (currentTab && typeof currentTab.handleDirectionKey === "function") {
-                                    console.log("✅ [MQTT控制导航] 参数区域上键 - 调用当前Tab自定义导航")
+                                    console.log("✅ [S7控制导航] 参数区域上键 - 调用当前Tab自定义导航")
                                     var handled = currentTab.handleDirectionKey("Up")
                                     if (handled) {
                                         event.accepted = true
@@ -826,14 +831,15 @@ Item {
                                     }
                                 }
                             }
-                            // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
-                            if (mqttPage.navigationManager) {
-                                console.log("✅ [MQTT控制导航] 参数区域上键 - 调用 NavigationManager.handleDirectionKey")
-                                mqttPage.navigationManager.handleDirectionKey("Up")
+                            // NavigationManager兜底
+                            if (s7Page.navigationManager) {
+                                console.log("✅ [S7控制导航] 参数区域上键 - 调用 NavigationManager.handleDirectionKey")
+                                s7Page.navigationManager.handleDirectionKey("Up")
                                 event.accepted = true
                                 return
                             }
                         }
+                    } else if (currentCategory === 11) {
                     } else {
                         // ❌ 2026-03-03 [Phase 7.47.76]: 此块原用于"其他页面"（开关量/模拟量）按钮区上键导航
                         // 修改：开关量/模拟量的按钮区已改为 focusSubArea=3，此代码成为死代码
@@ -881,6 +887,15 @@ Item {
                         if (tcpPage && tcpPage.navigationManager) {
                             console.log("✅ [TCP控制导航] 按钮区域上键 - 调用 NavigationManager.handleDirectionKey")
                             tcpPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    // ✅ 2026-04-10 [Phase 7.48.88.107]: S7控制按钮区域使用NavigationManager
+                    } else if (currentCategory === 10) {
+                        var s7Page = s7ControlPageLoader.item
+                        if (s7Page && s7Page.navigationManager) {
+                            console.log("✅ [S7控制导航] 按钮区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            s7Page.navigationManager.handleDirectionKey("Up")
                             event.accepted = true
                             return
                         }
@@ -1032,15 +1047,15 @@ Item {
                             event.accepted = true
                             return
                         }
-                    // ✅ 2026-04-10 [Phase 7.48.88.106]: S7控制页面使用NavigationManager
-                    } else if (currentCategory === 10) {
-                        var s7Page = s7ControlPageLoader.item
-                        if (s7Page && s7Page.navigationManager) {
-                            console.log("✅ [S7控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
-                            s7Page.navigationManager.handleDirectionKey("Down")
-                            event.accepted = true
-                            return
-                        }
+                    // 旧: S7在focusSubArea===0（列表区域）处理
+                    // ✅ 2026-04-10 [Phase 7.48.88.107]: S7无端口列表，focusSubArea不会为0，移至focusSubArea===2/3
+                    // } else if (currentCategory === 10) {
+                    //     var s7Page = s7ControlPageLoader.item
+                    //     if (s7Page && s7Page.navigationManager) {
+                    //         s7Page.navigationManager.handleDirectionKey("Down")
+                    //         event.accepted = true
+                    //         return
+                    //     }
                     } else if (currentCategory === 8) {
                         var canPage = canControlPageLoader.item
                         if (canPage && canPage.navigationManager) {
@@ -1223,10 +1238,37 @@ Item {
                                 return
                             }
                         }
+                    // ✅ 2026-04-10 [Phase 7.48.88.107]: S7控制参数区域——数据视图+自定义导航+NavigationManager
+                    } else if (currentCategory === 10) {
+                        var s7Page = s7ControlPageLoader.item
+                        if (s7Page) {
+                            // 数据视图模式下优先委托给Tab处理（滚动）
+                            if (typeof s7Page.tryDataViewNavigation === "function" && s7Page.tryDataViewNavigation("Down")) {
+                                console.log("✅ [S7控制导航] 参数区域下键 - 数据视图导航已处理")
+                                event.accepted = true
+                                return
+                            }
+                            // 检查当前 Tab 是否有自定义导航
+                            if (typeof s7Page.getCurrentTab === "function") {
+                                var currentTab = s7Page.getCurrentTab()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [S7控制导航] 参数区域下键 - 调用当前Tab自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Down")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                            // NavigationManager兜底
+                            if (s7Page.navigationManager) {
+                                console.log("✅ [S7控制导航] 参数区域下键 - 调用 NavigationManager.handleDirectionKey")
+                                s7Page.navigationManager.handleDirectionKey("Down")
+                                event.accepted = true
+                                return
+                            }
+                        }
                     } else if (currentCategory === 11) {
-                        // ✅ 2026-02-08 [Phase 7.43]: MQTT控制参数区域使用NavigationManager
-                        var mqttPage = mqttControlPageLoader.item
-                        if (mqttPage) {
                             // 先检查当前 Tab 是否有自定义导航
                             var mqttConfigPanel = mqttPage.mqttConfigPanel ? mqttPage.mqttConfigPanel.item : null
                             if (mqttConfigPanel && typeof mqttConfigPanel.getCurrentTabItem === "function") {
@@ -1300,6 +1342,15 @@ Item {
                         if (tcpPage && tcpPage.navigationManager) {
                             console.log("✅ [TCP控制导航] 按钮区域下键 - 调用 NavigationManager.handleDirectionKey")
                             tcpPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    // ✅ 2026-04-10 [Phase 7.48.88.107]: S7控制按钮区域使用NavigationManager
+                    } else if (currentCategory === 10) {
+                        var s7Page = s7ControlPageLoader.item
+                        if (s7Page && s7Page.navigationManager) {
+                            console.log("✅ [S7控制导航] 按钮区域下键 - 调用 NavigationManager.handleDirectionKey")
+                            s7Page.navigationManager.handleDirectionKey("Down")
                             event.accepted = true
                             return
                         }
@@ -3716,7 +3767,8 @@ Item {
                             if (s7ControlPageLoader.item && root.currentCategory === 10) {
                                 if (root.currentFocusArea === 2) {
                                     // S7无端口列表，直接进入Tab区域
-                                    s7ControlPageLoader.item.focusSubArea = 0
+                                    // 旧: focusSubArea = 0  // ✅ 2026-04-10 [Phase 7.48.88.107]: 改为1（Tab栏）
+                                    s7ControlPageLoader.item.focusSubArea = 1
                                 } else {
                                     s7ControlPageLoader.item.focusSubArea = -1
                                 }
@@ -3726,7 +3778,8 @@ Item {
                         function onCurrentCategoryChanged() {
                             if (s7ControlPageLoader.item) {
                                 if (root.currentFocusArea === 2 && root.currentCategory === 10) {
-                                    s7ControlPageLoader.item.focusSubArea = 0
+                                    // 旧: focusSubArea = 0  // ✅ 2026-04-10 [Phase 7.48.88.107]: 改为1（Tab栏）
+                                    s7ControlPageLoader.item.focusSubArea = 1
                                 }
                             }
                         }

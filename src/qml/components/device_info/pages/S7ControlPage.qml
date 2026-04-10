@@ -14,7 +14,9 @@ Rectangle {
     focus: true
 
     // ========== 公开属性 ==========
-    property int focusSubArea: 0         // 焦点子区域 (0:Tab栏 1:参数 2:按钮)
+    // 旧: property int focusSubArea: 0  // (0:Tab栏 1:参数 2:按钮)
+    // ✅ 2026-04-10 [Phase 7.48.88.107]: 焦点子区域映射改为与TCPControlPage一致，确保S7MasterTab/S7SlaveTab焦点指示器正常
+    property int focusSubArea: 0         // 焦点子区域 (0:列表[S7不使用] 1:Tab栏 2:参数 3:按钮)
     property int focusTabIndex: 0        // Tab 焦点索引 (0:S7主站 1:S7从站)
     property int focusParamIndex: 0      // 参数焦点索引
     property int focusButtonIndex: 0     // 按钮焦点索引
@@ -66,7 +68,9 @@ Rectangle {
     }
 
     function tryDataViewNavigation(direction) {
-        if (focusSubArea !== 1 || focusParamIndex < 0) return false
+        // 旧: if (focusSubArea !== 1 || focusParamIndex < 0) return false
+        // ✅ 2026-04-10 [Phase 7.48.88.107]: focusSubArea映射修正——参数区域现在是2
+        if (focusSubArea !== 2 || focusParamIndex < 0) return false
         var currentTab = getCurrentTab()
         if (!currentTab) return false
         if (typeof currentTab.handleDataViewKey !== "function") return false
@@ -75,7 +79,9 @@ Rectangle {
     }
 
     function handleEnterKey() {
-        if (focusSubArea === 0) {
+        // 旧: focusSubArea === 0 表示Tab栏, 1 表示参数, 2 表示按钮
+        // ✅ 2026-04-10 [Phase 7.48.88.107]: focusSubArea映射修正——与TCPControlPage一致
+        if (focusSubArea === 1) {
             // Tab栏按Enter → 切换视图模式
             var tabForView = getCurrentTab()
             if (tabForView && typeof tabForView.toggleViewMode === "function") {
@@ -84,7 +90,7 @@ Rectangle {
             return true
         }
 
-        if (focusSubArea === 1) {
+        if (focusSubArea === 2) {
             // 视图切换行按Enter
             if (focusParamIndex === -1) {
                 var tabForSwitch = getCurrentTab()
@@ -98,7 +104,7 @@ Rectangle {
             return true
         }
 
-        if (focusSubArea === 2) {
+        if (focusSubArea === 3) {
             return triggerButton(focusButtonIndex)
         }
 
@@ -157,7 +163,9 @@ Rectangle {
                 updateLastParamIndex(paramCount)
             })
 
-            root.focusSubArea = 0
+            // 旧: root.focusSubArea = 0  // 0=Tab栏
+            // ✅ 2026-04-10 [Phase 7.48.88.107]: 初始focusSubArea改为1（Tab栏）
+            root.focusSubArea = 1
             root.focusTabIndex = 0
             root.focusParamIndex = 0
             root.focusButtonIndex = 0
@@ -180,22 +188,24 @@ Rectangle {
             root.focusButtonIndex = buttonIndex
         }
 
+        // 旧: areaTabBar→0, areaParams→1, areaButtons→2
+        // ✅ 2026-04-10 [Phase 7.48.88.107]: focusSubArea映射修正——与TCPControlPage一致 (1/2/3)
         onAreaChanged: function(newArea) {
             switch(newArea) {
             case areaTabBar:
-                root.focusSubArea = 0
+                root.focusSubArea = 1
                 root.focusTabIndex = tabIndex
                 root.focusParamIndex = -1
                 root.focusButtonIndex = -1
                 break
             case areaParams:
-                root.focusSubArea = 1
+                root.focusSubArea = 2
                 root.focusParamIndex = paramIndex
                 root.focusTabIndex = -1
                 root.focusButtonIndex = -1
                 break
             case areaButtons:
-                root.focusSubArea = 2
+                root.focusSubArea = 3
                 root.focusButtonIndex = buttonIndex
                 root.focusTabIndex = -1
                 root.focusParamIndex = -1
@@ -256,7 +266,9 @@ Rectangle {
 
     Component.onCompleted: {
         console.log("✅ [S7ControlPage] 初始化完成")
-        focusSubArea = 0
+        // 旧: focusSubArea = 0
+        // ✅ 2026-04-10 [Phase 7.48.88.107]: 初始focusSubArea改为1（Tab栏）
+        focusSubArea = 1
     }
 
     // ========== 主布局 ==========
@@ -284,7 +296,9 @@ Rectangle {
 
                     Image {
                         anchors.fill: parent
-                        source: "../../images/059.png"
+                        // 旧: source: "../../images/059.png"  // 路径错误
+                        // ✅ 2026-04-10 [Phase 7.48.88.107]: 修正图片路径——pages/下的QML用../images/
+                        source: "../images/059.png"
                         fillMode: Image.Stretch
                         z: -1
                     }
@@ -322,12 +336,13 @@ Rectangle {
                                 color: "transparent"
 
                                 // 焦点指示器
+                                // 旧: focusSubArea === 0  // ✅ 2026-04-10 [Phase 7.48.88.107]: 改为1
                                 Rectangle {
                                     anchors.fill: parent
                                     color: "transparent"
-                                    border.color: (root.focusSubArea === 0 && root.focusTabIndex === index)
+                                    border.color: (root.focusSubArea === 1 && root.focusTabIndex === index)
                                                   ? "#2196F3" : "transparent"
-                                    border.width: (root.focusSubArea === 0 && root.focusTabIndex === index) ? 3 : 0
+                                    border.width: (root.focusSubArea === 1 && root.focusTabIndex === index) ? 3 : 0
                                     radius: 4
                                     z: 11
                                 }
@@ -337,9 +352,11 @@ Rectangle {
                                     anchors.fill: parent
                                     fillMode: Image.Stretch
                                     z: -1
+                                    // 旧: source使用../../images/路径（错误）
+                                    // ✅ 2026-04-10 [Phase 7.48.88.107]: 修正图片路径
                                     source: root.currentTabIndex === index
-                                            ? "../../images/DJHeadbutton2.png"
-                                            : "../../images/DJHeadbutton1.png"
+                                            ? "../images/DJHeadbutton2.png"
+                                            : "../images/DJHeadbutton1.png"
                                 }
 
                                 // 底部激活指示条
@@ -522,7 +539,8 @@ Rectangle {
 
                     background: Rectangle {
                         color: {
-                            var hasFocus = root.focusSubArea === 2 && root.focusButtonIndex === 0
+                            // 旧: focusSubArea === 2  // ✅ 2026-04-10 [Phase 7.48.88.107]: 改为3
+                            var hasFocus = root.focusSubArea === 3 && root.focusButtonIndex === 0
                             if (toggleS7Btn.s7Running) {
                                 return hasFocus ? "#e74c3c" : "#c0392b"
                             } else {
@@ -530,7 +548,8 @@ Rectangle {
                             }
                         }
                         radius: 4
-                        border.width: root.focusSubArea === 2 && root.focusButtonIndex === 0 ? 5 : 0
+                        // 旧: focusSubArea === 2  // ✅ 2026-04-10 [Phase 7.48.88.107]: 改为3
+                        border.width: root.focusSubArea === 3 && root.focusButtonIndex === 0 ? 5 : 0
                         border.color: "#2196F3"
                     }
 
