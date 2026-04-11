@@ -294,9 +294,10 @@ Rectangle {
 
                                 Image {
                                     anchors.fill: parent
+                                    // ✅ 2026-04-11 [Phase 7.48.88.110.4]: 修正图片名——与S7ControlPage一致
                                     source: root.currentTabIndex === index
-                                            ? "../images/DJHeadbutton.png"
-                                            : "../images/DJHeadbutton2.png"
+                                            ? "../images/DJHeadbutton2.png"
+                                            : "../images/DJHeadbutton1.png"
                                     fillMode: Image.Stretch
                                 }
 

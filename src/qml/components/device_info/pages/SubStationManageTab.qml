@@ -267,7 +267,6 @@ Rectangle {
                         model: ["关闭", "打开"]
                         currentIndex: (typeof centralControlManager !== "undefined" &&
                                        centralControlManager.isSlotEnabled(root.currentSlotIndex)) ? 1 : 0
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 0
                         onCurrentIndexChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotEnabled(root.currentSlotIndex, currentIndex === 1)
@@ -296,7 +295,6 @@ Rectangle {
                             default: return 0
                             }
                         }
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 1
                         onCurrentIndexChanged: {
                             var protocols = ["mqtt", "s7", "modbus"]
                             if (typeof centralControlManager !== "undefined") {
@@ -323,7 +321,6 @@ Rectangle {
                         value: (typeof centralControlManager !== "undefined")
                                ? centralControlManager.getSlotParam(root.currentSlotIndex, "targetDeviceId") || 1 : 1
                         visible: getCurrentSlotProtocol() === "mqtt"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 2 && visible
                         onValueChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotParam(root.currentSlotIndex, "targetDeviceId", value)
@@ -363,7 +360,6 @@ Rectangle {
                         text: (typeof centralControlManager !== "undefined")
                               ? centralControlManager.getSlotTargetIP(root.currentSlotIndex) : "192.168.0.1"
                         visible: getCurrentSlotProtocol() === "s7"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 2 && visible
                         onTextChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotTargetIP(root.currentSlotIndex, text)
@@ -388,7 +384,6 @@ Rectangle {
                         value: (typeof centralControlManager !== "undefined")
                                ? centralControlManager.getSlotPort(root.currentSlotIndex) : 102
                         visible: getCurrentSlotProtocol() === "s7"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 3 && visible
                         onValueChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotPort(root.currentSlotIndex, value)
@@ -413,7 +408,6 @@ Rectangle {
                         value: (typeof centralControlManager !== "undefined")
                                ? centralControlManager.getSlotParam(root.currentSlotIndex, "rack") || 0 : 0
                         visible: getCurrentSlotProtocol() === "s7"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 4 && visible
                         onValueChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotParam(root.currentSlotIndex, "rack", value)
@@ -438,7 +432,6 @@ Rectangle {
                         value: (typeof centralControlManager !== "undefined")
                                ? centralControlManager.getSlotParam(root.currentSlotIndex, "slot") || 2 : 2
                         visible: getCurrentSlotProtocol() === "s7"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 5 && visible
                         onValueChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotParam(root.currentSlotIndex, "slot", value)
@@ -469,7 +462,6 @@ Rectangle {
                             }
                         }
                         visible: getCurrentSlotProtocol() === "s7"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 6 && visible
                     }
 
                     // ===== Modbus TCP协议参数 =====
@@ -488,7 +480,6 @@ Rectangle {
                         text: (typeof centralControlManager !== "undefined")
                               ? centralControlManager.getSlotTargetIP(root.currentSlotIndex) : "192.168.1.1"
                         visible: getCurrentSlotProtocol() === "modbus"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 2 && visible
                         onTextChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotTargetIP(root.currentSlotIndex, text)
@@ -513,7 +504,6 @@ Rectangle {
                         value: (typeof centralControlManager !== "undefined")
                                ? centralControlManager.getSlotPort(root.currentSlotIndex) : 502
                         visible: getCurrentSlotProtocol() === "modbus"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 3 && visible
                         onValueChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotPort(root.currentSlotIndex, value)
@@ -538,7 +528,6 @@ Rectangle {
                         value: (typeof centralControlManager !== "undefined")
                                ? centralControlManager.getSlotParam(root.currentSlotIndex, "slaveAddress") || 1 : 1
                         visible: getCurrentSlotProtocol() === "modbus"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 4 && visible
                         onValueChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotParam(root.currentSlotIndex, "slaveAddress", value)
@@ -563,7 +552,6 @@ Rectangle {
                         value: (typeof centralControlManager !== "undefined")
                                ? centralControlManager.getSlotParam(root.currentSlotIndex, "startRegister") || 0 : 0
                         visible: getCurrentSlotProtocol() === "modbus"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 5 && visible
                         onValueChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotParam(root.currentSlotIndex, "startRegister", value)
@@ -588,7 +576,6 @@ Rectangle {
                         value: (typeof centralControlManager !== "undefined")
                                ? centralControlManager.getSlotParam(root.currentSlotIndex, "registerCount") || 10 : 10
                         visible: getCurrentSlotProtocol() === "modbus"
-                        highlighted: root.focusSubArea === 2 && root.focusParamIndex === 6 && visible
                         onValueChanged: {
                             if (typeof centralControlManager !== "undefined") {
                                 centralControlManager.setSlotParam(root.currentSlotIndex, "registerCount", value)

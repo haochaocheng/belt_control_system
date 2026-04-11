@@ -98,7 +98,6 @@ Rectangle {
                 from: 1
                 to: 8
                 value: root.localDeviceId
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 0
                 onValueChanged: {
                     if (typeof centralControlManager !== "undefined") {
                         centralControlManager.localDeviceId = value
@@ -119,7 +118,6 @@ Rectangle {
                 Layout.preferredHeight: 36
                 model: ["主站", "分站", "独立"]
                 currentIndex: root.roleIndex
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 1
                 onCurrentIndexChanged: updateRole()
             }
 
@@ -137,7 +135,6 @@ Rectangle {
                 from: 1
                 to: 8
                 value: root.stationId
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 2
                 onValueChanged: {
                     if (typeof centralControlManager !== "undefined") {
                         centralControlManager.stationId = value
@@ -160,7 +157,6 @@ Rectangle {
                 to: 8
                 value: root.masterDeviceId
                 enabled: roleField.currentIndex === 1  // 仅分站模式
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 3
                 onValueChanged: root.masterDeviceId = value
             }
 

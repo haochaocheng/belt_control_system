@@ -119,7 +119,6 @@ Rectangle {
                 Layout.preferredWidth: 160
                 Layout.preferredHeight: 36
                 text: root.brokerIP
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 0
                 onTextChanged: {
                     if (typeof centralControlManager !== "undefined") {
                         centralControlManager.mqttBrokerIP = text
@@ -141,7 +140,6 @@ Rectangle {
                 from: 1
                 to: 65535
                 value: root.brokerPort
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 1
                 onValueChanged: {
                     if (typeof centralControlManager !== "undefined") {
                         centralControlManager.mqttBrokerPort = value
@@ -161,7 +159,6 @@ Rectangle {
                 Layout.preferredWidth: 160
                 Layout.preferredHeight: 36
                 text: root.clientId
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 2
                 onTextChanged: {
                     if (typeof centralControlManager !== "undefined") {
                         centralControlManager.mqttClientId = text
@@ -182,7 +179,6 @@ Rectangle {
                 Layout.preferredHeight: 36
                 model: ["QoS 0", "QoS 1", "QoS 2"]
                 currentIndex: root.qosLevel
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 3
             }
 
             // ===== 参数4: Keep-alive =====
@@ -199,7 +195,6 @@ Rectangle {
                 from: 10
                 to: 600
                 value: root.keepAlive
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 4
                 onValueChanged: {
                     if (typeof centralControlManager !== "undefined") {
                         centralControlManager.mqttKeepAlive = value
@@ -219,7 +214,6 @@ Rectangle {
                 Layout.preferredWidth: 160
                 Layout.preferredHeight: 36
                 text: root.topicPrefix
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 5
                 onTextChanged: {
                     if (typeof centralControlManager !== "undefined") {
                         centralControlManager.mqttTopicPrefix = text
@@ -239,7 +233,6 @@ Rectangle {
                 Layout.preferredWidth: 160
                 Layout.preferredHeight: 36
                 text: root.username
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 6
                 onTextChanged: {
                     if (typeof centralControlManager !== "undefined") {
                         centralControlManager.mqttUsername = text
@@ -260,7 +253,6 @@ Rectangle {
                 Layout.preferredHeight: 36
                 text: root.password
                 echoMode: TextInput.Password
-                highlighted: root.focusSubArea === 2 && root.focusParamIndex === 7
                 onTextChanged: {
                     if (typeof centralControlManager !== "undefined") {
                         centralControlManager.mqttPassword = text
