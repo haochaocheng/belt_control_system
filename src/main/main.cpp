@@ -38,6 +38,7 @@
 #include "control/S7ClientController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加S7客户端控制器头文件
 #include "control/S7ServerController.h"  // ✅ 2026-02-08 [Phase 7.42]: 添加S7服务器控制器头文件
 #include "control/TCPDataAdapter.h"  // ✅ 2026-04-07 [Phase 7.48.88.83]: 添加TCP数据适配层头文件
+#include "control/CentralizedControlManager.h"  // ✅ 2026-04-11 [Phase 7.48.88.110]: 添加集控管理控制器头文件
 #ifdef MQTT_ENABLED
 #include "mqtt/MQTTController.h"  // ✅ 2026-02-08 [Phase 7.43]: 添加MQTT控制器头文件
 #include "mqtt/MQTTAutoManager.h"  // ✅ 2026-02-09 [Phase 7.44.1]: 添加MQTT自动管理器头文件
@@ -240,6 +241,9 @@ int main(int argc, char *argv[]) {
         tcpDataAdapter.bindS7Server(6, &s7Server7);
         tcpDataAdapter.bindS7Server(7, &s7Server8);
         logMessage("TCPDataAdapter initialized with 8 Modbus slaves and 8 S7 servers");
+
+        // ✅ 2026-04-11 [Phase 7.48.88.110]: 初始化集控管理控制器
+        CentralizedControlManager centralControlManager;
 
 #ifdef MQTT_ENABLED
         // ✅ 2026-02-08 [Phase 7.43]: 初始化MQTT控制器
@@ -587,6 +591,8 @@ int main(int argc, char *argv[]) {
         engine.rootContext()->setContextProperty("s7Server8", &s7Server8);
         // ✅ 2026-04-07 [Phase 7.48.88.83]: 注册TCP数据适配层到QML
         engine.rootContext()->setContextProperty("tcpDataAdapter", &tcpDataAdapter);
+        // ✅ 2026-04-11 [Phase 7.48.88.110]: 注册集控管理控制器到QML
+        engine.rootContext()->setContextProperty("centralControlManager", &centralControlManager);
 #ifdef MQTT_ENABLED
         // ✅ 2026-02-08 [Phase 7.43]: 注册MQTT控制器到QML
         engine.rootContext()->setContextProperty("mqttController", &mqttController);

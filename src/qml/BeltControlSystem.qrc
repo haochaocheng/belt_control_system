@@ -163,6 +163,10 @@
         <file>components/device_info/pages/S7MasterTab.qml</file>
         <file>components/device_info/pages/S7ControlPage.qml</file>
         <file>components/device_info/pages/S7SlaveTab.qml</file>
+        <file>components/device_info/pages/CentralControlPage.qml</file>
+        <file>components/device_info/pages/CentralRoleTab.qml</file>
+        <file>components/device_info/pages/SubStationManageTab.qml</file>
+        <file>components/device_info/pages/MQTTCentralTab.qml</file>
         <file>components/device_info/pages/SerialPortConfigPanel.qml</file>
         <file>components/device_info/pages/SerialPortControlPage.qml</file>
         <file>components/device_info/pages/SerialPortListPanel.qml</file>

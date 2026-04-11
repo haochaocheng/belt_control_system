@@ -36,6 +36,7 @@ set(CONTROL_SOURCES
     MqttProtectionMonitor.cpp
     ProtectionLogicController.cpp  # ✅ 2026-03-23 [Phase 7.48.85]: 添加保护逻辑控制器源文件
     TCPDataAdapter.cpp  # ✅ 2026-04-07 [Phase 7.48.88.83]: 添加TCP数据适配层源文件
+    CentralizedControlManager.cpp  # ✅ 2026-04-11 [Phase 7.48.88.110]: 添加集控管理控制器源文件
 )
 
 set(CONTROL_HEADERS
@@ -76,6 +77,7 @@ set(CONTROL_HEADERS
     MqttProtectionMonitor.h
     ProtectionLogicController.h  # ✅ 2026-03-23 [Phase 7.48.85]: 添加保护逻辑控制器头文件
     TCPDataAdapter.h  # ✅ 2026-04-07 [Phase 7.48.88.83]: 添加TCP数据适配层头文件
+    CentralizedControlManager.h  # ✅ 2026-04-11 [Phase 7.48.88.110]: 添加集控管理控制器头文件
 )
 
 # ========== Sherpa-ONNX TTS 集成（可选） ==========

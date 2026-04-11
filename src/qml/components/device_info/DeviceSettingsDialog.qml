@@ -676,6 +676,15 @@ Item {
                             event.accepted = true
                             return
                         }
+                    // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理页面使用NavigationManager
+                    } else if (currentCategory === 14) {
+                        var centralPage = centralControlPageLoader.item
+                        if (centralPage && centralPage.navigationManager) {
+                            console.log("✅ [集控管理导航] 上键 - 调用 NavigationManager.handleDirectionKey")
+                            centralPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
                     }
 
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
@@ -864,8 +873,29 @@ Item {
                                 return
                             }
                         }
+                    // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理参数区域使用NavigationManager
+                    } else if (currentCategory === 14) {
+                        var centralPage = centralControlPageLoader.item
+                        if (centralPage) {
+                            if (typeof centralPage.getCurrentTab === "function") {
+                                var currentTab = centralPage.getCurrentTab()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [集控管理导航] 参数区域上键 - 调用当前Tab自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Up")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                            if (centralPage.navigationManager) {
+                                console.log("✅ [集控管理导航] 参数区域上键 - 调用 NavigationManager.handleDirectionKey")
+                                centralPage.navigationManager.handleDirectionKey("Up")
+                                event.accepted = true
+                                return
+                            }
+                        }
                     } else {
-                        // ❌ 2026-03-03 [Phase 7.47.76]: 此块原用于"其他页面"（开关量/模拟量）按钮区上键导航
                         // 修改：开关量/模拟量的按钮区已改为 focusSubArea=3，此代码成为死代码
                         // 保留注释供参考，实际导航已移至 focusSubArea===3 的 else if 分支中
                         // 其他页面：focusSubArea=2是底部按钮区域
@@ -929,6 +959,15 @@ Item {
                         if (mqttPage && mqttPage.navigationManager) {
                             console.log("✅ [MQTT控制导航] 按钮区域上键 - 调用 NavigationManager.handleDirectionKey")
                             mqttPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
+                    // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理按钮区域使用NavigationManager
+                    } else if (currentCategory === 14) {
+                        var centralPage = centralControlPageLoader.item
+                        if (centralPage && centralPage.navigationManager) {
+                            console.log("✅ [集控管理导航] 按钮区域上键 - 调用 NavigationManager.handleDirectionKey")
+                            centralPage.navigationManager.handleDirectionKey("Up")
                             event.accepted = true
                             return
                         }
@@ -1158,6 +1197,15 @@ Item {
                             event.accepted = true
                             return
                         }
+                    // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理页面使用NavigationManager
+                    } else if (currentCategory === 14) {
+                        var centralPage = centralControlPageLoader.item
+                        if (centralPage && centralPage.navigationManager) {
+                            console.log("✅ [集控管理导航] 下键 - 调用 NavigationManager.handleDirectionKey")
+                            centralPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
                     } else {
                         // ✅ 2026-03-04 [Phase 7.47.80]: 其他页面（开关量/模拟量）：参数区两列Down导航
                         // 旧逻辑（Phase 7.47.76）：直接跳到底部按钮（不支持数据超时/连接超时导航）
@@ -1317,6 +1365,28 @@ Item {
                                 return
                             }
                         }
+                    // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理参数区域使用NavigationManager
+                    } else if (currentCategory === 14) {
+                        var centralPage = centralControlPageLoader.item
+                        if (centralPage) {
+                            if (typeof centralPage.getCurrentTab === "function") {
+                                var currentTab = centralPage.getCurrentTab()
+                                if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                    console.log("✅ [集控管理导航] 参数区域下键 - 调用当前Tab自定义导航")
+                                    var handled = currentTab.handleDirectionKey("Down")
+                                    if (handled) {
+                                        event.accepted = true
+                                        return
+                                    }
+                                }
+                            }
+                            if (centralPage.navigationManager) {
+                                console.log("✅ [集控管理导航] 参数区域下键 - 调用 NavigationManager.handleDirectionKey")
+                                centralPage.navigationManager.handleDirectionKey("Down")
+                                event.accepted = true
+                                return
+                            }
+                        }
                     }
 
                     // ❌ 2026-03-03 [Phase 7.47.76]: 此块原用于"其他页面"（开关量/模拟量）按钮区下键导航
@@ -1378,6 +1448,15 @@ Item {
                         if (s7Page && s7Page.navigationManager) {
                             console.log("✅ [S7控制导航] 按钮区域下键 - 调用 NavigationManager.handleDirectionKey")
                             s7Page.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理按钮区域使用NavigationManager
+                    } else if (currentCategory === 14) {
+                        var centralPage = centralControlPageLoader.item
+                        if (centralPage && centralPage.navigationManager) {
+                            console.log("✅ [集控管理导航] 按钮区域下键 - 调用 NavigationManager.handleDirectionKey")
+                            centralPage.navigationManager.handleDirectionKey("Down")
                             event.accepted = true
                             return
                         }
@@ -1542,8 +1621,9 @@ Item {
                 // 旧: 只排除串口/CAN/TCP/MQTT，漏掉S7导致focusSubArea被错误重置为0
                 var isS7ControlPage = (currentCategory === 10)  // S7控制类别
                 var isMQTTControlPage = (currentCategory === 11)  // MQTT控制类别
+                var isCentralControlPage = (currentCategory === 14)  // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理类别
 
-                if (currentPage.focusSubArea === 1 && !isSerialPortControlPage && !isCANControlPage && !isTCPControlPage && !isS7ControlPage && !isMQTTControlPage) {
+                if (currentPage.focusSubArea === 1 && !isSerialPortControlPage && !isCANControlPage && !isTCPControlPage && !isS7ControlPage && !isMQTTControlPage && !isCentralControlPage) {
                     // ✅ 2026-01-30 [FIX 100.300.106.3]: 检查布局模式
                     var currentTab = currentPage.getCurrentTab ? currentPage.getCurrentTab() : null
                     var layoutMode = (currentTab && currentTab.layoutMode) ? currentTab.layoutMode : "two-column"
@@ -1690,9 +1770,16 @@ Item {
             }
 
             // ✅ 2026-04-10 [Phase 7.48.88.106]: S7控制页面使用NavigationManager处理左键
+            // ✅ 2026-04-11 [Phase 7.48.88.109]: 数据视图模式下优先委托给Tab处理DB切换，与右键保持一致
             if (currentCategory === 10 && currentFocusArea === 2) {
                 var s7Page = s7ControlPageLoader.item
                 if (s7Page && s7Page.navigationManager) {
+                    // 数据视图模式下优先委托给Tab处理（DB1/DB2切换）
+                    if (typeof s7Page.tryDataViewNavigation === "function" && s7Page.tryDataViewNavigation("Left")) {
+                        console.log("✅ [S7控制导航] 左键 - 数据视图导航已处理")
+                        event.accepted = true
+                        return
+                    }
                     console.log("✅ [导航] S7控制页面左键 - 调用NavigationManager")
                     s7Page.navigationManager.handleDirectionKey("Left")
                     event.accepted = true
@@ -1706,6 +1793,17 @@ Item {
                 if (mqttPage && mqttPage.navigationManager) {
                     console.log("✅ [导航] MQTT控制页面左键 - 调用NavigationManager")
                     mqttPage.navigationManager.handleDirectionKey("Left")
+                    event.accepted = true
+                    return
+                }
+            }
+
+            // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理页面使用NavigationManager处理左键
+            if (currentCategory === 14 && currentFocusArea === 2) {
+                var centralPage = centralControlPageLoader.item
+                if (centralPage && centralPage.navigationManager) {
+                    console.log("✅ [导航] 集控管理页面左键 - 调用NavigationManager")
+                    centralPage.navigationManager.handleDirectionKey("Left")
                     event.accepted = true
                     return
                 }
@@ -1955,6 +2053,27 @@ Item {
                         // 如果没有自定义导航或自定义导航返回false，使用NavigationManager
                         console.log("🔍 [MQTT控制导航] 右键 - 调用 NavigationManager.handleDirectionKey")
                         mqttPage.navigationManager.handleDirectionKey("Right")
+                        event.accepted = true
+                        return
+                    }
+                }
+
+                // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理页面使用 NavigationManager
+                var isCentralControlPage = (currentCategory === 14)
+                if (isCentralControlPage) {
+                    var centralPage = centralControlPageLoader.item
+                    if (centralPage && centralPage.navigationManager) {
+                        if (typeof centralPage.getCurrentTab === "function") {
+                            var currentTab = centralPage.getCurrentTab()
+                            if (currentTab && typeof currentTab.handleDirectionKey === "function") {
+                                var handled = currentTab.handleDirectionKey("Right")
+                                if (handled) {
+                                    event.accepted = true
+                                    return
+                                }
+                            }
+                        }
+                        centralPage.navigationManager.handleDirectionKey("Right")
                         event.accepted = true
                         return
                     }
@@ -2233,9 +2352,18 @@ Item {
                         } else {
                             console.log("⚠️ [导航] mqttConfigPanel 不存在")
                         }
+                    // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理页面回车键处理
+                    } else if (currentCategory === 14) {
+                        var centralPage = centralControlPageLoader.item
+                        if (centralPage && typeof centralPage.handleEnterKey === "function") {
+                            handled = centralPage.handleEnterKey()
+                            if (handled) {
+                                console.log("✅ [导航] 回车键已被集控管理页面处理")
+                                event.accepted = true
+                                return
+                            }
+                        }
                     } else {
-                        console.log("✅ [导航] 回车键 - 其他页面，currentCategory:", currentCategory)
-                    }
 
                     // 如果Tab没有处理，执行默认行为（弹出虚拟键盘）
                     // ✅ 参数区域：弹出虚拟键盘
@@ -2685,7 +2813,8 @@ Item {
                     // ✅ 2026-03-18 [Phase 7.48.53]: "模拟量输入"重命名为"模拟量保护"
                     // ✅ 2026-04-10 [Phase 7.48.88.105]: 在TCP控制和MQTT控制之间插入"S7控制"
                     // 旧: model: ["基本配置", "开关量输入", "模拟量保护", "电机控制", "制动器控制", "张紧控制", "洒水控制", "串口控制", "CAN控制", "TCP控制", "MQTT控制", "逻辑控制", "沿线点位保护"]
-                    model: ["基本配置", "开关量输入", "模拟量保护", "电机控制", "制动器控制", "张紧控制", "洒水控制", "串口控制", "CAN控制", "TCP控制", "S7控制", "MQTT控制", "逻辑控制", "沿线点位保护"]
+                    // ✅ 2026-04-11 [Phase 7.48.88.110]: 添加"集控管理"类别（categoryIndex=14）
+                    model: ["基本配置", "开关量输入", "模拟量保护", "电机控制", "制动器控制", "张紧控制", "洒水控制", "串口控制", "CAN控制", "TCP控制", "S7控制", "MQTT控制", "逻辑控制", "沿线点位保护", "集控管理"]
 
                     Button {
                         width: parent.width - 20
@@ -4031,6 +4160,63 @@ Item {
                         }
                     }
                 }
+
+                // ✅ 2026-04-11 [Phase 7.48.88.110]: 14: 集控管理
+                Loader {
+                    id: centralControlPageLoader
+                    source: "pages/CentralControlPage.qml"
+
+                    onLoaded: {
+                        console.log("✅ [DeviceSettingsDialog] CentralControlPage 加载成功")
+                        if (item) {
+                            item.virtualKeyboard = Qt.binding(function() {
+                                return root.virtualKeyboard
+                            })
+                        }
+                    }
+
+                    onStatusChanged: {
+                        if (status === Loader.Error) {
+                            console.error("❌ [DeviceSettingsDialog] CentralControlPage 加载失败")
+                        }
+                    }
+
+                    // 集控管理焦点连接
+                    Connections {
+                        target: root
+                        enabled: centralControlPageLoader.item !== null
+
+                        function onCurrentFocusAreaChanged() {
+                            if (centralControlPageLoader.item && root.currentCategory === 14) {
+                                if (root.currentFocusArea === 2) {
+                                    // 集控无端口列表，直接进入Tab区域（与S7相同模式）
+                                    centralControlPageLoader.item.focusSubArea = 1
+                                } else {
+                                    centralControlPageLoader.item.focusSubArea = -1
+                                }
+                            }
+                        }
+
+                        function onCurrentCategoryChanged() {
+                            if (centralControlPageLoader.item) {
+                                if (root.currentFocusArea === 2 && root.currentCategory === 14) {
+                                    centralControlPageLoader.item.focusSubArea = 1
+                                }
+                            }
+                        }
+                    }
+
+                    // 监听集控管理页面焦点变化
+                    Connections {
+                        target: centralControlPageLoader.item
+                        enabled: centralControlPageLoader.item !== null
+
+                        function onRequestReturnToCategory() {
+                            console.log("✅ [DeviceSettingsDialog] 集控管理请求返回类别")
+                            root.currentFocusArea = 1
+                        }
+                    }
+                }
             }
         }
 
@@ -4274,6 +4460,8 @@ Item {
             return null  // 逻辑控制待实现
         case 13:
             return linePositionPageLoader.item  // ✅ 2026-03-18 [Phase 7.48.56]: 沿线点位保护
+        case 14:
+            return centralControlPageLoader.item  // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理
         default:
             return null
         }
