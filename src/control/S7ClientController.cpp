@@ -3,6 +3,7 @@
 // 创建日期: 2026-02-08
 // ✅ 2026-02-08 [Phase 7.42]: TCP控制功能实现 - 基于 Snap7 库
 // ✅ 2026-02-08 [Phase 7.42.5]: 集成 Snap7 库实现
+// ✅ 2026-04-11 [Phase 7.48.88.110]: 添加pduSize属性 + saveConfig/loadConfig持久化
 
 #include "S7ClientController.h"
 #include <QDebug>
@@ -16,11 +17,13 @@ S7ClientController::S7ClientController(QObject *parent)
     , m_connectionType("PG")
     , m_localTSAP("0x0100")
     , m_remoteTSAP("0x0302")
+    , m_pduSize(480)
     , m_pollInterval(1000)
     , m_timeout(5000)
     , m_pollTimer(new QTimer(this))
     , m_isConnected(false)
     , m_statusText("未连接")
+    , m_settings(nullptr)
 {
 #ifdef ENABLE_SNAP7
     // ✅ 2026-02-08 [Phase 7.42.5]: 初始化 Snap7 客户端
@@ -33,6 +36,9 @@ S7ClientController::S7ClientController(QObject *parent)
     // 配置轮询定时器
     connect(m_pollTimer, &QTimer::timeout,
             this, &S7ClientController::handlePollTimeout);
+
+    // ✅ 2026-04-11 [Phase 7.48.88.110]: 初始化配置
+    initSettings();
 }
 
 S7ClientController::~S7ClientController()
@@ -102,6 +108,15 @@ void S7ClientController::setRemoteTSAP(const QString &tsap)
     }
 }
 
+// ========== PDU配置 ==========
+void S7ClientController::setPduSize(int size)
+{
+    if (m_pduSize != size) {
+        m_pduSize = size;
+        emit pduSizeChanged();
+    }
+}
+
 // ========== 轮询配置 ==========
 void S7ClientController::setPollInterval(int interval)
 {
@@ -133,6 +148,13 @@ bool S7ClientController::connectToPLC()
     qDebug() << "  Rack:" << m_rack << "Slot:" << m_slot;
 
     // 使用 ConnectTo 方法连接到 PLC
+    // ✅ 2026-04-11 [Phase 7.48.88.110]: 连接前设置PDU大小
+    if (m_pduSize > 0) {
+        word pduRequest = static_cast<word>(m_pduSize);
+        m_s7Client->SetParam(p_u16_PduRequest, &pduRequest);
+        qDebug() << "  PDU请求大小:" << m_pduSize;
+    }
+
     int result = m_s7Client->ConnectTo(m_targetIP.toStdString().c_str(), m_rack, m_slot);
 
     if (result == 0) {
@@ -443,4 +465,71 @@ void S7ClientController::updateStatusText()
         m_statusText = newStatus;
         emit statusTextChanged();
     }
+}
+
+// ✅ 2026-04-11 [Phase 7.48.88.110]: 添加配置持久化功能
+void S7ClientController::initSettings()
+{
+    m_settings = new QSettings("BeltControlSystem", "S7Client", this);
+}
+
+void S7ClientController::saveConfig(int portIndex)
+{
+    if (!m_settings) {
+        initSettings();
+    }
+
+    QString prefix = QString("Port%1/").arg(portIndex);
+
+    m_settings->setValue(prefix + "targetIP", m_targetIP);
+    m_settings->setValue(prefix + "port", m_port);
+    m_settings->setValue(prefix + "rack", m_rack);
+    m_settings->setValue(prefix + "slot", m_slot);
+    m_settings->setValue(prefix + "connectionType", m_connectionType);
+    m_settings->setValue(prefix + "localTSAP", m_localTSAP);
+    m_settings->setValue(prefix + "remoteTSAP", m_remoteTSAP);
+    m_settings->setValue(prefix + "pduSize", m_pduSize);
+    m_settings->setValue(prefix + "pollInterval", m_pollInterval);
+    m_settings->setValue(prefix + "timeout", m_timeout);
+
+    m_settings->sync();
+    qDebug() << "✅ [S7ClientController] 配置已保存 - 端口:" << portIndex;
+}
+
+void S7ClientController::loadConfig(int portIndex)
+{
+    if (!m_settings) {
+        initSettings();
+    }
+
+    QString prefix = QString("Port%1/").arg(portIndex);
+
+    setTargetIP(m_settings->value(prefix + "targetIP", "192.168.0.1").toString());
+    setPort(m_settings->value(prefix + "port", 102).toInt());
+    setRack(m_settings->value(prefix + "rack", 0).toInt());
+    setSlot(m_settings->value(prefix + "slot", 2).toInt());
+    setConnectionType(m_settings->value(prefix + "connectionType", "PG").toString());
+    setLocalTSAP(m_settings->value(prefix + "localTSAP", "0x0100").toString());
+    setRemoteTSAP(m_settings->value(prefix + "remoteTSAP", "0x0302").toString());
+    setPduSize(m_settings->value(prefix + "pduSize", 480).toInt());
+    setPollInterval(m_settings->value(prefix + "pollInterval", 1000).toInt());
+    setTimeout(m_settings->value(prefix + "timeout", 5000).toInt());
+
+    qDebug() << "✅ [S7ClientController] 配置已加载 - 端口:" << portIndex;
+}
+
+void S7ClientController::resetConfig()
+{
+    setTargetIP("192.168.0.1");
+    setPort(102);
+    setRack(0);
+    setSlot(2);
+    setConnectionType("PG");
+    setLocalTSAP("0x0100");
+    setRemoteTSAP("0x0302");
+    setPduSize(480);
+    setPollInterval(1000);
+    setTimeout(5000);
+
+    qDebug() << "✅ [S7ClientController] 配置已重置";
 }

@@ -159,7 +159,7 @@ Rectangle {
         default:
             root.currentMapData = []
         }
-        console.log("✅ [S7SlaveTab] 加载映射数据 - 类别:", root.mapCategory, "数量:", root.currentMapData.length)
+        // 旧: console.log(...)  // 2026-04-10: 定时器每秒调用导致日志刷屏，去除
     }
 
     onMapCategoryChanged: loadMapData()

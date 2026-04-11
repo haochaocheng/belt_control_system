@@ -43,6 +43,14 @@ bool ModbusTCPSlaveController::isConnected() const
     return m_modbusServer && m_modbusServer->state() == QModbusDevice::ConnectedState;
 }
 
+// ✅ 2026-04-10 [Phase 7.48.88.104]: 检测实际TCP客户端连接数
+// QModbusTcpServer 内部继承自 QTcpServer，每个客户端连接对应一个 QTcpSocket 子对象
+int ModbusTCPSlaveController::getConnectedClientCount() const
+{
+    if (!m_modbusServer || !isConnected()) return 0;
+    return m_modbusServer->findChildren<QTcpSocket*>().count();
+}
+
 // ========== TCP配置 ==========
 void ModbusTCPSlaveController::setPort(int port)
 {

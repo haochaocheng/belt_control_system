@@ -41,6 +41,8 @@ public:
     // ========== 连接状态 ==========
     bool isRunning() const { return m_isRunning; }
     QString statusText() const { return m_statusText; }
+    // ✅ 2026-04-10 [Phase 7.48.88.104]: 获取实际客户端连接数
+    int getClientCount() const;
 
     // ========== S7配置 ==========
     int port() const { return m_port; }

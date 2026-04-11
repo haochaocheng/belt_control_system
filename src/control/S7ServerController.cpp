@@ -123,6 +123,10 @@ bool S7ServerController::startServer()
     qDebug() << "  绑定IP:" << m_bindIP;
     qDebug() << "  端口:" << m_port;
 
+    // ✅ 2026-04-10: 保留SetParam支持自定义端口（虽然目前所有实例共用102）
+    quint16 localPort = static_cast<quint16>(m_port);
+    m_s7Server->SetParam(1, &localPort);  // 1 = p_u16_LocalPort
+
     // 启动服务器（简化实现）
     int result = m_s7Server->Start();
 
@@ -231,6 +235,19 @@ QByteArray S7ServerController::getDBData(int dbNumber, int start, int size)
 }
 
 // ========== 辅助函数 ==========
+
+// ✅ 2026-04-10 [Phase 7.48.88.104]: 获取实际客户端连接数
+int S7ServerController::getClientCount() const
+{
+    if (!m_isRunning) return 0;
+#ifdef ENABLE_SNAP7
+    if (m_s7Server) {
+        return m_s7Server->ClientsCount();
+    }
+#endif
+    return 0;
+}
+
 void S7ServerController::updateStatusText()
 {
     QString newStatus;

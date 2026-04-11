@@ -170,7 +170,7 @@ Rectangle {
         } else {
             root.pollDataList = []
         }
-        console.log("✅ [S7MasterTab] 加载轮询配置 - DB:", root.pollDbNumber, "数量:", root.pollDataList.length)
+        // 旧: console.log(...)  // 2026-04-10: 定时器每秒调用导致日志刷屏，去除
     }
 
     onPollDbNumberChanged: loadPollConfig()

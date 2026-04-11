@@ -3,12 +3,14 @@
 // 创建日期: 2026-02-08
 // ✅ 2026-02-08 [Phase 7.42]: TCP控制功能实现 - 基于 Snap7 库
 // ✅ 2026-02-08 [Phase 7.42.5]: 集成 Snap7 库实现
+// ✅ 2026-04-11 [Phase 7.48.88.110]: 添加pduSize属性 + saveConfig/loadConfig持久化
 
 #ifndef S7CLIENTCONTROLLER_H
 #define S7CLIENTCONTROLLER_H
 
 #include <QObject>
 #include <QTimer>
+#include <QSettings>
 
 #ifdef ENABLE_SNAP7
 #include "snap7.h"
@@ -32,6 +34,9 @@ class S7ClientController : public QObject
     // ========== TSAP配置 ==========
     Q_PROPERTY(QString localTSAP READ localTSAP WRITE setLocalTSAP NOTIFY localTSAPChanged)
     Q_PROPERTY(QString remoteTSAP READ remoteTSAP WRITE setRemoteTSAP NOTIFY remoteTSAPChanged)
+
+    // ========== PDU配置 ==========
+    Q_PROPERTY(int pduSize READ pduSize WRITE setPduSize NOTIFY pduSizeChanged)
 
     // ========== 轮询配置 ==========
     Q_PROPERTY(int pollInterval READ pollInterval WRITE setPollInterval NOTIFY pollIntervalChanged)
@@ -68,6 +73,10 @@ public:
     QString remoteTSAP() const { return m_remoteTSAP; }
     void setRemoteTSAP(const QString &tsap);
 
+    // ========== PDU配置 ==========
+    int pduSize() const { return m_pduSize; }
+    void setPduSize(int size);
+
     // ========== 轮询配置 ==========
     int pollInterval() const { return m_pollInterval; }
     void setPollInterval(int interval);
@@ -92,6 +101,11 @@ public:
     Q_INVOKABLE bool writeMerker(int start, const QByteArray &data);
     Q_INVOKABLE bool writeOutput(int start, const QByteArray &data);
 
+    // ========== 数据持久化 ==========
+    Q_INVOKABLE void saveConfig(int portIndex);
+    Q_INVOKABLE void loadConfig(int portIndex);
+    Q_INVOKABLE void resetConfig();
+
 signals:
     // ========== 属性变化信号 ==========
     void isConnectedChanged();
@@ -103,6 +117,7 @@ signals:
     void connectionTypeChanged();
     void localTSAPChanged();
     void remoteTSAPChanged();
+    void pduSizeChanged();
     void pollIntervalChanged();
     void timeoutChanged();
 
@@ -131,6 +146,9 @@ private:
     QString m_localTSAP;
     QString m_remoteTSAP;
 
+    // ========== PDU配置 ==========
+    int m_pduSize;
+
     // ========== 轮询配置 ==========
     int m_pollInterval;
     int m_timeout;
@@ -140,8 +158,12 @@ private:
     bool m_isConnected;
     QString m_statusText;
 
+    // ========== 数据持久化 ==========
+    QSettings *m_settings;
+
     // ========== 辅助函数 ==========
     void updateStatusText();
+    void initSettings();
 };
 
 #endif // S7CLIENTCONTROLLER_H

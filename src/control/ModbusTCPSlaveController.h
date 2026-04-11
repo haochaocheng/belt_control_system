@@ -9,6 +9,7 @@
 #include <QObject>
 #include <QModbusTcpServer>
 #include <QModbusDataUnit>
+#include <QTcpSocket>  // ✅ 2026-04-10 [Phase 7.48.88.104]: 用于检测实际客户端连接数
 
 class ModbusTCPSlaveController : public QObject
 {
@@ -30,6 +31,8 @@ public:
     // ========== 连接状态 ==========
     bool isConnected() const;
     QString statusText() const { return m_statusText; }
+    // ✅ 2026-04-10 [Phase 7.48.88.104]: 检测实际TCP客户端连接数
+    int getConnectedClientCount() const;
 
     // ========== TCP配置 ==========
     int port() const { return m_port; }
