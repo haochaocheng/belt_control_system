@@ -199,6 +199,11 @@ Item {
 
     // ✅ 2026-01-31 [FIX 100.300.112.8.15]: 监听类别切换，保存和恢复内容索引
     onCurrentCategoryChanged: {
+        // ✅ 2026-04-11 [Phase 7.48.88.110.2]: 自动滚动类别列表到可见区域
+        if (typeof leftButtonsFlickable !== "undefined" && leftButtonsFlickable) {
+            leftButtonsFlickable.ensureVisible(currentCategory)
+        }
+
         // 保存旧类别的内容索引（如果有的话）
         // 注意：这里不需要保存，因为反向同步已经在更新 categoryContentIndexMap
 
@@ -1077,12 +1082,13 @@ Item {
                 console.log("✅ [导航] 顶部按钮末端下键 → 左侧类别区域")
             }
             break
-        case 1:  // 左侧类别（13个类别：0-12）
+        case 1:  // 左侧类别（15个类别：0-14）
             // ✅ 2026-02-07 [Phase 7.39.6]: 修改最大值为8（添加CAN控制后）
             // ✅ 2026-02-08 [Phase 7.42]: 修改最大值为9（添加TCP控制后）
             // 旧：if (currentCategory < 9) — 最大只能到TCP控制(9)，无法到达MQTT(10)/逻辑控制(11)/沿线点位保护(12)
             // ✅ 2026-03-25 [Phase 7.48.88.10]: 修改最大值为12（匹配全部13个分类）
-            if (currentCategory < 12) {
+            // ✅ 2026-04-11 [Phase 7.48.88.110.2]: 修改最大值为14（添加沿线点位保护13+集控管理14）
+            if (currentCategory < 14) {
                 // ✅ 2026-03-29 [Phase 7.48.88.57]: 使用 tryChangeCategory 检查未保存修改
                 // ❌ 旧代码: currentCategory++
                 tryChangeCategory(currentCategory + 1)
@@ -2800,15 +2806,33 @@ Item {
                 z: -1  // ✅ 确保在按钮下方
             }
 
-            // ✅ 按钮列（在背景图片上方）
-            Column {
-                id: leftButtons
+            // ✅ 2026-04-11 [Phase 7.48.88.110.2]: 改为Flickable支持滚动（15个类别超出容器高度）
+            Flickable {
+                id: leftButtonsFlickable
                 anchors.fill: parent
                 anchors.margins: 10
                 anchors.leftMargin: 8
                 anchors.rightMargin: 0
                 anchors.topMargin: 13
-                spacing: 10
+                contentHeight: leftButtons.height
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+
+                // 自动滚动到当前选中类别
+                function ensureVisible(categoryIndex) {
+                    var itemY = categoryIndex * 50  // 每项高度40 + spacing 10
+                    var viewHeight = leftButtonsFlickable.height
+                    if (itemY < contentY) {
+                        contentY = itemY
+                    } else if (itemY + 40 > contentY + viewHeight) {
+                        contentY = itemY + 40 - viewHeight
+                    }
+                }
+
+                Column {
+                    id: leftButtons
+                    width: parent.width
+                    spacing: 10
 
                 Repeater {
                     // 旧：model: ["基本配置", "开关量输入", "模拟量输入", ...]
@@ -2897,7 +2921,8 @@ Item {
                         }
                     }
                 }
-            }
+            }  // Column
+            }  // Flickable
         }
 
         // ========== 中间参数显示区域 ==========
