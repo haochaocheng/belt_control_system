@@ -2364,6 +2364,8 @@ Item {
                             }
                         }
                     } else {
+                        console.log("✅ [导航] 回车键 - 其他页面，currentCategory:", currentCategory)
+                    }
 
                     // 如果Tab没有处理，执行默认行为（弹出虚拟键盘）
                     // ✅ 参数区域：弹出虚拟键盘
