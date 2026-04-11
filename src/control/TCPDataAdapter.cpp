@@ -318,10 +318,6 @@ bool TCPDataAdapter::isPortRunning(int portIndex) const
 
     return false;
 }
-    }
-
-    return false;
-}
 
 void TCPDataAdapter::autoStart()
 {

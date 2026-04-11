@@ -150,8 +150,8 @@ bool S7ClientController::connectToPLC()
     // 使用 ConnectTo 方法连接到 PLC
     // ✅ 2026-04-11 [Phase 7.48.88.110]: 连接前设置PDU大小
     if (m_pduSize > 0) {
-        word pduRequest = static_cast<word>(m_pduSize);
-        m_s7Client->SetParam(p_u16_PduRequest, &pduRequest);
+        int pduRequest = m_pduSize;
+        m_s7Client->SetParam(p_i32_PDURequest, &pduRequest);
         qDebug() << "  PDU请求大小:" << m_pduSize;
     }
 
