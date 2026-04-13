@@ -1207,8 +1207,16 @@ Item {
                     } else if (currentCategory === 14) {
                         var centralPage = centralControlPageLoader.item
                         if (centralPage && centralPage.navigationManager) {
-                            console.log("✅ [集控管理导航] 下键 - 调用 NavigationManager.handleDirectionKey")
-                            centralPage.navigationManager.handleDirectionKey("Down")
+                            // ✅ 2026-04-14 [Phase 7.48.88.123]: Tab1(分站管理)+TabBar → 进入分站列表
+                            if (centralPage.currentTabIndex === 1 && centralPage.focusSubArea === 1) {
+                                console.log("✅ [集控管理导航] 下键 - Tab1+TabBar → 切换到分站列表")
+                                centralPage.navigationManager.switchToArea(
+                                    centralPage.navigationManager.areaMotorList)
+                                centralPage.navigationManager.motorListIndex = 0
+                            } else {
+                                console.log("✅ [集控管理导航] 下键 - 调用 NavigationManager.handleDirectionKey")
+                                centralPage.navigationManager.handleDirectionKey("Down")
+                            }
                             event.accepted = true
                             return
                         }
@@ -1808,8 +1816,16 @@ Item {
             if (currentCategory === 14 && currentFocusArea === 2) {
                 var centralPage = centralControlPageLoader.item
                 if (centralPage && centralPage.navigationManager) {
-                    console.log("✅ [导航] 集控管理页面左键 - 调用NavigationManager")
-                    centralPage.navigationManager.handleDirectionKey("Left")
+                    // ✅ 2026-04-14 [Phase 7.48.88.123]: Tab1参数区首列Left → 返回分站列表
+                    if (centralPage.currentTabIndex === 1 && centralPage.focusSubArea === 2
+                            && centralPage.navigationManager.paramIndex % centralPage.navigationManager.paramColumns === 0) {
+                        console.log("✅ [导航] 集控管理页面左键 - Tab1参数首列→分站列表")
+                        centralPage.navigationManager.switchToArea(
+                            centralPage.navigationManager.areaMotorList)
+                    } else {
+                        console.log("✅ [导航] 集控管理页面左键 - 调用NavigationManager")
+                        centralPage.navigationManager.handleDirectionKey("Left")
+                    }
                     event.accepted = true
                     return
                 }
@@ -2069,6 +2085,15 @@ Item {
                 if (isCentralControlPage) {
                     var centralPage = centralControlPageLoader.item
                     if (centralPage && centralPage.navigationManager) {
+                        // ✅ 2026-04-14 [Phase 7.48.88.123]: Tab1分站列表Right → 进入参数区
+                        if (centralPage.currentTabIndex === 1 && centralPage.focusSubArea === 0) {
+                            console.log("✅ [集控管理导航] 右键 - Tab1分站列表→参数区")
+                            centralPage.navigationManager.switchToArea(
+                                centralPage.navigationManager.areaParams)
+                            centralPage.navigationManager.paramIndex = 0
+                            event.accepted = true
+                            return
+                        }
                         if (typeof centralPage.getCurrentTab === "function") {
                             var currentTab = centralPage.getCurrentTab()
                             if (currentTab && typeof currentTab.handleDirectionKey === "function") {
