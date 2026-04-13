@@ -222,8 +222,14 @@ Rectangle {
                             anchors.fill: parent
                             model: ["关闭", "打开"]
                             parentDialog: root.parentDialog
-                            currentIndex: (typeof centralControlManager !== "undefined" &&
-                                           centralControlManager.isSlotEnabled(root.currentSlotIndex)) ? 1 : 0
+                            // ✅ 2026-04-14 [Phase 7.48.88.129]: 改用subStations(Q_PROPERTY+NOTIFY)替代
+                            // isSlotEnabled()函数调用，函数调用不是响应式的，setSlotEnabled后UI不更新
+                            currentIndex: {
+                                if (typeof centralControlManager === "undefined") return 0
+                                var slots = centralControlManager.subStations
+                                if (!slots || root.currentSlotIndex >= slots.length) return 0
+                                return slots[root.currentSlotIndex].enabled ? 1 : 0
+                            }
                             onActivated: {
                                 if (typeof centralControlManager !== "undefined")
                                     centralControlManager.setSlotEnabled(root.currentSlotIndex, currentIndex === 1)
@@ -244,8 +250,13 @@ Rectangle {
                             anchors.fill: parent
                             model: ["MQTT", "S7", "Modbus TCP"]
                             parentDialog: root.parentDialog
+                            // ✅ 2026-04-14 [Phase 7.48.88.129]: 同上，改用subStations响应式绑定
                             currentIndex: {
-                                switch(getCurrentSlotProtocol()) {
+                                if (typeof centralControlManager === "undefined") return 0
+                                var slots = centralControlManager.subStations
+                                if (!slots || root.currentSlotIndex >= slots.length) return 0
+                                var proto = slots[root.currentSlotIndex].protocol || ""
+                                switch(proto) {
                                 case "s7":     return 1
                                 case "modbus": return 2
                                 default:       return 0
