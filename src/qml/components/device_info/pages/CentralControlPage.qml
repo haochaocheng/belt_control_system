@@ -30,6 +30,27 @@ Rectangle {
     // Qt 虚拟键盘引用
     property var virtualKeyboard: null
 
+    // ✅ 2026-04-14 [Phase 7.48.88.135]: 响应式 MQTT模块7 连接状态
+    // isModuleConnected() 是 Q_INVOKABLE 函数调用，绑定不会自动更新
+    // 改用本地属性 + Connections 监听 connectedChanged 信号
+    property bool mqttModule7Connected: false
+
+    Connections {
+        target: typeof mqttController !== "undefined" ? mqttController : null
+        function onConnectedChanged(moduleIndex, connected) {
+            if (moduleIndex === 7) {
+                root.mqttModule7Connected = connected
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        // 初始化时读一次当前状态
+        if (typeof mqttController !== "undefined") {
+            root.mqttModule7Connected = mqttController.isModuleConnected(7)
+        }
+    }
+
     // ========== 信号 ==========
     signal requestReturnToCategory()
 
@@ -374,7 +395,7 @@ Rectangle {
                                 width: 8; height: 8; radius: 4
                                 anchors.verticalCenter: parent.verticalCenter
                                 color: (typeof mqttController !== "undefined" &&
-                                        mqttController.isModuleConnected(7)) ? "#4CAF50" : "#F44336"
+                                        root.mqttModule7Connected) ? "#4CAF50" : "#F44336"
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
@@ -382,12 +403,12 @@ Rectangle {
                                     if (typeof mqttController === "undefined") return "MQTT: 未知"
                                     var ip = (typeof centralControlManager !== "undefined")
                                              ? centralControlManager.mqttBrokerIP : ""
-                                    var connected = mqttController.isModuleConnected(7)
+                                    var connected = root.mqttModule7Connected
                                     return connected ? ("MQTT: " + (ip || "已连接"))
                                                      : ("MQTT: " + (ip ? ip + " 未连接" : "未配置"))
                                 }
                                 color: (typeof mqttController !== "undefined" &&
-                                        mqttController.isModuleConnected(7)) ? "#A5D6A7" : "#EF9A9A"
+                                        root.mqttModule7Connected) ? "#A5D6A7" : "#EF9A9A"
                                 font.pixelSize: 12
                             }
                         }
