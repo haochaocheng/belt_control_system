@@ -156,15 +156,20 @@ ComboBox {
             return
         }
 
-        if (!isUserAction && root.activeFocus) {
-            // 如果不是用户主动操作（回车键），且有焦点，说明是键盘导航引起的
-            // 立即恢复原值
+        // ✅ 2026-04-14 [Phase 7.48.88.119]: 修复下拉选项无法修改的问题
+        // 原逻辑：只要 !isUserAction && activeFocus 就恢复，导致下拉点击选项也被拦截
+        // 新逻辑：弹出列表打开时的变化必然是用户点击选项，应接受；只有弹出关闭时才判断是否为键盘导航
+        if (isUserAction || root.popup.visible) {
+            // 用户回车/空格切换，或下拉框打开时选择 → 接受变更
+            savedIndex = currentIndex
+        } else if (root.activeFocus) {
+            // 弹出框未打开、非显式用户操作、但有焦点 → 键盘上下键导航引起 → 恢复原值
             console.log("⚠️ [CustomComboBox] 检测到键盘导航修改索引:", currentIndex, "→ 恢复为:", savedIndex)
-            isRestoring = true  // 设置恢复标志
+            isRestoring = true
             root.currentIndex = savedIndex
-            isRestoring = false  // 重置恢复标志
+            isRestoring = false
         } else {
-            // 用户主动操作，更新保存的索引
+            // 外部（C++后端/属性绑定）驱动的变更 → 接受
             savedIndex = currentIndex
         }
     }
