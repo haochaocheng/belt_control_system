@@ -197,12 +197,15 @@ Rectangle {
                     anchors.fill: parent; anchors.margins: 12; spacing: 12
 
                     // 状态灯
+                    // ✅ 2026-04-14 [Phase 7.48.88.133]: isModuleConnecting 非 Q_INVOKABLE，改用 getModuleConnectionState
                     Rectangle {
                         width: 14; height: 14; radius: 7
                         color: {
                             if (typeof mqttController === "undefined") return "#555"
-                            if (mqttController.isModuleConnecting(7)) return "#FFA726"
-                            return mqttController.isModuleConnected(7) ? "#4CAF50" : "#F44336"
+                            if (mqttController.isModuleConnected(7)) return "#4CAF50"
+                            var state = mqttController.getModuleConnectionState(7)
+                            if (state === "Connecting" || state === "正在连接") return "#FFA726"
+                            return "#F44336"
                         }
                     }
 
@@ -217,17 +220,19 @@ Rectangle {
                                        ? centralControlManager.mqttBrokerPort : 1883
                             if (mqttController.isModuleConnected(7))
                                 return "MQTT模块7 已连接  " + ip + ":" + port
-                            if (mqttController.isModuleConnecting(7))
+                            var state = mqttController.getModuleConnectionState(7)
+                            if (!ip || ip === "") return "MQTT模块7 未连接 — 请先填写Broker IP地址"
+                            if (state === "Connecting" || state === "正在连接")
                                 return "MQTT模块7 连接中…  " + ip + ":" + port
-                            var err = mqttController.getModuleConnectionState(7)
-                            if (!ip || ip === "") return "MQTT模块7 未连接 — Broker地址未配置"
                             return "MQTT模块7 未连接  " + ip + ":" + port
-                                   + (err ? "  (" + err + ")" : "")
+                                   + (state ? "  [" + state + "]" : "")
                         }
                         color: {
                             if (typeof mqttController === "undefined") return "#78909C"
-                            if (mqttController.isModuleConnecting(7)) return "#FFB74D"
-                            return mqttController.isModuleConnected(7) ? "#A5D6A7" : "#EF9A9A"
+                            if (mqttController.isModuleConnected(7)) return "#A5D6A7"
+                            var state = mqttController.getModuleConnectionState(7)
+                            if (state === "Connecting" || state === "正在连接") return "#FFB74D"
+                            return "#EF9A9A"
                         }
                         font.pixelSize: 13
                     }
@@ -252,6 +257,7 @@ Rectangle {
                     Text { text: "MQTT集控说明"; color: "#4FC3F7"; font.pixelSize: 14; font.weight: Font.Bold }
                     Text { text: "集控专用MQTT模块7（模块0-6已被数据采集占用）"; color: "#90A4AE"; font.pixelSize: 12 }
                     Text { text: "确保所有集控设备使用相同的Broker地址和Topic前缀"; color: "#90A4AE"; font.pixelSize: 12 }
+                }
                 }
             }
         }

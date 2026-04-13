@@ -131,7 +131,8 @@ public:
     Q_INVOKABLE void disconnectAll();
     Q_INVOKABLE bool isModuleConnected(int moduleIndex) const;
     // ✅ 2026-03-02 [Phase 7.47.68]: 检查模块是否正在连接（Connecting状态）
-    bool isModuleConnecting(int moduleIndex) const;
+    // ✅ 2026-04-14 [Phase 7.48.88.133]: 补充 Q_INVOKABLE，使 QML 可直接调用
+    Q_INVOKABLE bool isModuleConnecting(int moduleIndex) const;
     Q_INVOKABLE QString getModuleConnectionState(int moduleIndex) const;
 
     // ========== 订阅管理（Q_INVOKABLE）==========
