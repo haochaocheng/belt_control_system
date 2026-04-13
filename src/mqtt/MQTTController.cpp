@@ -62,7 +62,7 @@ void MQTTController::initializeModules()
 
     for (int i = 0; i < 8; ++i) {
         m_configs[i].name = QString("模块%1").arg(i + 1);
-        m_configs[i].brokerHost = "192.168.10.142";  // ✅ 2026-02-09 [Phase 7.44.14]: EMQX在开发电脑的Docker中
+        m_configs[i].brokerHost = "127.0.0.1";  // ✅ 2026-04-14 [Phase 7.48.88.139]: 改为本机127.0.0.1，每台设备自带Mosquitto
         m_configs[i].brokerPort = 1883;
         m_configs[i].clientId = QString("belt_control_module_%1").arg(i + 1);
         m_configs[i].keepAlive = 60;
@@ -651,7 +651,7 @@ void MQTTController::loadModuleConfig(int moduleIndex)
 
     if (settings.contains("name")) {
         config.name = settings.value("name").toString();
-        config.brokerHost = settings.value("brokerHost", "192.168.10.142").toString();  // ✅ 2026-02-09 [Phase 7.44.14]: EMQX在开发电脑的Docker中
+        config.brokerHost = settings.value("brokerHost", "127.0.0.1").toString();  // ✅ 2026-04-14 [Phase 7.48.88.139]: 默认本机
         config.brokerPort = settings.value("brokerPort", 1883).toInt();
         config.clientId = settings.value("clientId").toString();
         config.username = settings.value("username").toString();
@@ -685,7 +685,7 @@ void MQTTController::resetModuleConfig(int moduleIndex)
 
     MQTTModuleConfig &config = m_configs[idx];
     config.name = QString("模块%1").arg(idx + 1);
-    config.brokerHost = "192.168.10.142";  // ✅ 2026-02-09 [Phase 7.44.14]: EMQX在开发电脑的Docker中
+    config.brokerHost = "127.0.0.1";  // ✅ 2026-04-14 [Phase 7.48.88.139]: 默认本机
     config.brokerPort = 1883;
     config.clientId = QString("belt_control_module_%1").arg(idx + 1);
     config.username.clear();

@@ -199,5 +199,20 @@ echo "Launching application..."
 echo "========================================="
 echo ""
 
+# ✅ 2026-04-14 [Phase 7.48.88.139]: 启动本机 Mosquitto MQTT Broker
+# 原因：模块0-6连接127.0.0.1（本机），每台设备互相独立，避免多台设备Client ID冲突
+# 集控模块7连接集控主站的MQTT地址（在集控配置界面单独设置）
+if command -v mosquitto &> /dev/null; then
+    echo "Starting local Mosquitto MQTT broker..."
+    mosquitto -c /etc/mosquitto/conf.d/belt_control.conf -d 2>/dev/null \
+        || mosquitto -d 2>/dev/null \
+        || echo "⚠️ Mosquitto start failed, MQTT modules may not work"
+    sleep 1
+    echo "✅ Mosquitto started on 127.0.0.1:1883"
+else
+    echo "⚠️ Mosquitto not found, skipping local broker"
+fi
+echo ""
+
 # Start application
 exec /app/belt_control_system

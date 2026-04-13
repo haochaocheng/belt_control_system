@@ -31,6 +31,16 @@ COPY tts_engines /app/tts_engines
 COPY packages/gstreamer1.0-alsa_1.24.2-1ubuntu0.3_arm64.deb /tmp/gstreamer1.0-alsa.deb
 RUN dpkg -i /tmp/gstreamer1.0-alsa.deb && rm -f /tmp/gstreamer1.0-alsa.deb
 
+# ✅ 2026-04-14 [Phase 7.48.88.139]: 安装本机 MQTT Broker（Mosquitto）
+# 原因：每台设备需要自己的 MQTT Broker，模块0-6连本机127.0.0.1，避免多台设备Client ID冲突
+# 效果：批量生产的设备无需互相感知，各自独立运行
+RUN apt-get update && apt-get install -y --no-install-recommends mosquitto \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Mosquitto 配置：允许匿名、监听1883
+RUN echo "allow_anonymous true\nlistener 1883 127.0.0.1\npersistence false\nlog_dest none" \
+    > /etc/mosquitto/conf.d/belt_control.conf
+
 # ✅ 2026-01-23 16:15 [FIX 100.299] TTS/ASR 模型改用 Volume 挂载
 # 原因：模型文件大（~1.4GB），打包进镜像导致：
 #   1. 镜像体积大（2.5GB → 1.1GB，减少 56%）
