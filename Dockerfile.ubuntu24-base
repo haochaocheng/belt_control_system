@@ -160,6 +160,9 @@ RUN apt-get update && apt-get install -y \
     mecab \
     mecab-ipadic-utf8 \
     \
+    # ✅ 2026-04-14 [Phase 7.48.88.139]: 本机MQTT Broker，每台设备自带，避免多设备Client ID冲突
+    mosquitto \
+    \
     && rm -rf /var/lib/apt/lists/* \
     && fc-cache -fv
 
