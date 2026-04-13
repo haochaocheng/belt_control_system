@@ -322,6 +322,107 @@ Rectangle {
                     }
                 }
 
+                // ✅ 2026-04-14 [Phase 7.48.88.132]: 状态栏——角色/MQTT/在线站数
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 36
+                    color: "#12192b"
+                    border.color: "#2a3550"
+                    border.width: 1
+
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        spacing: 16
+
+                        // 角色指示
+                        Row {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 5
+                            Rectangle {
+                                width: 8; height: 8; radius: 4
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: {
+                                    if (typeof centralControlManager === "undefined") return "#555"
+                                    switch(centralControlManager.stationRole) {
+                                    case "master": return "#4FC3F7"
+                                    case "sub":    return "#A5D6A7"
+                                    default:       return "#78909C"
+                                    }
+                                }
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: {
+                                    if (typeof centralControlManager === "undefined") return "角色: 独立"
+                                    switch(centralControlManager.stationRole) {
+                                    case "master": return "角色: 主站"
+                                    case "sub":    return "角色: 分站"
+                                    default:       return "角色: 独立"
+                                    }
+                                }
+                                color: "#B0BEC5"; font.pixelSize: 12
+                            }
+                        }
+
+                        // MQTT 连接状态
+                        Row {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 5
+                            Rectangle {
+                                width: 8; height: 8; radius: 4
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: (typeof mqttController !== "undefined" &&
+                                        mqttController.isModuleConnected(7)) ? "#4CAF50" : "#F44336"
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: {
+                                    if (typeof mqttController === "undefined") return "MQTT: 未知"
+                                    var ip = (typeof centralControlManager !== "undefined")
+                                             ? centralControlManager.mqttBrokerIP : ""
+                                    var connected = mqttController.isModuleConnected(7)
+                                    return connected ? ("MQTT: " + (ip || "已连接"))
+                                                     : ("MQTT: " + (ip ? ip + " 未连接" : "未配置"))
+                                }
+                                color: (typeof mqttController !== "undefined" &&
+                                        mqttController.isModuleConnected(7)) ? "#A5D6A7" : "#EF9A9A"
+                                font.pixelSize: 12
+                            }
+                        }
+
+                        // 在线分站数（主站模式）
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: typeof centralControlManager !== "undefined" &&
+                                     centralControlManager.isMasterMode
+                            text: {
+                                if (typeof centralControlManager === "undefined") return ""
+                                var slots = centralControlManager.subStations
+                                if (!slots) return "在线: 0/0"
+                                var enabled = 0, online = 0
+                                for (var i = 0; i < slots.length; i++) {
+                                    if (slots[i].enabled) enabled++
+                                    if (slots[i].isConnected) online++
+                                }
+                                return "在线: " + online + "/" + enabled + " 站"
+                            }
+                            color: "#90A4AE"; font.pixelSize: 12
+                        }
+
+                        // 分站模式提示
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: typeof centralControlManager !== "undefined" &&
+                                     centralControlManager.isSubMode
+                            text: "设备ID: " + (typeof centralControlManager !== "undefined"
+                                               ? centralControlManager.localDeviceId : "?")
+                            color: "#90A4AE"; font.pixelSize: 12
+                        }
+                    }
+                }
+
                 // Tab栏
                 Rectangle {
                     Layout.fillWidth: true

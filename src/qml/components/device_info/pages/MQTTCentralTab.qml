@@ -182,16 +182,76 @@ Rectangle {
                     radius: 4; z: 1; enabled: false }
             }
 
+            // ✅ 2026-04-14 [Phase 7.48.88.132]: MQTT集控连接状态区
+            Rectangle {
+                Layout.columnSpan: 4; Layout.fillWidth: true
+                Layout.preferredHeight: 56; Layout.topMargin: 10
+                color: "#0d1520"; radius: 4
+                border.color: {
+                    if (typeof mqttController === "undefined") return "#3d4556"
+                    return mqttController.isModuleConnected(7) ? "#388E3C" : "#C62828"
+                }
+                border.width: 2
+
+                RowLayout {
+                    anchors.fill: parent; anchors.margins: 12; spacing: 12
+
+                    // 状态灯
+                    Rectangle {
+                        width: 14; height: 14; radius: 7
+                        color: {
+                            if (typeof mqttController === "undefined") return "#555"
+                            if (mqttController.isModuleConnecting(7)) return "#FFA726"
+                            return mqttController.isModuleConnected(7) ? "#4CAF50" : "#F44336"
+                        }
+                    }
+
+                    // 状态文字
+                    Text {
+                        Layout.fillWidth: true
+                        text: {
+                            if (typeof mqttController === "undefined") return "MQTT模块7: 未知状态"
+                            var ip = (typeof centralControlManager !== "undefined")
+                                     ? centralControlManager.mqttBrokerIP : ""
+                            var port = (typeof centralControlManager !== "undefined")
+                                       ? centralControlManager.mqttBrokerPort : 1883
+                            if (mqttController.isModuleConnected(7))
+                                return "MQTT模块7 已连接  " + ip + ":" + port
+                            if (mqttController.isModuleConnecting(7))
+                                return "MQTT模块7 连接中…  " + ip + ":" + port
+                            var err = mqttController.getModuleConnectionState(7)
+                            if (!ip || ip === "") return "MQTT模块7 未连接 — Broker地址未配置"
+                            return "MQTT模块7 未连接  " + ip + ":" + port
+                                   + (err ? "  (" + err + ")" : "")
+                        }
+                        color: {
+                            if (typeof mqttController === "undefined") return "#78909C"
+                            if (mqttController.isModuleConnecting(7)) return "#FFB74D"
+                            return mqttController.isModuleConnected(7) ? "#A5D6A7" : "#EF9A9A"
+                        }
+                        font.pixelSize: 13
+                    }
+
+                    // 配置校验提示
+                    Text {
+                        visible: typeof centralControlManager !== "undefined"
+                                 && centralControlManager.mqttBrokerIP === ""
+                        text: "⚠ 未填写Broker地址"
+                        color: "#FFB74D"; font.pixelSize: 12
+                    }
+                }
+            }
+
             // ----- 说明 -----
             Rectangle {
                 Layout.columnSpan: 4; Layout.fillWidth: true
-                Layout.preferredHeight: 90; Layout.topMargin: 20
+                Layout.preferredHeight: 70; Layout.topMargin: 8
                 color: "#1a2030"; radius: 4; border.color: "#3d4556"; border.width: 1
                 ColumnLayout {
-                    anchors.fill: parent; anchors.margins: 12; spacing: 6
-                    Text { text: "MQTT集控说明"; color: "#4FC3F7"; font.pixelSize: 16; font.weight: Font.Bold }
-                    Text { text: "同类型设备之间通过MQTT Broker交换状态和控制数据"; color: "#90A4AE"; font.pixelSize: 14 }
-                    Text { text: "确保所有集控设备使用相同的Broker地址和Topic前缀";  color: "#90A4AE"; font.pixelSize: 14 }
+                    anchors.fill: parent; anchors.margins: 12; spacing: 4
+                    Text { text: "MQTT集控说明"; color: "#4FC3F7"; font.pixelSize: 14; font.weight: Font.Bold }
+                    Text { text: "集控专用MQTT模块7（模块0-6已被数据采集占用）"; color: "#90A4AE"; font.pixelSize: 12 }
+                    Text { text: "确保所有集控设备使用相同的Broker地址和Topic前缀"; color: "#90A4AE"; font.pixelSize: 12 }
                 }
             }
         }

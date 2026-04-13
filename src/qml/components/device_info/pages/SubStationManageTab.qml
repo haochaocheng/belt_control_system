@@ -155,36 +155,77 @@ Rectangle {
                         RowLayout {
                             anchors.fill: parent
                             anchors.margins: 5
-                            spacing: 5
+                            spacing: 4
 
-                            // 在线状态 LED
+                            // ✅ 2026-04-14 [Phase 7.48.88.132]: 增强在线状态 LED
                             Rectangle {
-                                width: 8; height: 8; radius: 4
+                                width: 10; height: 10; radius: 5
+                                anchors.verticalCenter: parent.verticalCenter
                                 color: {
                                     if (typeof centralControlManager === "undefined") return "#555"
-                                    if (centralControlManager.isSlotConnected(index)) return "#4CAF50"
-                                    if (centralControlManager.isSlotEnabled(index))   return "#FFA726"
-                                    return "#555"
+                                    var slots = centralControlManager.subStations
+                                    if (!slots || index >= slots.length) return "#555"
+                                    var slot = slots[index]
+                                    if (!slot.enabled) return "#555"       // 灰 = 未启用
+                                    if (slot.isConnected)  return "#4CAF50"  // 绿 = 在线
+                                    return "#FFA726"                          // 黄 = 启用未连接
                                 }
+                                // Tooltip: 鼠标悬停时显示状态文字（通过ToolTip不可用时用状态栏代替）
                             }
 
-                            Text {
-                                text: typeof centralControlManager !== "undefined"
-                                      ? centralControlManager.getSlotName(index)
-                                      : "分站 " + (index + 1)
-                                color: "#B0BEC5"
-                                font.pixelSize: 12
+                            ColumnLayout {
                                 Layout.fillWidth: true
+                                spacing: 0
+
+                                Text {
+                                    text: typeof centralControlManager !== "undefined"
+                                          ? centralControlManager.getSlotName(index)
+                                          : "分站 " + (index + 1)
+                                    color: {
+                                        if (typeof centralControlManager === "undefined") return "#78909C"
+                                        var slots = centralControlManager.subStations
+                                        if (!slots || index >= slots.length) return "#78909C"
+                                        return slots[index].enabled ? "#B0BEC5" : "#607080"
+                                    }
+                                    font.pixelSize: 12
+                                    Layout.fillWidth: true
+                                }
+
+                                // 状态小字
+                                Text {
+                                    text: {
+                                        if (typeof centralControlManager === "undefined") return ""
+                                        var slots = centralControlManager.subStations
+                                        if (!slots || index >= slots.length) return ""
+                                        var slot = slots[index]
+                                        if (!slot.enabled) return ""
+                                        return slot.statusText || ""
+                                    }
+                                    color: {
+                                        if (typeof centralControlManager === "undefined") return "#555"
+                                        var slots = centralControlManager.subStations
+                                        if (!slots || index >= slots.length) return "#555"
+                                        var slot = slots[index]
+                                        if (slot.isConnected) return "#81C784"
+                                        return "#FF8A65"
+                                    }
+                                    font.pixelSize: 9
+                                    visible: text.length > 0
+                                    Layout.fillWidth: true
+                                }
                             }
 
                             Text {
                                 text: {
                                     if (typeof centralControlManager === "undefined") return ""
-                                    var p = centralControlManager.getSlotProtocol(index)
+                                    var slots = centralControlManager.subStations
+                                    if (!slots || index >= slots.length) return ""
+                                    var p = slots[index].protocol || ""
                                     return p ? p.toUpperCase() : ""
                                 }
-                                color: "#78909C"
-                                font.pixelSize: 10
+                                color: "#607080"
+                                font.pixelSize: 9
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
 

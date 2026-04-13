@@ -2719,6 +2719,18 @@ Item {
                                 logicControlPageLoader.item.saveToConfig()
                             }
                             break
+                        // ✅ 2026-04-14 [Phase 7.48.88.132]: 补充 12/13/14 保存逻辑（旧：走default输出"未知分类"警告）
+                        case 12:  // 沿线点位保护
+                            // 沿线保护配置由各点位自动持久化，无需额外保存
+                            break
+                        case 13:  // （预留或其他）
+                            break
+                        case 14:  // 集控管理
+                            if (typeof centralControlManager !== "undefined") {
+                                centralControlManager.saveConfig()
+                                console.log("✅ [DeviceSettingsDialog] 集控管理配置已保存")
+                            }
+                            break
                         default:
                             console.log("⚠️ [DeviceSettingsDialog] 未知分类:", root.currentCategory)
                             break
@@ -4355,7 +4367,10 @@ Item {
     function getCategoryName(index) {
         // 旧：var names = ["基本配置", "开关量输入", "模拟量输入", ...]
         // ✅ 2026-03-18 [Phase 7.48.53]: "模拟量输入"→"模拟量保护"，补充"洒水控制"
-        var names = ["基本配置", "开关量输入", "模拟量保护", "电机控制", "制动器控制", "张紧控制", "洒水控制", "串口控制", "CAN控制", "TCP控制", "MQTT控制", "逻辑控制"]
+        // ✅ 2026-04-14 [Phase 7.48.88.132]: 补充 12=逻辑控制, 13=沿线点位保护, 14=集控管理
+        var names = ["基本配置", "开关量输入", "模拟量保护", "电机控制", "制动器控制", "张紧控制",
+                     "洒水控制", "串口控制", "CAN控制", "TCP控制", "MQTT控制", "S7控制",
+                     "逻辑控制", "沿线点位保护", "集控管理"]
         return names[index] || "未知类别"
     }
 
