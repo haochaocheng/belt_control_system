@@ -44,13 +44,6 @@ Rectangle {
         }
     }
 
-    Component.onCompleted: {
-        // 初始化时读一次当前状态
-        if (typeof mqttController !== "undefined") {
-            root.mqttModule7Connected = mqttController.isModuleConnected(7)
-        }
-    }
-
     // ========== 信号 ==========
     signal requestReturnToCategory()
 
@@ -304,6 +297,10 @@ Rectangle {
     Component.onCompleted: {
         console.log("✅ [CentralControlPage] 初始化完成")
         focusSubArea = 1
+        // ✅ 2026-04-14 [Phase 7.48.88.135]: 初始化时读一次 MQTT模块7 连接状态
+        if (typeof mqttController !== "undefined") {
+            root.mqttModule7Connected = mqttController.isModuleConnected(7)
+        }
     }
 
     // ========== 主布局 ==========
