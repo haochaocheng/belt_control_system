@@ -28,8 +28,10 @@
 #include <QJsonArray>
 #include <cstring>
 
-// ========== MQTT集控模块索引（使用MQTTController的第0个模块）==========
-static const int CENTRAL_MQTT_MODULE = 0;
+// ========== MQTT集控模块索引（使用MQTTController的第7个模块，预留给集控）==========
+// ✅ 2026-04-14 [Phase 7.48.88.117]: 从模块0改为模块7
+// 原因：模块0-6已被DI/AI/DO/CS数据管理器占用，模块7为预留模块
+static const int CENTRAL_MQTT_MODULE = 7;
 
 // ========== SubStationStatus::toVariantMap ==========
 
@@ -1514,6 +1516,12 @@ void CentralizedControlManager::enterMasterMode()
 {
     qDebug() << "[CentralizedControl] 进入主站模式";
 
+    // 确保模块7已连接（模块7是预留的集控专用模块，不被MQTTAutoManager自动连接）
+    if (m_mqttController && !m_mqttController->isModuleConnected(CENTRAL_MQTT_MODULE)) {
+        m_mqttController->connectToModule(CENTRAL_MQTT_MODULE);
+        qDebug() << "[CentralizedControl] 请求连接MQTT模块" << CENTRAL_MQTT_MODULE;
+    }
+
     // 启动 S7/Modbus 轮询
     m_pollTimer->start();
 
@@ -1545,6 +1553,12 @@ void CentralizedControlManager::exitMasterMode()
 void CentralizedControlManager::enterSubStationMode()
 {
     qDebug() << "[CentralizedControl] 进入分站模式，deviceId=" << m_localDeviceId;
+
+    // 确保模块7已连接
+    if (m_mqttController && !m_mqttController->isModuleConnected(CENTRAL_MQTT_MODULE)) {
+        m_mqttController->connectToModule(CENTRAL_MQTT_MODULE);
+        qDebug() << "[CentralizedControl] 请求连接MQTT模块" << CENTRAL_MQTT_MODULE;
+    }
 
     // 分站订阅命令主题
     setupMqttSubscriptions();

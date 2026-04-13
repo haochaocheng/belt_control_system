@@ -293,6 +293,9 @@ int main(int argc, char *argv[]) {
             }
         });
 
+        // ✅ 2026-04-14 [Phase 7.48.88.117]: 启动前加载所有模块配置，确保broker地址生效
+        mqttController.loadAllConfigs();
+
         // 启动自动管理器
         mqttAutoManager.start();
         logMessage("MQTT Auto Manager started");
@@ -445,6 +448,15 @@ int main(int argc, char *argv[]) {
         mqttProtectionMonitor.setBeltMapping(0, systemConfig.machineNumber());
         mqttProtectionMonitor.start();
         logMessage("MQTT Protection Monitor started");
+
+        // ✅ 2026-04-14 [Phase 7.48.88.117]: 集控管理控制器依赖注入
+        // 原因：集控管理使用MQTT模块7（预留模块），复用现有MQTTController
+        centralControlManager.setMQTTController(&mqttController);
+        centralControlManager.setCommonControl(&commonControl);
+        centralControlManager.setSystemConfig(&systemConfig);
+        centralControlManager.setMqttProtectionMonitor(&mqttProtectionMonitor);
+        centralControlManager.setTCPDataAdapter(&tcpDataAdapter);
+        logMessage("CentralizedControlManager dependencies injected");
 
         // ✅ 2026-03-13: 连接NetworkTask电机保护寄存器信号到MqttProtectionMonitor
         // 电机保护Modbus TCP测试模式：轮询192.168.10.142，8电机×9保护
