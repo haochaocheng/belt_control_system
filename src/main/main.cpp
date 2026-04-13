@@ -458,6 +458,10 @@ int main(int argc, char *argv[]) {
         centralControlManager.setTCPDataAdapter(&tcpDataAdapter);
         logMessage("CentralizedControlManager dependencies injected");
 
+        // ✅ 2026-04-14 [Phase 7.48.88.142]: 依赖注入完成后激活已保存的角色
+        // 若已配置为主站/分站，自动启动相应模式（定时器+MQTT订阅）
+        centralControlManager.activateLoadedRole();
+
         // ✅ 2026-03-13: 连接NetworkTask电机保护寄存器信号到MqttProtectionMonitor
         // 电机保护Modbus TCP测试模式：轮询192.168.10.142，8电机×9保护
         QObject::connect(&networkTask, &NetworkTask::motorRegisterReceived,

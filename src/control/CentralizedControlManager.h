@@ -196,6 +196,9 @@ public:
     void setTCPDataAdapter(TCPDataAdapter *adapter);
     void setDeviceRuntimeTracker(DeviceRuntimeTracker *tracker);
 
+    // ✅ 2026-04-14 [Phase 7.48.88.142]: 依赖注入完成后调用，激活已保存的角色
+    void activateLoadedRole();
+
 signals:
     // ========== 角色信号 ==========
     void localDeviceIdChanged();

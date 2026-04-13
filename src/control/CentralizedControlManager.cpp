@@ -577,8 +577,14 @@ int CentralizedControlManager::getDefaultPort(const QString &protocol) const
 int CentralizedControlManager::findSlotByDeviceId(int deviceId) const
 {
     for (int i = 0; i < MAX_SLOTS; i++) {
-        int slotDevId = m_slots[i].protocolParams.value("deviceId", -1).toInt();
-        if (m_slots[i].enabled && slotDevId == deviceId) return i;
+        if (!m_slots[i].enabled) continue;
+        // ✅ 2026-04-14 [Phase 7.48.88.142]: 修复key不匹配
+        // QML保存用"targetDeviceId"，但这里读"deviceId"，导致永远找不到槽位
+        // 同时兼容两种写法：先找"targetDeviceId"，再找"deviceId"（向后兼容）
+        int slotDevId = m_slots[i].protocolParams.value("targetDeviceId", -1).toInt();
+        if (slotDevId < 0)
+            slotDevId = m_slots[i].protocolParams.value("deviceId", -1).toInt();
+        if (slotDevId == deviceId) return i;
     }
     return -1;
 }
@@ -1527,6 +1533,19 @@ void CentralizedControlManager::enterMasterMode()
 {
     qDebug() << "[CentralizedControl] 进入主站模式";
 
+    // ✅ 2026-04-14 [Phase 7.48.88.142]: 将模块7的Broker地址配置为集控MQTT地址
+    // 主站模块7连自己的本机Broker（127.0.0.1），也可以由用户指定其他地址
+    if (m_mqttController && !m_mqttBrokerIP.isEmpty()
+            && m_mqttBrokerIP != "127.0.0.1") {
+        int oldIdx = m_mqttController->currentModuleIndex();
+        m_mqttController->setCurrentModuleIndex(CENTRAL_MQTT_MODULE);
+        m_mqttController->setBrokerHost(m_mqttBrokerIP);
+        if (m_mqttBrokerPort > 0)
+            m_mqttController->setBrokerPort(m_mqttBrokerPort);
+        m_mqttController->setCurrentModuleIndex(oldIdx);
+        qDebug() << "[CentralizedControl] 主站模式：模块7 Broker 设为" << m_mqttBrokerIP;
+    }
+
     // 确保模块7已连接（模块7是预留的集控专用模块，不被MQTTAutoManager自动连接）
     if (m_mqttController && !m_mqttController->isModuleConnected(CENTRAL_MQTT_MODULE)) {
         m_mqttController->connectToModule(CENTRAL_MQTT_MODULE);
@@ -1565,6 +1584,18 @@ void CentralizedControlManager::enterSubStationMode()
 {
     qDebug() << "[CentralizedControl] 进入分站模式，deviceId=" << m_localDeviceId;
 
+    // ✅ 2026-04-14 [Phase 7.48.88.142]: 将模块7的Broker地址配置为集控MQTT地址
+    // 模块0-6连本机127.0.0.1，模块7（集控）连主站的MQTT地址
+    if (m_mqttController && !m_mqttBrokerIP.isEmpty()) {
+        int oldIdx = m_mqttController->currentModuleIndex();
+        m_mqttController->setCurrentModuleIndex(CENTRAL_MQTT_MODULE);
+        m_mqttController->setBrokerHost(m_mqttBrokerIP);
+        if (m_mqttBrokerPort > 0)
+            m_mqttController->setBrokerPort(m_mqttBrokerPort);
+        m_mqttController->setCurrentModuleIndex(oldIdx);
+        qDebug() << "[CentralizedControl] 分站模式：模块7 Broker 设为" << m_mqttBrokerIP;
+    }
+
     // 确保模块7已连接
     if (m_mqttController && !m_mqttController->isModuleConnected(CENTRAL_MQTT_MODULE)) {
         m_mqttController->connectToModule(CENTRAL_MQTT_MODULE);
@@ -1579,6 +1610,19 @@ void CentralizedControlManager::enterSubStationMode()
 
     // 3s 心跳
     m_heartbeatTimer->start();
+}
+
+// ✅ 2026-04-14 [Phase 7.48.88.142]: 启动时激活已加载的角色
+// loadConfig() 只加载配置，不触发模式切换；此方法供 main.cpp 在依赖注入完成后调用
+void CentralizedControlManager::activateLoadedRole()
+{
+    if (m_stationRole == "master") {
+        qDebug() << "[CentralizedControl] 启动激活：主站模式";
+        enterMasterMode();
+    } else if (m_stationRole == "sub") {
+        qDebug() << "[CentralizedControl] 启动激活：分站模式 deviceId=" << m_localDeviceId;
+        enterSubStationMode();
+    }
 }
 
 void CentralizedControlManager::exitSubStationMode()
