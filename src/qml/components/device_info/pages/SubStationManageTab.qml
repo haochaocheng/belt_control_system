@@ -211,7 +211,7 @@ Rectangle {
                     Text { text: "启用:"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         DeviceInfo.CustomComboBox {
                             id: enabledField
                             anchors.fill: parent
@@ -233,7 +233,7 @@ Rectangle {
                     Text { text: "协议类型:"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         DeviceInfo.CustomComboBox {
                             id: protocolField
                             anchors.fill: parent
@@ -262,7 +262,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "mqtt" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "mqtt"
                         DeviceInfo.CustomSpinBox {
                             id: mqttTargetIdField
@@ -295,7 +295,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "s7" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "s7"
                         DeviceInfo.CustomTextField {
                             id: s7TargetIPField
@@ -317,7 +317,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "s7" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "s7"
                         DeviceInfo.CustomSpinBox {
                             id: s7PortField; anchors.fill: parent
@@ -339,7 +339,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "s7" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "s7"
                         DeviceInfo.CustomSpinBox {
                             id: s7RackField; anchors.fill: parent
@@ -361,7 +361,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "s7" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "s7"
                         DeviceInfo.CustomSpinBox {
                             id: s7SlotField; anchors.fill: parent
@@ -383,7 +383,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "s7" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "s7"
                         DeviceInfo.CustomComboBox {
                             id: s7ConnTypeField; anchors.fill: parent
@@ -410,7 +410,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "modbus" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "modbus"
                         DeviceInfo.CustomTextField {
                             id: modbusTargetIPField; anchors.fill: parent
@@ -431,7 +431,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "modbus" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "modbus"
                         DeviceInfo.CustomSpinBox {
                             id: modbusPortField; anchors.fill: parent
@@ -453,7 +453,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "modbus" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "modbus"
                         DeviceInfo.CustomSpinBox {
                             id: modbusSlaveAddrField; anchors.fill: parent
@@ -475,7 +475,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "modbus" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "modbus"
                         DeviceInfo.CustomSpinBox {
                             id: modbusStartRegField; anchors.fill: parent
@@ -497,7 +497,7 @@ Rectangle {
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "modbus" }
                     Item {
-                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                        Layout.preferredWidth: 200; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "modbus"
                         DeviceInfo.CustomSpinBox {
                             id: modbusRegCountField; anchors.fill: parent

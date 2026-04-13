@@ -68,7 +68,7 @@ Rectangle {
             Text { text: "Broker IP:"; font.pixelSize: 21; color: "#9E9E9E"
                    Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomTextField {
                     id: brokerIPField; anchors.fill: parent; text: root.brokerIP
                     onTextChanged: { if (typeof centralControlManager !== "undefined") centralControlManager.mqttBrokerIP = text }
@@ -82,7 +82,7 @@ Rectangle {
             Text { text: "Broker端口:"; font.pixelSize: 21; color: "#9E9E9E"
                    Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomSpinBox {
                     id: brokerPortField; anchors.fill: parent
                     from: 1; to: 65535; value: root.brokerPort
@@ -97,7 +97,7 @@ Rectangle {
             Text { text: "Client ID:"; font.pixelSize: 21; color: "#9E9E9E"
                    Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomTextField {
                     id: clientIdField; anchors.fill: parent; text: root.clientId
                     onTextChanged: { if (typeof centralControlManager !== "undefined") centralControlManager.mqttClientId = text }
@@ -111,7 +111,7 @@ Rectangle {
             Text { text: "QoS:"; font.pixelSize: 21; color: "#9E9E9E"
                    Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomComboBox {
                     id: qosField; anchors.fill: parent
                     model: ["QoS 0", "QoS 1", "QoS 2"]
@@ -128,7 +128,7 @@ Rectangle {
             Text { text: "Keep-alive(秒):"; font.pixelSize: 21; color: "#9E9E9E"
                    Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomSpinBox {
                     id: keepAliveField; anchors.fill: parent
                     from: 10; to: 600; value: root.keepAlive
@@ -143,7 +143,7 @@ Rectangle {
             Text { text: "Topic前缀:"; font.pixelSize: 21; color: "#9E9E9E"
                    Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomTextField {
                     id: topicPrefixField; anchors.fill: parent; text: root.topicPrefix
                     onTextChanged: { if (typeof centralControlManager !== "undefined") centralControlManager.mqttTopicPrefix = text }
@@ -157,7 +157,7 @@ Rectangle {
             Text { text: "用户名:"; font.pixelSize: 21; color: "#9E9E9E"
                    Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomTextField {
                     id: usernameField; anchors.fill: parent; text: root.username
                     onTextChanged: { if (typeof centralControlManager !== "undefined") centralControlManager.mqttUsername = text }
@@ -171,7 +171,7 @@ Rectangle {
             Text { text: "密码:"; font.pixelSize: 21; color: "#9E9E9E"
                    Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomTextField {
                     id: passwordField; anchors.fill: parent; text: root.password
                     echoMode: TextInput.Password

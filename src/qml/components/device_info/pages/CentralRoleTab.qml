@@ -83,7 +83,7 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomSpinBox {
                     id: deviceIdField; anchors.fill: parent
                     from: 1; to: 8; value: root.localDeviceId
@@ -105,7 +105,7 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomComboBox {
                     id: roleField; anchors.fill: parent
                     model: ["主站", "分站", "独立"]
@@ -126,7 +126,7 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomSpinBox {
                     id: stationIdField; anchors.fill: parent
                     from: 1; to: 8; value: root.stationId
@@ -149,7 +149,7 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
             Item {
-                Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
+                Layout.preferredWidth: 200; Layout.preferredHeight: 48
                 DeviceInfo.CustomSpinBox {
                     id: masterIdField; anchors.fill: parent
                     from: 1; to: 8; value: root.masterDeviceId
