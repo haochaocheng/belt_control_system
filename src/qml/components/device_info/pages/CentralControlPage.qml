@@ -160,6 +160,8 @@ Rectangle {
             } else {
                 skipMotorList = true
             }
+            // ✅ 2026-04-14 [Phase 7.48.88.123]: 切换Tab时确保focusSubArea=1(TabBar)
+            root.focusSubArea = 1
             Qt.callLater(function() {
                 var paramCount = root.getParamFieldCount()
                 updateLastParamIndex(paramCount)
@@ -229,9 +231,9 @@ Rectangle {
 
     Keys.onDownPressed: {
         if (!keysEnabled || isReturningToCategory) { event.accepted = true; return }
-        // ✅ 2026-04-14 [Phase 7.48.88.121]: Tab1(分站管理) + TabBar + Down → 进入分站列表
-        if (currentTabIndex === 1
-                && navigationManager.currentArea === navigationManager.areaTabBar) {
+        // ✅ 2026-04-14 [Phase 7.48.88.123]: Tab1(分站管理) + TabBar(focusSubArea===1) + Down → 进入分站列表
+        // 用 focusSubArea===1 替代 navigationManager.currentArea 比较（更可靠）
+        if (currentTabIndex === 1 && focusSubArea === 1) {
             navigationManager.switchToArea(navigationManager.areaMotorList)
             navigationManager.motorListIndex = 0
         } else {
@@ -242,9 +244,8 @@ Rectangle {
 
     Keys.onLeftPressed: function(event) {
         if (isReturningToCategory) { event.accepted = true; return }
-        // ✅ 2026-04-14 [Phase 7.48.88.121]: Tab1(分站管理) + 参数区首列 + Left → 返回分站列表
-        if (currentTabIndex === 1
-                && navigationManager.currentArea === navigationManager.areaParams
+        // ✅ 2026-04-14 [Phase 7.48.88.123]: Tab1 + 参数区首列(focusSubArea===2) + Left → 返回分站列表
+        if (currentTabIndex === 1 && focusSubArea === 2
                 && navigationManager.paramIndex % navigationManager.paramColumns === 0) {
             navigationManager.switchToArea(navigationManager.areaMotorList)
         } else {
@@ -255,9 +256,8 @@ Rectangle {
 
     Keys.onRightPressed: {
         if (!keysEnabled || isReturningToCategory) { event.accepted = true; return }
-        // ✅ 2026-04-14 [Phase 7.48.88.121]: Tab1(分站管理) + 分站列表 + Right → 直接进入参数区
-        if (currentTabIndex === 1
-                && navigationManager.currentArea === navigationManager.areaMotorList) {
+        // ✅ 2026-04-14 [Phase 7.48.88.123]: Tab1 + 分站列表(focusSubArea===0) + Right → 进入参数区
+        if (currentTabIndex === 1 && focusSubArea === 0) {
             navigationManager.switchToArea(navigationManager.areaParams)
             navigationManager.paramIndex = 0
         } else {
