@@ -17,6 +17,7 @@
 #include "SystemConfig.h"
 #include "MqttProtectionMonitor.h"
 #include "ProtectionLogicController.h"
+#include "DataPathConfig.h"
 #include "TCPDataAdapter.h"
 #include "DeviceRuntimeTracker.h"
 
@@ -105,7 +106,13 @@ CentralizedControlManager::CentralizedControlManager(QObject *parent)
     , m_heartbeatSeq(0)
     , m_mqttSubscribed(false)
 {
-    m_settings = new QSettings("BeltControl", "CentralizedControl", this);
+    // ✅ 2026-04-14 [Phase 7.48.88.138]: 改用 DataPathConfig 统一数据目录（/app/appdata/）
+    // 旧：QSettings("BeltControl", "CentralizedControl") → 保存到 ~/.config/，容器重新部署后配置丢失
+    // 参考 DeviceRoleManager.cpp Phase 7.48.88.18 的同类修复
+    QString configDir = DataPathConfig::getDataDirectory();
+    QDir().mkpath(configDir);
+    m_settings = new QSettings(configDir + "/centralized_control.ini",
+                               QSettings::IniFormat, this);
     initSlots();
     initTimers();
     loadConfig();
