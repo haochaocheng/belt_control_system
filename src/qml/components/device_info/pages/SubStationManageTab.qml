@@ -160,7 +160,7 @@ Rectangle {
                             // ✅ 2026-04-14 [Phase 7.48.88.132]: 增强在线状态 LED
                             Rectangle {
                                 width: 10; height: 10; radius: 5
-                                anchors.verticalCenter: parent.verticalCenter
+                                Layout.alignment: Qt.AlignVCenter
                                 color: {
                                     if (typeof centralControlManager === "undefined") return "#555"
                                     var slots = centralControlManager.subStations
@@ -225,7 +225,7 @@ Rectangle {
                                 }
                                 color: "#607080"
                                 font.pixelSize: 9
-                                anchors.verticalCenter: parent.verticalCenter
+                                Layout.alignment: Qt.AlignVCenter
                             }
                         }
 
