@@ -193,10 +193,11 @@ Rectangle {
                 root.focusTabIndex = -1
                 root.focusButtonIndex = -1
                 // ✅ 2026-04-14 [Phase 7.48.88.125]: 进入分站列表时直接更新tab的currentSlotIndex
+                // ✅ 2026-04-14 [Phase 7.48.88.128]: 不能直接设item.focusSubArea，会破坏Qt.binding
+                // root.focusSubArea = 0 已在上面设置，binding会自动同步到tab
                 Qt.callLater(function() {
                     if (subStationManageTabLoader.item) {
                         subStationManageTabLoader.item.currentSlotIndex = motorListIndex
-                        subStationManageTabLoader.item.focusSubArea = 0
                     }
                 })
                 break
