@@ -55,17 +55,21 @@ Rectangle {
         var protocol = getCurrentSlotProtocol()
         switch(index) {
         case 0:
-            var isEnabled = typeof centralControlManager !== "undefined"
-                            && centralControlManager.isSlotEnabled(currentSlotIndex)
+            // ✅ 2026-04-14 [Phase 7.48.88.131]: 参考BasicConfigTab enabledSwitch.toggle()模式
+            // 直接切换ComboBox的currentIndex（立即更新UI），再同步后端
+            var newEnabledIndex = (enabledField.currentIndex + 1) % 2
+            enabledField.currentIndex = newEnabledIndex
             if (typeof centralControlManager !== "undefined")
-                centralControlManager.setSlotEnabled(currentSlotIndex, !isEnabled)
+                centralControlManager.setSlotEnabled(currentSlotIndex, newEnabledIndex === 1)
             break
         case 1:
+            // ✅ 2026-04-14 [Phase 7.48.88.131]: 参考BasicConfigTab audioSourceCombo模式
+            // 直接切换协议ComboBox，再同步后端
+            var newProtoIndex = (protocolField.currentIndex + 1) % protocolField.count
+            protocolField.currentIndex = newProtoIndex
             var protocols = ["mqtt", "s7", "modbus"]
-            var idx = protocols.indexOf(getCurrentSlotProtocol())
-            idx = (idx + 1) % protocols.length
             if (typeof centralControlManager !== "undefined")
-                centralControlManager.setSlotProtocol(currentSlotIndex, protocols[idx])
+                centralControlManager.setSlotProtocol(currentSlotIndex, protocols[newProtoIndex])
             break
         default:
             if (protocol === "mqtt") {
