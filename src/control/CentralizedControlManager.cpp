@@ -286,7 +286,9 @@ QVariantList CentralizedControlManager::subStations() const
         m["port"]        = m_slots[i].port;
         m["isConnected"] = m_slots[i].isConnected;
         m["statusText"]  = m_slots[i].statusText;
-        m.unite(m_slots[i].protocolParams);
+        // ✅ 2026-04-14 [Phase 7.48.88.117]: Qt6移除了QMap::unite()，改用迭代器插入
+        for (auto it = m_slots[i].protocolParams.cbegin(); it != m_slots[i].protocolParams.cend(); ++it)
+            m.insert(it.key(), it.value());
         list << m;
     }
     return list;
@@ -395,7 +397,9 @@ QVariantMap CentralizedControlManager::getSlotConfig(int slotIndex) const
     m["port"]        = m_slots[slotIndex].port;
     m["isConnected"] = m_slots[slotIndex].isConnected;
     m["statusText"]  = m_slots[slotIndex].statusText;
-    m.unite(m_slots[slotIndex].protocolParams);
+    // ✅ 2026-04-14 [Phase 7.48.88.117]: Qt6移除了QMap::unite()，改用迭代器插入
+    for (auto it = m_slots[slotIndex].protocolParams.cbegin(); it != m_slots[slotIndex].protocolParams.cend(); ++it)
+        m.insert(it.key(), it.value());
     return m;
 }
 
