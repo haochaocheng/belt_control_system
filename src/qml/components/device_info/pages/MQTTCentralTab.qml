@@ -258,7 +258,6 @@ Rectangle {
                     Text { text: "集控专用MQTT模块7（模块0-6已被数据采集占用）"; color: "#90A4AE"; font.pixelSize: 12 }
                     Text { text: "确保所有集控设备使用相同的Broker地址和Topic前缀"; color: "#90A4AE"; font.pixelSize: 12 }
                 }
-                }
             }
         }
     }
