@@ -2229,7 +2229,8 @@ Item {
 
     // ✅ 2026-01-28 [FIX 100.300.101]: 电视遥控器式导航系统 - 回车键功能
     // ✅ 2026-01-29 [FIX 100.300.102 Phase 2.32]: 支持子区域的回车键处理
-    Keys.onReturnPressed: {
+    // ✅ 2026-04-14 [Phase 7.48.88.130]: 使用function(event)形式，修复Qt6参数注入弃用警告
+    Keys.onReturnPressed: function(event) {
         // ✅ 2026-03-29 [Phase 7.48.88.61]: 未保存对话框打开时拦截所有键盘事件
         if (unsavedChangesDialog.visible) { event.accepted = true; return }
         // 回车键：根据当前区域执行不同操作
@@ -2450,7 +2451,8 @@ Item {
         }
     }
 
-    Keys.onEscapePressed: {
+    // ✅ 2026-04-14 [Phase 7.48.88.130]: 使用function(event)形式
+    Keys.onEscapePressed: function(event) {
         // ✅ 2026-03-29 [Phase 7.48.88.61]: 未保存对话框打开时拦截所有键盘事件
         if (unsavedChangesDialog.visible) { event.accepted = true; return }
         // ✅ 2026-02-03 [FIX 100.300.112.8.25.7.10]: 检查虚拟键盘是否激活
@@ -4718,12 +4720,12 @@ Item {
                         width: 180
                         height: 44
                         // ✅ 2026-03-29 [Phase 7.48.88.61]: 按钮间键盘导航
-                        Keys.onRightPressed: { dialogDiscardBtn.forceActiveFocus(); event.accepted = true }
-                        Keys.onLeftPressed: { dialogDiscardBtn.forceActiveFocus(); event.accepted = true }
-                        Keys.onReturnPressed: { unsavedChangesDialog.doSave(); event.accepted = true }
-                        Keys.onEscapePressed: { unsavedChangesDialog.doDiscard(); event.accepted = true }
-                        Keys.onUpPressed: { event.accepted = true }
-                        Keys.onDownPressed: { event.accepted = true }
+                        Keys.onRightPressed: function(event) { dialogDiscardBtn.forceActiveFocus(); event.accepted = true }
+                        Keys.onLeftPressed: function(event) { dialogDiscardBtn.forceActiveFocus(); event.accepted = true }
+                        Keys.onReturnPressed: function(event) { unsavedChangesDialog.doSave(); event.accepted = true }
+                        Keys.onEscapePressed: function(event) { unsavedChangesDialog.doDiscard(); event.accepted = true }
+                        Keys.onUpPressed: function(event) { event.accepted = true }
+                        Keys.onDownPressed: function(event) { event.accepted = true }
                         background: Rectangle {
                             radius: 8
                             color: dialogSaveBtn.activeFocus ? "#22C55E" :
@@ -4770,12 +4772,12 @@ Item {
                         width: 180
                         height: 44
                         // ✅ 2026-03-29 [Phase 7.48.88.61]: 按钮间键盘导航
-                        Keys.onLeftPressed: { dialogSaveBtn.forceActiveFocus(); event.accepted = true }
-                        Keys.onRightPressed: { dialogSaveBtn.forceActiveFocus(); event.accepted = true }
-                        Keys.onReturnPressed: { unsavedChangesDialog.doDiscard(); event.accepted = true }
-                        Keys.onEscapePressed: { unsavedChangesDialog.doDiscard(); event.accepted = true }
-                        Keys.onUpPressed: { event.accepted = true }
-                        Keys.onDownPressed: { event.accepted = true }
+                        Keys.onLeftPressed: function(event) { dialogSaveBtn.forceActiveFocus(); event.accepted = true }
+                        Keys.onRightPressed: function(event) { dialogSaveBtn.forceActiveFocus(); event.accepted = true }
+                        Keys.onReturnPressed: function(event) { unsavedChangesDialog.doDiscard(); event.accepted = true }
+                        Keys.onEscapePressed: function(event) { unsavedChangesDialog.doDiscard(); event.accepted = true }
+                        Keys.onUpPressed: function(event) { event.accepted = true }
+                        Keys.onDownPressed: function(event) { event.accepted = true }
                         background: Rectangle {
                             radius: 8
                             color: dialogDiscardBtn.activeFocus ? "#DC2626" :
