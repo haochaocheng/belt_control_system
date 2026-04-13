@@ -47,6 +47,16 @@ Rectangle {
         }
     }
 
+    // ✅ 2026-04-14 [Phase 7.48.88.120]: 供 CustomComboBox.parentDialog 调用
+    function handleNavigationKey(key, event) {
+        switch(key) {
+        case Qt.Key_Up:    navigationManager.handleDirectionKey("Up");    break
+        case Qt.Key_Down:  navigationManager.handleDirectionKey("Down");  break
+        case Qt.Key_Left:  navigationManager.handleDirectionKey("Left");  break
+        case Qt.Key_Right: navigationManager.handleDirectionKey("Right"); break
+        }
+    }
+
     function getParamFieldCount() {
         var currentTab = getCurrentTab()
         if (currentTab && typeof currentTab.getParamFieldCount === "function") {
@@ -121,6 +131,7 @@ Rectangle {
             skipButtonArea = false
             lastTabIndex = 2      // 3个Tab (0-2)
             hasViewSwitchRow = false
+            paramColumns = 2      // ✅ 2026-04-14 [Phase 7.48.88.120]: 2列参数布局
 
             // skipMotorList=true时，初始区域为TabBar
             currentArea = areaTabBar
@@ -142,10 +153,25 @@ Rectangle {
         onTabIndexChanged: {
             root.focusTabIndex = tabIndex
             root.currentTabIndex = tabIndex
+            // ✅ 2026-04-14 [Phase 7.48.88.120]: Tab1(分站管理)启用分站列表区域
+            if (tabIndex === 1) {
+                skipMotorList = false
+                lastMotorIndex = 7  // 8个分站 (0-7)
+            } else {
+                skipMotorList = true
+            }
             Qt.callLater(function() {
                 var paramCount = root.getParamFieldCount()
                 updateLastParamIndex(paramCount)
             })
+        }
+
+        onMotorListIndexChanged: {
+            // ✅ 2026-04-14 [Phase 7.48.88.120]: 列表索引变化 → 同步分站选中
+            if (root.currentTabIndex === 1 && subStationManageTabLoader.item) {
+                subStationManageTabLoader.item.currentSlotIndex = motorListIndex
+            }
+            root.focusItemIndex = motorListIndex
         }
 
         onParamIndexChanged: {
@@ -158,6 +184,13 @@ Rectangle {
 
         onAreaChanged: function(newArea) {
             switch(newArea) {
+            case areaMotorList:
+                root.focusSubArea = 0   // ✅ 2026-04-14: 0=分站列表区
+                root.focusItemIndex = motorListIndex
+                root.focusParamIndex = -1
+                root.focusTabIndex = -1
+                root.focusButtonIndex = -1
+                break
             case areaTabBar:
                 root.focusSubArea = 1
                 root.focusTabIndex = tabIndex
@@ -336,6 +369,7 @@ Rectangle {
 
                         onLoaded: {
                             item.virtualKeyboard = root.virtualKeyboard
+                            item.parentDialog    = root  // ✅ 2026-04-14: 供ComboBox键盘导航使用
                             item.focusParamIndex = Qt.binding(function() {
                                 return root.focusSubArea === 2 ? root.focusParamIndex : -1
                             })
@@ -353,11 +387,15 @@ Rectangle {
 
                         onLoaded: {
                             item.virtualKeyboard = root.virtualKeyboard
+                            item.parentDialog    = root  // ✅ 2026-04-14: 供ComboBox键盘导航使用
                             item.focusParamIndex = Qt.binding(function() {
                                 return root.focusSubArea === 2 ? root.focusParamIndex : -1
                             })
                             item.focusSubArea = Qt.binding(function() {
                                 return root.focusSubArea
+                            })
+                            item.focusListIndex = Qt.binding(function() {
+                                return root.focusSubArea === 0 ? navigationManager.motorListIndex : -1
                             })
                         }
                     }
@@ -370,6 +408,7 @@ Rectangle {
 
                         onLoaded: {
                             item.virtualKeyboard = root.virtualKeyboard
+                            item.parentDialog    = root  // ✅ 2026-04-14: 供ComboBox键盘导航使用
                             item.focusParamIndex = Qt.binding(function() {
                                 return root.focusSubArea === 2 ? root.focusParamIndex : -1
                             })
