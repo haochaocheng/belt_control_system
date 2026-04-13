@@ -229,19 +229,40 @@ Rectangle {
 
     Keys.onDownPressed: {
         if (!keysEnabled || isReturningToCategory) { event.accepted = true; return }
-        navigationManager.handleDirectionKey("Down")
+        // ✅ 2026-04-14 [Phase 7.48.88.121]: Tab1(分站管理) + TabBar + Down → 进入分站列表
+        if (currentTabIndex === 1
+                && navigationManager.currentArea === navigationManager.areaTabBar) {
+            navigationManager.switchToArea(navigationManager.areaMotorList)
+            navigationManager.motorListIndex = 0
+        } else {
+            navigationManager.handleDirectionKey("Down")
+        }
         event.accepted = true
     }
 
     Keys.onLeftPressed: function(event) {
         if (isReturningToCategory) { event.accepted = true; return }
-        navigationManager.handleDirectionKey("Left")
+        // ✅ 2026-04-14 [Phase 7.48.88.121]: Tab1(分站管理) + 参数区首列 + Left → 返回分站列表
+        if (currentTabIndex === 1
+                && navigationManager.currentArea === navigationManager.areaParams
+                && navigationManager.paramIndex % navigationManager.paramColumns === 0) {
+            navigationManager.switchToArea(navigationManager.areaMotorList)
+        } else {
+            navigationManager.handleDirectionKey("Left")
+        }
         event.accepted = true
     }
 
     Keys.onRightPressed: {
         if (!keysEnabled || isReturningToCategory) { event.accepted = true; return }
-        navigationManager.handleDirectionKey("Right")
+        // ✅ 2026-04-14 [Phase 7.48.88.121]: Tab1(分站管理) + 分站列表 + Right → 直接进入参数区
+        if (currentTabIndex === 1
+                && navigationManager.currentArea === navigationManager.areaMotorList) {
+            navigationManager.switchToArea(navigationManager.areaParams)
+            navigationManager.paramIndex = 0
+        } else {
+            navigationManager.handleDirectionKey("Right")
+        }
         event.accepted = true
     }
 

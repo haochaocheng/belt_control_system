@@ -1,8 +1,8 @@
 // SubStationManageTab.qml
 // 分站管理Tab - 8个预设槽位，每个可配置不同协议
-// 创建日期: 2026-04-11
 // ✅ 2026-04-11 [Phase 7.48.88.110]: 集控管理——分站管理
-// ✅ 2026-04-14 [Phase 7.48.88.120]: 添加完整键盘导航（分站列表 + 参数区焦点指示器）
+// ✅ 2026-04-14 [Phase 7.48.88.120]: 键盘导航（分站列表 + 参数区焦点指示器）
+// ✅ 2026-04-14 [Phase 7.48.88.121]: 字体/尺寸统一 + 虚拟键盘调用修复
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -45,15 +45,22 @@ Rectangle {
     }
 
     function triggerParamInput(index) {
+        // ✅ 2026-04-14 [Phase 7.48.88.121]: 使用 activateVirtualKeyboard()
+        function activate(field) {
+            if (field && field.visible) {
+                if (field.activateVirtualKeyboard) field.activateVirtualKeyboard()
+                else field.forceActiveFocus()
+            }
+        }
         var protocol = getCurrentSlotProtocol()
         switch(index) {
-        case 0:  // 启用/禁用
+        case 0:
             var isEnabled = typeof centralControlManager !== "undefined"
                             && centralControlManager.isSlotEnabled(currentSlotIndex)
             if (typeof centralControlManager !== "undefined")
                 centralControlManager.setSlotEnabled(currentSlotIndex, !isEnabled)
             break
-        case 1:  // 协议类型
+        case 1:
             var protocols = ["mqtt", "s7", "modbus"]
             var idx = protocols.indexOf(getCurrentSlotProtocol())
             idx = (idx + 1) % protocols.length
@@ -61,34 +68,29 @@ Rectangle {
                 centralControlManager.setSlotProtocol(currentSlotIndex, protocols[idx])
             break
         default:
-            triggerProtocolParam(index, protocol)
-        }
-    }
-
-    function triggerProtocolParam(index, protocol) {
-        if (protocol === "mqtt") {
-            if (index === 2 && root.virtualKeyboard && mqttTargetIdField.visible)
-                root.virtualKeyboard.targetInput = mqttTargetIdField; root.virtualKeyboard && root.virtualKeyboard.show()
-        } else if (protocol === "s7") {
-            switch(index) {
-            case 2: if (root.virtualKeyboard && s7TargetIPField.visible) { root.virtualKeyboard.targetInput = s7TargetIPField; root.virtualKeyboard.show() } break
-            case 3: if (root.virtualKeyboard && s7PortField.visible)     { root.virtualKeyboard.targetInput = s7PortField;     root.virtualKeyboard.show() } break
-            case 4: if (root.virtualKeyboard && s7RackField.visible)     { root.virtualKeyboard.targetInput = s7RackField;     root.virtualKeyboard.show() } break
-            case 5: if (root.virtualKeyboard && s7SlotField.visible)     { root.virtualKeyboard.targetInput = s7SlotField;     root.virtualKeyboard.show() } break
-            case 6:
-                s7ConnTypeField.currentIndex = (s7ConnTypeField.currentIndex + 1) % s7ConnTypeField.count
-                if (typeof centralControlManager !== "undefined")
-                    centralControlManager.setSlotParam(currentSlotIndex, "connectionType",
-                        s7ConnTypeField.model[s7ConnTypeField.currentIndex])
-                break
-            }
-        } else if (protocol === "modbus") {
-            switch(index) {
-            case 2: if (root.virtualKeyboard && modbusTargetIPField.visible)   { root.virtualKeyboard.targetInput = modbusTargetIPField;   root.virtualKeyboard.show() } break
-            case 3: if (root.virtualKeyboard && modbusPortField.visible)       { root.virtualKeyboard.targetInput = modbusPortField;       root.virtualKeyboard.show() } break
-            case 4: if (root.virtualKeyboard && modbusSlaveAddrField.visible)  { root.virtualKeyboard.targetInput = modbusSlaveAddrField;  root.virtualKeyboard.show() } break
-            case 5: if (root.virtualKeyboard && modbusStartRegField.visible)   { root.virtualKeyboard.targetInput = modbusStartRegField;   root.virtualKeyboard.show() } break
-            case 6: if (root.virtualKeyboard && modbusRegCountField.visible)   { root.virtualKeyboard.targetInput = modbusRegCountField;   root.virtualKeyboard.show() } break
+            if (protocol === "mqtt") {
+                if (index === 2) activate(mqttTargetIdField)
+            } else if (protocol === "s7") {
+                switch(index) {
+                case 2: activate(s7TargetIPField);   break
+                case 3: activate(s7PortField);       break
+                case 4: activate(s7RackField);       break
+                case 5: activate(s7SlotField);       break
+                case 6:
+                    s7ConnTypeField.currentIndex = (s7ConnTypeField.currentIndex + 1) % s7ConnTypeField.count
+                    if (typeof centralControlManager !== "undefined")
+                        centralControlManager.setSlotParam(currentSlotIndex, "connectionType",
+                            s7ConnTypeField.model[s7ConnTypeField.currentIndex])
+                    break
+                }
+            } else if (protocol === "modbus") {
+                switch(index) {
+                case 2: activate(modbusTargetIPField);   break
+                case 3: activate(modbusPortField);       break
+                case 4: activate(modbusSlaveAddrField);  break
+                case 5: activate(modbusStartRegField);   break
+                case 6: activate(modbusRegCountField);   break
+                }
             }
         }
     }
@@ -206,9 +208,10 @@ Rectangle {
                     rowSpacing: 10
 
                     // ----- 参数0: 启用/禁用 -----
-                    Text { text: "启用"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100 }
+                    Text { text: "启用:"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
                     Item {
-                        Layout.preferredWidth: 120; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         DeviceInfo.CustomComboBox {
                             id: enabledField
                             anchors.fill: parent
@@ -227,9 +230,10 @@ Rectangle {
                     }
 
                     // ----- 参数1: 协议类型 -----
-                    Text { text: "协议类型"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100 }
+                    Text { text: "协议类型:"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
                     Item {
-                        Layout.preferredWidth: 120; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         DeviceInfo.CustomComboBox {
                             id: protocolField
                             anchors.fill: parent
@@ -254,10 +258,11 @@ Rectangle {
                     }
 
                     // ----- MQTT: 参数2 目标设备ID -----
-                    Text { text: "目标设备ID"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "目标设备ID"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "mqtt" }
                     Item {
-                        Layout.preferredWidth: 120; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "mqtt"
                         DeviceInfo.CustomSpinBox {
                             id: mqttTargetIdField
@@ -276,7 +281,8 @@ Rectangle {
                     }
 
                     // ----- MQTT: 参数3 Topic前缀 -----
-                    Text { text: "Topic前缀"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "Topic前缀"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "mqtt" }
                     Text {
                         text: "belt/" + mqttTargetIdField.value + "/ctrl"
@@ -285,10 +291,11 @@ Rectangle {
                     }
 
                     // ----- S7: 参数2 目标IP -----
-                    Text { text: "目标IP"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "目标IP"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "s7" }
                     Item {
-                        Layout.preferredWidth: 140; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "s7"
                         DeviceInfo.CustomTextField {
                             id: s7TargetIPField
@@ -306,10 +313,11 @@ Rectangle {
                     }
 
                     // ----- S7: 参数3 端口 -----
-                    Text { text: "端口"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "端口"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "s7" }
                     Item {
-                        Layout.preferredWidth: 100; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "s7"
                         DeviceInfo.CustomSpinBox {
                             id: s7PortField; anchors.fill: parent
@@ -327,10 +335,11 @@ Rectangle {
                     }
 
                     // ----- S7: 参数4 机架 -----
-                    Text { text: "机架"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "机架"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "s7" }
                     Item {
-                        Layout.preferredWidth: 100; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "s7"
                         DeviceInfo.CustomSpinBox {
                             id: s7RackField; anchors.fill: parent
@@ -348,10 +357,11 @@ Rectangle {
                     }
 
                     // ----- S7: 参数5 插槽 -----
-                    Text { text: "插槽"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "插槽"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "s7" }
                     Item {
-                        Layout.preferredWidth: 100; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "s7"
                         DeviceInfo.CustomSpinBox {
                             id: s7SlotField; anchors.fill: parent
@@ -369,10 +379,11 @@ Rectangle {
                     }
 
                     // ----- S7: 参数6 连接类型 -----
-                    Text { text: "连接类型"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "连接类型"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "s7" }
                     Item {
-                        Layout.preferredWidth: 100; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "s7"
                         DeviceInfo.CustomComboBox {
                             id: s7ConnTypeField; anchors.fill: parent
@@ -395,10 +406,11 @@ Rectangle {
                     }
 
                     // ----- Modbus: 参数2 目标IP -----
-                    Text { text: "目标IP"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "目标IP"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "modbus" }
                     Item {
-                        Layout.preferredWidth: 140; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "modbus"
                         DeviceInfo.CustomTextField {
                             id: modbusTargetIPField; anchors.fill: parent
@@ -415,10 +427,11 @@ Rectangle {
                     }
 
                     // ----- Modbus: 参数3 端口 -----
-                    Text { text: "端口"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "端口"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "modbus" }
                     Item {
-                        Layout.preferredWidth: 100; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "modbus"
                         DeviceInfo.CustomSpinBox {
                             id: modbusPortField; anchors.fill: parent
@@ -436,10 +449,11 @@ Rectangle {
                     }
 
                     // ----- Modbus: 参数4 从站地址 -----
-                    Text { text: "从站地址"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "从站地址"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "modbus" }
                     Item {
-                        Layout.preferredWidth: 100; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "modbus"
                         DeviceInfo.CustomSpinBox {
                             id: modbusSlaveAddrField; anchors.fill: parent
@@ -457,10 +471,11 @@ Rectangle {
                     }
 
                     // ----- Modbus: 参数5 起始寄存器 -----
-                    Text { text: "起始寄存器"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "起始寄存器"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "modbus" }
                     Item {
-                        Layout.preferredWidth: 100; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "modbus"
                         DeviceInfo.CustomSpinBox {
                             id: modbusStartRegField; anchors.fill: parent
@@ -478,10 +493,11 @@ Rectangle {
                     }
 
                     // ----- Modbus: 参数6 寄存器数量 -----
-                    Text { text: "寄存器数量"; color: "#B0BEC5"; font.pixelSize: 13; Layout.preferredWidth: 100
+                    Text { text: "寄存器数量"; font.pixelSize: 21; color: "#9E9E9E"
+                           Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
                            visible: getCurrentSlotProtocol() === "modbus" }
                     Item {
-                        Layout.preferredWidth: 100; Layout.preferredHeight: 36
+                        Layout.fillWidth: true; Layout.maximumWidth: 300; Layout.preferredHeight: 48
                         visible: getCurrentSlotProtocol() === "modbus"
                         DeviceInfo.CustomSpinBox {
                             id: modbusRegCountField; anchors.fill: parent
