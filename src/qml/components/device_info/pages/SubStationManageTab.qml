@@ -105,8 +105,9 @@ Rectangle {
             Layout.preferredWidth: 160
             Layout.fillHeight: true
             color: "#1a2030"
-            border.color: focusSubArea === 0 ? "#2196F3" : "#3d4556"
-            border.width: focusSubArea === 0 ? 2 : 1
+            // ✅ 2026-04-14 [Phase 7.48.88.125]: 去掉整体蓝框，改为用标题颜色提示焦点区域
+            border.color: "#3d4556"
+            border.width: 1
 
             ColumnLayout {
                 anchors.fill: parent
@@ -115,7 +116,8 @@ Rectangle {
 
                 Text {
                     text: "分站列表"
-                    color: "#4FC3F7"
+                    // ✅ 标题颜色：列表有焦点时变亮
+                    color: focusSubArea === 0 ? "#FFFFFF" : "#4FC3F7"
                     font.pixelSize: 13
                     font.weight: Font.Bold
                     Layout.alignment: Qt.AlignHCenter
@@ -128,20 +130,23 @@ Rectangle {
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 40
-                        // 选中 = 当前槽位；焦点 = 键盘焦点位于列表区且focusListIndex匹配
-                        color: root.currentSlotIndex === index ? "#2d3a5c" : "transparent"
                         radius: 4
 
-                        // 选中/焦点边框
+                        // ✅ 2026-04-14 [Phase 7.48.88.125]: 单项高亮——只高亮当前选中项
+                        // 列表模式(focusSubArea===0): 橙色高亮表示键盘焦点
+                        // 非列表模式: 蓝色高亮表示当前配置目标
+                        color: root.currentSlotIndex === index
+                               ? (root.focusSubArea === 0 ? "#3a4a6c" : "#2d3a5c")
+                               : "transparent"
+
                         border.color: {
-                            if (root.focusSubArea === 0 && root.focusListIndex === index)
-                                return "#FFB300"   // 橙色 = 键盘焦点
+                            if (root.currentSlotIndex === index && root.focusSubArea === 0)
+                                return "#FFB300"   // 橙色 = 列表键盘焦点
                             if (root.currentSlotIndex === index)
-                                return "#4FC3F7"   // 蓝色 = 当前选中
+                                return "#4FC3F7"   // 蓝色 = 当前配置项
                             return "#3d4556"
                         }
-                        border.width: (root.focusSubArea === 0 && root.focusListIndex === index)
-                                      || root.currentSlotIndex === index ? 2 : 1
+                        border.width: root.currentSlotIndex === index ? 2 : 1
 
                         RowLayout {
                             anchors.fill: parent

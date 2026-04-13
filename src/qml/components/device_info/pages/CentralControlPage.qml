@@ -187,11 +187,18 @@ Rectangle {
         onAreaChanged: function(newArea) {
             switch(newArea) {
             case areaMotorList:
-                root.focusSubArea = 0   // ✅ 2026-04-14: 0=分站列表区
+                root.focusSubArea = 0
                 root.focusItemIndex = motorListIndex
                 root.focusParamIndex = -1
                 root.focusTabIndex = -1
                 root.focusButtonIndex = -1
+                // ✅ 2026-04-14 [Phase 7.48.88.125]: 进入分站列表时直接更新tab的currentSlotIndex
+                Qt.callLater(function() {
+                    if (subStationManageTabLoader.item) {
+                        subStationManageTabLoader.item.currentSlotIndex = motorListIndex
+                        subStationManageTabLoader.item.focusSubArea = 0
+                    }
+                })
                 break
             case areaTabBar:
                 root.focusSubArea = 1
@@ -408,16 +415,16 @@ Rectangle {
 
                         onLoaded: {
                             item.virtualKeyboard = root.virtualKeyboard
-                            item.parentDialog    = root  // ✅ 2026-04-14: 供ComboBox键盘导航使用
+                            item.parentDialog    = root
                             item.focusParamIndex = Qt.binding(function() {
                                 return root.focusSubArea === 2 ? root.focusParamIndex : -1
                             })
                             item.focusSubArea = Qt.binding(function() {
                                 return root.focusSubArea
                             })
-                            item.focusListIndex = Qt.binding(function() {
-                                return root.focusSubArea === 0 ? navigationManager.motorListIndex : -1
-                            })
+                            // ✅ 2026-04-14 [Phase 7.48.88.125]: 移除不可靠的focusListIndex绑定
+                            // currentSlotIndex 由 onMotorListIndexChanged 和 onAreaChanged 直接更新
+                            // item.focusListIndex 不再单独使用
                         }
                     }
 
