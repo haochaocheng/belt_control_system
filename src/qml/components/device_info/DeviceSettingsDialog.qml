@@ -604,6 +604,15 @@ Item {
                             event.accepted = true
                             return
                         }
+                    } else if (currentCategory === 14) {
+                        // ✅ 2026-04-14 [Phase 7.48.88.126]: 集控管理分站列表区域上键
+                        var centralPage = centralControlPageLoader.item
+                        if (centralPage && centralPage.navigationManager) {
+                            console.log("✅ [集控管理导航] 列表区域上键 - motorListIndex:", centralPage.navigationManager.motorListIndex)
+                            centralPage.navigationManager.handleDirectionKey("Up")
+                            event.accepted = true
+                            return
+                        }
                     } else if (currentCategory === 7) {
                         var serialPage = serialPortControlPageLoader.item
                         if (serialPage && serialPage.navigationManager) {
@@ -1130,6 +1139,15 @@ Item {
                         if (canPage && canPage.navigationManager) {
                             console.log("✅ [CAN控制导航] 列表区域下键 - 调用 NavigationManager.handleDirectionKey")
                             canPage.navigationManager.handleDirectionKey("Down")
+                            event.accepted = true
+                            return
+                        }
+                    } else if (currentCategory === 14) {
+                        // ✅ 2026-04-14 [Phase 7.48.88.126]: 集控管理分站列表区域上下键
+                        var centralPage = centralControlPageLoader.item
+                        if (centralPage && centralPage.navigationManager) {
+                            console.log("✅ [集控管理导航] 列表区域下键 - motorListIndex:", centralPage.navigationManager.motorListIndex)
+                            centralPage.navigationManager.handleDirectionKey("Down")
                             event.accepted = true
                             return
                         }
