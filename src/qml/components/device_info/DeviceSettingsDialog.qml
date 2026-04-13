@@ -4259,8 +4259,13 @@ Item {
                         function onCurrentFocusAreaChanged() {
                             if (centralControlPageLoader.item && root.currentCategory === 14) {
                                 if (root.currentFocusArea === 2) {
-                                    // 集控无端口列表，直接进入Tab区域（与S7相同模式）
-                                    centralControlPageLoader.item.focusSubArea = 1
+                                    // ✅ 2026-04-14 [Phase 7.48.88.127]: 进入内容区时初始化为TabBar
+                                    // 但不覆盖NavigationManager已设置的值（0=分站列表 2=参数区）
+                                    // 旧：强制 focusSubArea = 1（覆盖NavigationManager的设置导致焦点跳回Tab栏）
+                                    var currentSub = centralControlPageLoader.item.focusSubArea
+                                    if (currentSub < 0) {
+                                        centralControlPageLoader.item.focusSubArea = 1
+                                    }
                                 } else {
                                     centralControlPageLoader.item.focusSubArea = -1
                                 }
@@ -4270,6 +4275,7 @@ Item {
                         function onCurrentCategoryChanged() {
                             if (centralControlPageLoader.item) {
                                 if (root.currentFocusArea === 2 && root.currentCategory === 14) {
+                                    // ✅ 2026-04-14 [Phase 7.48.88.127]: 切换到集控类别时初始化TabBar
                                     centralControlPageLoader.item.focusSubArea = 1
                                 }
                             }
