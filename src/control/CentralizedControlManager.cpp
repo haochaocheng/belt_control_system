@@ -451,6 +451,18 @@ void CentralizedControlManager::setMQTTController(MQTTController *controller)
                 this, [this](int /*moduleIndex*/, const QString &topic, const QByteArray &payload) {
             handleMqttMessage(topic, payload);
         });
+
+        // ✅ 2026-04-14 [Phase 7.48.88.144]: 模块7连接时自动建立订阅
+        // 场景：分站先启，模块7连接失败 → 心跳重连成功后 setupMqttSubscriptions 未被调用
+        // 修复：监听 connectedChanged，模块7上线时自动补订阅
+        connect(m_mqttController, &MQTTController::connectedChanged,
+                this, [this](int moduleIndex, bool connected) {
+            if (moduleIndex == CENTRAL_MQTT_MODULE && connected) {
+                qDebug() << "[CentralizedControl] 模块7已连接，建立订阅";
+                m_mqttSubscribed = false;  // 重置标志，允许重新订阅
+                setupMqttSubscriptions();
+            }
+        });
     }
 }
 
