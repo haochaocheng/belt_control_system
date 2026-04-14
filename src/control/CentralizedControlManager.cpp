@@ -1313,6 +1313,7 @@ void CentralizedControlManager::publishHeartbeat()
             m_mqttController->publishBytes(topic, payload, 0, false, CENTRAL_MQTT_MODULE);
         }
     }
+}
 
 // ========== 分站被动模式：发布本地状态（Phase 7.48.88.114）==========
 
