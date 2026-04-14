@@ -589,10 +589,12 @@ Rectangle {
                             Text { text: "状态:"; color: "#78909C"; font.pixelSize: 13 }
                             Rectangle {
                                 width: 10; height: 10; radius: 5
+                                // ✅ 2026-04-14 [Phase 7.48.88.146]: 用 subStations.isConnected 代替函数调用（响应式）
                                 color: {
                                     if (typeof centralControlManager === "undefined") return "#555"
-                                    return centralControlManager.isSlotConnected(root.currentSlotIndex)
-                                           ? "#4CAF50" : "#555"
+                                    var slots = centralControlManager.subStations
+                                    if (!slots || root.currentSlotIndex >= slots.length) return "#555"
+                                    return slots[root.currentSlotIndex].isConnected ? "#4CAF50" : "#555"
                                 }
                             }
                             Text {
@@ -600,6 +602,103 @@ Rectangle {
                                       ? centralControlManager.getSlotStatusText(root.currentSlotIndex) : "未配置"
                                 color: "#B0BEC5"; font.pixelSize: 13
                                 Layout.fillWidth: true
+                            }
+                        }
+                    }
+
+                    // ✅ 2026-04-14 [Phase 7.48.88.146]: 分站实时数据展示（仅在线时显示）
+                    Rectangle {
+                        Layout.columnSpan: 4
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: visible ? 160 : 0
+                        Layout.topMargin: 6
+                        color: "#0d1520"; radius: 4
+                        border.color: "#2a3550"; border.width: 1
+                        visible: {
+                            if (typeof centralControlManager === "undefined") return false
+                            var slots = centralControlManager.subStations
+                            if (!slots || root.currentSlotIndex >= slots.length) return false
+                            return slots[root.currentSlotIndex].isConnected
+                        }
+
+                        GridLayout {
+                            anchors.fill: parent; anchors.margins: 10
+                            columns: 4; columnSpacing: 8; rowSpacing: 4
+
+                            property var slotSt: {
+                                if (typeof centralControlManager === "undefined") return null
+                                return centralControlManager.getSlotStatus(root.currentSlotIndex)
+                            }
+
+                            // 行1：运行状态 + 速度
+                            Text { text: "运行:"; color: "#78909C"; font.pixelSize: 12 }
+                            Text {
+                                text: {
+                                    var st = parent.slotSt
+                                    if (!st) return "-"
+                                    var states = ["停止","预警","运行","故障","松闸","停车中"]
+                                    return states[st.runState] || "-"
+                                }
+                                color: {
+                                    var st = parent.slotSt
+                                    if (!st) return "#B0BEC5"
+                                    if (st.runState === 2) return "#4CAF50"
+                                    if (st.runState === 3) return "#F44336"
+                                    return "#B0BEC5"
+                                }
+                                font.pixelSize: 12; font.weight: Font.Bold
+                            }
+                            Text { text: "速度:"; color: "#78909C"; font.pixelSize: 12 }
+                            Text {
+                                text: {
+                                    var st = parent.slotSt
+                                    return st ? st.speed.toFixed(2) + " m/s" : "-"
+                                }
+                                color: "#B0BEC5"; font.pixelSize: 12
+                            }
+
+                            // 行2：电机1电流 + 电机2电流
+                            Text { text: "M1电流:"; color: "#78909C"; font.pixelSize: 12 }
+                            Text {
+                                text: { var st = parent.slotSt; return st ? st.m1Current.toFixed(1) + " A" : "-" }
+                                color: "#B0BEC5"; font.pixelSize: 12
+                            }
+                            Text { text: "M2电流:"; color: "#78909C"; font.pixelSize: 12 }
+                            Text {
+                                text: { var st = parent.slotSt; return st ? st.m2Current.toFixed(1) + " A" : "-" }
+                                color: "#B0BEC5"; font.pixelSize: 12
+                            }
+
+                            // 行3：张力 + 温度
+                            Text { text: "张力:"; color: "#78909C"; font.pixelSize: 12 }
+                            Text {
+                                text: { var st = parent.slotSt; return st ? st.tension.toFixed(1) + " kN" : "-" }
+                                color: "#B0BEC5"; font.pixelSize: 12
+                            }
+                            Text { text: "M1温度:"; color: "#78909C"; font.pixelSize: 12 }
+                            Text {
+                                text: { var st = parent.slotSt; return st ? st.m1Temp.toFixed(1) + " °C" : "-" }
+                                color: "#B0BEC5"; font.pixelSize: 12
+                            }
+
+                            // 行4：保护状态
+                            Text { text: "保护:"; color: "#78909C"; font.pixelSize: 12 }
+                            Text {
+                                Layout.columnSpan: 3
+                                text: {
+                                    var st = parent.slotSt
+                                    if (!st || st.protectionByte === 0) return "正常"
+                                    var prots = ["急停","跑偏","撕裂","烟雾","温度","护网","堆煤","主急停"]
+                                    var active = []
+                                    for (var i = 0; i < 8; i++)
+                                        if ((st.protectionByte >> i) & 1) active.push(prots[i])
+                                    return active.join(" | ") || "正常"
+                                }
+                                color: {
+                                    var st = parent.slotSt
+                                    return (st && st.protectionByte !== 0) ? "#F44336" : "#4CAF50"
+                                }
+                                font.pixelSize: 12
                             }
                         }
                     }

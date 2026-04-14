@@ -1504,9 +1504,14 @@ void CentralizedControlManager::handleSlotOnline(int slotIndex)
     st.reconnectAttempts  = 0;
     st.nextReconnectTime  = QDateTime();
 
+    // ✅ 2026-04-14 [Phase 7.48.88.146]: 同步 isConnected，使 LED 变绿
+    // handleSlotOnline 之前只更新 m_slotStatus.isOnline，
+    // 但 subStations() 暴露的是 m_slots.isConnected，LED 读的是它
+    m_slots[slotIndex].isConnected = true;
     m_slots[slotIndex].statusText = "在线";
     emit slotOnlineChanged(slotIndex, true);
     emit slotStatusChanged(slotIndex, "在线");
+    emit slotConnectionChanged(slotIndex, true);
     emit subStationsChanged();
     qDebug() << "[CentralizedControl] 槽位" << slotIndex << "上线";
 }
@@ -1517,9 +1522,12 @@ void CentralizedControlManager::handleSlotOffline(int slotIndex)
     st.isOnline          = false;
     st.missedHeartbeats  = 0;
 
+    // ✅ 2026-04-14 [Phase 7.48.88.146]: 同步 isConnected
+    m_slots[slotIndex].isConnected = false;
     m_slots[slotIndex].statusText = "离线";
     emit slotOnlineChanged(slotIndex, false);
     emit slotStatusChanged(slotIndex, "离线");
+    emit slotConnectionChanged(slotIndex, false);
     emit subStationsChanged();
     qWarning() << "[CentralizedControl] 槽位" << slotIndex << "离线";
 
