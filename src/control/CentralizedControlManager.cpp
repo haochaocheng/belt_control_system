@@ -1309,15 +1309,18 @@ void CentralizedControlManager::publishHeartbeat()
         // 每次心跳检查模块7是否在线，断线则重新设置Broker并连接
         if (m_mqttController && !m_mqttController->isModuleConnected(CENTRAL_MQTT_MODULE)) {
             if (!m_mqttBrokerIP.isEmpty()) {
-                // 确保模块7 Broker 指向主站
+                // 确保模块7 Broker 和 Client ID 正确（每次重连都设置，防止被覆盖）
                 int oldIdx = m_mqttController->currentModuleIndex();
                 m_mqttController->setCurrentModuleIndex(CENTRAL_MQTT_MODULE);
+                // ✅ 2026-04-14 [Phase 7.48.88.145]: 重连时也设置唯一 Client ID
+                QString subId = QString("belt_central_sub_%1").arg(m_localDeviceId);
+                m_mqttController->setClientId(subId);
                 m_mqttController->setBrokerHost(m_mqttBrokerIP);
                 if (m_mqttBrokerPort > 0)
                     m_mqttController->setBrokerPort(m_mqttBrokerPort);
                 m_mqttController->setCurrentModuleIndex(oldIdx);
                 m_mqttController->connectToModule(CENTRAL_MQTT_MODULE);
-                qDebug() << "[CentralizedControl] 分站心跳：模块7断线，重连到" << m_mqttBrokerIP;
+                qDebug() << "[CentralizedControl] 分站心跳：模块7断线，重连到" << m_mqttBrokerIP << "clientId=" << subId;
             }
         } else {
             // 模块7已连接，正常发送心跳
@@ -1567,17 +1570,25 @@ void CentralizedControlManager::enterMasterMode()
 {
     qDebug() << "[CentralizedControl] 进入主站模式";
 
-    // ✅ 2026-04-14 [Phase 7.48.88.142]: 将模块7的Broker地址配置为集控MQTT地址
-    // 主站模块7连自己的本机Broker（127.0.0.1），也可以由用户指定其他地址
-    if (m_mqttController && !m_mqttBrokerIP.isEmpty()
-            && m_mqttBrokerIP != "127.0.0.1") {
+    if (m_mqttController) {
         int oldIdx = m_mqttController->currentModuleIndex();
         m_mqttController->setCurrentModuleIndex(CENTRAL_MQTT_MODULE);
-        m_mqttController->setBrokerHost(m_mqttBrokerIP);
-        if (m_mqttBrokerPort > 0)
-            m_mqttController->setBrokerPort(m_mqttBrokerPort);
+
+        // ✅ 2026-04-14 [Phase 7.48.88.145]: 主站模块7 Client ID 唯一化，避免与分站互踢
+        // 主站和分站连同一 Broker 时，必须使用不同 Client ID
+        QString masterId = QString("belt_central_master_%1").arg(m_localDeviceId);
+        m_mqttController->setClientId(masterId);
+        qDebug() << "[CentralizedControl] 主站模式：模块7 Client ID =" << masterId;
+
+        // 主站模块7 Broker：使用配置的地址（默认127.0.0.1本机）
+        if (!m_mqttBrokerIP.isEmpty()) {
+            m_mqttController->setBrokerHost(m_mqttBrokerIP);
+            if (m_mqttBrokerPort > 0)
+                m_mqttController->setBrokerPort(m_mqttBrokerPort);
+            qDebug() << "[CentralizedControl] 主站模式：模块7 Broker =" << m_mqttBrokerIP;
+        }
+
         m_mqttController->setCurrentModuleIndex(oldIdx);
-        qDebug() << "[CentralizedControl] 主站模式：模块7 Broker 设为" << m_mqttBrokerIP;
     }
 
     // 确保模块7已连接（模块7是预留的集控专用模块，不被MQTTAutoManager自动连接）
@@ -1618,16 +1629,23 @@ void CentralizedControlManager::enterSubStationMode()
 {
     qDebug() << "[CentralizedControl] 进入分站模式，deviceId=" << m_localDeviceId;
 
-    // ✅ 2026-04-14 [Phase 7.48.88.142]: 将模块7的Broker地址配置为集控MQTT地址
-    // 模块0-6连本机127.0.0.1，模块7（集控）连主站的MQTT地址
     if (m_mqttController && !m_mqttBrokerIP.isEmpty()) {
         int oldIdx = m_mqttController->currentModuleIndex();
         m_mqttController->setCurrentModuleIndex(CENTRAL_MQTT_MODULE);
+
+        // ✅ 2026-04-14 [Phase 7.48.88.145]: 分站模块7 Client ID 唯一化，避免与主站互踢
+        // 主站和分站都连主站 Mosquitto，必须使用不同 Client ID
+        QString subId = QString("belt_central_sub_%1").arg(m_localDeviceId);
+        m_mqttController->setClientId(subId);
+        qDebug() << "[CentralizedControl] 分站模式：模块7 Client ID =" << subId;
+
+        // 分站模块7 Broker：连主站的 MQTT 地址
         m_mqttController->setBrokerHost(m_mqttBrokerIP);
         if (m_mqttBrokerPort > 0)
             m_mqttController->setBrokerPort(m_mqttBrokerPort);
+        qDebug() << "[CentralizedControl] 分站模式：模块7 Broker =" << m_mqttBrokerIP;
+
         m_mqttController->setCurrentModuleIndex(oldIdx);
-        qDebug() << "[CentralizedControl] 分站模式：模块7 Broker 设为" << m_mqttBrokerIP;
     }
 
     // 确保模块7已连接
