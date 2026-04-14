@@ -144,6 +144,8 @@ qt_add_qml_module(qml_module
         components/device_info/pages/CentralRoleTab.qml
         components/device_info/pages/SubStationManageTab.qml
         components/device_info/pages/MQTTCentralTab.qml
+        # ✅ 2026-04-14 [Phase 7.48.88.152]: 集控顺序启动Tab
+        components/device_info/pages/CentralSequenceTab.qml
         # ✅ 2026-02-08 [Phase 7.43]: MQTT控制页面组件
         components/device_info/pages/MQTTControlPage.qml
         components/device_info/pages/MQTTListPanel.qml
