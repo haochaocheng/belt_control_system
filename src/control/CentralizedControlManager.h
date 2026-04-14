@@ -98,6 +98,13 @@ class CentralizedControlManager : public QObject
     Q_PROPERTY(QString mqttUsername READ mqttUsername WRITE setMqttUsername NOTIFY mqttUsernameChanged)
     Q_PROPERTY(QString mqttPassword READ mqttPassword WRITE setMqttPassword NOTIFY mqttPasswordChanged)
 
+    // ========== 顺序启动 ==========
+    Q_PROPERTY(QVariantList sequenceOrder READ sequenceOrder NOTIFY sequenceOrderChanged)
+    Q_PROPERTY(int sequenceInterval READ sequenceInterval WRITE setSequenceInterval NOTIFY sequenceIntervalChanged)
+    Q_PROPERTY(bool sequenceRunning READ sequenceRunning NOTIFY sequenceRunningChanged)
+    Q_PROPERTY(int sequenceCurrentStep READ sequenceCurrentStep NOTIFY sequenceCurrentStepChanged)
+    Q_PROPERTY(QString sequenceStatusText READ sequenceStatusText NOTIFY sequenceStatusTextChanged)
+
 public:
     explicit CentralizedControlManager(QObject *parent = nullptr);
     ~CentralizedControlManager();
@@ -182,6 +189,20 @@ public:
     Q_INVOKABLE void stopAllBelts();
     Q_INVOKABLE void emergencyStopAll();
 
+    // ========== 顺序启动 ==========
+    QVariantList sequenceOrder() const;
+    int sequenceInterval() const { return m_sequenceInterval; }
+    void setSequenceInterval(int secs);
+    bool sequenceRunning() const { return m_sequenceRunning; }
+    int sequenceCurrentStep() const { return m_sequenceStep; }
+    QString sequenceStatusText() const { return m_sequenceStatusText; }
+
+    Q_INVOKABLE void startSequence();          // 顺序启动（按序）
+    Q_INVOKABLE void stopSequence();           // 顺序停止（倒序）
+    Q_INVOKABLE void abortSequence();          // 中止当前序列
+    Q_INVOKABLE void moveSequenceItem(int fromIndex, int toIndex);  // 调整顺序
+    Q_INVOKABLE void resetSequenceOrder();     // 重置为默认顺序
+
     // ========== 数据持久化 ==========
     Q_INVOKABLE void saveConfig();
     Q_INVOKABLE void loadConfig();
@@ -217,6 +238,14 @@ signals:
     // ========== 报警信号 ==========
     void remoteAlarmReceived(int slotIndex, const QString &alarmType, const QString &name);
     void commandSent(int slotIndex, const QString &cmd, bool success);
+
+    // ========== 顺序启动信号 ==========
+    void sequenceOrderChanged();
+    void sequenceIntervalChanged();
+    void sequenceRunningChanged();
+    void sequenceCurrentStepChanged();
+    void sequenceStatusTextChanged();
+    void sequenceStepExecuted(int step, int slotIndex, bool isStart, const QString &msg);
 
     // ========== MQTT配置信号 ==========
     void mqttBrokerIPChanged();
@@ -287,6 +316,15 @@ private:
 
     // ========== MQTT订阅追踪 ==========
     bool m_mqttSubscribed = false;
+
+    // ========== 顺序启动 ==========
+    QList<int> m_sequenceOrder;      // 槽位索引顺序列表
+    int  m_sequenceInterval = 5;     // 步间隔（秒）
+    bool m_sequenceRunning  = false;
+    int  m_sequenceStep     = -1;    // 当前执行步骤（0-based）
+    bool m_sequenceIsStart  = true;  // true=顺序启动, false=顺序停止
+    QString m_sequenceStatusText;
+    QTimer *m_sequenceTimer = nullptr;
 
     // ========== 数据持久化 ==========
     QSettings *m_settings;

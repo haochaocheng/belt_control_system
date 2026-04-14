@@ -1901,3 +1901,190 @@ void CentralizedControlManager::emergencyStopAll()
     }
     qWarning() << "[CentralizedControl] 全部紧急停车";
 }
+
+// ========== 顺序启动（Phase 7.48.88.147）==========
+
+QVariantList CentralizedControlManager::sequenceOrder() const
+{
+    QVariantList list;
+    // 如果序列为空，动态生成（所有已启用槽位）
+    if (m_sequenceOrder.isEmpty()) {
+        for (int i = 0; i < MAX_SLOTS; i++) {
+            if (m_slots[i].enabled) {
+                QVariantMap item;
+                item["slotIndex"] = i;
+                item["name"]      = m_slots[i].name;
+                item["enabled"]   = m_slots[i].enabled;
+                item["online"]    = m_slots[i].isConnected;
+                list << item;
+            }
+        }
+    } else {
+        for (int idx : m_sequenceOrder) {
+            if (idx < 0 || idx >= MAX_SLOTS) continue;
+            QVariantMap item;
+            item["slotIndex"] = idx;
+            item["name"]      = m_slots[idx].name;
+            item["enabled"]   = m_slots[idx].enabled;
+            item["online"]    = m_slots[idx].isConnected;
+            list << item;
+        }
+    }
+    return list;
+}
+
+void CentralizedControlManager::setSequenceInterval(int secs)
+{
+    int clamped = qBound(1, secs, 300);
+    if (m_sequenceInterval == clamped) return;
+    m_sequenceInterval = clamped;
+    emit sequenceIntervalChanged();
+}
+
+void CentralizedControlManager::resetSequenceOrder()
+{
+    m_sequenceOrder.clear();
+    // 按槽位顺序填入所有已启用槽位
+    for (int i = 0; i < MAX_SLOTS; i++) {
+        if (m_slots[i].enabled) m_sequenceOrder.append(i);
+    }
+    emit sequenceOrderChanged();
+}
+
+void CentralizedControlManager::moveSequenceItem(int fromIndex, int toIndex)
+{
+    // 确保序列已初始化
+    if (m_sequenceOrder.isEmpty()) resetSequenceOrder();
+
+    if (fromIndex < 0 || fromIndex >= m_sequenceOrder.size()) return;
+    if (toIndex   < 0 || toIndex   >= m_sequenceOrder.size()) return;
+    if (fromIndex == toIndex) return;
+
+    int item = m_sequenceOrder.takeAt(fromIndex);
+    m_sequenceOrder.insert(toIndex, item);
+    emit sequenceOrderChanged();
+}
+
+void CentralizedControlManager::startSequence()
+{
+    if (!isMasterMode() || m_sequenceRunning) return;
+    if (m_sequenceOrder.isEmpty()) resetSequenceOrder();
+    if (m_sequenceOrder.isEmpty()) {
+        qWarning() << "[CentralizedControl] 顺序启动：无已启用分站";
+        return;
+    }
+
+    m_sequenceIsStart  = true;
+    m_sequenceStep     = 0;
+    m_sequenceRunning  = true;
+    m_sequenceStatusText = "顺序启动中...";
+    emit sequenceRunningChanged();
+    emit sequenceStatusTextChanged();
+
+    // 确保 sequenceTimer 已创建
+    if (!m_sequenceTimer) {
+        m_sequenceTimer = new QTimer(this);
+        m_sequenceTimer->setSingleShot(true);
+        connect(m_sequenceTimer, &QTimer::timeout, this, [this]() {
+            executeSequenceStep();
+        });
+    }
+
+    // 立即执行第一步
+    executeSequenceStep();
+    qDebug() << "[CentralizedControl] 顺序启动，共" << m_sequenceOrder.size() << "站，间隔" << m_sequenceInterval << "s";
+}
+
+void CentralizedControlManager::stopSequence()
+{
+    if (!isMasterMode() || m_sequenceRunning) return;
+    if (m_sequenceOrder.isEmpty()) resetSequenceOrder();
+    if (m_sequenceOrder.isEmpty()) return;
+
+    m_sequenceIsStart  = false;
+    m_sequenceStep     = 0;
+    m_sequenceRunning  = true;
+    m_sequenceStatusText = "顺序停止中...";
+    emit sequenceRunningChanged();
+    emit sequenceStatusTextChanged();
+
+    if (!m_sequenceTimer) {
+        m_sequenceTimer = new QTimer(this);
+        m_sequenceTimer->setSingleShot(true);
+        connect(m_sequenceTimer, &QTimer::timeout, this, [this]() {
+            executeSequenceStep();
+        });
+    }
+
+    executeSequenceStep();
+    qDebug() << "[CentralizedControl] 顺序停止（倒序），共" << m_sequenceOrder.size() << "站";
+}
+
+void CentralizedControlManager::abortSequence()
+{
+    if (m_sequenceTimer) m_sequenceTimer->stop();
+    m_sequenceRunning  = false;
+    m_sequenceStep     = -1;
+    m_sequenceStatusText = "已中止";
+    emit sequenceRunningChanged();
+    emit sequenceCurrentStepChanged();
+    emit sequenceStatusTextChanged();
+    qWarning() << "[CentralizedControl] 顺序执行已中止";
+}
+
+void CentralizedControlManager::executeSequenceStep()
+{
+    if (!m_sequenceRunning) return;
+
+    int total = m_sequenceOrder.size();
+    if (m_sequenceStep >= total) {
+        // 序列完成
+        m_sequenceRunning = false;
+        m_sequenceStep    = -1;
+        m_sequenceStatusText = m_sequenceIsStart ? "顺序启动完成" : "顺序停止完成";
+        emit sequenceRunningChanged();
+        emit sequenceCurrentStepChanged();
+        emit sequenceStatusTextChanged();
+        qDebug() << "[CentralizedControl]" << m_sequenceStatusText;
+        return;
+    }
+
+    // 停止序列用倒序索引
+    int seqIdx    = m_sequenceIsStart ? m_sequenceStep : (total - 1 - m_sequenceStep);
+    int slotIndex = m_sequenceOrder[seqIdx];
+    QString name  = (slotIndex < MAX_SLOTS) ? m_slots[slotIndex].name : QString("分站%1").arg(slotIndex + 1);
+
+    if (m_sequenceIsStart) {
+        // 启动
+        if (m_slots[slotIndex].enabled && m_slots[slotIndex].isConnected) {
+            sendStartBelt(slotIndex, 1);
+            m_sequenceStatusText = QString("启动 %1 (%2/%3)").arg(name).arg(m_sequenceStep + 1).arg(total);
+        } else {
+            m_sequenceStatusText = QString("跳过 %1 (离线) (%2/%3)").arg(name).arg(m_sequenceStep + 1).arg(total);
+            qWarning() << "[CentralizedControl] 顺序启动：跳过离线分站" << name;
+        }
+        emit sequenceStepExecuted(m_sequenceStep, slotIndex, true, m_sequenceStatusText);
+    } else {
+        // 停止（倒序）
+        if (m_slots[slotIndex].enabled && m_slots[slotIndex].isConnected) {
+            sendStopBelt(slotIndex, 1);
+            m_sequenceStatusText = QString("停止 %1 (%2/%3)").arg(name).arg(m_sequenceStep + 1).arg(total);
+        } else {
+            m_sequenceStatusText = QString("跳过 %1 (离线) (%2/%3)").arg(name).arg(m_sequenceStep + 1).arg(total);
+        }
+        emit sequenceStepExecuted(m_sequenceStep, slotIndex, false, m_sequenceStatusText);
+    }
+
+    emit sequenceCurrentStepChanged();
+    emit sequenceStatusTextChanged();
+
+    m_sequenceStep++;
+
+    // 安排下一步
+    if (m_sequenceStep < total) {
+        if (m_sequenceTimer) m_sequenceTimer->start(m_sequenceInterval * 1000);
+    } else {
+        // 最后一步完成后再执行一次收尾
+        if (m_sequenceTimer) m_sequenceTimer->start(100);
+    }
+}

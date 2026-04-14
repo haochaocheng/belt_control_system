@@ -48,7 +48,7 @@ Rectangle {
     signal requestReturnToCategory()
 
     // ========== Tab模型 ==========
-    property var tabModel: ["集控角色", "分站管理", "MQTT集控配置"]
+    property var tabModel: ["集控角色", "分站管理", "MQTT集控配置", "顺序启动"]
     property int currentTabIndex: 0
 
     // ========== 函数 ==========
@@ -57,6 +57,7 @@ Rectangle {
         case 0: return centralRoleTabLoader.item
         case 1: return subStationManageTabLoader.item
         case 2: return mqttCentralTabLoader.item
+        case 3: return sequenceTabLoader.item
         default: return null
         }
     }
@@ -143,7 +144,7 @@ Rectangle {
             skipMotorList = true   // 集控无端口列表
             skipTabArea = false
             skipButtonArea = false
-            lastTabIndex = 2      // 3个Tab (0-2)
+            lastTabIndex = 3      // 4个Tab (0-3)
             hasViewSwitchRow = false
             paramColumns = 2      // ✅ 2026-04-14 [Phase 7.48.88.120]: 2列参数布局
 
@@ -562,6 +563,27 @@ Rectangle {
                             })
                             item.focusSubArea = Qt.binding(function() {
                                 return root.focusSubArea
+                            })
+                        }
+                    }
+
+                    // ✅ 2026-04-14 [Phase 7.48.88.147]: Tab 3: 集控顺序启动
+                    Loader {
+                        id: sequenceTabLoader
+                        source: "CentralSequenceTab.qml"
+                        active: root.currentTabIndex === 3
+
+                        onLoaded: {
+                            item.virtualKeyboard = root.virtualKeyboard
+                            item.parentDialog    = root
+                            item.focusParamIndex = Qt.binding(function() {
+                                return root.focusSubArea === 2 ? root.focusParamIndex : -1
+                            })
+                            item.focusSubArea = Qt.binding(function() {
+                                return root.focusSubArea
+                            })
+                            item.focusListIndex = Qt.binding(function() {
+                                return root.focusSubArea === 0 ? navigationManager.motorListIndex : -1
                             })
                         }
                     }
