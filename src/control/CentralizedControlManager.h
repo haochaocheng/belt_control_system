@@ -202,6 +202,8 @@ public:
     Q_INVOKABLE void abortSequence();          // 中止当前序列
     Q_INVOKABLE void moveSequenceItem(int fromIndex, int toIndex);  // 调整顺序
     Q_INVOKABLE void resetSequenceOrder();     // 重置为默认顺序
+    // ✅ 2026-04-14 [Phase 7.48.88.151]: 每步独立延迟
+    Q_INVOKABLE void setSequenceStepDelay(int stepIndex, int delaySecs);
 
     // ========== 数据持久化 ==========
     Q_INVOKABLE void saveConfig();
@@ -319,10 +321,11 @@ private:
 
     // ========== 顺序启动 ==========
     QList<int> m_sequenceOrder;      // 槽位索引顺序列表
-    int  m_sequenceInterval = 5;     // 步间隔（秒）
+    QList<int> m_sequenceDelays;     // ✅ 2026-04-14 [Phase 7.48.88.151]: 每步独立延迟（秒）
+    int  m_sequenceInterval = 5;     // 全局默认间隔（新步加入时使用）
     bool m_sequenceRunning  = false;
-    int  m_sequenceStep     = -1;    // 当前执行步骤（0-based）
-    bool m_sequenceIsStart  = true;  // true=顺序启动, false=顺序停止
+    int  m_sequenceStep     = -1;
+    bool m_sequenceIsStart  = true;
     QString m_sequenceStatusText;
     QTimer *m_sequenceTimer = nullptr;
 
@@ -376,6 +379,8 @@ private:
     S7ClientController *getOrCreateS7Client(int slotIndex);
     ModbusTCPMasterController *getOrCreateModbusClient(int slotIndex);
     void destroySlotControllers(int slotIndex);
+    // ✅ 2026-04-14 [Phase 7.48.88.151]: 顺序执行内部方法
+    void executeSequenceStep();
     int getDefaultPort(const QString &protocol) const;
     int findSlotByDeviceId(int deviceId) const;
 

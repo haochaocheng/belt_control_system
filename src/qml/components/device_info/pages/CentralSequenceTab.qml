@@ -155,7 +155,7 @@ Rectangle {
 
                 delegate: Rectangle {
                     width: seqListView.width
-                    height: 44
+                    height: 50    // ✅ Phase 7.48.88.151: 增高以容纳延迟输入
                     radius: 4
 
                     property bool isKeyFocused: root.focusListIndex === index
@@ -165,15 +165,15 @@ Rectangle {
                                                  && index < execStep
 
                     color: {
-                        if (isCurrentExec) return "#0d2a1a"       // 已执行：暗绿
-                        if (isKeyFocused)  return "#1e3a5c"       // 键盘焦点：深蓝
+                        if (isCurrentExec) return "#0d2a1a"
+                        if (isKeyFocused)  return "#1e3a5c"
                         return index % 2 === 0 ? "#0d1520" : "#111827"
                     }
                     border.color: isKeyFocused ? "#4FC3F7" : "transparent"
                     border.width: isKeyFocused ? 2 : 0
 
                     RowLayout {
-                        anchors.fill: parent; anchors.margins: 8; spacing: 8
+                        anchors.fill: parent; anchors.margins: 8; spacing: 6
 
                         // 序号圆圈
                         Rectangle {
@@ -191,7 +191,7 @@ Rectangle {
                         // 分站名称
                         Text {
                             text: modelData.name || ("分站" + (index + 1))
-                            font.pixelSize: 14
+                            font.pixelSize: 13
                             color: isCurrentExec ? "#81C784" : "#B0BEC5"
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
@@ -204,9 +204,46 @@ Rectangle {
                             color: modelData.online ? "#4CAF50" : "#37474F"
                         }
 
+                        // ✅ Phase 7.48.88.151: 每步独立延迟输入
+                        Text {
+                            text: "后"
+                            font.pixelSize: 11; color: "#607080"
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                        Rectangle {
+                            width: 52; height: 30; radius: 3
+                            color: "#12192b"
+                            border.color: delayInput.activeFocus ? "#4FC3F7" : "#2a3550"
+                            border.width: 1
+                            Layout.alignment: Qt.AlignVCenter
+                            enabled: !centralControlManager || !centralControlManager.sequenceRunning
+
+                            TextInput {
+                                id: delayInput
+                                anchors.fill: parent; anchors.margins: 4
+                                text: modelData.delay !== undefined ? modelData.delay.toString() : "5"
+                                font.pixelSize: 13; color: "#B0BEC5"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                validator: IntValidator { bottom: 1; top: 300 }
+                                onEditingFinished: {
+                                    if (typeof centralControlManager !== "undefined") {
+                                        var v = parseInt(text) || 5
+                                        centralControlManager.setSequenceStepDelay(index, v)
+                                    }
+                                }
+                            }
+                        }
+                        Text {
+                            text: "秒"
+                            font.pixelSize: 11; color: "#607080"
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
                         // ↑ 按钮
                         Rectangle {
-                            width: 28; height: 28; radius: 4
+                            width: 26; height: 26; radius: 4
                             color: upHov.containsMouse ? "#1e3a5c" : "transparent"
                             border.color: "#2a3550"; border.width: 1
                             Layout.alignment: Qt.AlignVCenter
@@ -230,7 +267,7 @@ Rectangle {
 
                         // ↓ 按钮
                         Rectangle {
-                            width: 28; height: 28; radius: 4
+                            width: 26; height: 26; radius: 4
                             color: dnHov.containsMouse ? "#1e3a5c" : "transparent"
                             border.color: "#2a3550"; border.width: 1
                             Layout.alignment: Qt.AlignVCenter

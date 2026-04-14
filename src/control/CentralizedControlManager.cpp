@@ -1907,8 +1907,8 @@ void CentralizedControlManager::emergencyStopAll()
 QVariantList CentralizedControlManager::sequenceOrder() const
 {
     QVariantList list;
-    // 如果序列为空，动态生成（所有已启用槽位）
     if (m_sequenceOrder.isEmpty()) {
+        // 动态生成：所有已启用槽位，使用全局默认间隔
         for (int i = 0; i < MAX_SLOTS; i++) {
             if (m_slots[i].enabled) {
                 QVariantMap item;
@@ -1916,17 +1916,20 @@ QVariantList CentralizedControlManager::sequenceOrder() const
                 item["name"]      = m_slots[i].name;
                 item["enabled"]   = m_slots[i].enabled;
                 item["online"]    = m_slots[i].isConnected;
+                item["delay"]     = m_sequenceInterval;  // ✅ Phase 7.48.88.151: 包含延迟
                 list << item;
             }
         }
     } else {
-        for (int idx : m_sequenceOrder) {
+        for (int j = 0; j < m_sequenceOrder.size(); j++) {
+            int idx = m_sequenceOrder[j];
             if (idx < 0 || idx >= MAX_SLOTS) continue;
             QVariantMap item;
             item["slotIndex"] = idx;
             item["name"]      = m_slots[idx].name;
             item["enabled"]   = m_slots[idx].enabled;
             item["online"]    = m_slots[idx].isConnected;
+            item["delay"]     = (j < m_sequenceDelays.size()) ? m_sequenceDelays[j] : m_sequenceInterval;
             list << item;
         }
     }
@@ -1944,10 +1947,22 @@ void CentralizedControlManager::setSequenceInterval(int secs)
 void CentralizedControlManager::resetSequenceOrder()
 {
     m_sequenceOrder.clear();
-    // 按槽位顺序填入所有已启用槽位
+    m_sequenceDelays.clear();
     for (int i = 0; i < MAX_SLOTS; i++) {
-        if (m_slots[i].enabled) m_sequenceOrder.append(i);
+        if (m_slots[i].enabled) {
+            m_sequenceOrder.append(i);
+            m_sequenceDelays.append(m_sequenceInterval);  // 默认使用全局间隔
+        }
     }
+    emit sequenceOrderChanged();
+}
+
+void CentralizedControlManager::setSequenceStepDelay(int stepIndex, int delaySecs)
+{
+    if (stepIndex < 0 || stepIndex >= m_sequenceDelays.size()) return;
+    int clamped = qBound(1, delaySecs, 300);
+    if (m_sequenceDelays[stepIndex] == clamped) return;
+    m_sequenceDelays[stepIndex] = clamped;
     emit sequenceOrderChanged();
 }
 
@@ -1960,8 +1975,17 @@ void CentralizedControlManager::moveSequenceItem(int fromIndex, int toIndex)
     if (toIndex   < 0 || toIndex   >= m_sequenceOrder.size()) return;
     if (fromIndex == toIndex) return;
 
-    int item = m_sequenceOrder.takeAt(fromIndex);
-    m_sequenceOrder.insert(toIndex, item);
+    int slotItem = m_sequenceOrder.takeAt(fromIndex);
+    m_sequenceOrder.insert(toIndex, slotItem);
+
+    // ✅ Phase 7.48.88.151: 同步移动延迟列表
+    if (fromIndex < m_sequenceDelays.size()) {
+        int delayItem = m_sequenceDelays.takeAt(fromIndex);
+        if (toIndex <= m_sequenceDelays.size())
+            m_sequenceDelays.insert(toIndex, delayItem);
+        else
+            m_sequenceDelays.append(delayItem);
+    }
     emit sequenceOrderChanged();
 }
 
@@ -2080,11 +2104,15 @@ void CentralizedControlManager::executeSequenceStep()
 
     m_sequenceStep++;
 
-    // 安排下一步
+    // 安排下一步——使用刚执行步骤的每步延迟
     if (m_sequenceStep < total) {
-        if (m_sequenceTimer) m_sequenceTimer->start(m_sequenceInterval * 1000);
+        // ✅ Phase 7.48.88.151: 用上一步(seqIdx)的独立延迟，而非全局间隔
+        int prevSeqIdx = m_sequenceIsStart ? (m_sequenceStep - 1) : (total - m_sequenceStep);
+        int stepDelay = (prevSeqIdx >= 0 && prevSeqIdx < m_sequenceDelays.size())
+                        ? m_sequenceDelays[prevSeqIdx]
+                        : m_sequenceInterval;
+        if (m_sequenceTimer) m_sequenceTimer->start(stepDelay * 1000);
     } else {
-        // 最后一步完成后再执行一次收尾
         if (m_sequenceTimer) m_sequenceTimer->start(100);
     }
 }
