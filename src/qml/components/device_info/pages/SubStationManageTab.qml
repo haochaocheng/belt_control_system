@@ -34,7 +34,8 @@ Rectangle {
         if (typeof centralControlManager === "undefined") return 2
         var slots = centralControlManager.subStations
         if (!slots || root.currentSlotIndex >= slots.length) return 2
-        switch(slots[root.currentSlotIndex].protocol) {
+        var proto = slots[root.currentSlotIndex].protocol || "mqtt"
+        switch(proto) {
         case "mqtt":   return 4
         case "s7":     return 7
         case "modbus": return 7
@@ -324,10 +325,10 @@ Rectangle {
                     // ----- MQTT: 参数2 目标设备ID -----
                     Text { text: "目标设备ID"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "mqtt" } }
+                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && (s[root.currentSlotIndex].protocol === "mqtt" || !s[root.currentSlotIndex].protocol) } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "mqtt" }
+                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && (s[root.currentSlotIndex].protocol === "mqtt" || !s[root.currentSlotIndex].protocol) }
                         DeviceInfo.CustomSpinBox {
                             id: mqttTargetIdField
                             anchors.fill: parent
@@ -347,11 +348,11 @@ Rectangle {
                     // ----- MQTT: 参数3 Topic前缀 -----
                     Text { text: "Topic前缀"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "mqtt" } }
+                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && (s[root.currentSlotIndex].protocol === "mqtt" || !s[root.currentSlotIndex].protocol) } }
                     Text {
                         text: "belt/" + mqttTargetIdField.value + "/ctrl"
                         color: "#78909C"; font.pixelSize: 13; Layout.preferredWidth: 120
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "mqtt" }
+                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && (s[root.currentSlotIndex].protocol === "mqtt" || !s[root.currentSlotIndex].protocol) }
                     }
 
                     // ----- S7: 参数2 目标IP -----
