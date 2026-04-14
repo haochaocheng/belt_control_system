@@ -9,7 +9,7 @@
 #   .\build-ubuntu24-apt.ps1 simulator  # 启动模拟器（无需实体设备）
 
 param(
-    [string]$Device = "185"  # 默认185设备
+    [string]$Device = "151"  # 默认151设备
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,9 +31,9 @@ switch -Regex ($Device) {
         & "$PSScriptRoot\scripts\2026-02-15\30-start-simulator.ps1"
         exit 0
     }
-    "^185$" {
-        $DeviceIP = "192.168.10.185"
-        Write-Host "[Device] Target: Device 185 ($DeviceIP)" -ForegroundColor Cyan
+    "^151$" {
+        $DeviceIP = "192.168.10.151"
+        Write-Host "[Device] Target: Device 151 ($DeviceIP)" -ForegroundColor Cyan
     }
     "^188$" {
         $DeviceIP = "192.168.10.188"
@@ -47,8 +47,8 @@ switch -Regex ($Device) {
         Write-Host "[ERROR] Invalid device parameter: $Device" -ForegroundColor Red
         Write-Host ""
         Write-Host "Usage:" -ForegroundColor Yellow
-        Write-Host "  .\build-ubuntu24-apt.ps1 185              # Deploy to 192.168.10.185" -ForegroundColor White
-        Write-Host "  .\build-ubuntu24-apt.ps1 185              # Deploy to 192.168.10.185" -ForegroundColor White
+        Write-Host "  .\build-ubuntu24-apt.ps1 151              # Deploy to 192.168.10.151" -ForegroundColor White
+        Write-Host "  .\build-ubuntu24-apt.ps1 151              # Deploy to 192.168.10.151" -ForegroundColor White
         Write-Host "  .\build-ubuntu24-apt.ps1 192.168.10.200   # Deploy to custom IP" -ForegroundColor White
         Write-Host "  .\build-ubuntu24-apt.ps1 simulator        # Start simulator (no device needed)" -ForegroundColor White
         Write-Host ""
@@ -1258,11 +1258,15 @@ if ($needBuildBase) {
             Write-Host "  导出镜像: $baseImageId" -ForegroundColor Gray
             $backupStart = Get-Date
 
-            docker save $baseImageId | gzip > $backupImagePath
+            # ✅ 2026-04-14 [Phase 7.48.88.142 fix]: gzip 在Windows不可用，改用 docker save 直接输出 tar
+            # 旧：docker save $baseImageId | gzip > $backupImagePath
+            # 新：去掉 gzip 压缩，直接保存为 .tar（Windows PowerShell 无 gzip 命令）
+            $backupTarPath = $backupImagePath -replace '\.gz$', ''
+            docker save -o $backupTarPath $baseImageId
 
             if ($LASTEXITCODE -eq 0) {
                 $backupDuration = (Get-Date) - $backupStart
-                $backupSizeMB = [math]::Round((Get-Item $backupImagePath).Length / 1MB, 2)
+                $backupSizeMB = [math]::Round((Get-Item $backupTarPath).Length / 1MB, 2)
 
                 # 保存哈希值
                 $hashData = @{
