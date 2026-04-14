@@ -261,6 +261,25 @@ Rectangle {
                     columnSpacing: 10
                     rowSpacing: 10
 
+                    // ===== 调试信息行（问题定位用，修复后删除）=====
+                    Rectangle {
+                        Layout.columnSpan: 4; Layout.fillWidth: true
+                        Layout.preferredHeight: 24
+                        color: "#0a1020"; radius: 3
+                        Text {
+                            anchors.fill: parent; anchors.margins: 4
+                            font.pixelSize: 10; color: "#4FC3F7"
+                            text: {
+                                var cm = typeof centralControlManager
+                                if (cm === "undefined") return "DBG: centralControlManager=undefined(QDS), protocolIdx=" + protocolField.currentIndex
+                                var s = centralControlManager.subStations
+                                if (!s || root.currentSlotIndex >= s.length) return "DBG: subStations空或越界, slotIdx=" + root.currentSlotIndex
+                                var slot = s[root.currentSlotIndex]
+                                return "DBG: slotIdx=" + root.currentSlotIndex + " proto='" + slot.protocol + "' enabled=" + slot.enabled + " connected=" + slot.isConnected
+                            }
+                        }
+                    }
+
                     // ----- 参数0: 启用/禁用 -----
                     Text { text: "启用:"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight }
@@ -325,10 +344,10 @@ Rectangle {
                     // ----- MQTT: 参数2 目标设备ID -----
                     Text { text: "目标设备ID"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && (s[root.currentSlotIndex].protocol === "mqtt" || !s[root.currentSlotIndex].protocol) } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 0; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 0; var proto = s[root.currentSlotIndex].protocol || "mqtt"; return proto === "mqtt" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && (s[root.currentSlotIndex].protocol === "mqtt" || !s[root.currentSlotIndex].protocol) }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 0; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 0; var proto = s[root.currentSlotIndex].protocol || "mqtt"; return proto === "mqtt" }
                         DeviceInfo.CustomSpinBox {
                             id: mqttTargetIdField
                             anchors.fill: parent
@@ -348,20 +367,20 @@ Rectangle {
                     // ----- MQTT: 参数3 Topic前缀 -----
                     Text { text: "Topic前缀"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && (s[root.currentSlotIndex].protocol === "mqtt" || !s[root.currentSlotIndex].protocol) } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 0; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 0; var proto = s[root.currentSlotIndex].protocol || "mqtt"; return proto === "mqtt" } }
                     Text {
                         text: "belt/" + mqttTargetIdField.value + "/ctrl"
                         color: "#78909C"; font.pixelSize: 13; Layout.preferredWidth: 120
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && (s[root.currentSlotIndex].protocol === "mqtt" || !s[root.currentSlotIndex].protocol) }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 0; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 0; var proto = s[root.currentSlotIndex].protocol || "mqtt"; return proto === "mqtt" }
                     }
 
                     // ----- S7: 参数2 目标IP -----
                     Text { text: "目标IP"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "s7" } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 1; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 1; return s[root.currentSlotIndex].protocol === "s7" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "s7" }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 1; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 1; return s[root.currentSlotIndex].protocol === "s7" }
                         DeviceInfo.CustomTextField {
                             id: s7TargetIPField
                             anchors.fill: parent
@@ -380,10 +399,10 @@ Rectangle {
                     // ----- S7: 参数3 端口 -----
                     Text { text: "端口"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "s7" } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 1; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 1; return s[root.currentSlotIndex].protocol === "s7" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "s7" }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 1; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 1; return s[root.currentSlotIndex].protocol === "s7" }
                         DeviceInfo.CustomSpinBox {
                             id: s7PortField; anchors.fill: parent
                             from: 1; to: 65535
@@ -402,10 +421,10 @@ Rectangle {
                     // ----- S7: 参数4 机架 -----
                     Text { text: "机架"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "s7" } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 1; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 1; return s[root.currentSlotIndex].protocol === "s7" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "s7" }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 1; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 1; return s[root.currentSlotIndex].protocol === "s7" }
                         DeviceInfo.CustomSpinBox {
                             id: s7RackField; anchors.fill: parent
                             from: 0; to: 7
@@ -424,10 +443,10 @@ Rectangle {
                     // ----- S7: 参数5 插槽 -----
                     Text { text: "插槽"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "s7" } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 1; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 1; return s[root.currentSlotIndex].protocol === "s7" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "s7" }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 1; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 1; return s[root.currentSlotIndex].protocol === "s7" }
                         DeviceInfo.CustomSpinBox {
                             id: s7SlotField; anchors.fill: parent
                             from: 0; to: 31
@@ -446,10 +465,10 @@ Rectangle {
                     // ----- S7: 参数6 连接类型 -----
                     Text { text: "连接类型"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "s7" } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 1; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 1; return s[root.currentSlotIndex].protocol === "s7" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "s7" }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 1; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 1; return s[root.currentSlotIndex].protocol === "s7" }
                         DeviceInfo.CustomComboBox {
                             id: s7ConnTypeField; anchors.fill: parent
                             model: ["PG", "OP", "Basic"]
@@ -473,10 +492,10 @@ Rectangle {
                     // ----- Modbus: 参数2 目标IP -----
                     Text { text: "目标IP"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "modbus" } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 2; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 2; return s[root.currentSlotIndex].protocol === "modbus" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "modbus" }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 2; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 2; return s[root.currentSlotIndex].protocol === "modbus" }
                         DeviceInfo.CustomTextField {
                             id: modbusTargetIPField; anchors.fill: parent
                             text: (typeof centralControlManager !== "undefined")
@@ -494,10 +513,10 @@ Rectangle {
                     // ----- Modbus: 参数3 端口 -----
                     Text { text: "端口"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "modbus" } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 2; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 2; return s[root.currentSlotIndex].protocol === "modbus" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "modbus" }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 2; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 2; return s[root.currentSlotIndex].protocol === "modbus" }
                         DeviceInfo.CustomSpinBox {
                             id: modbusPortField; anchors.fill: parent
                             from: 1; to: 65535
@@ -516,10 +535,10 @@ Rectangle {
                     // ----- Modbus: 参数4 从站地址 -----
                     Text { text: "从站地址"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "modbus" } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 2; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 2; return s[root.currentSlotIndex].protocol === "modbus" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "modbus" }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 2; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 2; return s[root.currentSlotIndex].protocol === "modbus" }
                         DeviceInfo.CustomSpinBox {
                             id: modbusSlaveAddrField; anchors.fill: parent
                             from: 1; to: 247
@@ -538,10 +557,10 @@ Rectangle {
                     // ----- Modbus: 参数5 起始寄存器 -----
                     Text { text: "起始寄存器"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "modbus" } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 2; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 2; return s[root.currentSlotIndex].protocol === "modbus" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "modbus" }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 2; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 2; return s[root.currentSlotIndex].protocol === "modbus" }
                         DeviceInfo.CustomSpinBox {
                             id: modbusStartRegField; anchors.fill: parent
                             from: 0; to: 65535
@@ -560,10 +579,10 @@ Rectangle {
                     // ----- Modbus: 参数6 寄存器数量 -----
                     Text { text: "寄存器数量"; font.pixelSize: 21; color: "#9E9E9E"
                            Layout.preferredWidth: 160; horizontalAlignment: Text.AlignRight
-                           visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "modbus" } }
+                           visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 2; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 2; return s[root.currentSlotIndex].protocol === "modbus" } }
                     Item {
                         Layout.preferredWidth: 200; Layout.preferredHeight: 48
-                        visible: { if (typeof centralControlManager === "undefined") return false; var s = centralControlManager.subStations; return s && root.currentSlotIndex < s.length && s[root.currentSlotIndex].protocol === "modbus" }
+                        visible: { if (typeof centralControlManager === "undefined") return protocolField.currentIndex === 2; var s = centralControlManager.subStations; if (!s || root.currentSlotIndex >= s.length) return protocolField.currentIndex === 2; return s[root.currentSlotIndex].protocol === "modbus" }
                         DeviceInfo.CustomSpinBox {
                             id: modbusRegCountField; anchors.fill: parent
                             from: 1; to: 125
