@@ -1243,9 +1243,11 @@ void CentralizedControlManager::publishMqttCommand(int slotIndex,
     if (!m_mqttController) return;
     if (!m_mqttController->isModuleConnected(CENTRAL_MQTT_MODULE)) return;
 
-    int deviceId = m_slots[slotIndex].protocolParams.value("deviceId", -1).toInt();
+    int deviceId = m_slots[slotIndex].protocolParams.value("targetDeviceId", -1).toInt();
+    if (deviceId < 0)
+        deviceId = m_slots[slotIndex].protocolParams.value("deviceId", -1).toInt();
     if (deviceId < 0) {
-        qWarning() << "[CentralizedControl] 槽位" << slotIndex << "未配置deviceId";
+        qWarning() << "[CentralizedControl] 槽位" << slotIndex << "未配置targetDeviceId/deviceId";
         return;
     }
 
@@ -1282,17 +1284,35 @@ void CentralizedControlManager::publishHeartbeat()
         // 主站心跳发到所有已配置分站
         for (int i = 0; i < MAX_SLOTS; i++) {
             if (!m_slots[i].enabled || m_slots[i].protocol != "mqtt") continue;
-            int devId = m_slots[i].protocolParams.value("deviceId", -1).toInt();
+            int devId = m_slots[i].protocolParams.value("targetDeviceId", -1).toInt();
+            if (devId < 0)
+                devId = m_slots[i].protocolParams.value("deviceId", -1).toInt();
             if (devId < 0) continue;
             topic = m_mqttTopicPrefix + QString::number(devId) + "/heartbeat";
             m_mqttController->publishBytes(topic, payload, 0, false, CENTRAL_MQTT_MODULE);
         }
     } else if (isSubMode()) {
-        // 分站心跳发到自己的主题（主站订阅 +/heartbeat）
-        topic = m_mqttTopicPrefix + QString::number(m_localDeviceId) + "/heartbeat";
-        m_mqttController->publishBytes(topic, payload, 0, false, CENTRAL_MQTT_MODULE);
+        // ✅ 2026-04-14 [Phase 7.48.88.143]: 分站模式心跳 + 模块7断线自动重连
+        // 场景：分站先启动，主站 Mosquitto 未就绪 → 模块7连接失败 → 无自动重连
+        // 每次心跳检查模块7是否在线，断线则重新设置Broker并连接
+        if (m_mqttController && !m_mqttController->isModuleConnected(CENTRAL_MQTT_MODULE)) {
+            if (!m_mqttBrokerIP.isEmpty()) {
+                // 确保模块7 Broker 指向主站
+                int oldIdx = m_mqttController->currentModuleIndex();
+                m_mqttController->setCurrentModuleIndex(CENTRAL_MQTT_MODULE);
+                m_mqttController->setBrokerHost(m_mqttBrokerIP);
+                if (m_mqttBrokerPort > 0)
+                    m_mqttController->setBrokerPort(m_mqttBrokerPort);
+                m_mqttController->setCurrentModuleIndex(oldIdx);
+                m_mqttController->connectToModule(CENTRAL_MQTT_MODULE);
+                qDebug() << "[CentralizedControl] 分站心跳：模块7断线，重连到" << m_mqttBrokerIP;
+            }
+        } else {
+            // 模块7已连接，正常发送心跳
+            topic = m_mqttTopicPrefix + QString::number(m_localDeviceId) + "/heartbeat";
+            m_mqttController->publishBytes(topic, payload, 0, false, CENTRAL_MQTT_MODULE);
+        }
     }
-}
 
 // ========== 分站被动模式：发布本地状态（Phase 7.48.88.114）==========
 
@@ -1347,10 +1367,11 @@ void CentralizedControlManager::publishLocalStatus()
     quint8 protByte = 0;
     if (m_systemConfig) {
         if (m_systemConfig->property("emergencyStopActive").toBool())    protByte |= (1 << 0);
-        if (m_systemConfig->property("deviationActive").toBool())        protByte |= (1 << 1);
+        // ✅ 2026-04-14 [Phase 7.48.88.143]: 修复属性名 deviationActive→runOffActive, temperatureProtActive→temperatureActive
+        if (m_systemConfig->property("runOffActive").toBool())           protByte |= (1 << 1);
         if (m_systemConfig->property("tearActive").toBool())             protByte |= (1 << 2);
         if (m_systemConfig->property("smokeActive").toBool())            protByte |= (1 << 3);
-        if (m_systemConfig->property("temperatureProtActive").toBool())  protByte |= (1 << 4);
+        if (m_systemConfig->property("temperatureActive").toBool())      protByte |= (1 << 4);
         if (m_systemConfig->property("guardNetActive").toBool())         protByte |= (1 << 5);
         if (m_systemConfig->property("coalPileActive").toBool())         protByte |= (1 << 6);
         if (m_systemConfig->property("mainEmergencyStopActive").toBool())protByte |= (1 << 7);
