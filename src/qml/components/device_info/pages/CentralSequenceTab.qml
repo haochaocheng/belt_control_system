@@ -192,9 +192,22 @@ Rectangle {
                         Text {
                             text: modelData.name || ("分站" + (index + 1))
                             font.pixelSize: 13
-                            color: isCurrentExec ? "#81C784" : "#B0BEC5"
+                            color: isCurrentExec ? "#81C784" : (modelData.isLocal ? "#FFD54F" : "#B0BEC5")
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        // ✅ 2026-04-15 [Phase 7.48.88.153]: 本站徽标
+                        Rectangle {
+                            visible: modelData.isLocal === true
+                            width: 22; height: 16; radius: 3
+                            color: "#E65100"
+                            Layout.alignment: Qt.AlignVCenter
+                            Text {
+                                anchors.centerIn: parent
+                                text: "本"; font.pixelSize: 10; font.weight: Font.Bold
+                                color: "#FFFFFF"
+                            }
                         }
 
                         // 在线 LED

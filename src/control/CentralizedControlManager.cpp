@@ -1907,8 +1907,24 @@ void CentralizedControlManager::emergencyStopAll()
 QVariantList CentralizedControlManager::sequenceOrder() const
 {
     QVariantList list;
+
+    // ✅ 2026-04-15 [Phase 7.48.88.153]: 构造本机条目的辅助 lambda
+    auto buildLocalItem = [&](int delayVal) -> QVariantMap {
+        QVariantMap item;
+        item["slotIndex"] = LOCAL_STATION_SLOT;
+        item["name"]      = m_stationId > 0
+                            ? QString("本站（ID:%1）").arg(m_stationId)
+                            : QString("本站（主站）");
+        item["enabled"]   = true;
+        item["online"]    = true;   // 本机始终在线
+        item["isLocal"]   = true;
+        item["delay"]     = delayVal;
+        return item;
+    };
+
     if (m_sequenceOrder.isEmpty()) {
-        // 动态生成：所有已启用槽位，使用全局默认间隔
+        // 动态生成：本机优先，再追加所有已启用远程槽位
+        list << buildLocalItem(m_sequenceInterval);
         for (int i = 0; i < MAX_SLOTS; i++) {
             if (m_slots[i].enabled) {
                 QVariantMap item;
@@ -1916,21 +1932,27 @@ QVariantList CentralizedControlManager::sequenceOrder() const
                 item["name"]      = m_slots[i].name;
                 item["enabled"]   = m_slots[i].enabled;
                 item["online"]    = m_slots[i].isConnected;
-                item["delay"]     = m_sequenceInterval;  // ✅ Phase 7.48.88.151: 包含延迟
+                item["isLocal"]   = false;
+                item["delay"]     = m_sequenceInterval;
                 list << item;
             }
         }
     } else {
         for (int j = 0; j < m_sequenceOrder.size(); j++) {
-            int idx = m_sequenceOrder[j];
-            if (idx < 0 || idx >= MAX_SLOTS) continue;
-            QVariantMap item;
-            item["slotIndex"] = idx;
-            item["name"]      = m_slots[idx].name;
-            item["enabled"]   = m_slots[idx].enabled;
-            item["online"]    = m_slots[idx].isConnected;
-            item["delay"]     = (j < m_sequenceDelays.size()) ? m_sequenceDelays[j] : m_sequenceInterval;
-            list << item;
+            int idx      = m_sequenceOrder[j];
+            int delayVal = (j < m_sequenceDelays.size()) ? m_sequenceDelays[j] : m_sequenceInterval;
+            if (idx == LOCAL_STATION_SLOT) {
+                list << buildLocalItem(delayVal);
+            } else if (idx >= 0 && idx < MAX_SLOTS) {
+                QVariantMap item;
+                item["slotIndex"] = idx;
+                item["name"]      = m_slots[idx].name;
+                item["enabled"]   = m_slots[idx].enabled;
+                item["online"]    = m_slots[idx].isConnected;
+                item["isLocal"]   = false;
+                item["delay"]     = delayVal;
+                list << item;
+            }
         }
     }
     return list;
@@ -1948,10 +1970,13 @@ void CentralizedControlManager::resetSequenceOrder()
 {
     m_sequenceOrder.clear();
     m_sequenceDelays.clear();
+    // ✅ 2026-04-15 [Phase 7.48.88.153]: 本机主站作为默认第一个启动步骤
+    m_sequenceOrder.append(LOCAL_STATION_SLOT);
+    m_sequenceDelays.append(m_sequenceInterval);
     for (int i = 0; i < MAX_SLOTS; i++) {
         if (m_slots[i].enabled) {
             m_sequenceOrder.append(i);
-            m_sequenceDelays.append(m_sequenceInterval);  // 默认使用全局间隔
+            m_sequenceDelays.append(m_sequenceInterval);
         }
     }
     emit sequenceOrderChanged();
@@ -2076,11 +2101,22 @@ void CentralizedControlManager::executeSequenceStep()
     // 停止序列用倒序索引
     int seqIdx    = m_sequenceIsStart ? m_sequenceStep : (total - 1 - m_sequenceStep);
     int slotIndex = m_sequenceOrder[seqIdx];
-    QString name  = (slotIndex < MAX_SLOTS) ? m_slots[slotIndex].name : QString("分站%1").arg(slotIndex + 1);
+    // ✅ 2026-04-15 [Phase 7.48.88.153]: 区分本机与远程分站
+    bool isLocal  = (slotIndex == LOCAL_STATION_SLOT);
+    QString name  = isLocal ? (m_stationId > 0 ? QString("本站（ID:%1）").arg(m_stationId) : QString("本站（主站）"))
+                            : ((slotIndex >= 0 && slotIndex < MAX_SLOTS) ? m_slots[slotIndex].name
+                                                                         : QString("分站%1").arg(slotIndex + 1));
 
     if (m_sequenceIsStart) {
         // 启动
-        if (m_slots[slotIndex].enabled && m_slots[slotIndex].isConnected) {
+        if (isLocal) {
+            if (m_commonControl) {
+                m_commonControl->startBelt(1);
+                m_sequenceStatusText = QString("启动 %1 (%2/%3)").arg(name).arg(m_sequenceStep + 1).arg(total);
+            } else {
+                m_sequenceStatusText = QString("跳过 %1 (无本地控制) (%2/%3)").arg(name).arg(m_sequenceStep + 1).arg(total);
+            }
+        } else if (m_slots[slotIndex].enabled && m_slots[slotIndex].isConnected) {
             sendStartBelt(slotIndex, 1);
             m_sequenceStatusText = QString("启动 %1 (%2/%3)").arg(name).arg(m_sequenceStep + 1).arg(total);
         } else {
@@ -2090,7 +2126,14 @@ void CentralizedControlManager::executeSequenceStep()
         emit sequenceStepExecuted(m_sequenceStep, slotIndex, true, m_sequenceStatusText);
     } else {
         // 停止（倒序）
-        if (m_slots[slotIndex].enabled && m_slots[slotIndex].isConnected) {
+        if (isLocal) {
+            if (m_commonControl) {
+                m_commonControl->stopBelt(1);
+                m_sequenceStatusText = QString("停止 %1 (%2/%3)").arg(name).arg(m_sequenceStep + 1).arg(total);
+            } else {
+                m_sequenceStatusText = QString("跳过 %1 (无本地控制) (%2/%3)").arg(name).arg(m_sequenceStep + 1).arg(total);
+            }
+        } else if (m_slots[slotIndex].enabled && m_slots[slotIndex].isConnected) {
             sendStopBelt(slotIndex, 1);
             m_sequenceStatusText = QString("停止 %1 (%2/%3)").arg(name).arg(m_sequenceStep + 1).arg(total);
         } else {

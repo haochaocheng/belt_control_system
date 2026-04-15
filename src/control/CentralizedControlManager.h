@@ -265,6 +265,8 @@ signals:
 private:
     // ========== 分站槽位数据结构 ==========
     static const int MAX_SLOTS = 8;
+    // ✅ 2026-04-15 [Phase 7.48.88.153]: 本机主站的特殊槽位索引（参与顺序启动）
+    static const int LOCAL_STATION_SLOT = -1;
 
     struct SubStationSlot {
         bool enabled = false;
